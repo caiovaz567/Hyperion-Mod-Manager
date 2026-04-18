@@ -29,7 +29,7 @@ type PendingActionState =
 type LibrarySortKey = 'name' | 'type' | 'installedAt'
 type SortDirection = 'asc' | 'desc'
 
-const LIBRARY_GRID_TEMPLATE = '72px 64px minmax(280px,1fr) 110px 156px 184px 96px'
+const LIBRARY_GRID_TEMPLATE = '72px 80px minmax(280px,1fr) 110px 156px 184px 96px'
 
 export const ModList: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false)
@@ -623,66 +623,40 @@ export const ModList: React.FC = () => {
 
       <div className="hyperion-scrollbar managed-mods-scroll flex-1 overflow-y-auto">
         <div className="p-8 pb-24 max-w-[1600px] mx-auto">
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
-                Managed Mods
-              </h1>
-              <p className="text-[#9a9a9a] text-xs mt-1.5 flex items-center gap-2 font-mono tracking-tight">
-                TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
-              </p>
-              <p className="text-[#818181] text-[10px] mt-2 font-mono uppercase tracking-[0.18em] leading-relaxed">
-                Tip: Shift+Click selects ranges. Ctrl+Click adds single mods. Ctrl+A selects every visible mod and opens bulk actions.
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setLibraryStatusFilter('all')}
-                  className={`${browseLikeButtonClass} ${
-                    libraryStatusFilter === 'all'
-                      ? 'border-[#4fd8ff] bg-[#4fd8ff] text-[#051218]'
-                      : 'border-[#1f4c57] bg-transparent text-[#88dceb] hover:border-[#4fd8ff] hover:text-[#b8f3ff]'
-                  }`}
-                >
-                  <span className="brand-font font-bold">All</span>
-                </button>
-                <button
-                  onClick={() => setLibraryStatusFilter('enabled')}
-                  className={`${libraryStatusFilter === 'enabled' ? activeBrowseLikeButtonClass : darkBrowseLikeButtonClass} inline-flex gap-2`}
-                >
-                  <span className="brand-font font-bold">Enabled</span>
-                </button>
-                <button
-                  onClick={() => setLibraryStatusFilter('disabled')}
-                  className={`${libraryStatusFilter === 'disabled' ? activeBrowseLikeButtonClass : darkBrowseLikeButtonClass} inline-flex gap-2`}
-                >
-                  <span className="brand-font font-bold">Disabled</span>
-                </button>
+          <div className="mb-8">
+            <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
+              Managed Mods
+            </h1>
+            <p className="text-[#9a9a9a] text-xs mt-1.5 flex items-center gap-2 font-mono tracking-tight">
+              TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
+            </p>
+            <p className="text-[#818181] text-[10px] mt-2 font-mono uppercase tracking-[0.18em] leading-relaxed">
+              Tip: Shift+Click selects ranges. Ctrl+Click adds single mods. Ctrl+A selects every visible mod and opens bulk actions.
+            </p>
+            <div className="mt-4 flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] brand-font uppercase tracking-widest text-[#555555]">Filter:</span>
+                <div className="relative">
+                  <select
+                    value={libraryStatusFilter}
+                    onChange={(e) => setLibraryStatusFilter(e.target.value as LibraryStatusFilter)}
+                    className="h-10 cursor-pointer appearance-none rounded-sm border-[0.5px] border-[#252525] bg-[#0a0a0a] pl-3 pr-7 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:border-[#fcee09]/30 focus:border-[#fcee09]/40 focus:outline-none"
+                  >
+                    <option value="all">All</option>
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </select>
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-[14px] text-[#6a6a6a]">expand_more</span>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-nowrap gap-3 items-center justify-end">
               <Tooltip content="Delete every mod from the current library">
                 <button
                   onClick={() => requestLibraryDeleteAll()}
-                  className={destructiveButtonClass}
+                  className="flex h-10 w-10 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
                 >
-                  <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-                  Delete All
+                  <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
                 </button>
-              </Tooltip>
-
-              <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : allVisibleEnabled ? 'Disable every visible mod' : 'Enable every visible mod'}>
-                <span className="inline-flex">
-                  <button
-                    onClick={() => runBulkToggle(visibleModIds, allVisibleEnabled ? 'disable' : 'enable')}
-                    disabled={bulkToggleDisabled}
-                    className={`${bulkToggleDisabled ? disabledBrowseLikeButtonClass : allVisibleEnabled ? darkBrowseLikeButtonClass : activeBrowseLikeButtonClass} shadow-[0_0_16px_rgba(252,238,9,0.1)]`}
-                  >
-                    <span className="brand-font text-[10px] font-bold uppercase tracking-[0.18em]">
-                      {allVisibleEnabled ? 'Disable All' : 'Enable All'}
-                    </span>
-                  </button>
-                </span>
               </Tooltip>
 
               <button
@@ -700,7 +674,21 @@ export const ModList: React.FC = () => {
               className="grid gap-4 px-6 py-0 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
               style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
             >
-                <div className="flex h-10 items-center pl-2 text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold whitespace-nowrap">Status</div>
+                <div className="flex h-10 items-center pl-2">
+                  <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : allVisibleEnabled ? 'Disable all visible mods' : 'Enable all visible mods'}>
+                    <span className="inline-flex">
+                      <button
+                        onClick={() => runBulkToggle(visibleModIds, allVisibleEnabled ? 'disable' : 'enable')}
+                        disabled={bulkToggleDisabled}
+                        className={`flex items-center justify-center transition-colors ${bulkToggleDisabled ? 'cursor-not-allowed text-[#333333]' : allVisibleEnabled ? 'text-[#fcee09] hover:text-[#fcee09]/60' : 'text-[#444444] hover:text-[#fcee09]'}`}
+                      >
+                        <span className="material-symbols-outlined text-[24px]">
+                          {allVisibleEnabled ? 'toggle_on' : 'toggle_off'}
+                        </span>
+                      </button>
+                    </span>
+                  </Tooltip>
+                </div>
                 <div className="flex h-10 items-center text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">#</div>
                 <button
                   onClick={() => handleSort('name')}
