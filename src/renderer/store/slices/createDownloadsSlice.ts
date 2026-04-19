@@ -49,6 +49,7 @@ export interface DownloadsSlice {
   pendingInstallRequest: InstallModRequest | null
   activeDownloads: ActiveDownload[]
   localFiles: DownloadEntry[]
+  newFiles: string[]
 
   installMod: (
     filePath: string,
@@ -61,6 +62,7 @@ export interface DownloadsSlice {
   refreshLocalFiles: () => Promise<void>
   startNxmDownload: (payload: NxmLinkPayload) => Promise<void>
   cancelDownload: (id: string) => Promise<void>
+  markFileAsOld: (filePath: string) => void
   setupNxmListeners: () => () => void
 }
 
@@ -75,6 +77,10 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   pendingMod: null,
   installPrompt: null,
   pendingInstallRequest: null,
+  newFiles: (() => {
+    try { return JSON.parse(localStorage.getItem('hyperion:newFiles') ?? '[]') as string[] }
+    catch { return [] }
+  })(),
   activeDownloads: [],
   localFiles: [],
 
@@ -224,6 +230,14 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     }))
   },
 
+  markFileAsOld: (filePath) => {
+    set((state) => {
+      const next = state.newFiles.filter((p) => p !== filePath)
+      try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
+      return { newFiles: next }
+    })
+  },
+
   setupNxmListeners: () => {
     const unsubLink = IpcService.on(IPC.NXM_LINK_RECEIVED, (...args) => {
       const raw = args[0] as string
@@ -251,11 +265,13 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         ),
       }))
       window.setTimeout(() => {
-        set((state) => ({
-          activeDownloads: state.activeDownloads.filter((d) => d.id !== id),
-        }))
+        set((state) => {
+          const next = [...new Set([...state.newFiles, savedPath])]
+          try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
+          return { activeDownloads: state.activeDownloads.filter((d) => d.id !== id), newFiles: next }
+        })
         get().refreshLocalFiles().catch(() => undefined)
-      }, 2000)
+      }, 1200)
     })
 
     const unsubError = IpcService.on(IPC.NXM_DOWNLOAD_ERROR, (...args) => {

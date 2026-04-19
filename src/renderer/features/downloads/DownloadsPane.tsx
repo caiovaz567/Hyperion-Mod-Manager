@@ -83,6 +83,8 @@ export const DownloadsPane: React.FC = () => {
     localFiles,
     refreshLocalFiles,
     cancelDownload,
+    newFiles,
+    markFileAsOld,
   } = useAppStore((state) => ({
     settings: state.settings,
     installMod: state.installMod,
@@ -98,6 +100,8 @@ export const DownloadsPane: React.FC = () => {
     localFiles: state.localFiles,
     refreshLocalFiles: state.refreshLocalFiles,
     cancelDownload: state.cancelDownload,
+    newFiles: state.newFiles,
+    markFileAsOld: state.markFileAsOld,
   }), shallow)
 
   const hasRequiredPaths = Boolean(
@@ -131,6 +135,8 @@ export const DownloadsPane: React.FC = () => {
     return map
   }, [mods])
 
+  const newFilesSet = useMemo(() => new Set(newFiles.map((p) => p.toLowerCase())), [newFiles])
+
   const handleInstall = async (entry: DownloadEntry) => {
     if (!hasRequiredPaths) {
       addToast('Set Game Path and Mod Library before installing mods', 'warning')
@@ -141,6 +147,7 @@ export const DownloadsPane: React.FC = () => {
     const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
     if (installedMod) {
       openReinstallPrompt(installedMod)
+      markFileAsOld(entry.path)
       return
     }
 
@@ -154,6 +161,7 @@ export const DownloadsPane: React.FC = () => {
     setInstallingPath(null)
 
     if (installResult.data.status === 'installed' && installResult.data.mod) {
+      markFileAsOld(entry.path)
       await scanMods()
       const enableResult = await enableMod(installResult.data.mod.uuid)
       if (!enableResult.ok) {
@@ -182,16 +190,19 @@ export const DownloadsPane: React.FC = () => {
       addToast(result.error ?? 'Could not delete download', 'error')
       return
     }
+    markFileAsOld(pendingDeleteDownload.path)
     setPendingDeleteDownload(null)
     addToast(`${pendingDeleteDownload.name} deleted`, 'success')
     await doRefresh()
   }
 
+  const totalRows = activeDownloads.length + localFiles.length
+
   return (
     <div className="h-full animate-settings-in">
       <div className="flex flex-col h-full overflow-hidden">
 
-        {/* Fixed header — does not scroll */}
+        {/* Fixed header */}
         <div className="shrink-0 px-8 pt-6 pb-3 w-full">
           <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
             Downloads
@@ -218,79 +229,112 @@ export const DownloadsPane: React.FC = () => {
           </div>
         </div>
 
-        {/* Active downloads — compact cards, only shown when active */}
-        {activeDownloads.length > 0 && (
-          <div className="shrink-0 px-8 pb-3">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+        {/* Unified table */}
+        <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
+          <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
+            <div className="hyperion-scrollbar h-full overflow-y-auto">
+
+              {/* Sticky column headers */}
+              <div
+                className="sticky top-0 z-10 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+                style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+              >
+                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                  Archive Name
+                </div>
+                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                  Format
+                </div>
+                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                  Modified
+                </div>
+                <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                  Actions
+                </div>
+              </div>
+
+              {/* Active download rows — inline at the top */}
               {activeDownloads.map((dl) => {
                 const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
                 const isDone = dl.status === 'done'
                 const isError = dl.status === 'error'
                 const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
-                const eta = isDone || isError ? '—' : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
+                const eta = isDone || isError ? null : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
 
                 return (
                   <div
                     key={dl.id}
-                    className="relative bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] rounded-sm p-4 overflow-hidden"
+                    className="grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1e1a00] relative overflow-hidden"
+                    style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE, background: 'rgba(252,238,9,0.03)' }}
                   >
+                    {/* Yellow left accent bar */}
                     <div
                       className="absolute inset-y-0 left-0 w-[3px]"
-                      style={{ background: accent, boxShadow: `0 0 10px ${accent}55` }}
+                      style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
                     />
-                    <div className="flex items-start justify-between gap-4 mb-2 pl-2">
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className="truncate brand-font font-bold tracking-wider uppercase text-sm leading-tight"
+
+                    {/* Col 1: name + progress bar + sizes */}
+                    <div className="flex flex-col justify-center gap-[3px] overflow-hidden pl-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="font-medium tracking-tight truncate text-sm"
                           style={{ color: accent }}
                         >
                           {dl.fileName}
-                        </div>
-                        <div className="mt-0.5 text-[10px] text-[#7a7a7a] font-mono uppercase tracking-[0.14em]">
-                          MOD {dl.nxmModId} · FILE {dl.nxmFileId}
-                        </div>
-                      </div>
-                      <div className="text-xl text-white font-bold brand-font tabular-nums leading-none mt-0.5">
-                        {pct}%
-                      </div>
-                    </div>
-
-                    <div className="h-[3px] bg-[#111] rounded-full overflow-hidden mb-2 ml-2">
-                      <div
-                        className="h-full transition-all duration-500"
-                        style={{
-                          width: `${isDone ? 100 : pct}%`,
-                          background: accent,
-                          boxShadow: `0 0 6px ${accent}55`,
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pl-2">
-                      <div className="flex items-center gap-3 text-[10px] font-mono text-[#9a9a9a] min-w-0">
-                        {isError ? (
-                          <span className="text-[#f87171] truncate">{dl.error ?? 'Download failed'}</span>
-                        ) : isDone ? (
-                          <span className="flex items-center gap-1 text-[#34d399]">
+                        </span>
+                        {isDone && (
+                          <span className="shrink-0 flex items-center gap-1 text-[#34d399] text-[10px] font-mono">
                             <span className="material-symbols-outlined text-[13px]">check_circle</span>
-                            Complete
+                            Done
                           </span>
-                        ) : (
-                          <>
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[13px] text-[#7a7a7a]">download</span>
-                              {formatSpeed(dl.speedBps)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[13px] text-[#7a7a7a]">schedule</span>
-                              ETA {eta}
-                            </span>
-                            <span className="text-[#5a5a5a]">
-                              {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)}
-                            </span>
-                          </>
+                        )}
+                        {isError && (
+                          <span className="shrink-0 text-[#f87171] text-[10px] font-mono truncate">
+                            {dl.error ?? 'Failed'}
+                          </span>
                         )}
                       </div>
+                      {!isDone && !isError && (
+                        <>
+                          <div className="h-[2px] bg-[#1a1a1a] rounded-full overflow-hidden">
+                            <div
+                              className="h-full transition-all duration-500"
+                              style={{ width: `${pct}%`, background: accent }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-[#7a7a7a]">
+                            {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Col 2: percentage */}
+                    <div className="flex items-center">
+                      <span
+                        className="font-mono font-bold text-sm"
+                        style={{ color: accent }}
+                      >
+                        {isDone ? '100%' : isError ? 'ERR' : `${pct}%`}
+                      </span>
+                    </div>
+
+                    {/* Col 3: speed + ETA */}
+                    <div className="flex flex-col justify-center gap-[3px]">
+                      {!isDone && !isError && (
+                        <>
+                          <span className="text-[11px] font-mono text-[#9a9a9a]">
+                            {formatSpeed(dl.speedBps)}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#6a6a6a]">
+                            ETA {eta}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Col 4: cancel */}
+                    <div className="flex items-center justify-end">
                       {!isDone && !isError && (
                         <Tooltip content="Cancel download">
                           <button
@@ -305,33 +349,13 @@ export const DownloadsPane: React.FC = () => {
                   </div>
                 )
               })}
-            </div>
-          </div>
-        )}
 
-        {/* Table — sticky headers keep columns perfectly aligned with scrollbar */}
-        <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
-          <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
-
-            {/* Single scroll container — header sticky inside so scrollbar width never misaligns */}
-            <div className="hyperion-scrollbar h-full overflow-y-auto">
-
-              {/* Sticky column headers */}
-              <div
-                className="sticky top-0 z-10 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
-                style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
-              >
-                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Archive Name</div>
-                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Format</div>
-                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Modified</div>
-                <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
-              </div>
-
+              {/* Local file rows */}
               {loading ? (
                 <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
                   Scanning downloads...
                 </div>
-              ) : localFiles.length === 0 ? (
+              ) : totalRows === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4">
                   <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">download</span>
                   <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
@@ -350,97 +374,112 @@ export const DownloadsPane: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div>
-                  {localFiles.map((entry, index) => {
-                    const isInstalling = installingPath === entry.path
-                    const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
-                    const rowBg =
-                      index % 2 === 0 ? 'bg-[#050505] hover:bg-[#141414]' : 'bg-[#0a0a0a] hover:bg-[#161616]'
+                localFiles.map((entry, index) => {
+                  const isInstalling = installingPath === entry.path
+                  const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
+                  const isNew = newFilesSet.has(entry.path.toLowerCase())
+                  const ext = entry.extension.replace('.', '').toUpperCase()
+                  const color = formatColor(entry.extension)
+                  const rowBg = index % 2 === 0
+                    ? 'bg-[#050505] hover:bg-[#141414]'
+                    : 'bg-[#0a0a0a] hover:bg-[#161616]'
 
-                    return (
+                  return (
+                    <div
+                      key={entry.path}
+                      className={`grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
+                      style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+                    >
+                      {/* Hover gradient overlay */}
                       <div
-                        key={entry.path}
-                        className={`grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow] duration-150 ${rowBg} hover:border-[#363636]`}
-                        style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
-                      >
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                        style={{
+                          background: isNew
+                            ? 'linear-gradient(90deg, rgba(252,238,9,0.07) 0%, rgba(252,238,9,0.025) 20%, transparent 60%)'
+                            : 'linear-gradient(90deg, rgba(252,238,9,0.05) 0%, rgba(252,238,9,0.02) 18%, transparent 60%)',
+                        }}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-0 left-0 w-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                        style={{ background: isNew ? '#fcee09' : 'rgba(252,238,9,0.55)' }}
+                      />
+                      {/* Persistent left bar for NEW files */}
+                      {isNew && (
                         <div
                           aria-hidden="true"
-                          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                          style={{
-                            background:
-                              'linear-gradient(90deg, rgba(252,238,9,0.05) 0%, rgba(252,238,9,0.02) 18%, rgba(255,255,255,0) 60%)',
-                          }}
+                          className="pointer-events-none absolute inset-y-0 left-0 w-[2px]"
+                          style={{ background: 'rgba(252,238,9,0.4)' }}
                         />
-                        <div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-[#fcee09]/55 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                        />
+                      )}
 
-                        <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
+                      {/* Col 1: name + size + NEW badge */}
+                      <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
+                        <div className="flex items-center gap-2 min-w-0">
                           <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
                             {entry.name}
                           </span>
-                          <span className="text-xs font-mono text-[#9a9a9a] tracking-tight">
-                            {formatSize(entry.size)}
-                          </span>
+                          {isNew && (
+                            <span className="shrink-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest bg-[#fcee09] text-[#050505] rounded-sm">
+                              NEW
+                            </span>
+                          )}
                         </div>
-
-                        <div className="flex items-center">
-                          <span
-                            className="px-2.5 py-[3px] border-[0.5px] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm transition-colors"
-                            style={{
-                              color: formatColor(entry.extension),
-                              borderColor: `${formatColor(entry.extension)}33`,
-                            }}
-                          >
-                            {entry.extension.replace('.', '').toUpperCase()}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
-                          {formatDate(entry.modifiedAt)}
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => void handleInstall(entry)}
-                            disabled={isInstalling}
-                            className={`group/btn h-7 px-3 rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${
-                              installedMod
-                                ? 'bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white hover:border-[#fcee09] hover:text-[#fcee09]'
-                                : 'bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/40 text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
-                            } disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]`}
-                          >
-                            {isInstalling ? (
-                              'Installing'
-                            ) : installedMod ? (
-                              <>
-                                <span className="group-hover/btn:hidden">Installed</span>
-                                <span className="hidden group-hover/btn:inline">Reinstall</span>
-                              </>
-                            ) : (
-                              'Install'
-                            )}
-                          </button>
-                          <Tooltip content="Delete download">
-                            <button
-                              onClick={() => setPendingDeleteDownload(entry)}
-                              className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
-                            >
-                              <span className="material-symbols-outlined text-[14px]">delete</span>
-                            </button>
-                          </Tooltip>
-                        </div>
+                        <span className="text-xs font-mono text-[#7a7a7a] tracking-tight">
+                          {formatSize(entry.size)}
+                        </span>
                       </div>
-                    )
-                  })}
-                </div>
+
+                      {/* Col 2: format badge with color */}
+                      <div className="flex items-center">
+                        <span
+                          className="px-2.5 py-[3px] border-[0.5px] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm transition-colors"
+                          style={{ color, borderColor: `${color}33` }}
+                        >
+                          {ext}
+                        </span>
+                      </div>
+
+                      {/* Col 3: modified date */}
+                      <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
+                        {formatDate(entry.modifiedAt)}
+                      </div>
+
+                      {/* Col 4: install + delete */}
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => void handleInstall(entry)}
+                          disabled={isInstalling}
+                          className={`group/btn h-7 px-3 rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${
+                            installedMod
+                              ? 'bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white hover:border-[#fcee09] hover:text-[#fcee09]'
+                              : 'bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/40 text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
+                          } disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]`}
+                        >
+                          {isInstalling ? 'Installing' : installedMod ? (
+                            <>
+                              <span className="group-hover/btn:hidden">Installed</span>
+                              <span className="hidden group-hover/btn:inline">Reinstall</span>
+                            </>
+                          ) : 'Install'}
+                        </button>
+                        <Tooltip content="Delete download">
+                          <button
+                            onClick={() => setPendingDeleteDownload(entry)}
+                            className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  )
+                })
               )}
             </div>
-
           </div>
         </div>
-
       </div>
 
       {pendingDeleteDownload && (
