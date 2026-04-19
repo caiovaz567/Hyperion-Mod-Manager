@@ -94,14 +94,14 @@ export const App: React.FC = () => {
 
       const hasValidGamePath = await validateGamePath(currentSettings.gamePath)
       const hasValidLibraryPath = await validateLibraryPath(currentSettings.libraryPath)
-      if (hasValidGamePath && hasValidLibraryPath) {
-        setStatus('Restoring active mods...')
-        await restoreEnabledMods(scannedMods)
-      }
 
       const cleanupUpdates = setupUpdateListeners()
       const cleanupNxm = setupNxmListeners()
       cleanup = () => { cleanupUpdates(); cleanupNxm() }
+
+      if (hasValidGamePath && hasValidLibraryPath) {
+        void restoreEnabledMods(scannedMods).catch(() => undefined)
+      }
 
       if (!import.meta.env.DEV && currentSettings.autoUpdate) {
         void checkForUpdates().catch(() => undefined)
