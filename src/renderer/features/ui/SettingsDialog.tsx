@@ -34,7 +34,7 @@ export const SettingsPage: React.FC = () => {
   const [nexusValidateResult, setNexusValidateResult] = useState<
     { ok: true; name: string; isPremium: boolean } | { ok: false; error: string } | null
   >(null)
-  const nexusSaveTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
+  const nexusSaveTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!defaultPaths) {
