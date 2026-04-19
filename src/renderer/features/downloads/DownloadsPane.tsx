@@ -260,6 +260,8 @@ export const DownloadsPane: React.FC = () => {
                 const isError = dl.status === 'error'
                 const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
                 const eta = isDone || isError ? null : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
+                const dlExt = dl.fileName.split('.').pop()?.toLowerCase() ?? ''
+                const dlColor = FORMAT_COLOR[dlExt] ?? '#64748B'
 
                 return (
                   <div
@@ -267,19 +269,16 @@ export const DownloadsPane: React.FC = () => {
                     className="grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1e1a00] relative overflow-hidden"
                     style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE, background: 'rgba(252,238,9,0.03)' }}
                   >
-                    {/* Yellow left accent bar */}
+                    {/* Left accent bar */}
                     <div
                       className="absolute inset-y-0 left-0 w-[3px]"
                       style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
                     />
 
-                    {/* Col 1: name + progress bar + sizes */}
+                    {/* Col 1: name + progress bar + sizes + % */}
                     <div className="flex flex-col justify-center gap-[3px] overflow-hidden pl-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="font-medium tracking-tight truncate text-sm"
-                          style={{ color: accent }}
-                        >
+                        <span className="font-medium tracking-tight truncate text-sm" style={{ color: accent }}>
                           {dl.fileName}
                         </span>
                         {isDone && (
@@ -297,25 +296,22 @@ export const DownloadsPane: React.FC = () => {
                       {!isDone && !isError && (
                         <>
                           <div className="h-[2px] bg-[#1a1a1a] rounded-full overflow-hidden">
-                            <div
-                              className="h-full transition-all duration-500"
-                              style={{ width: `${pct}%`, background: accent }}
-                            />
+                            <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: accent }} />
                           </div>
                           <span className="text-[10px] font-mono text-[#7a7a7a]">
-                            {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)}
+                            {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)} · {pct}%
                           </span>
                         </>
                       )}
                     </div>
 
-                    {/* Col 2: percentage */}
+                    {/* Col 2: format badge (same as local files) */}
                     <div className="flex items-center">
                       <span
-                        className="font-mono font-bold text-sm"
-                        style={{ color: accent }}
+                        className="inline-flex h-5 items-center px-1.5 rounded-sm text-[10px] font-bold font-mono tracking-wide uppercase border-[0.5px]"
+                        style={{ color: dlColor, borderColor: `${dlColor}40`, background: `${dlColor}12` }}
                       >
-                        {isDone ? '100%' : isError ? 'ERR' : `${pct}%`}
+                        {dlExt || '?'}
                       </span>
                     </div>
 
@@ -323,12 +319,8 @@ export const DownloadsPane: React.FC = () => {
                     <div className="flex flex-col justify-center gap-[3px]">
                       {!isDone && !isError && (
                         <>
-                          <span className="text-[11px] font-mono text-[#9a9a9a]">
-                            {formatSpeed(dl.speedBps)}
-                          </span>
-                          <span className="text-[10px] font-mono text-[#6a6a6a]">
-                            ETA {eta}
-                          </span>
+                          <span className="text-[11px] font-mono text-[#9a9a9a]">{formatSpeed(dl.speedBps)}</span>
+                          {eta && <span className="text-[10px] font-mono text-[#6a6a6a]">ETA {eta}</span>}
                         </>
                       )}
                     </div>

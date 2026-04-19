@@ -200,6 +200,12 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   },
 
   startNxmDownload: async (payload) => {
+    const already = get().activeDownloads.find(
+      (d) => d.nxmModId === payload.modId && d.nxmFileId === payload.fileId &&
+        (d.status === 'queued' || d.status === 'downloading')
+    )
+    if (already) return
+
     const result = await IpcService.invoke<IpcResult<{ id: string; fileName: string }>>(
       IPC.NXM_DOWNLOAD_START,
       payload
