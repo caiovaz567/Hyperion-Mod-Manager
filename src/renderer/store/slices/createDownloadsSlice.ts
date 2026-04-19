@@ -43,6 +43,7 @@ export interface DownloadsSlice {
   installing: boolean
   installProgress: number
   installStatus: string
+  installCurrentFile: string
   pendingMod: ModMetadata | null
   installPrompt: InstallPromptInfo | null
   pendingInstallRequest: InstallModRequest | null
@@ -70,6 +71,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   installing: false,
   installProgress: 0,
   installStatus: '',
+  installCurrentFile: '',
   pendingMod: null,
   installPrompt: null,
   pendingInstallRequest: null,
@@ -81,7 +83,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
 
     const unsubscribe = IpcService.on(IPC.INSTALL_PROGRESS, (...args) => {
       const progress = args[0] as InstallProgress
-      set({ installProgress: progress.percent, installStatus: progress.step })
+      set({ installProgress: progress.percent, installStatus: progress.step, installCurrentFile: progress.currentFile ?? '' })
     })
 
     const result = await IpcService.invoke<IpcResult<InstallModResponse>>(
@@ -178,6 +180,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       installing: false,
       installProgress: 0,
       installStatus: '',
+      installCurrentFile: '',
       pendingMod: null,
       installPrompt: null,
       pendingInstallRequest: null,

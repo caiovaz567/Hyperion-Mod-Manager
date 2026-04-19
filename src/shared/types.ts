@@ -97,6 +97,7 @@ export interface DownloadEntry {
 export interface InstallProgress {
   step: string
   percent: number
+  currentFile?: string
 }
 
 export interface ConflictInfo {

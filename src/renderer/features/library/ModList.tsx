@@ -76,6 +76,9 @@ export const ModList: React.FC = () => {
     gamePathValid,
     libraryPathValid,
     typeFilter,
+    installProgress,
+    installStatus,
+    installCurrentFile,
   } = useAppStore((state) => ({
     filter: state.filter,
     filteredMods: state.filteredMods,
@@ -99,6 +102,9 @@ export const ModList: React.FC = () => {
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
     typeFilter: state.typeFilter,
+    installProgress: state.installProgress,
+    installStatus: state.installStatus,
+    installCurrentFile: state.installCurrentFile,
   }), shallow)
 
   const hasRequiredPaths = Boolean(settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid)
@@ -627,9 +633,27 @@ export const ModList: React.FC = () => {
       )}
 
       {isInstalling && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/90 pointer-events-none">
-          <span className="material-symbols-outlined text-[40px] text-[#fcee09] mb-4 animate-spin">progress_activity</span>
-          <span className="brand-font text-sm text-[#9a9a9a] tracking-widest uppercase">Installing...</span>
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/92 pointer-events-none px-16">
+          <span className="material-symbols-outlined text-[36px] text-[#fcee09] mb-5 animate-spin">progress_activity</span>
+          <span className="brand-font text-sm text-white tracking-widest uppercase mb-1">
+            {installStatus || 'Installing...'}
+          </span>
+          {installCurrentFile && (
+            <span className="font-mono text-[11px] text-[#7a7a7a] mb-4 max-w-[480px] truncate text-center">
+              {installCurrentFile}
+            </span>
+          )}
+          <div className="w-full max-w-[420px] mt-2">
+            <div className="h-[3px] bg-[#1a1a1a] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#fcee09] transition-all duration-300"
+                style={{ width: `${installProgress}%`, boxShadow: '0 0 8px rgba(252,238,9,0.5)' }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="font-mono text-[10px] text-[#5a5a5a]">{installProgress}%</span>
+            </div>
+          </div>
         </div>
       )}
 

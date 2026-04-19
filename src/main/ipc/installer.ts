@@ -1,8 +1,9 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import { spawn } from 'child_process'
 import { v4 as uuidv4 } from 'uuid'
-import AdmZip from 'adm-zip'
+import { path7za } from '7zip-bin'
 import { IPC } from '../../shared/types'
 import type {
   ModMetadata,
@@ -21,20 +22,75 @@ import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
 
 type GetMainWindow = () => BrowserWindow | null
 
+const SUPPORTED_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
+
 function sendProgress(
   win: BrowserWindow | null,
   step: string,
-  percent: number
+  percent: number,
+  currentFile?: string
 ): void {
-  win?.webContents.send(IPC.INSTALL_PROGRESS, { step, percent })
+  win?.webContents.send(IPC.INSTALL_PROGRESS, { step, percent, currentFile })
 }
 
-/**
- * Extracts a ZIP archive to a temp directory.
- */
-function extractZip(archivePath: string, destDir: string): void {
-  const zip = new AdmZip(archivePath)
-  zip.extractAllTo(destDir, true)
+function countArchiveFiles(archivePath: string): Promise<number> {
+  return new Promise((resolve) => {
+    const args = ['l', '-ba', '-slt', archivePath]
+    const proc = spawn(path7za, args)
+    let count = 0
+    let buffer = ''
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString()
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (line.startsWith('Attr = ') && !line.includes('D')) count++
+        if (/^Attributes = [^D]/.test(line)) count++
+      }
+    })
+
+    proc.on('close', () => resolve(Math.max(count, 1)))
+    proc.on('error', () => resolve(1))
+  })
+}
+
+function extractArchiveAsync(
+  archivePath: string,
+  destDir: string,
+  totalFiles: number,
+  onFile: (name: string, percent: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const args = ['x', archivePath, `-o${destDir}`, '-y', '-bb1', '-bd']
+    const proc = spawn(path7za, args)
+    let extracted = 0
+    let buffer = ''
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString()
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        const trimmed = line.trimStart()
+        if (trimmed.startsWith('- ') || trimmed.startsWith('Extracting  ')) {
+          const name = trimmed.replace(/^(- |Extracting\s+)/, '').trim()
+          extracted++
+          const percent = Math.min(99, Math.round((extracted / totalFiles) * 90) + 5)
+          onFile(name, percent)
+        }
+      }
+    })
+
+    proc.stderr.on('data', () => { /* ignore stderr */ })
+
+    proc.on('close', (code) => {
+      if (code === 0 || code === null) resolve()
+      else reject(new Error(`Extraction failed (exit code ${code})`))
+    })
+
+    proc.on('error', (err) => reject(new Error(`Could not start extractor: ${err.message}`)))
+  })
 }
 
 /**
@@ -166,8 +222,8 @@ async function installMod(
   const ext = path.extname(filePath).toLowerCase()
   const isDir = fs.statSync(filePath).isDirectory()
 
-  if (!isDir && ext !== '.zip') {
-    return { ok: false, error: `Unsupported format: ${ext}. Only .zip archives are supported.` }
+  if (!isDir && !SUPPORTED_EXTENSIONS.has(ext)) {
+    return { ok: false, error: `Unsupported format: ${ext}. Supported: .zip, .7z, .rar` }
   }
 
   const rawName = isDir ? path.basename(filePath) : path.basename(filePath, ext)
@@ -176,26 +232,21 @@ async function installMod(
   const tempDir = path.join(settings.libraryPath, `_tmp_${uuidv4()}`)
 
   try {
-    sendProgress(win, 'Extracting...', 10)
+    sendProgress(win, 'Preparing...', 5)
     fs.mkdirSync(tempDir, { recursive: true })
 
     if (isDir) {
-      // Copy folder contents directly
-      const srcEntries = fs.readdirSync(filePath, { withFileTypes: true })
-      for (const entry of srcEntries) {
-        const src = path.join(filePath, entry.name)
-        const dest = path.join(tempDir, entry.name)
-        if (entry.isDirectory()) {
-          copyDirSync(src, dest)
-        } else {
-          fs.copyFileSync(src, dest)
-        }
-      }
+      sendProgress(win, 'Copying files...', 10)
+      copyDirSync(filePath, tempDir)
     } else {
-      extractZip(filePath, tempDir)
+      sendProgress(win, 'Reading archive...', 8)
+      const totalFiles = await countArchiveFiles(filePath)
+      await extractArchiveAsync(filePath, tempDir, totalFiles, (name, percent) => {
+        sendProgress(win, 'Extracting...', percent, path.basename(name))
+      })
     }
 
-    sendProgress(win, 'Detecting mod type...', 40)
+    sendProgress(win, 'Detecting mod type...', 95)
 
     // Flatten single-subfolder wrapping (common in mod archives)
     const tempContents = fs.readdirSync(tempDir)
@@ -209,7 +260,7 @@ async function installMod(
 
     const modType = detectModType(extractRoot)
 
-    sendProgress(win, 'Checking for conflicts...', 60)
+    sendProgress(win, 'Checking for conflicts...', 96)
 
     // Detect conflicts using archive hashes
     const existingMods = await scanMods(settings.libraryPath)
@@ -277,7 +328,7 @@ async function installMod(
       }
     }
 
-    sendProgress(win, 'Installing...', 80)
+    sendProgress(win, 'Installing...', 97)
 
     // Move to library
     fs.mkdirSync(modDir, { recursive: true })
