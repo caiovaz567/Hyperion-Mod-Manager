@@ -31,6 +31,10 @@ function parseNxmUrl(raw: string): NxmLinkPayload | null {
   }
 }
 
+// Module-level set so concurrent async calls can't both slip through
+// before reactive state has a chance to update
+const pendingDownloadKeys = new Set<string>()
+
 export interface InstallPromptInfo {
   mode: 'duplicate' | 'reinstall'
   existingModId: string
@@ -200,33 +204,44 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   },
 
   startNxmDownload: async (payload) => {
-    const already = get().activeDownloads.find(
+    const key = `${payload.modId}:${payload.fileId}`
+
+    // Synchronous guard (module-level Set) prevents a race condition where
+    // two NXM_LINK_RECEIVED events arrive before the first async call
+    // updates reactive state, letting both slip through the activeDownloads check.
+    if (pendingDownloadKeys.has(key)) return
+    const alreadyActive = get().activeDownloads.find(
       (d) => d.nxmModId === payload.modId && d.nxmFileId === payload.fileId &&
         (d.status === 'queued' || d.status === 'downloading')
     )
-    if (already) return
+    if (alreadyActive) return
 
-    const result = await IpcService.invoke<IpcResult<{ id: string; fileName: string }>>(
-      IPC.NXM_DOWNLOAD_START,
-      payload
-    )
-    if (!result.ok || !result.data) return
-    const { id, fileName } = result.data
-    set((state) => ({
-      activeDownloads: [
-        ...state.activeDownloads,
-        {
-          id,
-          nxmModId: payload.modId,
-          nxmFileId: payload.fileId,
-          fileName,
-          totalBytes: 0,
-          downloadedBytes: 0,
-          speedBps: 0,
-          status: 'downloading' as const,
-        },
-      ],
-    }))
+    pendingDownloadKeys.add(key)
+    try {
+      const result = await IpcService.invoke<IpcResult<{ id: string; fileName: string }>>(
+        IPC.NXM_DOWNLOAD_START,
+        payload
+      )
+      if (!result.ok || !result.data) return
+      const { id, fileName } = result.data
+      set((state) => ({
+        activeDownloads: [
+          ...state.activeDownloads,
+          {
+            id,
+            nxmModId: payload.modId,
+            nxmFileId: payload.fileId,
+            fileName,
+            totalBytes: 0,
+            downloadedBytes: 0,
+            speedBps: 0,
+            status: 'downloading' as const,
+          },
+        ],
+      }))
+    } finally {
+      pendingDownloadKeys.delete(key)
+    }
   },
 
   cancelDownload: async (id) => {
@@ -265,19 +280,14 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
 
     const unsubComplete = IpcService.on(IPC.NXM_DOWNLOAD_COMPLETE, (...args) => {
       const { id, savedPath } = args[0] as { id: string; savedPath: string; fileName: string }
-      set((state) => ({
-        activeDownloads: state.activeDownloads.map((d) =>
-          d.id === id ? { ...d, status: 'done' as const, savedPath } : d
-        ),
-      }))
-      window.setTimeout(() => {
-        set((state) => {
-          const next = [...new Set([...state.newFiles, savedPath])]
-          try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
-          return { activeDownloads: state.activeDownloads.filter((d) => d.id !== id), newFiles: next }
-        })
-        get().refreshLocalFiles().catch(() => undefined)
-      }, 1200)
+      // Remove the active row immediately and refresh local files so the file
+      // appears with the NEW badge without a double-row overlap period.
+      set((state) => {
+        const next = [...new Set([...state.newFiles, savedPath])]
+        try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
+        return { activeDownloads: state.activeDownloads.filter((d) => d.id !== id), newFiles: next }
+      })
+      get().refreshLocalFiles().catch(() => undefined)
     })
 
     const unsubError = IpcService.on(IPC.NXM_DOWNLOAD_ERROR, (...args) => {
