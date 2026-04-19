@@ -15,6 +15,7 @@ import { initializeUpdates } from './updater'
 import { registerModManagerHandlers } from './ipc/modManager'
 import { registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
+import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
 import { IPC } from '../shared/types'
 
 const DOWNLOAD_EXTENSIONS = new Set(['.zip', '.rar', '.7z'])
@@ -92,6 +93,36 @@ if (!app.isPackaged) {
 }
 
 let mainWindow: BrowserWindow | null = null
+let pendingNxmUrl: string | null = null
+
+const startupNxmArg = process.argv.find((a) => a.startsWith('nxm://'))
+if (startupNxmArg) pendingNxmUrl = startupNxmArg
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
+
+app.on('second-instance', (_event, argv) => {
+  const nxm = argv.find((a) => a.startsWith('nxm://'))
+  if (nxm) {
+    if (mainWindow) {
+      mainWindow.webContents.send(IPC.NXM_LINK_RECEIVED, nxm)
+    } else {
+      pendingNxmUrl = nxm
+    }
+  }
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+})
+
+app.on('open-url', (_event, url) => {
+  if (mainWindow) {
+    mainWindow.webContents.send(IPC.NXM_LINK_RECEIVED, url)
+  } else {
+    pendingNxmUrl = url
+  }
+})
 
 function resolveWindowIconPath(): string {
   if (process.platform === 'win32') {
@@ -244,11 +275,14 @@ app.whenReady().then(async () => {
     `).catch(() => {/* splash element may not exist */})
   })
 
+  app.setAsDefaultProtocolClient('nxm')
+
   // Register all IPC handlers
   registerGlobalHandlers()
   registerModManagerHandlers()
   registerInstallerHandlers(() => mainWindow)
   registerGameDetectorHandlers()
+  registerNexusDownloaderHandlers(() => mainWindow)
 
   // Load initial settings
   const settings = loadSettings()
@@ -271,6 +305,10 @@ app.whenReady().then(async () => {
     }
     mainWindow?.show()
     mainWindow?.focus()
+    if (pendingNxmUrl && mainWindow) {
+      mainWindow.webContents.send(IPC.NXM_LINK_RECEIVED, pendingNxmUrl)
+      pendingNxmUrl = null
+    }
   })
 
   app.on('activate', () => {

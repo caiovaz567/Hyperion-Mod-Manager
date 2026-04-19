@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
+import type { IpcResult, NexusValidateResult } from '@shared/types'
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -26,7 +27,14 @@ export const SettingsPage: React.FC = () => {
   const [gamePathValid, setGamePathValid] = useState(false)
   const [libraryPathValid, setLibraryPathValid] = useState(false)
   const [appVersion, setAppVersion] = useState('—')
-  const [activeTab, setActiveTab] = useState<'paths' | 'workspace'>('paths')
+  const [activeTab, setActiveTab] = useState<'paths' | 'workspace' | 'nexus'>('paths')
+  const [nexusApiKey, setNexusApiKey] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [nexusValidating, setNexusValidating] = useState(false)
+  const [nexusValidateResult, setNexusValidateResult] = useState<
+    { ok: true; name: string; isPremium: boolean } | { ok: false; error: string } | null
+  >(null)
+  const nexusSaveTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
 
   useEffect(() => {
     if (!defaultPaths) {
@@ -39,6 +47,7 @@ export const SettingsPage: React.FC = () => {
       setGamePath(settings.gamePath ?? '')
       setLibraryPath(settings.libraryPath ?? '')
       setDownloadPath(settings.downloadPath ?? '')
+      setNexusApiKey(settings.nexusApiKey ?? '')
     }
   }, [settings])
 
@@ -106,6 +115,47 @@ export const SettingsPage: React.FC = () => {
     return () => window.clearTimeout(timeoutId)
   }, [gamePath, libraryPath, downloadPath, settings, updateSettings, scanMods, restoreEnabledMods, purgeMods, selectMod, addToast, gamePathValid, libraryPathValid])
 
+  useEffect(() => {
+    if (!settings) return
+    if (nexusApiKey === (settings.nexusApiKey ?? '')) return
+
+    if (nexusSaveTimerRef.current) window.clearTimeout(nexusSaveTimerRef.current)
+    nexusSaveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await updateSettings({ nexusApiKey })
+        addToast('Nexus API key saved', 'success', 1800)
+        setNexusValidateResult(null)
+      } catch {
+        addToast('Could not save Nexus API key', 'error', 2600)
+      }
+    }, 600)
+
+    return () => {
+      if (nexusSaveTimerRef.current) window.clearTimeout(nexusSaveTimerRef.current)
+    }
+  }, [nexusApiKey, settings, updateSettings, addToast])
+
+  const testNexusConnection = async () => {
+    if (!nexusApiKey.trim()) return
+    setNexusValidating(true)
+    setNexusValidateResult(null)
+    try {
+      const result = await IpcService.invoke<IpcResult<NexusValidateResult>>(
+        IPC.NEXUS_VALIDATE_KEY,
+        nexusApiKey.trim()
+      )
+      if (result.ok && result.data) {
+        setNexusValidateResult({ ok: true, name: result.data.name, isPremium: result.data.isPremium })
+      } else {
+        setNexusValidateResult({ ok: false, error: result.error ?? 'Validation failed' })
+      }
+    } catch {
+      setNexusValidateResult({ ok: false, error: 'Connection error' })
+    } finally {
+      setNexusValidating(false)
+    }
+  }
+
   const applyDefaultManagedPaths = () => {
     if (!defaultPaths) return
     setLibraryPath(defaultPaths.libraryPath)
@@ -155,7 +205,7 @@ export const SettingsPage: React.FC = () => {
   const statusBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2.5 text-[9px] font-mono uppercase leading-none tracking-[0.14em]'
   const metaBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[9px] font-mono uppercase leading-none tracking-[0.14em]'
   const sectionDotClass = 'relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[#fcee09]'
-  const tabButtonClass = (tab: 'paths' | 'workspace') => `group relative flex w-full items-center gap-3 overflow-hidden rounded-sm border-[0.5px] px-3 py-3 text-left transition-all duration-200 ${
+  const tabButtonClass = (tab: 'paths' | 'workspace' | 'nexus') => `group relative flex w-full items-center gap-3 overflow-hidden rounded-sm border-[0.5px] px-3 py-3 text-left transition-all duration-200 ${
     activeTab === tab
       ? 'border-[#6a5b10] bg-transparent text-[#f1df88]'
       : 'border-[#1a1a1a] bg-transparent text-[#a3a3a3] hover:border-[#2a2a2a] hover:text-[#d0d0d0]'
@@ -198,6 +248,15 @@ export const SettingsPage: React.FC = () => {
                 <span className={`absolute inset-y-0 left-0 w-[2px] ${activeTab === 'workspace' ? 'bg-[#fcee09]' : 'bg-transparent group-hover:bg-[#2f2f2f]'}`} />
                 <span className={`h-1.5 w-1.5 flex-shrink-0 ${activeTab === 'workspace' ? 'bg-[#fcee09]' : 'bg-[#3a3a3a]'}`} />
                 <span className="text-[10px] uppercase tracking-[0.18em] font-mono">Workspace</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('nexus')}
+                className={tabButtonClass('nexus')}
+              >
+                <span className={`absolute inset-y-0 left-0 w-[2px] ${activeTab === 'nexus' ? 'bg-[#fcee09]' : 'bg-transparent group-hover:bg-[#2f2f2f]'}`} />
+                <span className={`h-1.5 w-1.5 flex-shrink-0 ${activeTab === 'nexus' ? 'bg-[#fcee09]' : 'bg-[#3a3a3a]'}`} />
+                <span className="text-[10px] uppercase tracking-[0.18em] font-mono">Nexus</span>
               </button>
             </div>
           </aside>
@@ -324,6 +383,91 @@ export const SettingsPage: React.FC = () => {
               <div className="text-[10px] uppercase tracking-[0.18em] text-[#6f6f6f] font-mono mb-3">Status</div>
               <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 text-[11px] font-mono uppercase tracking-[0.14em] text-[#8a8a8a]">
                 Workspace tab scaffold ready for expansion.
+              </div>
+            </div>
+          </div>
+          )}
+          {activeTab === 'nexus' && (
+          <div>
+            <div className="border-b-[0.5px] border-[#1a1a1a] px-5 py-5">
+              <div className="text-[10px] tracking-[0.2em] text-[#8a8a8a] uppercase font-mono font-bold mb-2">
+                Nexus Mods Integration
+              </div>
+              <p className="text-[12px] text-[#7f7f7f] font-mono leading-relaxed">
+                Personal API key enables "Mod Manager Download" buttons on nexusmods.com to route directly into Hyperion.
+              </p>
+            </div>
+
+            <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
+              <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+                <div className={sectionDotClass} />
+                <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Personal API Key</span>
+                <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Optional</span>
+                {nexusApiKey.trim() ? (
+                  nexusValidateResult ? (
+                    nexusValidateResult.ok ? (
+                      <span className={`ml-auto ${statusBadgeClass} border-[#1d3d2e] bg-[#091410] text-[#34d399]`}>
+                        {nexusValidateResult.isPremium ? 'Premium' : 'Free'} · {nexusValidateResult.name}
+                      </span>
+                    ) : (
+                      <span className={`ml-auto ${statusBadgeClass} border-[#4a1212] bg-[#150404] text-[#f87171]`}>
+                        Invalid Key
+                      </span>
+                    )
+                  ) : (
+                    <span className={`ml-auto ${statusBadgeClass} border-[#4a3f08] bg-[#0d0b00] text-[#fcee09]`}>
+                      Not Verified
+                    </span>
+                  )
+                ) : (
+                  <span className={`ml-auto ${statusBadgeClass} border-[#2a2a2a] bg-[#111] text-[#6a6a6a]`}>
+                    Not Configured
+                  </span>
+                )}
+              </div>
+              <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+                Generate a Personal API key at nexusmods.com → Account → API Keys.
+              </p>
+              <div className="flex items-center border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] mb-3">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={nexusApiKey}
+                  onChange={(e) => setNexusApiKey(e.target.value)}
+                  placeholder="Paste your Nexus API key here..."
+                  className="flex-1 bg-transparent px-4 py-3 font-mono text-sm text-[#e5e2e1] placeholder:text-[#4a4a4a] focus:outline-none"
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey((v) => !v)}
+                  className="flex h-full items-center px-3 text-[#6a6a6a] hover:text-[#e5e2e1] transition-colors"
+                  tabIndex={-1}
+                >
+                  <span className="material-symbols-outlined text-[18px]">{showApiKey ? 'visibility_off' : 'visibility'}</span>
+                </button>
+              </div>
+              <div className="flex gap-2 items-center">
+                <button
+                  onClick={() => void testNexusConnection()}
+                  disabled={!nexusApiKey.trim() || nexusValidating}
+                  className={`${accentBtn} disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  {nexusValidating ? 'Connecting...' : 'Test Connection'}
+                </button>
+                {nexusValidateResult && !nexusValidateResult.ok && (
+                  <span className="text-[11px] font-mono text-[#f87171]">{nexusValidateResult.error}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="px-5 py-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-[16px] text-[#6a6a6a]">info</span>
+                <span className="text-[10px] uppercase tracking-[0.18em] text-[#6f6f6f] font-mono">Protocol Handler</span>
+              </div>
+              <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 text-[11px] font-mono text-[#8a8a8a] leading-relaxed">
+                nxm:// links open in Hyperion automatically once the app has been launched at least once. No manual registration required.
               </div>
             </div>
           </div>

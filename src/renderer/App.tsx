@@ -41,6 +41,7 @@ export const App: React.FC = () => {
     restoreEnabledMods,
     checkForUpdates,
     setupUpdateListeners,
+    setupNxmListeners,
     activeView,
     setStatus,
     settings,
@@ -57,6 +58,7 @@ export const App: React.FC = () => {
     restoreEnabledMods: state.restoreEnabledMods,
     checkForUpdates: state.checkForUpdates,
     setupUpdateListeners: state.setupUpdateListeners,
+    setupNxmListeners: state.setupNxmListeners,
     activeView: state.activeView,
     setStatus: state.setStatus,
     settings: state.settings,
@@ -97,7 +99,9 @@ export const App: React.FC = () => {
         await restoreEnabledMods(scannedMods)
       }
 
-      cleanup = setupUpdateListeners()
+      const cleanupUpdates = setupUpdateListeners()
+      const cleanupNxm = setupNxmListeners()
+      cleanup = () => { cleanupUpdates(); cleanupNxm() }
 
       if (!import.meta.env.DEV && currentSettings.autoUpdate) {
         void checkForUpdates().catch(() => undefined)
@@ -129,7 +133,7 @@ export const App: React.FC = () => {
       })
     })
 
-    return () => { cleanup?.() }
+    return () => cleanup?.()
   }, [])
 
   useEffect(() => {

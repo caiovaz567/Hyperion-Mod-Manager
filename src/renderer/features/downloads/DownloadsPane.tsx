@@ -6,7 +6,13 @@ import { IPC } from '@shared/types'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { Tooltip } from '../ui/Tooltip'
 
+const formatSpeed = (bps: number): string => {
+  if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`
+  return `${(bps / 1024 / 1024).toFixed(1)} MB/s`
+}
+
 const formatSize = (bytes: number): string => {
+  if (bytes <= 0) return '—'
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
@@ -23,24 +29,16 @@ const formatDate = (value: string): string => {
 }
 
 const copySuffixPattern = /\sCopy(?:\s\d+)?$/i
-
 const isCopyVariant = (name: string): boolean => copySuffixPattern.test(name.trim())
-
 const getInstalledTimestamp = (installedAt?: string): number => {
   if (!installedAt) return Number.POSITIVE_INFINITY
-
-  const timestamp = Date.parse(installedAt)
-  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp
+  const ts = Date.parse(installedAt)
+  return Number.isNaN(ts) ? Number.POSITIVE_INFINITY : ts
 }
-
 const shouldPreferReinstallTarget = (candidate: ModMetadata, current: ModMetadata): boolean => {
   const candidateIsCopy = isCopyVariant(candidate.name)
   const currentIsCopy = isCopyVariant(current.name)
-
-  if (candidateIsCopy !== currentIsCopy) {
-    return !candidateIsCopy
-  }
-
+  if (candidateIsCopy !== currentIsCopy) return !candidateIsCopy
   return getInstalledTimestamp(candidate.installedAt) < getInstalledTimestamp(current.installedAt)
 }
 
@@ -56,43 +54,38 @@ export const DownloadsPane: React.FC = () => {
     openReinstallPrompt,
     gamePathValid,
     libraryPathValid,
+    activeDownloads,
+    localFiles,
+    refreshLocalFiles,
+    cancelDownload,
   } = useAppStore()
-  const hasRequiredPaths = Boolean(settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid)
-  const [downloads, setDownloads] = useState<DownloadEntry[]>([])
+
+  const hasRequiredPaths = Boolean(
+    settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid
+  )
+
   const [loading, setLoading] = useState(true)
   const [installingPath, setInstallingPath] = useState<string | null>(null)
   const [pendingDeleteDownload, setPendingDeleteDownload] = useState<DownloadEntry | null>(null)
 
-  const refreshDownloads = async () => {
+  const doRefresh = async () => {
     setLoading(true)
-    const result = await IpcService.invoke<IpcResult<DownloadEntry[]>>(IPC.LIST_DOWNLOADS)
-    if (!result.ok || !result.data) {
-      addToast(result.error ?? 'Could not scan downloads folder', 'error')
-      setDownloads([])
-      setLoading(false)
-      return
-    }
-    setDownloads(result.data)
+    await refreshLocalFiles().catch(() => undefined)
     setLoading(false)
   }
 
   useEffect(() => {
-    refreshDownloads().catch(() => {
-      addToast('Could not scan downloads folder', 'error')
-      setLoading(false)
-    })
+    doRefresh().catch(() => setLoading(false))
   }, [settings?.downloadPath])
 
-  const latestDownloads = useMemo(() => downloads.slice(0, 16), [downloads])
   const installedBySourcePath = useMemo(() => {
     const map = new Map<string, ModMetadata>()
     for (const mod of mods) {
       if (mod.kind !== 'mod' || !mod.sourcePath) continue
-
-      const sourcePathKey = mod.sourcePath.toLowerCase()
-      const existing = map.get(sourcePathKey)
+      const key = mod.sourcePath.toLowerCase()
+      const existing = map.get(key)
       if (!existing || shouldPreferReinstallTarget(mod, existing)) {
-        map.set(sourcePathKey, mod)
+        map.set(key, mod)
       }
     }
     return map
@@ -127,7 +120,6 @@ export const DownloadsPane: React.FC = () => {
         addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
         return
       }
-
       addToast(`${installResult.data.mod.name} installed & activated`, 'success')
       return
     }
@@ -145,105 +137,168 @@ export const DownloadsPane: React.FC = () => {
 
   const handleDeleteDownload = async () => {
     if (!pendingDeleteDownload) return
-
     const result = await IpcService.invoke<IpcResult>(IPC.DELETE_DOWNLOAD, pendingDeleteDownload.path)
     if (!result.ok) {
       addToast(result.error ?? 'Could not delete download', 'error')
       return
     }
-
     setPendingDeleteDownload(null)
     addToast(`${pendingDeleteDownload.name} deleted`, 'success')
-    await refreshDownloads()
+    await doRefresh()
   }
 
+  const LABEL = 'text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold'
+
   return (
-    <div className="h-full overflow-y-auto hyperion-scrollbar pb-16 animate-settings-in">
-      <div className="max-w-6xl mx-auto px-8 py-10">
-        <div className="flex items-end justify-between mb-6 gap-6">
+    <div className="h-full flex flex-col animate-settings-in">
+      {/* Fixed header */}
+      <div className="shrink-0 px-8 pt-6 pb-3 w-full">
+        <div className="flex items-center justify-between gap-6">
           <div>
-            <h1 className="brand-font text-xl font-bold tracking-[0.18em] uppercase text-white">Downloads</h1>
-            <p className="mt-2 text-[11px] text-[#8a8a8a] font-mono tracking-[0.15em] uppercase">
-              Indexed from the configured downloads path
+            <h1 className="brand-font text-xl font-bold tracking-[0.18em] uppercase text-white leading-none">
+              Downloads
+            </h1>
+            <p className="mt-1 text-[10px] text-[#8a8a8a] font-mono tracking-[0.15em] uppercase">
+              {activeDownloads.length > 0 ? `${activeDownloads.length} active · ` : ''}{localFiles.length} local
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={refreshDownloads}
-              className="px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] text-[#9a9a9a] rounded-sm text-[10px] brand-font font-semibold uppercase tracking-widest hover:text-white hover:border-[#7a7a7a] transition-colors"
+              onClick={() => void doRefresh()}
+              className="h-10 px-4 bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] text-[#9a9a9a] rounded-sm text-[10px] brand-font font-semibold uppercase tracking-widest hover:text-white hover:border-[#7a7a7a] transition-colors"
             >
               Refresh
             </button>
             <button
               onClick={openDownloadsFolder}
-              className="px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors"
+              className="h-10 px-4 bg-[#fcee09] text-[#050505] rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors"
             >
               Open Folder
             </button>
           </div>
         </div>
+      </div>
 
-        <div className="mb-6 border-[0.5px] border-[#1a1a1a] bg-[#070707] shadow-[0_4px_14px_rgba(0,0,0,0.22)]">
-          <div className="grid grid-cols-[minmax(0,1fr)_120px_120px_auto] gap-4 px-5 py-4 items-center">
-            <div className="min-w-0">
-              <div className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold mb-2">Downloads Path</div>
-              <div className="text-[#e5e2e1] text-sm truncate">{settings?.downloadPath || 'Not configured'}</div>
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto hyperion-scrollbar px-8 pb-6">
+
+        {/* Active Downloads */}
+        {activeDownloads.length > 0 && (
+          <div className="mb-6">
+            <div className={`${LABEL} mb-2`}>Active Downloads</div>
+            <div className="bg-[#050505] border-[0.5px] border-[#1a1a1a] rounded-sm overflow-hidden">
+              {activeDownloads.map((dl) => {
+                const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
+                const isDone = dl.status === 'done'
+                const isError = dl.status === 'error'
+                return (
+                  <div
+                    key={dl.id}
+                    className="grid px-5 py-[5px] border-b-[0.5px] border-[#111] last:border-b-0"
+                    style={{ gridTemplateColumns: 'minmax(0,1fr) 90px 32px' }}
+                  >
+                    {/* Col 1: name + progress bar + size */}
+                    <div className="min-w-0 pr-4">
+                      <div className="truncate text-[#e5e2e1] text-[12px] leading-tight">{dl.fileName}</div>
+                      <div className="mt-[3px] h-[3px] bg-[#111] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${isDone ? 'bg-[#34d399]' : isError ? 'bg-[#f87171]' : 'bg-[#fcee09]'}`}
+                          style={{ width: `${isDone ? 100 : pct}%` }}
+                        />
+                      </div>
+                      <div className="mt-[2px] text-[10px] font-mono text-[#6a6a6a]">
+                        {dl.totalBytes > 0
+                          ? `${formatSize(dl.downloadedBytes)} / ${formatSize(dl.totalBytes)}`
+                          : dl.downloadedBytes > 0 ? formatSize(dl.downloadedBytes) : '—'}
+                      </div>
+                    </div>
+
+                    {/* Col 2: speed / status */}
+                    <div className="flex items-center justify-end">
+                      {isDone ? (
+                        <span className="text-[10px] font-mono text-[#34d399] uppercase tracking-wider">Done</span>
+                      ) : isError ? (
+                        <span className="text-[10px] font-mono text-[#f87171] uppercase tracking-wider">Error</span>
+                      ) : dl.speedBps > 0 ? (
+                        <span className="text-[10px] font-mono text-[#9a9a9a]">{formatSpeed(dl.speedBps)}</span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-[#6a6a6a]">Starting…</span>
+                      )}
+                    </div>
+
+                    {/* Col 3: cancel button */}
+                    <div className="flex items-center justify-end">
+                      {(dl.status === 'queued' || dl.status === 'downloading') && (
+                        <Tooltip content="Cancel download">
+                          <button
+                            onClick={() => void cancelDownload(dl.id)}
+                            className="flex h-7 w-7 items-center justify-center rounded-sm text-[#6a6a6a] hover:text-[#ff4d4f] transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">close</span>
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3">
-              <div className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold mb-2">Files</div>
-              <div className="text-xl text-white font-semibold">{downloads.length}</div>
-            </div>
-            <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3">
-              <div className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold mb-2">Zip Ready</div>
-              <div className="text-xl text-[#fcee09] font-semibold">{downloads.filter((entry) => entry.extension === '.zip').length}</div>
-            </div>
-            <button
-              onClick={() => setActiveView('settings')}
-              className="px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] text-[#9a9a9a] rounded-sm text-[10px] brand-font font-semibold uppercase tracking-widest hover:text-white hover:border-[#7a7a7a] transition-colors justify-self-end"
+          </div>
+        )}
+
+        {/* Local Files */}
+        <div>
+          <div className={`${LABEL} mb-2`}>Local Files</div>
+          <div className="border-[0.5px] border-[#1a1a1a] bg-[#050505] overflow-hidden">
+            {/* Column headers */}
+            <div
+              className="grid px-5 h-8 items-center border-b-[0.5px] border-[#1a1a1a] bg-[#0a0a0a]"
+              style={{ gridTemplateColumns: 'minmax(300px,1fr) 80px 120px auto' }}
             >
-              Configure Paths
-            </button>
-          </div>
-        </div>
-
-        <div className="border-[0.5px] border-[#1a1a1a] bg-[#050505] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
-          <div className="grid grid-cols-[minmax(340px,1fr)_110px_140px_200px] gap-4 px-5 py-3 border-b-[0.5px] border-[#1a1a1a] bg-[#0a0a0a]">
-              <span className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold">Name</span>
-              <span className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold">Format</span>
-              <span className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold">Modified</span>
-              <span className="text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold text-left">Actions</span>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">Scanning downloads...</div>
-          ) : latestDownloads.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4 px-8 text-center">
-              <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">download</span>
-              <div className="text-[#8a8a8a] text-sm font-mono tracking-tight">
-                {settings?.downloadPath ? 'No archives found in the downloads folder' : 'Set a downloads path in Configuration first'}
-              </div>
+              <span className={LABEL}>Name</span>
+              <span className={LABEL}>Format</span>
+              <span className={LABEL}>Modified</span>
+              <span className={LABEL}>Actions</span>
             </div>
-          ) : (
-            <div>
-              {latestDownloads.map((entry) => {
+
+            {loading ? (
+              <div className="flex items-center justify-center py-16 text-[#8a8a8a] font-mono text-sm">
+                Scanning downloads...
+              </div>
+            ) : localFiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 px-8 text-center">
+                <span className="material-symbols-outlined text-[40px] text-[#4a4a4a]">download</span>
+                <div className="text-[#6a6a6a] text-[11px] font-mono tracking-tight">
+                  {settings?.downloadPath
+                    ? 'No archives found in the downloads folder'
+                    : 'Set a downloads path in Configuration first'}
+                </div>
+              </div>
+            ) : (
+              localFiles.map((entry) => {
                 const isInstalling = installingPath === entry.path
                 const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
                 return (
                   <div
                     key={entry.path}
-                    className="grid grid-cols-[minmax(340px,1fr)_110px_140px_200px] gap-4 px-5 py-3 border-b-[0.5px] border-[#1a1a1a] hover:bg-[#0a0a0a] transition-colors"
+                    className="grid px-5 py-[5px] border-b-[0.5px] border-[#111] hover:bg-[#080808] transition-colors"
+                    style={{ gridTemplateColumns: 'minmax(300px,1fr) 80px 120px auto' }}
                   >
-                    <div className="min-w-0">
-                      <div className="truncate text-[#e5e2e1] text-sm">{entry.name}</div>
-                      <div className="mt-1 text-[#8a8a8a] text-[11px] font-mono">{formatSize(entry.size)}</div>
+                    <div className="min-w-0 flex flex-col justify-center">
+                      <div className="truncate text-[#e5e2e1] text-[12px]">{entry.name}</div>
+                      <div className="text-[#6a6a6a] text-[10px] font-mono">{formatSize(entry.size)}</div>
                     </div>
-                    <div className="flex items-center text-[#9a9a9a] text-[11px] font-mono uppercase">{entry.extension.replace('.', '')}</div>
-                    <div className="flex items-center text-[#8a8a8a] text-[11px] font-mono">{formatDate(entry.modifiedAt)}</div>
+                    <div className="flex items-center text-[#7a7a7a] text-[10px] font-mono uppercase">
+                      {entry.extension.replace('.', '')}
+                    </div>
+                    <div className="flex items-center text-[#6a6a6a] text-[10px] font-mono">
+                      {formatDate(entry.modifiedAt)}
+                    </div>
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => handleInstall(entry)}
+                        onClick={() => void handleInstall(entry)}
                         disabled={isInstalling}
-                        className={`group px-3 py-1.5 rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${
+                        className={`group px-3 py-1 rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${
                           installedMod
                             ? 'bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white hover:border-[#fcee09] hover:text-[#fcee09]'
                             : 'bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/40 text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
@@ -263,35 +318,35 @@ export const DownloadsPane: React.FC = () => {
                       <Tooltip content="Delete download">
                         <button
                           onClick={() => setPendingDeleteDownload(entry)}
-                          className="ml-auto flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] text-[#8a8a8a] hover:border-[#ff4d4f]/50 hover:text-[#ff4d4f] transition-colors"
+                          className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#1a1a1a] text-[#6a6a6a] hover:border-[#ff4d4f]/50 hover:text-[#ff4d4f] transition-colors"
                         >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
                         </button>
                       </Tooltip>
                     </div>
                   </div>
                 )
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
         </div>
-
-        {pendingDeleteDownload && (
-          <ActionPromptDialog
-            accentColor="#ff4d4f"
-            accentGlow="rgba(255,77,79,0.45)"
-            title="Delete Download"
-            description={`You are about to permanently delete ${pendingDeleteDownload.name} from your downloads path.`}
-            detailLabel="Target file"
-            detailValue={pendingDeleteDownload.name}
-            icon="delete"
-            primaryLabel="Delete"
-            onPrimary={handleDeleteDownload}
-            onCancel={() => setPendingDeleteDownload(null)}
-            primaryTextColor="#ffffff"
-          />
-        )}
       </div>
+
+      {pendingDeleteDownload && (
+        <ActionPromptDialog
+          accentColor="#ff4d4f"
+          accentGlow="rgba(255,77,79,0.45)"
+          title="Delete Download"
+          description={`You are about to permanently delete ${pendingDeleteDownload.name} from your downloads path.`}
+          detailLabel="Target file"
+          detailValue={pendingDeleteDownload.name}
+          icon="delete"
+          primaryLabel="Delete"
+          onPrimary={() => void handleDeleteDownload()}
+          onCancel={() => setPendingDeleteDownload(null)}
+          primaryTextColor="#ffffff"
+        />
+      )}
     </div>
   )
 }

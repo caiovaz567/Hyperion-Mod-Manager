@@ -44,6 +44,39 @@ export interface AppSettings {
   downloadPath: string
   theme: 'dark'
   autoUpdate: boolean
+  nexusApiKey: string
+}
+
+// ─── Nexus / NXM ─────────────────────────────────────────────────────────────
+
+export interface ActiveDownload {
+  id: string
+  nxmModId: number
+  nxmFileId: number
+  fileName: string
+  totalBytes: number
+  downloadedBytes: number
+  speedBps: number
+  status: 'queued' | 'downloading' | 'done' | 'error'
+  error?: string
+  savedPath?: string
+}
+
+export interface NxmLinkPayload {
+  modId: number
+  fileId: number
+  key: string
+  expires: number
+  userId: number
+  raw: string
+}
+
+export interface NexusValidateResult {
+  userId: number
+  key: string
+  name: string
+  isPremium: boolean
+  email: string
 }
 
 export interface PathDefaults {
@@ -178,6 +211,15 @@ export const IPC = {
   UPDATE_PROGRESS: 'update:progress',
   UPDATE_DOWNLOADED: 'update:downloaded',
   UPDATE_ERROR: 'update:error',
+
+  // Nexus / NXM
+  NXM_LINK_RECEIVED:     'nxm:linkReceived',
+  NXM_DOWNLOAD_START:    'nxm:downloadStart',
+  NXM_DOWNLOAD_PROGRESS: 'nxm:downloadProgress',
+  NXM_DOWNLOAD_COMPLETE: 'nxm:downloadComplete',
+  NXM_DOWNLOAD_ERROR:    'nxm:downloadError',
+  NXM_DOWNLOAD_CANCEL:   'nxm:downloadCancel',
+  NEXUS_VALIDATE_KEY:    'nexus:validateKey',
 
   // App / Dialogs
   APP_READY: 'app:ready',
