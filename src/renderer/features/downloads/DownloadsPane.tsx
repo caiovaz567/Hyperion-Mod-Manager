@@ -275,37 +275,39 @@ export const DownloadsPane: React.FC = () => {
                       style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
                     />
 
-                    {/* Col 1: name + progress bar + sizes + % */}
-                    <div className="flex flex-col justify-center gap-[3px] overflow-hidden pl-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium tracking-tight truncate text-sm" style={{ color: accent }}>
-                          {dl.fileName}
-                        </span>
-                        {isDone && (
-                          <span className="shrink-0 flex items-center gap-1 text-[#34d399] text-[10px] font-mono">
-                            <span className="material-symbols-outlined text-[13px]">check_circle</span>
-                            Done
-                          </span>
-                        )}
-                        {isError && (
-                          <span className="shrink-0 text-[#f87171] text-[10px] font-mono truncate">
-                            {dl.error ?? 'Failed'}
-                          </span>
-                        )}
-                      </div>
-                      {!isDone && !isError && (
-                        <>
-                          <div className="h-[2px] bg-[#1a1a1a] rounded-full overflow-hidden">
-                            <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: accent }} />
+                    {/* Col 1: name + tall progress bar with stats inside */}
+                    <div className="flex flex-col justify-center gap-[5px] overflow-hidden pl-1">
+                      <span className="font-medium tracking-tight truncate text-sm text-white">
+                        {dl.fileName}
+                      </span>
+                      {!isDone && !isError ? (
+                        <div className="relative h-6 rounded-sm overflow-hidden" style={{ background: '#0e0e0e', border: '0.5px solid #1e1e1e' }}>
+                          {/* Fill */}
+                          <div
+                            className="absolute inset-y-0 left-0 transition-all duration-500"
+                            style={{ width: `${pct}%`, background: `${accent}22` }}
+                          />
+                          {/* Leading edge line */}
+                          <div
+                            className="absolute inset-y-0 w-px transition-all duration-500"
+                            style={{ left: `${Math.min(pct, 99.6)}%`, background: accent, boxShadow: `0 0 6px ${accent}aa` }}
+                          />
+                          {/* Stats text inside */}
+                          <div className="relative z-10 flex h-full items-center justify-between px-2.5">
+                            <span className="text-[10px] font-mono" style={{ color: accent }}>
+                              {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)} · {pct}%
+                            </span>
+                            <span className="text-[10px] font-mono text-[#8a8a8a]">
+                              {formatSpeed(dl.speedBps)}{eta ? ` · ETA ${eta}` : ''}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-mono text-[#7a7a7a]">
-                            {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)} · {pct}%
-                          </span>
-                        </>
-                      )}
+                        </div>
+                      ) : isError ? (
+                        <span className="text-[10px] font-mono text-[#f87171] truncate">{dl.error ?? 'Download failed'}</span>
+                      ) : null}
                     </div>
 
-                    {/* Col 2: format badge (same as local files) */}
+                    {/* Col 2: format badge */}
                     <div className="flex items-center">
                       <span
                         className="inline-flex h-5 items-center px-1.5 rounded-sm text-[10px] font-bold font-mono tracking-wide uppercase border-[0.5px]"
@@ -315,15 +317,8 @@ export const DownloadsPane: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Col 3: speed + ETA */}
-                    <div className="flex flex-col justify-center gap-[3px]">
-                      {!isDone && !isError && (
-                        <>
-                          <span className="text-[11px] font-mono text-[#9a9a9a]">{formatSpeed(dl.speedBps)}</span>
-                          {eta && <span className="text-[10px] font-mono text-[#6a6a6a]">ETA {eta}</span>}
-                        </>
-                      )}
-                    </div>
+                    {/* Col 3: empty — MODIFIED doesn't apply to active downloads */}
+                    <div />
 
                     {/* Col 4: cancel */}
                     <div className="flex items-center justify-end">
