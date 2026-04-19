@@ -99,10 +99,8 @@ export const App: React.FC = () => {
       const cleanupNxm = setupNxmListeners()
       cleanup = () => { cleanupUpdates(); cleanupNxm() }
 
-      // Await mod restore before showing window so the main process isn't
-      // doing heavy filesystem work while the UI is already visible.
       if (hasValidGamePath && hasValidLibraryPath) {
-        await restoreEnabledMods(scannedMods).catch(() => undefined)
+        void restoreEnabledMods(scannedMods).catch(() => undefined)
       }
 
       if (!import.meta.env.DEV && currentSettings.autoUpdate) {
@@ -121,21 +119,10 @@ export const App: React.FC = () => {
 
       setStatus('Ready')
       setBooting(false)
-      // Double RAF: first tick lets React render and commit the full UI to the
-      // DOM; second tick ensures the browser has painted that frame before we
-      // signal the main process to close the splash and show the window.
+      // RAF ensures React has rendered the full UI to the DOM before we
+      // signal the main process to show the window.
       window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          IpcService.send(IPC.APP_READY)
-        })
-      })
-    }
-
-    const sendReady = () => {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          IpcService.send(IPC.APP_READY)
-        })
+        IpcService.send(IPC.APP_READY)
       })
     }
 
@@ -143,7 +130,9 @@ export const App: React.FC = () => {
       console.error(error)
       setStatus('Ready')
       setBooting(false)
-      sendReady()
+      window.requestAnimationFrame(() => {
+        IpcService.send(IPC.APP_READY)
+      })
     })
 
     return () => cleanup?.()

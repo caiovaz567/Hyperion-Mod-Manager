@@ -303,13 +303,15 @@ app.whenReady().then(async () => {
   // Initialize auto-updater
   initializeUpdates(mainWindow)
 
-  // When renderer is ready, close splash and show main window
+  // When renderer is ready, show main window first then close splash.
+  // Showing before closing prevents Windows from reassigning focus to
+  // another window (or the taskbar) between the two operations.
   ipcMain.once(IPC.APP_READY, () => {
+    mainWindow?.show()
+    mainWindow?.focus()
     if (!splash.isDestroyed()) {
       splash.close()
     }
-    mainWindow?.show()
-    mainWindow?.focus()
     if (pendingNxmUrl && mainWindow) {
       mainWindow.webContents.send(IPC.NXM_LINK_RECEIVED, pendingNxmUrl)
       pendingNxmUrl = null
