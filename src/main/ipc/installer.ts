@@ -230,6 +230,7 @@ async function installMod(
   const normalizedName = normalizeModName(rawName)
   const folderBase = sanitizeFolderName(rawName)
   const tempDir = path.join(settings.libraryPath, `_tmp_${uuidv4()}`)
+  let modDir = ''
 
   try {
     sendProgress(win, 'Preparing...', 5)
@@ -298,7 +299,7 @@ async function installMod(
     const folderName = duplicateAction === 'replace' && duplicateMod?.folderName
       ? duplicateMod.folderName
       : uniqueFolderName(settings.libraryPath, sanitizeFolderName(modName))
-    const modDir = path.join(settings.libraryPath, folderName)
+    modDir = path.join(settings.libraryPath, folderName)
     const enabledMods = existingMods.filter(
       (m) => m.enabled && m.kind === 'mod' && m.uuid !== duplicateMod?.uuid
     )
@@ -377,7 +378,7 @@ async function installMod(
   } catch (err: unknown) {
     // Cleanup on failure
     fs.rmSync(tempDir, { recursive: true, force: true })
-    if (fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true })
+    if (modDir && fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true })
     return { ok: false, error: String(err) }
   }
 }
