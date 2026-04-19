@@ -42,7 +42,8 @@ const formatDate = (value: string): string => {
   const dd = String(date.getDate()).padStart(2, '0')
   const hh = String(date.getHours()).padStart(2, '0')
   const min = String(date.getMinutes()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}`
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
 }
 
 const copySuffixPattern = /\sCopy(?:\s\d+)?$/i
@@ -180,277 +181,260 @@ export const DownloadsPane: React.FC = () => {
   }
 
   return (
-    <div className="h-full pb-16 animate-settings-in">
-      <div className="flex h-full overflow-hidden">
-        <div className="hyperion-scrollbar flex-1 overflow-y-auto">
-          <div className="p-8 pb-24 max-w-[1600px] mx-auto">
+    <div className="h-full animate-settings-in">
+      <div className="flex flex-col h-full overflow-hidden">
 
-            {/* Header — matches ModList */}
-            <div className="mb-8">
-              <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
-                Downloads
-              </h1>
-              <p className="text-[#9a9a9a] text-xs mt-1.5 flex items-center gap-2 font-mono tracking-tight">
-                LOCAL: {localFiles.length}
-                {activeDownloads.length > 0 && <>&nbsp;|&nbsp; ACTIVE: {activeDownloads.length}</>}
-              </p>
-              <p className="text-[#818181] text-[10px] mt-2 font-mono uppercase tracking-[0.18em] leading-relaxed">
-                Tip: Click "Mod Manager Download" on Nexus Mods to route the file directly into Hyperion.
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <button
-                  onClick={() => void doRefresh()}
-                  className="flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] border-[#252525] bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:border-[#fcee09]/30 hover:text-white"
-                >
-                  <span className="material-symbols-outlined text-[15px]">refresh</span>
-                  Refresh
-                </button>
-                <button
-                  onClick={openDownloadsFolder}
-                  className="flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] border-[#252525] bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:border-[#fcee09]/30 hover:text-white"
-                >
-                  <span className="material-symbols-outlined text-[15px]">folder_open</span>
-                  Open Folder
-                </button>
+        {/* Fixed header — does not scroll */}
+        <div className="shrink-0 px-8 pt-6 pb-3 w-full">
+          <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
+            Downloads
+          </h1>
+          <p className="text-[#9a9a9a] text-xs mt-1 flex items-center gap-2 font-mono tracking-tight">
+            LOCAL: {localFiles.length}
+            {activeDownloads.length > 0 && <>&nbsp;|&nbsp; ACTIVE: {activeDownloads.length}</>}
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              onClick={() => void doRefresh()}
+              className="flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] border-[#252525] bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:border-[#fcee09]/30 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              Refresh
+            </button>
+            <button
+              onClick={openDownloadsFolder}
+              className="flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] border-[#252525] bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:border-[#fcee09]/30 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-[16px]">folder_open</span>
+              Open Folder
+            </button>
+          </div>
+        </div>
+
+        {/* Active downloads — compact cards, only shown when active */}
+        {activeDownloads.length > 0 && (
+          <div className="shrink-0 px-8 pb-3">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+              {activeDownloads.map((dl) => {
+                const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
+                const isDone = dl.status === 'done'
+                const isError = dl.status === 'error'
+                const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
+                const eta = isDone || isError ? '—' : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
+
+                return (
+                  <div
+                    key={dl.id}
+                    className="relative bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] rounded-sm p-4 overflow-hidden"
+                  >
+                    <div
+                      className="absolute inset-y-0 left-0 w-[3px]"
+                      style={{ background: accent, boxShadow: `0 0 10px ${accent}55` }}
+                    />
+                    <div className="flex items-start justify-between gap-4 mb-2 pl-2">
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className="truncate brand-font font-bold tracking-wider uppercase text-sm leading-tight"
+                          style={{ color: accent }}
+                        >
+                          {dl.fileName}
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-[#7a7a7a] font-mono uppercase tracking-[0.14em]">
+                          MOD {dl.nxmModId} · FILE {dl.nxmFileId}
+                        </div>
+                      </div>
+                      <div className="text-xl text-white font-bold brand-font tabular-nums leading-none mt-0.5">
+                        {pct}%
+                      </div>
+                    </div>
+
+                    <div className="h-[3px] bg-[#111] rounded-full overflow-hidden mb-2 ml-2">
+                      <div
+                        className="h-full transition-all duration-500"
+                        style={{
+                          width: `${isDone ? 100 : pct}%`,
+                          background: accent,
+                          boxShadow: `0 0 6px ${accent}55`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pl-2">
+                      <div className="flex items-center gap-3 text-[10px] font-mono text-[#9a9a9a] min-w-0">
+                        {isError ? (
+                          <span className="text-[#f87171] truncate">{dl.error ?? 'Download failed'}</span>
+                        ) : isDone ? (
+                          <span className="flex items-center gap-1 text-[#34d399]">
+                            <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                            Complete
+                          </span>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px] text-[#7a7a7a]">download</span>
+                              {formatSpeed(dl.speedBps)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px] text-[#7a7a7a]">schedule</span>
+                              ETA {eta}
+                            </span>
+                            <span className="text-[#5a5a5a]">
+                              {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      {!isDone && !isError && (
+                        <Tooltip content="Cancel download">
+                          <button
+                            onClick={() => void cancelDownload(dl.id)}
+                            className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">close</span>
+                          </button>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Table — has its own scroll, toolbar stays fixed above */}
+        <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
+          <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)] flex flex-col">
+
+            {/* Column headers — never scroll */}
+            <div
+              className="shrink-0 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+              style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+            >
+              <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                Archive Name
+              </div>
+              <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                Format
+              </div>
+              <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                Modified
+              </div>
+              <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                Actions
               </div>
             </div>
 
-            {/* Active Downloads — compact card grid */}
-            {activeDownloads.length > 0 && (
-              <div className="mb-8">
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 bg-[#fcee09] flex-shrink-0" />
-                  <span className="text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                    Active Transfers
-                  </span>
-                  <span className="text-[10px] font-mono text-[#5a5a5a]">· {activeDownloads.length}</span>
+            {/* Scrollable rows */}
+            <div className="hyperion-scrollbar flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
+                  Scanning downloads...
                 </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  {activeDownloads.map((dl) => {
-                    const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
-                    const isDone = dl.status === 'done'
-                    const isError = dl.status === 'error'
-                    const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
-                    const eta = isDone || isError ? '—' : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
+              ) : localFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                  <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">download</span>
+                  <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
+                    {settings?.downloadPath
+                      ? 'No archives found in the downloads folder'
+                      : 'Set a downloads path in Configuration first'}
+                  </span>
+                  {!settings?.downloadPath && (
+                    <button
+                      onClick={() => setActiveView('settings')}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">settings</span>
+                      Configuration
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {localFiles.map((entry, index) => {
+                    const isInstalling = installingPath === entry.path
+                    const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
+                    const rowBg =
+                      index % 2 === 0 ? 'bg-[#050505] hover:bg-[#141414]' : 'bg-[#0a0a0a] hover:bg-[#161616]'
 
                     return (
                       <div
-                        key={dl.id}
-                        className="group relative bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] rounded-sm p-4 hover:border-[#2a2a2a] transition-colors overflow-hidden"
+                        key={entry.path}
+                        className={`grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow] duration-150 ${rowBg} hover:border-[#363636]`}
+                        style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
                       >
-                        {/* Left accent bar */}
                         <div
-                          className="absolute inset-y-0 left-0 w-[3px]"
-                          style={{ background: accent, boxShadow: `0 0 10px ${accent}55` }}
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                          style={{
+                            background:
+                              'linear-gradient(90deg, rgba(252,238,9,0.05) 0%, rgba(252,238,9,0.02) 18%, rgba(255,255,255,0) 60%)',
+                          }}
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-[#fcee09]/55 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
                         />
 
-                        {/* Top row: title + percentage */}
-                        <div className="flex items-start justify-between gap-4 mb-2 pl-2">
-                          <div className="min-w-0 flex-1">
-                            <div
-                              className="truncate brand-font font-bold tracking-wider uppercase text-sm leading-tight"
-                              style={{ color: accent }}
-                            >
-                              {dl.fileName}
-                            </div>
-                            <div className="mt-1 text-[10px] text-[#7a7a7a] font-mono uppercase tracking-[0.16em]">
-                              MOD {dl.nxmModId} · FILE {dl.nxmFileId}
-                            </div>
-                          </div>
-                          <div className="text-2xl text-white font-bold brand-font tabular-nums leading-none mt-0.5">
-                            {pct}%
-                          </div>
+                        <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
+                          <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
+                            {entry.name}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#7a7a7a] tracking-tight">
+                            {formatSize(entry.size)}
+                          </span>
                         </div>
 
-                        {/* Progress bar */}
-                        <div className="h-[4px] bg-[#111] rounded-full overflow-hidden mb-3 ml-2">
-                          <div
-                            className="h-full transition-all duration-500"
-                            style={{
-                              width: `${isDone ? 100 : pct}%`,
-                              background: accent,
-                              boxShadow: `0 0 8px ${accent}66`,
-                            }}
-                          />
+                        <div className="flex items-center">
+                          <span className="px-2.5 py-[3px] border-[0.5px] border-[#222] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm text-[#9a9a9a] transition-colors">
+                            {entry.extension.replace('.', '').toUpperCase()}
+                          </span>
                         </div>
 
-                        {/* Bottom row: stats + actions */}
-                        <div className="flex items-center justify-between gap-4 pl-2">
-                          <div className="flex items-center gap-4 text-[11px] font-mono text-[#9a9a9a] min-w-0">
-                            {isError ? (
-                              <span className="text-[#f87171] truncate">{dl.error ?? 'Download failed'}</span>
-                            ) : isDone ? (
-                              <span className="flex items-center gap-1.5 text-[#34d399]">
-                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                                Complete
-                              </span>
-                            ) : (
+                        <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
+                          {formatDate(entry.modifiedAt)}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => void handleInstall(entry)}
+                            disabled={isInstalling}
+                            className={`group/btn h-7 px-3 rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${
+                              installedMod
+                                ? 'bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white hover:border-[#fcee09] hover:text-[#fcee09]'
+                                : 'bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/40 text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
+                            } disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]`}
+                          >
+                            {isInstalling ? (
+                              'Installing'
+                            ) : installedMod ? (
                               <>
-                                <span className="flex items-center gap-1.5">
-                                  <span className="material-symbols-outlined text-[14px] text-[#7a7a7a]">download</span>
-                                  {formatSpeed(dl.speedBps)}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <span className="material-symbols-outlined text-[14px] text-[#7a7a7a]">schedule</span>
-                                  ETA {eta}
-                                </span>
-                                <span className="hidden sm:inline text-[#5a5a5a] truncate">
-                                  {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)}
-                                </span>
+                                <span className="group-hover/btn:hidden">Installed</span>
+                                <span className="hidden group-hover/btn:inline">Reinstall</span>
                               </>
+                            ) : (
+                              'Install'
                             )}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {!isDone && !isError && (
-                              <Tooltip content="Cancel download">
-                                <button
-                                  onClick={() => void cancelDownload(dl.id)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
-                                >
-                                  <span className="material-symbols-outlined text-[15px]">close</span>
-                                </button>
-                              </Tooltip>
-                            )}
-                          </div>
+                          </button>
+                          <Tooltip content="Delete download">
+                            <button
+                              onClick={() => setPendingDeleteDownload(entry)}
+                              className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                            </button>
+                          </Tooltip>
                         </div>
                       </div>
                     )
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* Local Files — table matching ModList */}
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <span className="h-1.5 w-1.5 bg-[#fcee09] flex-shrink-0" />
-                <span className="text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                  Local Archives
-                </span>
-                <span className="text-[10px] font-mono text-[#5a5a5a]">· {localFiles.length}</span>
-              </div>
-
-              <div className="bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
-                {/* Column headers — matches ModList */}
-                <div
-                  className="grid gap-4 px-6 py-0 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
-                  style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
-                >
-                  <div className="flex h-10 items-center text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                    Archive Name
-                  </div>
-                  <div className="flex h-10 items-center text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                    Format
-                  </div>
-                  <div className="flex h-10 items-center text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                    Modified
-                  </div>
-                  <div className="flex h-10 items-center justify-end text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                    Actions
-                  </div>
-                </div>
-
-                {loading ? (
-                  <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
-                    Scanning downloads...
-                  </div>
-                ) : localFiles.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-4">
-                    <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">download</span>
-                    <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
-                      {settings?.downloadPath
-                        ? 'No archives found in the downloads folder'
-                        : 'Set a downloads path in Configuration first'}
-                    </span>
-                  </div>
-                ) : (
-                  <div>
-                    {localFiles.map((entry, index) => {
-                      const isInstalling = installingPath === entry.path
-                      const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
-                      const rowBg =
-                        index % 2 === 0 ? 'bg-[#050505] hover:bg-[#141414]' : 'bg-[#0a0a0a] hover:bg-[#161616]'
-
-                      return (
-                        <div
-                          key={entry.path}
-                          className={`grid gap-4 pl-6 pr-6 py-3 border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow] duration-150 ${rowBg} hover:border-[#363636]`}
-                          style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
-                        >
-                          <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                            style={{
-                              background:
-                                'linear-gradient(90deg, rgba(252,238,9,0.05) 0%, rgba(252,238,9,0.02) 18%, rgba(255,255,255,0) 60%)',
-                            }}
-                          />
-                          <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-[#fcee09]/55 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                          />
-
-                          <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
-                            <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
-                              {entry.name}
-                            </span>
-                            <span className="text-[10px] font-mono text-[#7a7a7a] tracking-tight">
-                              {formatSize(entry.size)}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center">
-                            <span className="px-2.5 py-[3px] border-[0.5px] border-[#222] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm text-[#9a9a9a] transition-colors">
-                              {entry.extension.replace('.', '').toUpperCase()}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center text-[11px] font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
-                            {formatDate(entry.modifiedAt)}
-                          </div>
-
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => void handleInstall(entry)}
-                              disabled={isInstalling}
-                              className={`group/btn h-8 px-3 rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest transition-all disabled:opacity-50 ${
-                                installedMod
-                                  ? 'bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white hover:border-[#fcee09] hover:text-[#fcee09]'
-                                  : 'bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/40 text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
-                              } disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]`}
-                            >
-                              {isInstalling ? (
-                                'Installing'
-                              ) : installedMod ? (
-                                <>
-                                  <span className="group-hover/btn:hidden">Installed</span>
-                                  <span className="hidden group-hover/btn:inline">Reinstall</span>
-                                </>
-                              ) : (
-                                'Install'
-                              )}
-                            </button>
-                            <Tooltip content="Delete download">
-                              <button
-                                onClick={() => setPendingDeleteDownload(entry)}
-                                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
-                              >
-                                <span className="material-symbols-outlined text-[15px]">delete</span>
-                              </button>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
           </div>
         </div>
+
       </div>
 
       {pendingDeleteDownload && (
