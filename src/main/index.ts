@@ -275,7 +275,12 @@ app.whenReady().then(async () => {
     `).catch(() => {/* splash element may not exist */})
   })
 
-  app.setAsDefaultProtocolClient('nxm')
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient('nxm')
+  } else {
+    // In dev mode pass the app path and -- so Electron doesn't treat the nxm:// URL as a module path
+    app.setAsDefaultProtocolClient('nxm', process.execPath, [app.getAppPath(), '--'])
+  }
 
   // Register all IPC handlers
   registerGlobalHandlers()

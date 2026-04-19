@@ -9,6 +9,13 @@ import { Tooltip } from '../ui/Tooltip'
 
 const DOWNLOADS_GRID_TEMPLATE = 'minmax(280px,1fr) 156px 184px 130px'
 
+const FORMAT_COLOR: Record<string, string> = {
+  zip: '#60A5FA',
+  rar: '#A78BFA',
+  '7z': '#fbbf24',
+}
+const formatColor = (ext: string) => FORMAT_COLOR[ext.replace('.', '').toLowerCase()] ?? '#64748B'
+
 const formatSpeed = (bps: number): string => {
   if (bps <= 0) return '—'
   if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`
@@ -302,31 +309,24 @@ export const DownloadsPane: React.FC = () => {
           </div>
         )}
 
-        {/* Table — has its own scroll, toolbar stays fixed above */}
+        {/* Table — sticky headers keep columns perfectly aligned with scrollbar */}
         <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
-          <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)] flex flex-col">
+          <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
 
-            {/* Column headers — never scroll */}
-            <div
-              className="shrink-0 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
-              style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
-            >
-              <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                Archive Name
-              </div>
-              <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                Format
-              </div>
-              <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                Modified
-              </div>
-              <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                Actions
-              </div>
-            </div>
+            {/* Single scroll container — header sticky inside so scrollbar width never misaligns */}
+            <div className="hyperion-scrollbar h-full overflow-y-auto">
 
-            {/* Scrollable rows */}
-            <div className="hyperion-scrollbar flex-1 overflow-y-auto">
+              {/* Sticky column headers */}
+              <div
+                className="sticky top-0 z-10 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+                style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+              >
+                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Archive Name</div>
+                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Format</div>
+                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Modified</div>
+                <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
+              </div>
+
               {loading ? (
                 <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
                   Scanning downloads...
@@ -380,13 +380,19 @@ export const DownloadsPane: React.FC = () => {
                           <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
                             {entry.name}
                           </span>
-                          <span className="text-[10px] font-mono text-[#7a7a7a] tracking-tight">
+                          <span className="text-xs font-mono text-[#9a9a9a] tracking-tight">
                             {formatSize(entry.size)}
                           </span>
                         </div>
 
                         <div className="flex items-center">
-                          <span className="px-2.5 py-[3px] border-[0.5px] border-[#222] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm text-[#9a9a9a] transition-colors">
+                          <span
+                            className="px-2.5 py-[3px] border-[0.5px] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm transition-colors"
+                            style={{
+                              color: formatColor(entry.extension),
+                              borderColor: `${formatColor(entry.extension)}33`,
+                            }}
+                          >
                             {entry.extension.replace('.', '').toUpperCase()}
                           </span>
                         </div>

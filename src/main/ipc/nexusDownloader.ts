@@ -169,6 +169,9 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     if (!settings.nexusApiKey) {
       return { ok: false, error: 'Nexus API key not configured. Add it in Settings > Nexus.' }
     }
+    if (!settings.downloadPath) {
+      return { ok: false, error: 'Download path not configured. Set it in Settings > Paths.' }
+    }
 
     const id = uuidv4()
 
