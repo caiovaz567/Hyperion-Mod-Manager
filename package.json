@@ -1,9 +1,10 @@
 {
   "name": "hyperion",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Cyberpunk 2077 Mod Manager",
   "main": "out/main/index.js",
   "scripts": {
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "clean:dist": "node scripts/clean-dist.mjs",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -12,9 +13,9 @@
     "preview:win": "npm run clean:dist && npm run build && electron-builder --win dir --publish never",
     "dist": "npm run clean:dist && npm run build && electron-builder --win nsis --publish never",
     "dist:publish": "npm run clean:dist && npm run build && electron-builder --win nsis --publish always",
-    "release:patch": "npm version patch -m \"release: %s\"",
-    "release:minor": "npm version minor -m \"release: %s\"",
-    "release:major": "npm version major -m \"release: %s\""
+    "release:patch": "node scripts/prepare-release-tag.mjs patch",
+    "release:minor": "node scripts/prepare-release-tag.mjs minor",
+    "release:major": "node scripts/prepare-release-tag.mjs major"
   },
   "keywords": [
     "cyberpunk",
