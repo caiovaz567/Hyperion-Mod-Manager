@@ -20,6 +20,7 @@ export interface LibrarySlice {
   disableMod: (id: string) => Promise<IpcResult>
   purgeMods: () => Promise<IpcResult<PurgeModsResult>>
   deleteMod: (id: string) => Promise<IpcResult>
+  createSeparator: (name?: string) => Promise<ModMetadata | null>
   reorderMods: (orderedIds: string[]) => Promise<void>
   updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
   setFilter: (filter: string) => void
@@ -128,13 +129,27 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     return result
   },
 
+  createSeparator: async (name = 'New Separator') => {
+    const result = await IpcService.invoke<IpcResult<ModMetadata>>(IPC.CREATE_SEPARATOR, name)
+    if (result.ok && result.data) {
+      set((state) => ({
+        mods: [...state.mods, result.data!].sort((left, right) => left.order - right.order)
+      }))
+      return result.data
+    }
+    return null
+  },
+
   reorderMods: async (orderedIds) => {
     await IpcService.invoke(IPC.REORDER_MODS, orderedIds)
     set((state) => {
       const orderMap = new Map(orderedIds.map((id, i) => [id, i]))
-      const reordered = [...state.mods].sort(
-        (a, b) => (orderMap.get(a.uuid) ?? 0) - (orderMap.get(b.uuid) ?? 0)
-      )
+      const reordered = state.mods
+        .map((mod) => ({
+          ...mod,
+          order: orderMap.get(mod.uuid) ?? mod.order,
+        }))
+        .sort((a, b) => a.order - b.order)
       return { mods: reordered }
     })
   },

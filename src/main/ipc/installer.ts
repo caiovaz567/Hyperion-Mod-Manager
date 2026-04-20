@@ -319,8 +319,35 @@ function findDuplicateMod(
 
 function getNextInstallOrder(existingMods: ModMetadata[]): number {
   return existingMods
-    .filter((mod) => mod.kind === 'mod')
     .reduce((highestOrder, mod) => Math.max(highestOrder, mod.order), -1) + 1
+}
+
+function getInstallOrderForCopy(existingMods: ModMetadata[], sourceMod: ModMetadata): number {
+  const nextOrder = sourceMod.order + 1
+  return Math.max(nextOrder, 0)
+}
+
+function shiftInstallOrdersForInsert(
+  libraryPath: string,
+  existingMods: ModMetadata[],
+  fromOrder: number
+): void {
+  const entriesToShift = [...existingMods]
+    .filter((entry) => entry.order >= fromOrder)
+    .sort((left, right) => right.order - left.order)
+
+  for (const entry of entriesToShift) {
+    const found = findModDir(libraryPath, entry.uuid)
+    if (!found) continue
+
+    const updated = { ...found.mod, order: found.mod.order + 1 }
+    fs.writeFileSync(
+      path.join(found.dir, '_metadata.json'),
+      JSON.stringify(updated, null, 2),
+      'utf-8'
+    )
+    entry.order = updated.order
+  }
 }
 
 async function removeExistingMod(
@@ -346,7 +373,7 @@ async function installMod(
 ): Promise<IpcResult<InstallModResponse>> {
   const request = normalizeInstallRequest(requestInput)
   const { filePath, duplicateAction = 'prompt', targetModId } = request
-  const targetModMatchId = duplicateAction === 'replace' ? targetModId : undefined
+  const targetModMatchId = targetModId
   const ext = path.extname(filePath).toLowerCase()
   const extractor = resolveArchiveExtractor(ext)
   let isDir = false
@@ -453,7 +480,9 @@ async function installMod(
     const nextInstallOrder = getNextInstallOrder(existingMods)
     const installOrder = duplicateAction === 'replace'
       ? (duplicateMod?.order ?? existingMods.length)
-      : nextInstallOrder
+      : duplicateAction === 'copy' && duplicateMod
+        ? getInstallOrderForCopy(existingMods, duplicateMod)
+        : nextInstallOrder
 
     if (duplicateMod && duplicateAction === 'prompt') {
       fs.rmSync(tempDir, { recursive: true, force: true })
@@ -479,6 +508,10 @@ async function installMod(
         fs.rmSync(tempDir, { recursive: true, force: true })
         return removalResult
       }
+    }
+
+    if (duplicateAction === 'copy' && installOrder < nextInstallOrder) {
+      shiftInstallOrdersForInsert(settings.libraryPath, existingMods, installOrder)
     }
 
     const modName = duplicateAction === 'copy'

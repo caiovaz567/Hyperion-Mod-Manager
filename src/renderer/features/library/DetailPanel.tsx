@@ -114,6 +114,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   autoFocus
                   value={nameValue}
                   onChange={(event) => setNameValue(event.target.value)}
+                  onBlur={() => void handleSaveName()}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') void handleSaveName()
                     if (event.key === 'Escape') {
@@ -121,7 +122,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       setEditingName(false)
                     }
                   }}
-                  className="w-full max-w-xl border-[0.5px] border-[#7a7a7a] bg-[#0a0a0a] px-4 py-2 text-white font-medium tracking-tight focus:border-[#fcee09]/60 focus:shadow-[0_0_10px_rgba(252,238,9,0.12)] focus:outline-none"
+                  className="w-full max-w-xl border-[0.5px] border-[#7a7a7a] bg-[#0a0a0a] px-4 py-2 text-2xl brand-font font-bold uppercase tracking-[0.04em] leading-none text-white focus:border-[#fcee09]/60 focus:shadow-[0_0_10px_rgba(252,238,9,0.12)] focus:outline-none"
                 />
                 <button
                   onClick={() => void handleSaveName()}

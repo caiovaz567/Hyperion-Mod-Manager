@@ -549,6 +549,7 @@ app.whenReady().then(async () => {
   // Show splash while loading
   const splash = createSplashWindow()
   let mainWindowReadyToShow = false
+  let mainWindowRevealed = false
 
   const updateSplashStatus = (message: string) => {
     if (splash.isDestroyed()) return
@@ -560,20 +561,37 @@ app.whenReady().then(async () => {
   }
 
   const revealMainWindow = () => {
-    if (!rendererReady || !mainWindowReadyToShow || !mainWindow) return
+    if (!rendererReady || !mainWindowReadyToShow || !mainWindow || mainWindowRevealed) return
+
+    const targetWindow = mainWindow
+    mainWindowRevealed = true
+
+    if (targetWindow.isMinimized()) {
+      targetWindow.restore()
+    }
+
+    targetWindow.setSkipTaskbar(false)
+    targetWindow.show()
+    targetWindow.moveTop()
+    targetWindow.focus()
+    targetWindow.webContents.focus()
+
+    setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      if (!mainWindow.isVisible()) mainWindow.show()
+      mainWindow.moveTop()
+      mainWindow.focus()
+      mainWindow.webContents.focus()
+    }, 120)
 
     if (!splash.isDestroyed()) {
       splash.hide()
       splash.setAlwaysOnTop(false)
-      splash.destroy()
+      setTimeout(() => {
+        if (!splash.isDestroyed()) splash.destroy()
+      }, 0)
     }
-
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore()
-    }
-    mainWindow.show()
-    mainWindow.moveTop()
-    mainWindow.focus()
 
     flushPendingNxmUrls()
   }

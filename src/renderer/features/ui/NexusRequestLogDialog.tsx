@@ -25,120 +25,6 @@ interface LoggedSecretValue {
   value: string
 }
 
-const MOCK_POST_REQUEST_ID = '__hyperion_mock_post_request__'
-
-const MOCK_POST_REQUEST_ENTRY: NexusApiLogEntry = {
-  id: MOCK_POST_REQUEST_ID,
-  timestamp: '2026-04-19T18:42:00.000Z',
-  method: 'POST',
-  endpoint: '/batch/install-and-deploy',
-  url: 'https://api.hyperion.local/batch/install-and-deploy',
-  requestBody: {
-    installJobs: [
-      {
-        jobId: 'job_001_7089_37705',
-        modId: 7089,
-        fileId: 37705,
-        gameDomain: 'cyberpunk2077',
-        priority: 'high',
-        source: {
-          type: 'nexus',
-          downloadUrl: '/games/cyberpunk2077/mods/7089/files/37705/download_link.json',
-          verifyHash: true,
-          hashAlgorithm: 'sha256',
-          expectedHash: '8e4f2c1a9d6b3e5f7a2c4b9d1e8f3a5c7b9d2e4f6a8b1c3d5e7f9a2b4d6e8',
-        },
-        deploymentRules: {
-          replaceExisting: false,
-          deployAfterInstall: true,
-          targetFolders: ['bin', 'engine', 'r6'],
-          excludePatterns: ['*.bak', 'temp/*'],
-        },
-        metadata: {
-          author: 'nexusdev',
-          version: '1.4.2',
-          tags: ['cyberware', 'weapons', 'gameplay'],
-        },
-      },
-      {
-        jobId: 'job_002_8156_42103',
-        modId: 8156,
-        fileId: 42103,
-        gameDomain: 'cyberpunk2077',
-        priority: 'normal',
-        source: {
-          type: 'nexus',
-          downloadUrl: '/games/cyberpunk2077/mods/8156/files/42103/download_link.json',
-          verifyHash: true,
-          hashAlgorithm: 'sha256',
-          expectedHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1',
-        },
-        deploymentRules: {
-          replaceExisting: true,
-          deployAfterInstall: false,
-          targetFolders: ['red4ext'],
-          excludePatterns: [],
-        },
-        metadata: {
-          author: 'modder_pro',
-          version: '2.1.0',
-          tags: ['enhancement', 'fixes'],
-        },
-      },
-    ],
-    globalOptions: {
-      executeSequentially: true,
-      rollbackOnFailure: true,
-      notifyOnCompletion: true,
-      timeoutPerJob: 30000,
-    },
-    verifyDependencies: true,
-    backupExisting: true,
-  },
-  responseBody: {
-    ok: true,
-    processId: 'proc_19c4d7f2',
-    batchStatus: 'processing',
-    submittedAt: '2026-04-19T18:42:00.156Z',
-    estimatedTimeRemaining: 45300,
-    jobs: [
-      {
-        jobId: 'job_001_7089_37705',
-        status: 'installing',
-        progress: {
-          step: 'extracting-archive',
-          percent: 42,
-          currentFile: 'cyberware_system.redscript',
-        },
-        timestamps: {
-          queued: '2026-04-19T18:42:00.200Z',
-          started: '2026-04-19T18:42:01.500Z',
-          updated: '2026-04-19T18:42:08.340Z',
-        },
-      },
-      {
-        jobId: 'job_002_8156_42103',
-        status: 'queued',
-        progress: {
-          step: 'waiting',
-          percent: 0,
-        },
-        timestamps: {
-          queued: '2026-04-19T18:42:00.250Z',
-        },
-      },
-    ],
-    diagnostics: {
-      diskSpaceAvailable: 52428800000,
-      estimatedTotalSize: 2147483648,
-      systemLoad: 0.34,
-    },
-  },
-  status: 'success',
-  statusCode: 202,
-  durationMs: 287,
-}
-
 const requestMethodBadgeClass: Record<NexusApiLogEntry['method'], string> = {
   GET: 'border-[#4a3f08] bg-[#171303] text-[#fcee09]',
   POST: 'border-[#14365a] bg-[#07111d] text-[#60a5fa]',
@@ -479,7 +365,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
   const [generalEntries, setGeneralEntries] = useState<AppGeneralLogEntry[]>([])
   const [requestEntries, setRequestEntries] = useState<NexusApiLogEntry[]>([])
   const [expandedGeneralIds, setExpandedGeneralIds] = useState<Set<string>>(new Set())
-  const [expandedRequestIds, setExpandedRequestIds] = useState<Set<string>>(new Set([MOCK_POST_REQUEST_ID]))
+  const [expandedRequestIds, setExpandedRequestIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let mounted = true
@@ -534,6 +420,17 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
     }
   }, [activeTab, generalEntries.length, requestEntries.length])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const activeCount = activeTab === 'general' ? generalEntries.length : requestEntries.length
   const clearTabLabel = activeTab === 'general' ? 'Clear General logs' : 'Clear Request logs'
 
@@ -567,7 +464,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
     setGeneralEntries([])
     setExpandedGeneralIds(new Set())
     setRequestEntries([])
-    setExpandedRequestIds(new Set([MOCK_POST_REQUEST_ID]))
+    setExpandedRequestIds(new Set())
   }
 
   const handleClearTab = async () => {
@@ -579,7 +476,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
       return
     }
     setRequestEntries([])
-    setExpandedRequestIds(new Set([MOCK_POST_REQUEST_ID]))
+    setExpandedRequestIds(new Set())
   }
 
   const handleCopyPayload = async (payload: unknown, label = 'Payload') => {
@@ -867,7 +764,6 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             )
           ) : (
             <div className="space-y-2">
-              {renderRequestEntry(MOCK_POST_REQUEST_ENTRY, 'mock post')}
               {requestEntries.length === 0 ? (
                 <div className="flex min-h-[180px] items-center justify-center border-[0.5px] border-[#1a1a1a] bg-[#070707]">
                   <div className="ui-support-mono text-center uppercase tracking-[0.14em]">No live request logs recorded yet</div>

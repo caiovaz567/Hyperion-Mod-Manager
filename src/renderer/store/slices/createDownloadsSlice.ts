@@ -174,7 +174,7 @@ export interface DownloadsSlice {
   installCurrentFile: string
   installSourcePath: string
   installTargetModId: string
-  installPlacement: 'replace' | 'append'
+  installPlacement: 'replace' | 'append' | 'insert-after'
   pendingMod: ModMetadata | null
   installPrompt: InstallPromptInfo | null
   pendingInstallRequest: InstallModRequest | null
@@ -273,7 +273,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       installCurrentFile: '',
       installSourcePath: filePath,
       installTargetModId: request.targetModId ?? '',
-      installPlacement: request.duplicateAction === 'replace' ? 'replace' : 'append',
+      installPlacement: request.duplicateAction === 'replace' ? 'replace' : (request.duplicateAction === 'copy' && request.targetModId) ? 'insert-after' : 'append',
     })
 
     const unsubscribe = IpcService.on(IPC.INSTALL_PROGRESS, (...args) => {
@@ -523,6 +523,11 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       }
       state.addToast?.(message, tone, 2600)
     }
+    const uiState = get() as DownloadsSlice & {
+      setActiveView?: (view: 'library' | 'downloads' | 'settings') => void
+    }
+
+    uiState.setActiveView?.('downloads')
 
     const previousStart = pendingDownloadStarts.get(key) ?? Promise.resolve()
     let currentStart: Promise<void>
@@ -624,10 +629,24 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   },
 
   cancelDownload: async (id) => {
+    const activeDownload = get().activeDownloads.find((download) => download.id === id)
+    const savedPath = activeDownload?.savedPath
+
     await IpcService.invoke(IPC.NXM_DOWNLOAD_CANCEL, id)
-    set((state) => ({
-      activeDownloads: state.activeDownloads.filter((d) => d.id !== id),
-    }))
+
+    set((state) => {
+      const nextNewFiles = savedPath ? removeNewFilePath(state.newFiles, savedPath) : state.newFiles
+      if (nextNewFiles !== state.newFiles) {
+        persistNewFiles(nextNewFiles)
+      }
+
+      return {
+        activeDownloads: state.activeDownloads.filter((d) => d.id !== id),
+        newFiles: nextNewFiles,
+      }
+    })
+
+    await get().refreshLocalFiles().catch(() => undefined)
   },
 
   markFileAsOld: (filePath) => {

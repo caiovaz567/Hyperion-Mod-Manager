@@ -134,6 +134,7 @@ Alignment rules:
 - Detail panel appears when a mod is selected
 - Visual emphasis goes to name, status, type, actions, and activation state
 - Mod search belongs to the library surface itself, not the global header, so filtering stays contextual to `Managed Mods`
+- The mod search field should share the same dark squared chrome, border language, and vertical rhythm as adjacent library action buttons instead of reading like a different widget family
 - Library status filtering should live in the screen itself, below the selection guidance, not in the global header
 - Use local segmented controls for `All`, `Enabled`, and `Disabled`; `All` may use the cyber blue accent while activation-oriented controls should reuse the same squared button language as Browse and other path actions
 - Enable/disable-all control should read as a compact rectangular command block, not a toggle switch and not a rounded pill
@@ -142,6 +143,29 @@ Alignment rules:
 - Bulk actions should appear only when multiple mods are selected
 - Sort affordance should keep the entire header cell clickable, left align the label, and show only one active sorted column at a time
 - When the local status filter is `Enabled` or `Disabled`, the enable/disable-all control should be visibly disabled and explain that state through the shared tooltip treatment
+- Separators are first-class library rows in `Custom Order`, not a separate grouping mode layered on top of the list
+- While a column sort is active, flatten the library into a pure sorted mod list and hide separators entirely; the third click must return to `Custom Order` with separators restored in their saved positions
+- Mods inside a separator should shift the entire row inward as a grouped sub-block; do not move only the left active bar
+- Grouped mods should use the regular left accent position with a cyan accent instead of introducing a second cyan guide line beside the row
+- Separators should support moving selected mods into the block through direct drag/drop and explicit library actions
+- Separator headers should align left like a real section marker, use readable label sizing, and avoid compressed microtype
+- Separator helper copy should stay hidden until an actual drag is in progress; do not keep `Drag mods here` permanently visible on the row
+- Separators should be collapsible so large grouped sections can fold away without losing their custom-order placement
+- Expanding a separator should use a subtle motion cue; use one chevron affordance only and avoid stacking multiple right-pointing icons in the same header
+- Manual drag reorder in `Custom Order` should work both on separators and on individual mod rows; dropping before or after a mod row must be a valid target, not just dropping onto the separator header
+- Moving a mod into a separator should update the visible custom order immediately and should never require reselection or a refresh for the row to appear in its new block
+- The persistent `Custom Order` guidance should stay lightweight inside the title/toolbar chrome; do not spend a full-width helper row on it. When dragging, the table header itself should become the compact `Top Level` drop target
+- Selecting a separator should support range/additive selection with the existing `Shift` and `Ctrl/Cmd` patterns, and dragging a selected separator should move its whole block with child mods intact
+- Creating or renaming a separator should use a compact confirmation/input modal instead of forcing inline rename on the row itself
+- The `Create Separator` modal should open with the text cursor already active in the input so the user can type immediately without clicking first
+- In `Custom Order`, the library should explain how to group mods: drag onto a separator, use the separator context action, or use the bulk `Move to Separator` command
+- `Add Separator` belongs beside the local filter controls, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar
+- Right-clicking empty library space should expose `Create Separator Here` so the user can insert a separator at that exact point in custom order
+- Right-clicking any library row should include a `Create Separator` action, and empty-library context menus should also offer `Refresh` and other lightweight utilities such as separator expand/collapse
+- In row context menus, `Reinstall` should stay near the top of the action stack instead of being buried below secondary utilities
+- Right-clicking a separator should offer a single toggle that expands or collapses every separator in the library, using the current collapsed state to decide the label
+- Reinstalling as copy should insert the new mod immediately after the source mod's current `#` position; if that insertion point is right before the next separator, the separator must shift down so the copy stays in the same context as the source
+- Normal mod installations should always place the new mod at the end of the library list
 
 ### Downloads
 
@@ -156,6 +180,9 @@ Alignment rules:
 - Archive extraction is its own phase and should use a distinct cool accent from the default download/install yellow, while later install/finalization can return to the product accent
 - When extracting from `.zip`, `.rar`, or `.7z`, show the current internal archive entry when available so the user can see what is being unpacked in real time
 - If the user confirms `Replace` or `Install as Copy` from a duplicate-install prompt, dismiss the confirmation immediately and hand off to the shared install progress UI instead of keeping the dialog visible during extraction/install
+- Downloads rows should support a right-click menu with reveal-in-Explorer, copy-path, install/reinstall, pause/resume/cancel, delete, and refresh-style utilities that match the row state
+- In Downloads row context menus, `Install` or `Reinstall` should appear before file utilities such as reveal-in-Explorer or copy-path
+- Revealing a download in Explorer should select the exact file the user clicked, not just open the parent folder
 - If a Nexus archive already exists in Downloads, use the shared confirmation dialog instead of a toast-only rejection and preview the renamed duplicate archive before the user confirms
 - If the same Nexus archive is already downloading, reuse that same duplicate-download confirmation dialog instead of blocking the request; make it clear that one transfer is already in progress and preview the next duplicate name
 - Repeated `Download Again` requests for the same Nexus file should serialize behind the first request and still end in the shared duplicate-download confirmation flow; do not fall back to a warning snackbar/toast just because the first request is still spinning up

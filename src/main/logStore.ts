@@ -15,6 +15,12 @@ const MAX_REQUEST_LOG_ENTRIES = 120
 const generalLogEntries: AppGeneralLogEntry[] = []
 const requestLogEntries: NexusApiLogEntry[] = []
 
+function shouldStoreGeneralLog(entry: Omit<AppGeneralLogEntry, 'id' | 'timestamp'>): boolean {
+  if (entry.level !== 'info') return true
+
+  return entry.message === 'NXM download requested'
+}
+
 export function safeSendToWindow(
   mainWindow: BrowserWindow | null,
   channel: IpcChannel,
@@ -51,6 +57,10 @@ export function pushGeneralLog(
     ...entry,
   }
 
+  if (!shouldStoreGeneralLog(entry)) {
+    return nextEntry
+  }
+
   generalLogEntries.unshift(nextEntry)
   trimLogs(generalLogEntries, MAX_GENERAL_LOG_ENTRIES)
   emitLogUpdate(mainWindow, { kind: 'general', entry: nextEntry })
@@ -75,7 +85,7 @@ export function pushRequestLog(
 
 export function getAppLogsSnapshot(): AppLogsSnapshot {
   return {
-    general: [...generalLogEntries],
+    general: generalLogEntries.filter((entry) => shouldStoreGeneralLog(entry)),
     requests: [...requestLogEntries],
   }
 }

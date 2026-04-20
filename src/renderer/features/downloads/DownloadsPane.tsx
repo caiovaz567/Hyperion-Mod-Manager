@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
-import type { DownloadEntry, IpcResult, ModMetadata } from '@shared/types'
+import type { ActiveDownload, DownloadEntry, IpcResult, ModMetadata } from '@shared/types'
 import { IPC } from '@shared/types'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { Tooltip } from '../ui/Tooltip'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
+import { DELETE_PROGRESS_APPEARANCE, getTransientDeleteProgress } from '../../utils/deleteProgressAppearance'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 
 const DOWNLOADS_GRID_TEMPLATE = 'minmax(360px,1fr) 110px 220px 132px'
@@ -15,8 +17,12 @@ const DOWNLOAD_ROW_HEIGHT = 56
 const DOWNLOAD_VIRTUALIZATION_THRESHOLD = 120
 
 type DownloadListRow =
-  | { kind: 'active'; key: string; orderTs: number; active: ReturnType<typeof useAppStore.getState>['activeDownloads'][number] }
+  | { kind: 'active'; key: string; orderTs: number; active: ActiveDownload }
   | { kind: 'local'; key: string; orderTs: number; entry: DownloadEntry }
+
+type DownloadContextMenuState =
+  | { kind: 'blank'; x: number; y: number }
+  | { kind: 'row'; x: number; y: number; row: DownloadListRow }
 
 const formatSpeed = (bps: number): string => {
   if (bps <= 0) return '—'
@@ -118,13 +124,30 @@ export const DownloadsPane: React.FC = () => {
   const [pendingDeleteDownload, setPendingDeleteDownload] = useState<DownloadEntry | null>(null)
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const [deletingAll, setDeletingAll] = useState(false)
+  const [deletingDownloads, setDeletingDownloads] = useState<Record<string, { startedAt: number; entry: DownloadEntry }>>({})
+  const [deleteProgressTick, setDeleteProgressTick] = useState(() => Date.now())
+  const [contextMenu, setContextMenu] = useState<DownloadContextMenuState | null>(null)
   const downloadsScrollRef = useRef<HTMLDivElement>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
 
   const doRefresh = async () => {
     setLoading(true)
     await refreshLocalFiles().catch(() => undefined)
     setLoading(false)
   }
+
+  useEffect(() => {
+    const deletingPaths = Object.keys(deletingDownloads)
+    if (deletingPaths.length === 0) return
+
+    const intervalId = window.setInterval(() => {
+      setDeleteProgressTick(Date.now())
+    }, 120)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [deletingDownloads])
 
   useEffect(() => {
     const downloadPath = settings?.downloadPath ?? ''
@@ -204,14 +227,28 @@ export const DownloadsPane: React.FC = () => {
 
   const handleDeleteDownload = async () => {
     if (!pendingDeleteDownload) return
-    const result = await IpcService.invoke<IpcResult>(IPC.DELETE_DOWNLOAD, pendingDeleteDownload.path)
+    const target = pendingDeleteDownload
+    setPendingDeleteDownload(null)
+    setDeletingDownloads((current) => ({
+      ...current,
+      [target.path]: {
+        startedAt: Date.now(),
+        entry: target,
+      },
+    }))
+
+    const result = await IpcService.invoke<IpcResult>(IPC.DELETE_DOWNLOAD, target.path)
+    setDeletingDownloads((current) => {
+      const next = { ...current }
+      delete next[target.path]
+      return next
+    })
     if (!result.ok) {
       addToast(result.error ?? 'Could not delete download', 'error')
       return
     }
-    markFileAsOld(pendingDeleteDownload.path)
-    setPendingDeleteDownload(null)
-    addToast(`${pendingDeleteDownload.name} deleted`, 'success')
+    markFileAsOld(target.path)
+    addToast(`${target.name} deleted`, 'success')
     await doRefresh()
   }
 
@@ -237,6 +274,128 @@ export const DownloadsPane: React.FC = () => {
     }
     await doRefresh()
   }
+
+  const getDownloadRowPath = useCallback((row: DownloadListRow): string | null => {
+    if (row.kind === 'active') {
+      return row.active.savedPath?.trim() ?? null
+    }
+
+    return row.entry.path.trim() || null
+  }, [])
+
+  const handleDownloadRowContextMenu = useCallback((event: React.MouseEvent, row: DownloadListRow) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ kind: 'row', x: event.clientX, y: event.clientY, row })
+  }, [])
+
+  const handleDownloadsBlankContextMenu = useCallback((event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    if (target?.closest('[data-download-row="true"]')) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ kind: 'blank', x: event.clientX, y: event.clientY })
+  }, [])
+
+  const handleRefreshDownloads = useCallback(async () => {
+    setContextMenu(null)
+    await doRefresh()
+  }, [doRefresh])
+
+  const handleOpenDownloadsLocation = useCallback(async () => {
+    if (!contextMenu || contextMenu.kind !== 'row') return
+
+    const filePath = getDownloadRowPath(contextMenu.row)
+    if (!filePath) {
+      addToast('Download file is not available yet', 'warning')
+      return
+    }
+
+    await IpcService.invoke(IPC.SHOW_ITEM_IN_FOLDER, filePath)
+    setContextMenu(null)
+  }, [addToast, contextMenu, getDownloadRowPath])
+
+  const handleCopyDownloadPath = useCallback(async () => {
+    if (!contextMenu || contextMenu.kind !== 'row') return
+
+    const filePath = getDownloadRowPath(contextMenu.row)
+    if (!filePath) {
+      addToast('Download file is not available yet', 'warning')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(filePath)
+      addToast('Path copied', 'success', 1200)
+    } catch {
+      addToast('Could not copy path', 'error')
+    } finally {
+      setContextMenu(null)
+    }
+  }, [addToast, contextMenu, getDownloadRowPath])
+
+  const handleInstallContextRow = useCallback(async () => {
+    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.row.kind !== 'local') return
+
+    setContextMenu(null)
+    await handleInstall(contextMenu.row.entry)
+  }, [contextMenu, handleInstall])
+
+  const handleToggleDownloadState = useCallback(async () => {
+    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.row.kind !== 'active') return
+
+    const download = contextMenu.row.active
+    setContextMenu(null)
+
+    if (download.status === 'paused') {
+      await resumeDownload(download.id)
+      return
+    }
+
+    if (download.status === 'downloading' || download.status === 'queued') {
+      await pauseDownload(download.id)
+      return
+    }
+
+    await cancelDownload(download.id)
+  }, [cancelDownload, contextMenu, pauseDownload, resumeDownload])
+
+  const handleCancelContextDownload = useCallback(async () => {
+    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.row.kind !== 'active') return
+
+    setContextMenu(null)
+    await cancelDownload(contextMenu.row.active.id)
+  }, [cancelDownload, contextMenu])
+
+  useEffect(() => {
+    if (!contextMenu) return
+
+    const closeMenu = () => setContextMenu(null)
+    window.addEventListener('click', closeMenu)
+    window.addEventListener('resize', closeMenu)
+    window.addEventListener('scroll', closeMenu, true)
+
+    return () => {
+      window.removeEventListener('click', closeMenu)
+      window.removeEventListener('resize', closeMenu)
+      window.removeEventListener('scroll', closeMenu, true)
+    }
+  }, [contextMenu])
+
+  useLayoutEffect(() => {
+    if (!contextMenu || !contextMenuRef.current) return
+
+    const menu = contextMenuRef.current
+    const rect = menu.getBoundingClientRect()
+    const maxX = window.innerWidth - rect.width - 8
+    const maxY = window.innerHeight - rect.height - 8
+    const x = Math.max(8, Math.min(contextMenu.x, maxX))
+    const y = Math.max(8, Math.min(contextMenu.y, maxY))
+
+    menu.style.left = `${x}px`
+    menu.style.top = `${y}px`
+  }, [contextMenu])
 
   const orderedRows = useMemo<DownloadListRow[]>(() => {
     const activeRows: DownloadListRow[] = activeDownloads.map((download) => ({
@@ -287,6 +446,113 @@ export const DownloadsPane: React.FC = () => {
     () => orderedRows.slice(virtualizedDownloads.startIndex, virtualizedDownloads.endIndex),
     [orderedRows, virtualizedDownloads.endIndex, virtualizedDownloads.startIndex]
   )
+
+  const downloadMenuButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase'
+  const downloadMenuSubtleButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#9d9d9d] hover:bg-[#111] hover:text-white transition-colors gap-3 tracking-wider font-semibold uppercase'
+  const downloadMenuBlueButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#c6f4ff] hover:bg-[#08141a] hover:text-[#4fd8ff] transition-colors gap-3 tracking-wider font-semibold uppercase'
+  const downloadMenuDangerButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#ffb4ab] hover:bg-[#93000a]/10 transition-colors gap-3 tracking-wider font-semibold uppercase'
+  const contextMenuRow = contextMenu?.kind === 'row' ? contextMenu.row : null
+  const contextMenuActiveDownload = contextMenuRow?.kind === 'active' ? contextMenuRow.active : null
+  const contextMenuLocalEntry = contextMenuRow?.kind === 'local' ? contextMenuRow.entry : null
+  const contextMenuRowPath = contextMenuRow ? getDownloadRowPath(contextMenuRow) : null
+  const contextMenuInstalledMod = contextMenuLocalEntry ? installedBySourcePath.get(contextMenuLocalEntry.path.toLowerCase()) : null
+  const deleteAppearance = DELETE_PROGRESS_APPEARANCE
+
+  const renderDeletingDownloadRow = (entry: DownloadEntry) => {
+    const deletingState = deletingDownloads[entry.path]
+    const deleteProgress = getTransientDeleteProgress(deletingState?.startedAt ?? deleteProgressTick, deleteProgressTick)
+
+    return (
+      <div
+        key={`deleting:${entry.path}`}
+        data-download-row="true"
+        className="relative h-14 overflow-hidden border-b-[0.5px]"
+        style={{
+          background: deleteAppearance.rowTint,
+          borderColor: deleteAppearance.softBorder,
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 transition-all duration-500"
+          style={{
+            width: `${Math.max(0, Math.min(deleteProgress, 100))}%`,
+            background: deleteAppearance.fill,
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 w-[2px] transition-all duration-500"
+          style={{
+            left: `calc(${Math.max(0, Math.min(deleteProgress, 99.6))}% - 1px)`,
+            background: deleteAppearance.accent,
+            boxShadow: `0 0 10px ${deleteAppearance.accent}aa`,
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 w-[3px]"
+          style={{
+            background: deleteAppearance.accent,
+            boxShadow: `0 0 8px ${deleteAppearance.accent}55`,
+          }}
+        />
+        <div
+          className="relative z-10 grid h-14 gap-4 pl-6 pr-6 py-[5px]"
+          style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+        >
+          <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-medium tracking-tight truncate text-[#ffe1e1]">
+                {entry.name}
+              </span>
+              <span
+                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                style={{
+                  color: deleteAppearance.accent,
+                  borderColor: `${deleteAppearance.accent}55`,
+                  background: `${deleteAppearance.accent}12`,
+                }}
+              >
+                {deleteAppearance.label}
+              </span>
+            </div>
+            <span
+              className="truncate text-sm font-mono tracking-tight"
+              style={{ color: deleteAppearance.accent }}
+            >
+              {formatSize(entry.size)}
+            </span>
+          </div>
+
+          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+            {entry.version ?? '—'}
+          </div>
+
+          <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
+            <span className="truncate text-[#d8d8d8]">
+              {deleteProgress > 0 ? `${deleteProgress}%` : '...'}
+            </span>
+            <span className="truncate text-[#ffb4ab]">
+              {deleteAppearance.summary}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+              style={{
+                borderColor: `${deleteAppearance.accent}44`,
+                color: deleteAppearance.accent,
+              }}
+            >
+              <span className="material-symbols-outlined animate-spin text-[16px]">delete</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full animate-settings-in">
@@ -353,36 +619,37 @@ export const DownloadsPane: React.FC = () => {
               </div>
 
               {/* Rows */}
-              {loading ? (
-                <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
-                  Scanning downloads...
-                </div>
-              ) : totalRows === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-4">
-                  <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">download</span>
-                  <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
-                    {settings?.downloadPath
-                      ? 'No archives found in the downloads folder'
-                      : 'Set a downloads path in Configuration first'}
-                  </span>
-                  {!settings?.downloadPath && (
-                    <button
-                      onClick={() => setActiveView('settings')}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">settings</span>
-                      Configuration
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    paddingTop: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingTop : 0,
-                    paddingBottom: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingBottom : 0,
-                  }}
-                >
-                  {visibleRows.map((row, visibleIndex) => {
+              <div className="relative" onContextMenu={handleDownloadsBlankContextMenu}>
+                {loading ? (
+                  <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
+                    Scanning downloads...
+                  </div>
+                ) : totalRows === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24 gap-4">
+                    <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">download</span>
+                    <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
+                      {settings?.downloadPath
+                        ? 'No archives found in the downloads folder'
+                        : 'Set a downloads path in Configuration first'}
+                    </span>
+                    {!settings?.downloadPath && (
+                      <button
+                        onClick={() => setActiveView('settings')}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">settings</span>
+                        Configuration
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      paddingTop: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingTop : 0,
+                      paddingBottom: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingBottom : 0,
+                    }}
+                  >
+                    {visibleRows.map((row, visibleIndex) => {
                     if (row.kind === 'active') {
                       const dl = row.active
                     const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
@@ -420,6 +687,8 @@ export const DownloadsPane: React.FC = () => {
                     return (
                       <div
                         key={row.key}
+                        data-download-row="true"
+                        onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
                         className="relative h-14 overflow-hidden border-b-[0.5px] border-[#1e1a00]"
                         style={{ background: rowTint, borderColor: rowBorder }}
                       >
@@ -532,6 +801,7 @@ export const DownloadsPane: React.FC = () => {
                   const entry = row.entry
                   const index = virtualizedDownloads.startIndex + visibleIndex
                   const isInstalling = installing && installSourcePath === entry.path
+                  const isDeleting = Boolean(deletingDownloads[entry.path])
                   const installAppearance = isInstalling
                     ? getInstallProgressAppearance(installStatus)
                     : null
@@ -548,6 +818,8 @@ export const DownloadsPane: React.FC = () => {
                     return (
                       <div
                         key={row.key}
+                        data-download-row="true"
+                        onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
                         className="relative h-14 overflow-hidden border-b-[0.5px]"
                         style={{
                           background: installAppearance.rowTint,
@@ -636,9 +908,15 @@ export const DownloadsPane: React.FC = () => {
                     )
                   }
 
+                  if (isDeleting) {
+                    return renderDeletingDownloadRow(entry)
+                  }
+
                   return (
                     <div
                       key={row.key}
+                      data-download-row="true"
+                      onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
                       className={`grid h-14 gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
                       style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
                     >
@@ -725,10 +1003,162 @@ export const DownloadsPane: React.FC = () => {
                 })}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {contextMenu && createPortal(
+        <div
+          ref={contextMenuRef}
+          className="fixed z-[100] min-w-[220px] border-[0.5px] border-[#222] bg-[#0a0a0a] py-1 shadow-[0_10px_30px_rgba(0,0,0,0.5)] brand-font"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {contextMenu.kind === 'blank' ? (
+            <>
+              <button
+                onClick={() => void handleRefreshDownloads()}
+                className={downloadMenuButtonClass}
+              >
+                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                <span>Refresh Downloads</span>
+              </button>
+              <button
+                onClick={() => {
+                  setContextMenu(null)
+                  openDownloadsFolder()
+                }}
+                disabled={!settings?.downloadPath}
+                className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <span>Open Downloads Folder</span>
+              </button>
+              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <button
+                onClick={() => {
+                  setDeleteAllOpen(true)
+                  setContextMenu(null)
+                }}
+                disabled={localFiles.length === 0}
+                className={`${downloadMenuDangerButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+                <span>Delete All Downloads</span>
+              </button>
+            </>
+          ) : contextMenu.row.kind === 'active' ? (
+            <>
+              <button
+                onClick={() => void handleOpenDownloadsLocation()}
+                disabled={!contextMenuRowPath}
+                className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <span>Open File Location</span>
+              </button>
+              <button
+                onClick={() => void handleCopyDownloadPath()}
+                disabled={!contextMenuRowPath}
+                className={`${downloadMenuSubtleButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                <span>Copy Path</span>
+              </button>
+              <button
+                onClick={() => void handleRefreshDownloads()}
+                className={downloadMenuButtonClass}
+              >
+                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                <span>Refresh</span>
+              </button>
+              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <button
+                onClick={() => void handleToggleDownloadState()}
+                className={contextMenuActiveDownload?.status === 'paused'
+                  ? downloadMenuBlueButtonClass
+                  : contextMenuActiveDownload?.status === 'error'
+                    ? downloadMenuDangerButtonClass
+                    : downloadMenuButtonClass}
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {contextMenuActiveDownload?.status === 'paused'
+                    ? 'play_arrow'
+                    : contextMenuActiveDownload?.status === 'error'
+                      ? 'delete'
+                      : 'pause'}
+                </span>
+                <span>
+                  {contextMenuActiveDownload?.status === 'paused'
+                    ? 'Resume'
+                    : contextMenuActiveDownload?.status === 'error'
+                      ? 'Remove from List'
+                      : 'Pause'}
+                </span>
+              </button>
+              {contextMenuActiveDownload?.status !== 'error' && (
+                <button
+                  onClick={() => void handleCancelContextDownload()}
+                  className={downloadMenuDangerButtonClass}
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <span>Cancel Download</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => void handleInstallContextRow()}
+                disabled={Boolean(contextMenuLocalEntry && installing && installSourcePath === contextMenuLocalEntry.path)}
+                className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">{contextMenuInstalledMod ? 'settings_backup_restore' : 'download'}</span>
+                <span>{contextMenuInstalledMod ? 'Reinstall' : 'Install'}</span>
+              </button>
+              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <button
+                onClick={() => void handleOpenDownloadsLocation()}
+                disabled={!contextMenuRowPath}
+                className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <span>Open File Location</span>
+              </button>
+              <button
+                onClick={() => void handleCopyDownloadPath()}
+                disabled={!contextMenuRowPath}
+                className={`${downloadMenuSubtleButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+              >
+                <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                <span>Copy Path</span>
+              </button>
+              <button
+                onClick={() => void handleRefreshDownloads()}
+                className={downloadMenuButtonClass}
+              >
+                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                <span>Refresh</span>
+              </button>
+              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <button
+                onClick={() => {
+                  if (!contextMenuLocalEntry) return
+                  setPendingDeleteDownload(contextMenuLocalEntry)
+                  setContextMenu(null)
+                }}
+                className={downloadMenuDangerButtonClass}
+              >
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <span>Delete Download</span>
+              </button>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
 
       {pendingDeleteDownload && (
         <ActionPromptDialog

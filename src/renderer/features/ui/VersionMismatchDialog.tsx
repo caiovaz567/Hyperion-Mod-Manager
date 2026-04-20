@@ -59,6 +59,7 @@ export const VersionMismatchDialog: React.FC = () => {
   }))
 
   const [submitting, setSubmitting] = useState(false)
+
   useEffect(() => {
     if (!versionMismatchPrompt) {
       setSubmitting(false)
@@ -72,30 +73,58 @@ export const VersionMismatchDialog: React.FC = () => {
 
   if (!versionMismatchPrompt) return null
 
-  const relationCopy = {
+  const relationMeta = {
     upgrade: {
-      label: 'Upgrade Ready',
-      description: 'This archive is newer than the version currently installed.',
-      helper: 'Replace to update now, or install as copy to keep both versions available.',
+      badge: 'Upgrade Ready',
+      summary: 'The selected archive is newer than the mod already installed.',
+      tone: 'cyan' as const,
     },
     downgrade: {
-      label: 'Older Archive',
-      description: 'This archive looks older than the version already installed.',
-      helper: 'Replace only if you want a rollback, or install as copy to compare both versions safely.',
+      badge: 'Older Archive',
+      summary: 'The selected archive is older than the mod already installed.',
+      tone: 'red' as const,
     },
     different: {
-      label: 'Different Version',
-      description: 'The selected archive does not match the installed version.',
-      helper: 'Choose whether to replace the current install or keep both variants side by side.',
+      badge: 'Different Version',
+      summary: 'The selected archive does not match the currently installed version.',
+      tone: 'cyan' as const,
     },
     unknown: {
-      label: 'Needs Review',
-      description: 'Hyperion could not verify one of the versions with confidence.',
-      helper: 'Review the selected archive before replacing the installed mod.',
+      badge: 'Needs Review',
+      summary: 'Hyperion could not verify the version relationship with confidence.',
+      tone: 'cyan' as const,
     },
   }[relation]
 
-  const relationBadgeStyle = relation === 'downgrade'
+  const replaceMeta = relation === 'downgrade'
+    ? {
+        title: `Replace Current Mod With ${formatVersionLabel(versionMismatchPrompt.incomingVersion)}`,
+        helper: 'Use this only if you want to roll back. The installed entry will be replaced by the older archive.',
+        accent: 'red' as const,
+        recommended: false,
+      }
+    : {
+        title: `Update To ${formatVersionLabel(versionMismatchPrompt.incomingVersion)}`,
+        helper: 'Use this if you want the current library entry to become the selected archive version.',
+        accent: 'yellow' as const,
+        recommended: relation === 'upgrade',
+      }
+
+  const copyMeta = relation === 'downgrade'
+    ? {
+        title: `Keep Current Version ${formatVersionLabel(versionMismatchPrompt.existingVersion)}`,
+        helper: 'Recommended. Hyperion keeps the current install exactly as it is and ignores the older archive.',
+        accent: 'yellow' as const,
+        recommended: true,
+      }
+    : {
+        title: `Keep Both Versions Side By Side`,
+        helper: 'The current mod stays installed and the selected archive is added as a separate copy in the library.',
+        accent: 'cyan' as const,
+        recommended: false,
+      }
+
+  const relationBadgeStyle = relationMeta.tone === 'red'
     ? {
         borderColor: 'rgba(248,113,113,0.45)',
         background: 'rgba(248,113,113,0.08)',
@@ -106,6 +135,12 @@ export const VersionMismatchDialog: React.FC = () => {
         background: 'rgba(79,216,255,0.08)',
         color: 'var(--accent-cyber-blue)',
       }
+  const relationAccentColor = relation === 'downgrade'
+    ? 'var(--status-error)'
+    : 'var(--accent-cyber-blue)'
+  const relationAccentGlow = relation === 'downgrade'
+    ? '0 0 12px rgba(248,113,113,0.24)'
+    : '0 0 12px rgba(79,216,255,0.24)'
 
   const doAction = async (action: 'replace' | 'copy' | 'skip') => {
     setSubmitting(true)
@@ -118,12 +153,12 @@ export const VersionMismatchDialog: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[210] flex items-center justify-center overflow-hidden bg-black/82 px-4 py-5 backdrop-blur-sm sm:px-5">
-      <div className="relative w-full max-w-[680px] overflow-hidden border-[0.5px] border-[var(--border-strong)] bg-[var(--bg-base)] px-5 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.82)] sm:px-6 sm:py-6">
+      <div className="relative mx-auto w-full max-w-[560px] overflow-hidden border-[0.5px] border-[var(--border-strong)] bg-[var(--bg-base)] px-5 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.82)] sm:px-6 sm:py-6">
         <div
           className="absolute left-0 top-0 h-[2px] w-full"
           style={{
-            background: 'var(--accent-cyber-blue)',
-            boxShadow: '0 0 12px rgba(79,216,255,0.28)',
+            background: relationAccentColor,
+            boxShadow: relationAccentGlow,
           }}
         />
 
@@ -132,7 +167,7 @@ export const VersionMismatchDialog: React.FC = () => {
             <div className="mb-2 flex items-center gap-3">
               <span
                 className="material-symbols-outlined text-[22px]"
-                style={{ color: 'var(--accent-cyber-blue)' }}
+                style={{ color: relationAccentColor }}
               >
                 difference
               </span>
@@ -144,15 +179,14 @@ export const VersionMismatchDialog: React.FC = () => {
               </h2>
             </div>
             <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-              {relationCopy.description}{' '}
-              <span style={{ color: 'var(--text-support)' }}>{relationCopy.helper}</span>
+              {relationMeta.summary}
             </p>
           </div>
           <span
             className="inline-flex shrink-0 items-center self-start rounded-sm border-[0.5px] px-3 py-1 text-[10px] brand-font font-bold uppercase tracking-[0.18em]"
             style={relationBadgeStyle}
           >
-            {relationCopy.label}
+            {relationMeta.badge}
           </span>
         </div>
 
@@ -160,16 +194,25 @@ export const VersionMismatchDialog: React.FC = () => {
           <div className="grid gap-3 sm:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
             <div className="min-w-0">
               <div className="ui-support-mono uppercase tracking-[0.14em] text-[var(--text-support)]">
-                Nexus mod
+                Current installed
               </div>
-              <div className="brand-font mt-1 text-[1.05rem] font-bold uppercase tracking-[0.06em] text-[var(--text-primary)]">
+              <div className="mt-2 font-mono text-[1.45rem] font-semibold leading-none text-[var(--accent)]">
+                {formatVersionLabel(versionMismatchPrompt.existingVersion)}
+              </div>
+              <div className="mt-2 text-sm font-medium tracking-[0.01em] text-[var(--text-primary)]">
                 {versionMismatchPrompt.existingModName}
               </div>
             </div>
 
             <div className="min-w-0 border-t-[0.5px] border-[var(--border-default)] pt-3 sm:border-l-[0.5px] sm:border-t-0 sm:pl-4 sm:pt-0 sm:border-l-[var(--border-default)]">
               <div className="ui-support-mono uppercase tracking-[0.14em] text-[var(--text-support)]">
-                Selected archive
+                Archive selected
+              </div>
+              <div
+                className="mt-2 font-mono text-[1.45rem] font-semibold leading-none"
+                style={{ color: relationAccentColor }}
+              >
+                {formatVersionLabel(versionMismatchPrompt.incomingVersion)}
               </div>
               <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-[var(--text-primary)]">
                 {versionMismatchPrompt.sourceFileName ?? 'Archive currently selected in Downloads'}
@@ -178,85 +221,160 @@ export const VersionMismatchDialog: React.FC = () => {
           </div>
         </div>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          <div
-            className="rounded-sm border-[0.5px] px-4 py-3"
-            style={{
-              borderColor: 'rgba(252,238,9,0.28)',
-              background: 'linear-gradient(180deg, rgba(252,238,9,0.08), rgba(10,10,10,0.98) 52%)',
-            }}
-          >
-            <div className="ui-support-mono uppercase tracking-[0.14em] text-[var(--text-support)]">
-              Installed now
-            </div>
-            <div
-              className="mt-2 font-mono text-[1.3rem] font-semibold leading-none"
-              style={{ color: 'var(--accent)' }}
-            >
-              {formatVersionLabel(versionMismatchPrompt.existingVersion)}
-            </div>
-            <div className="ui-support-mono mt-2 text-[var(--text-support)]">
-              Replace updates the current library entry for this Nexus mod.
-            </div>
-          </div>
+        <div className="mb-4 grid gap-3">
+          {relation !== 'downgrade' ? (
+            <>
+              <button
+                onClick={() => void doAction('replace')}
+                disabled={submitting}
+                className="group rounded-sm border-[0.5px] px-4 py-4 text-left transition-all duration-150 hover:-translate-y-[1px] disabled:opacity-60"
+                style={{
+                  borderColor: 'rgba(79,216,255,0.34)',
+                  background: 'linear-gradient(180deg, rgba(79,216,255,0.08), rgba(8,8,8,0.99) 58%)',
+                  boxShadow: 'inset 0 1px 0 rgba(79,216,255,0.08), 0 0 0 rgba(79,216,255,0)',
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(79,216,255,0.55)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(79,216,255,0.12), 0 0 18px rgba(79,216,255,0.12)'
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(79,216,255,0.34)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(79,216,255,0.08), 0 0 0 rgba(79,216,255,0)'
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div
+                    className="brand-font text-[0.95rem] font-bold uppercase tracking-[0.05em]"
+                    style={{ color: 'var(--accent-cyber-blue)' }}
+                  >
+                    {replaceMeta.title}
+                  </div>
+                  {replaceMeta.recommended ? (
+                    <span className="rounded-sm border-[0.5px] border-[rgba(79,216,255,0.34)] bg-[rgba(79,216,255,0.08)] px-2 py-1 text-[10px] brand-font font-bold uppercase tracking-[0.16em] text-[var(--accent-cyber-blue)]">
+                      Recommended
+                    </span>
+                  ) : null}
+                </div>
+                <div className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                  {replaceMeta.helper}
+                </div>
+              </button>
 
-          <div
-            className="rounded-sm border-[0.5px] px-4 py-3 shadow-[inset_0_1px_0_rgba(79,216,255,0.08)]"
-            style={{
-              borderColor: 'rgba(79,216,255,0.34)',
-              background: 'linear-gradient(180deg, rgba(79,216,255,0.08), rgba(8,8,8,0.99) 56%)',
-            }}
-          >
-            <div className="ui-support-mono uppercase tracking-[0.14em] text-[var(--text-support)]">
-              Archive selected
-            </div>
-            <div
-              className="mt-2 font-mono text-[1.3rem] font-semibold leading-none"
-              style={{ color: 'var(--accent-cyber-blue)' }}
-            >
-              {formatVersionLabel(versionMismatchPrompt.incomingVersion)}
-            </div>
-            <div className="ui-support-mono mt-2 text-[var(--text-support)]">
-              Install as copy keeps both versions side by side in the library.
-            </div>
-          </div>
+              <button
+                onClick={() => void doAction('copy')}
+                disabled={submitting}
+                className="group rounded-sm border-[0.5px] px-4 py-4 text-left transition-all duration-150 hover:-translate-y-[1px] disabled:opacity-60"
+                style={{
+                  borderColor: 'rgba(252,238,9,0.34)',
+                  background: 'linear-gradient(180deg, rgba(252,238,9,0.08), rgba(10,10,10,0.98) 58%)',
+                  boxShadow: 'inset 0 1px 0 rgba(252,238,9,0.06), 0 0 0 rgba(252,238,9,0)',
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(252,238,9,0.56)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(252,238,9,0.1), 0 0 18px rgba(252,238,9,0.1)'
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(252,238,9,0.34)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(252,238,9,0.06), 0 0 0 rgba(252,238,9,0)'
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div
+                    className="brand-font text-[0.95rem] font-bold uppercase tracking-[0.05em]"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    {copyMeta.title}
+                  </div>
+                </div>
+                <div className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                  {copyMeta.helper}
+                </div>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => void doAction('replace')}
+                disabled={submitting}
+                className="group rounded-sm border-[0.5px] px-4 py-4 text-left transition-all duration-150 hover:-translate-y-[1px] disabled:opacity-60"
+                style={{
+                  borderColor: 'rgba(248,113,113,0.38)',
+                  background: 'linear-gradient(180deg, rgba(248,113,113,0.08), rgba(10,10,10,0.98) 60%)',
+                  boxShadow: 'inset 0 1px 0 rgba(248,113,113,0.06), 0 0 0 rgba(248,113,113,0)',
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(248,113,113,0.58)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(248,113,113,0.12), 0 0 18px rgba(248,113,113,0.12)'
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(248,113,113,0.38)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(248,113,113,0.06), 0 0 0 rgba(248,113,113,0)'
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div
+                    className="brand-font text-[0.95rem] font-bold uppercase tracking-[0.05em]"
+                    style={{ color: 'var(--status-error)' }}
+                  >
+                    {replaceMeta.title}
+                  </div>
+                </div>
+                <div className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                  {replaceMeta.helper}
+                </div>
+              </button>
+
+              <button
+                onClick={() => void doAction('skip')}
+                disabled={submitting}
+                className="group rounded-sm border-[0.5px] px-4 py-4 text-left transition-all duration-150 hover:-translate-y-[1px] disabled:opacity-60"
+                style={{
+                  borderColor: 'rgba(252,238,9,0.34)',
+                  background: 'linear-gradient(180deg, rgba(252,238,9,0.08), rgba(10,10,10,0.98) 58%)',
+                  boxShadow: 'inset 0 1px 0 rgba(252,238,9,0.06), 0 0 0 rgba(252,238,9,0)',
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(252,238,9,0.56)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(252,238,9,0.1), 0 0 18px rgba(252,238,9,0.1)'
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.borderColor = 'rgba(252,238,9,0.34)'
+                  event.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(252,238,9,0.06), 0 0 0 rgba(252,238,9,0)'
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div
+                    className="brand-font text-[0.95rem] font-bold uppercase tracking-[0.05em]"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    {copyMeta.title}
+                  </div>
+                  {copyMeta.recommended ? (
+                    <span className="rounded-sm border-[0.5px] border-[rgba(252,238,9,0.34)] bg-[rgba(252,238,9,0.08)] px-2 py-1 text-[10px] brand-font font-bold uppercase tracking-[0.16em] text-[var(--accent)]">
+                      Recommended
+                    </span>
+                  ) : null}
+                </div>
+                <div className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                  {copyMeta.helper}
+                </div>
+              </button>
+            </>
+          )}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        {relation !== 'downgrade' ? (
           <button
-            onClick={() => void doAction('replace')}
-            disabled={submitting}
-            className="h-10 rounded-sm px-4 text-[11px] brand-font font-bold uppercase tracking-[0.18em] transition-all hover:bg-[var(--accent-hover)] hover:shadow-[0_0_18px_rgba(252,238,9,0.14)] disabled:opacity-60"
-            style={{
-              background: 'var(--accent)',
-              color: '#050505',
+            onClick={() => {
+              if (submitting) return
+              void doAction('skip')
             }}
-          >
-            Replace Installed Mod
-          </button>
-          <button
-            onClick={() => void doAction('copy')}
             disabled={submitting}
-            className="h-10 rounded-sm border-[0.5px] bg-[var(--bg-base)] px-4 text-[11px] brand-font font-bold uppercase tracking-[0.18em] transition-all hover:bg-[rgba(79,216,255,0.08)] disabled:opacity-60"
-            style={{
-              borderColor: 'rgba(79,216,255,0.34)',
-              color: 'var(--accent-cyber-blue)',
-            }}
+            className="w-full rounded-sm border-[0.5px] border-[var(--border-default)] py-2 text-[10px] brand-font font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] disabled:opacity-60"
           >
-            Install as Copy
+            Not Now
           </button>
-        </div>
-
-        <button
-          onClick={() => {
-            if (submitting) return
-            void doAction('skip')
-          }}
-          disabled={submitting}
-          className="mt-3 w-full rounded-sm border-[0.5px] border-[var(--border-default)] py-2 text-[10px] brand-font font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] disabled:opacity-60"
-        >
-          Not Now
-        </button>
+        ) : null}
       </div>
     </div>
   )

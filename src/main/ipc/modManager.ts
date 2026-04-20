@@ -40,6 +40,37 @@ function normalizeModName(rawName: string): string {
     .trim() || rawName
 }
 
+function sanitizeSeparatorFolderName(rawName: string): string {
+  const cleaned = rawName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/g, '')
+
+  return cleaned || 'New Separator'
+}
+
+function getUniqueSeparatorFolderName(
+  libraryPath: string,
+  rawName: string,
+  excludeDirPath?: string
+): string {
+  const baseName = sanitizeSeparatorFolderName(rawName)
+  const excludedPath = excludeDirPath ? path.resolve(excludeDirPath) : null
+  let candidate = baseName
+  let suffix = 2
+
+  while (true) {
+    const candidatePath = path.join(libraryPath, candidate)
+    if (!fs.existsSync(candidatePath) || (excludedPath && path.resolve(candidatePath) === excludedPath)) {
+      return candidate
+    }
+
+    candidate = `${baseName} ${suffix}`
+    suffix += 1
+  }
+}
+
 function getSourceModifiedAt(sourcePath?: string): string | undefined {
   if (!sourcePath || !fs.existsSync(sourcePath)) return undefined
 
@@ -320,6 +351,38 @@ function writeMetadata(modDir: string, meta: ModMetadata): void {
   )
 }
 
+async function createSeparator(libraryPath: string, rawName: string): Promise<IpcResult<ModMetadata>> {
+  if (!libraryPath) return { ok: false, error: 'Library path not set' }
+
+  fs.mkdirSync(libraryPath, { recursive: true })
+
+  const currentEntries = await scanMods(libraryPath)
+  const nextOrder = currentEntries.length
+  const uuid = uuidv4()
+  const name = rawName.trim() || 'New Separator'
+  const folderName = getUniqueSeparatorFolderName(libraryPath, name)
+  const modDir = path.join(libraryPath, folderName)
+  const installedAt = new Date().toISOString()
+
+  const separator: ModMetadata = {
+    uuid,
+    name,
+    type: 'unknown',
+    kind: 'separator',
+    order: nextOrder,
+    enabled: false,
+    installedAt,
+    fileSize: 0,
+    files: ['_metadata.json'],
+    folderName,
+    deployedPaths: [],
+  }
+
+  fs.mkdirSync(modDir, { recursive: true })
+  writeMetadata(modDir, separator)
+  return { ok: true, data: separator }
+}
+
 // ─── Core Functions ──────────────────────────────────────────────────────────
 
 // Finds the actual directory of a mod by scanning for its UUID in metadata
@@ -598,6 +661,14 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
   )
 
   ipcMain.handle(
+    IPC.CREATE_SEPARATOR,
+    async (_event, name: string): Promise<IpcResult<ModMetadata>> => {
+      const settings = loadSettings()
+      return createSeparator(settings.libraryPath, name)
+    }
+  )
+
+  ipcMain.handle(
     IPC.REORDER_MODS,
     async (_event, orderedIds: string[]): Promise<IpcResult> => {
       const settings = loadSettings()
@@ -626,8 +697,20 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       const settings = loadSettings()
       const found = findModDir(settings.libraryPath, modId)
       if (!found) return { ok: false, error: 'Metadata not found' }
+      let nextDir = found.dir
       const updated = { ...found.mod, ...updates, uuid: found.mod.uuid }
-      writeMetadata(found.dir, updated)
+
+      if (found.mod.kind === 'separator' && typeof updates.name === 'string') {
+        const nextName = updates.name.trim() || found.mod.name
+        const nextFolderName = getUniqueSeparatorFolderName(settings.libraryPath, nextName, found.dir)
+        if (nextFolderName !== path.basename(found.dir)) {
+          nextDir = path.join(settings.libraryPath, nextFolderName)
+          fs.renameSync(found.dir, nextDir)
+        }
+        updated.folderName = nextFolderName
+      }
+
+      writeMetadata(nextDir, updated)
       return { ok: true, data: updated }
     }
   )

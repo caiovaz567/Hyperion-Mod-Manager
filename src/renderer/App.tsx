@@ -14,6 +14,7 @@ import { ModList } from './features/library/ModList'
 import { DownloadsPane } from './features/downloads/DownloadsPane'
 import { SettingsPage } from './features/ui/SettingsDialog'
 import { AppLogsDialog } from './features/ui/NexusRequestLogDialog'
+import { getInstallProgressAppearance } from './utils/installProgressAppearance'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
@@ -43,6 +44,14 @@ async function waitForCriticalFonts(): Promise<void> {
   ])
 }
 
+function getInstallOverlayName(sourcePath: string, currentFile: string): string {
+  const raw = currentFile || sourcePath
+  if (!raw) return 'Preparing installation'
+  const normalized = raw.replace(/\//g, '\\')
+  const parts = normalized.split('\\').filter(Boolean)
+  return parts[parts.length - 1] ?? raw
+}
+
 export const App: React.FC = () => {
   const {
     loadSettings,
@@ -60,6 +69,11 @@ export const App: React.FC = () => {
     addToast,
     gamePathValid,
     libraryPathValid,
+    installing,
+    installProgress,
+    installStatus,
+    installCurrentFile,
+    installSourcePath,
     dialogs,
     closeDialog,
   } = useAppStore((state) => ({
@@ -78,6 +92,11 @@ export const App: React.FC = () => {
     addToast: state.addToast,
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
+    installing: state.installing,
+    installProgress: state.installProgress,
+    installStatus: state.installStatus,
+    installCurrentFile: state.installCurrentFile,
+    installSourcePath: state.installSourcePath,
     dialogs: state.dialogs,
     closeDialog: state.closeDialog,
   }), shallow)
@@ -197,6 +216,9 @@ export const App: React.FC = () => {
   const missingRequiredPaths = !settings?.gamePath?.trim() || !settings?.libraryPath?.trim() || !gamePathValid || !libraryPathValid
   const showSidebar = !missingRequiredPaths
   const showHeader = !missingRequiredPaths
+  const installAppearance = getInstallProgressAppearance(installStatus)
+  const installOverlayName = getInstallOverlayName(installSourcePath, installCurrentFile)
+  const clampedInstallProgress = Math.max(6, Math.min(installProgress || 8, 100))
 
   return (
     <div className="hyperion-shell h-screen overflow-hidden flex flex-col bg-[#050505] text-[#e5e2e1] antialiased">
@@ -217,6 +239,67 @@ export const App: React.FC = () => {
         <VersionMismatchDialog />
         {dialogs.appLogs && (
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
+        )}
+        {installing && (
+          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/86 px-4 backdrop-blur-sm">
+            <div
+              className="relative w-full max-w-[520px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-6 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
+              style={{ borderColor: `${installAppearance.accent}44` }}
+            >
+              <div
+                className="absolute left-0 top-0 h-[2px] w-full"
+                style={{
+                  background: installAppearance.accent,
+                  boxShadow: `0 0 12px ${installAppearance.accent}44`,
+                }}
+              />
+              <div className="flex items-start gap-4">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]"
+                  style={{ borderColor: `${installAppearance.accent}33`, color: installAppearance.accent }}
+                >
+                  <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="brand-font text-[1rem] font-bold uppercase tracking-[0.12em]" style={{ color: installAppearance.accent }}>
+                    Installing Mod
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-[#d3d3d3]">
+                    Hyperion is extracting files, updating the library, and deploying the mod. Please wait until the installation finishes.
+                  </p>
+                  <div className="mt-4 rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
+                    <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">
+                      Processing now
+                    </div>
+                    <div className="mt-2 truncate text-sm font-medium text-[#f2f2f2]">
+                      {installOverlayName}
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#111]">
+                      <div
+                        className="h-full transition-all duration-500"
+                        style={{
+                          width: `${clampedInstallProgress}%`,
+                          background: installAppearance.fill,
+                          boxShadow: `0 0 12px ${installAppearance.accent}33`,
+                        }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-mono">
+                      <span style={{ color: installAppearance.accent }}>
+                        {installStatus || installAppearance.summary}
+                      </span>
+                      <span className="text-[#d8d8d8]">
+                        {Math.round(clampedInstallProgress)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-[11px] brand-font uppercase tracking-[0.16em] text-[#8a8a8a]">
+                    The interface is temporarily locked to keep this install stable.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         <ToastContainer />
       </div>

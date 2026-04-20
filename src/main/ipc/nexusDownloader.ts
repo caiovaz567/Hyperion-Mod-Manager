@@ -400,7 +400,7 @@ interface DownloadHandle {
   destPath: string
   fileName: string
   startedAt: string
-  status: 'downloading' | 'paused'
+  status: 'downloading' | 'paused' | 'cancelling'
   requestToken: number
   version?: string
 }
@@ -806,11 +806,13 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     const handle = inFlightDownloads.get(id)
     if (handle) {
       if (handle.abort) {
+        handle.status = 'cancelling'
         handle.abort.abort('cancel')
       } else {
         removePartialFile(handle.destPath)
+        removeNexusDownloadRecordByPath(handle.destPath)
+        inFlightDownloads.delete(id)
       }
-      inFlightDownloads.delete(id)
     }
     return { ok: true }
   })

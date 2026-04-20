@@ -261,6 +261,7 @@ export const IPC = {
   DISABLE_MOD: 'mods:disable',
   PURGE_MODS: 'mods:purge',
   DELETE_MOD: 'mods:delete',
+  CREATE_SEPARATOR: 'mods:createSeparator',
   REORDER_MODS: 'mods:reorder',
   UPDATE_MOD_METADATA: 'mods:updateMetadata',
 

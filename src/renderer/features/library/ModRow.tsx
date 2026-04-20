@@ -9,6 +9,15 @@ interface ModRowProps {
   mod: ModMetadata
   index: number
   selected: boolean
+  nested?: boolean
+  animateOnEnter?: boolean
+  dragging?: boolean
+  dragEnabled?: boolean
+  separatorDropTarget?: boolean
+  separatorCollapsed?: boolean
+  separatorChildCount?: number
+  separatorMoveHint?: string | null
+  rowDropPosition?: 'before' | 'after' | null
   onSelect: (event: React.MouseEvent) => void
   onContextMenu: (event: React.MouseEvent, mod: ModMetadata) => void
   onRename: (mod: ModMetadata) => void
@@ -19,6 +28,14 @@ interface ModRowProps {
   onRenameChange: (value: string) => void
   onRenameSave: () => void
   onRenameCancel: () => void
+  onDragStart?: (event: React.DragEvent, mod: ModMetadata) => void
+  onDragEnd?: (event: React.DragEvent, mod: ModMetadata) => void
+  onRowDragOver?: (event: React.DragEvent, mod: ModMetadata) => void
+  onRowDragLeave?: (event: React.DragEvent, mod: ModMetadata) => void
+  onRowDrop?: (event: React.DragEvent, mod: ModMetadata) => void
+  onSeparatorDragOver?: (event: React.DragEvent, separator: ModMetadata) => void
+  onSeparatorDragLeave?: (event: React.DragEvent, separator: ModMetadata) => void
+  onSeparatorDrop?: (event: React.DragEvent, separator: ModMetadata) => void
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -48,11 +65,21 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 const ACTIVE_COLOR = '#fcee09'
+const NESTED_ACCENT_COLOR = '#4fd8ff'
 
 export const ModRow: React.FC<ModRowProps> = ({
   mod,
   index,
   selected,
+  nested = false,
+  animateOnEnter = false,
+  dragging = false,
+  dragEnabled = false,
+  separatorDropTarget = false,
+  separatorCollapsed = false,
+  separatorChildCount = 0,
+  separatorMoveHint = null,
+  rowDropPosition = null,
   onSelect,
   onContextMenu,
   onOpenDetails,
@@ -63,6 +90,14 @@ export const ModRow: React.FC<ModRowProps> = ({
   onRenameChange,
   onRenameSave,
   onRenameCancel,
+  onDragStart,
+  onDragEnd,
+  onRowDragOver,
+  onRowDragLeave,
+  onRowDrop,
+  onSeparatorDragOver,
+  onSeparatorDragLeave,
+  onSeparatorDrop,
 }) => {
   const { enableMod, disableMod, addToast, recentBadge } = useAppStore((state) => ({
     enableMod: state.enableMod,
@@ -74,20 +109,131 @@ export const ModRow: React.FC<ModRowProps> = ({
   if (mod.kind === 'separator') {
     return (
       <div
+        data-mod-row="true"
+        draggable={dragEnabled && !isRenaming}
+        onDragStart={(event) => onDragStart?.(event, mod)}
+        onDragEnd={(event) => onDragEnd?.(event, mod)}
         onClick={onSelect}
-        className="flex items-center gap-4 px-6 py-1 cursor-pointer border-b-[0.5px] border-[#1a1a1a] hover:bg-[#0a0a0a] transition-colors"
+        onContextMenu={(event) => onContextMenu(event, mod)}
+        onDragOver={(event) => onSeparatorDragOver?.(event, mod)}
+        onDragLeave={(event) => onSeparatorDragLeave?.(event, mod)}
+        onDrop={(event) => onSeparatorDrop?.(event, mod)}
+        className={`group relative overflow-hidden border-b-[0.5px] border-[#1a1a1a] transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${
+          separatorDropTarget
+            ? 'bg-[#04141b] shadow-[inset_0_0_0_1px_rgba(79,216,255,0.34)]'
+            : selected
+              ? 'bg-[#0b0f11]'
+              : 'bg-[#070707] hover:border-[#19333c] hover:bg-[#0c1114] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(79,216,255,0.14)]'
+        } ${dragEnabled ? 'cursor-default active:cursor-grabbing' : ''} ${dragging ? 'opacity-45 translate-x-1' : ''}`}
       >
-        <div className="flex-1 h-px bg-[#1a1a1a]" />
-        <span className="text-[10px] brand-font font-bold text-[#8a8a8a] uppercase tracking-widest whitespace-nowrap flex-shrink-0">
-          {mod.name}
-        </span>
-        <div className="flex-1 h-px bg-[#1a1a1a]" />
+        {rowDropPosition ? (
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none absolute left-0 right-0 z-20 h-[2px] ${
+              rowDropPosition === 'before' ? 'top-0' : 'bottom-0'
+            }`}
+            style={{
+              background: '#4fd8ff',
+              boxShadow: '0 0 10px rgba(79,216,255,0.55)',
+            }}
+          />
+        ) : null}
+        <div
+          aria-hidden="true"
+          className="absolute left-0 right-0 top-0 h-px opacity-70 transition-opacity duration-150 group-hover:opacity-100"
+          style={{
+            background: separatorDropTarget
+              ? 'rgba(79,216,255,0.7)'
+              : 'rgba(79,216,255,0.28)',
+            boxShadow: separatorDropTarget ? '0 0 8px rgba(79,216,255,0.28)' : 'none',
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 w-[3px] transition-[background-color,box-shadow] duration-150"
+          style={{
+            background: separatorDropTarget ? '#4fd8ff' : 'rgba(79,216,255,0.72)',
+            boxShadow: separatorDropTarget ? '0 0 10px rgba(79,216,255,0.45)' : '0 0 10px rgba(79,216,255,0.16)',
+          }}
+        />
+        {!separatorDropTarget && !selected ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+            style={{
+              background: 'linear-gradient(90deg, rgba(79,216,255,0.08) 0%, rgba(79,216,255,0.03) 18%, rgba(255,255,255,0.012) 38%, rgba(255,255,255,0) 68%)',
+            }}
+          />
+        ) : null}
+        <div className="relative flex h-[40px] items-center justify-between gap-6 px-5">
+          {isRenaming ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(event) => onRenameChange(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              onDoubleClick={(event) => event.stopPropagation()}
+              onBlur={onRenameSave}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') onRenameSave()
+                if (event.key === 'Escape') onRenameCancel()
+              }}
+              className="allow-text-selection h-9 min-w-[220px] max-w-[340px] border-[0.5px] border-[#3d3d3d] bg-[#0a0a0a] px-3 text-[13px] brand-font font-bold uppercase tracking-[0.14em] leading-none text-white focus:border-[#4fd8ff]/55 focus:outline-none"
+            />
+          ) : (
+            <div className="flex min-w-0 items-center gap-3 pl-[32px]">
+              <span className={`absolute left-[16px] top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-[#8fb8c4] transition-[transform,color] duration-200 group-hover:text-[#dff7ff] ${
+                separatorCollapsed ? '-rotate-90' : 'rotate-0'
+              }`}>
+                expand_more
+              </span>
+              <span
+                aria-hidden="true"
+                className="h-[8px] w-[8px] shrink-0 rounded-full transition-[background-color,box-shadow] duration-150"
+                style={{
+                  background: '#4fd8ff',
+                  boxShadow: separatorDropTarget ? '0 0 10px rgba(79,216,255,0.45)' : '0 0 8px rgba(79,216,255,0.2)',
+                }}
+              />
+              <span
+                className={`truncate text-[13px] brand-font font-bold uppercase tracking-[0.14em] transition-colors duration-150 ${
+                  separatorDropTarget
+                    ? 'text-[#4fd8ff]'
+                    : selected
+                      ? 'text-[#ffffff]'
+                      : 'text-[#f2f2f2] group-hover:text-[#ffffff]'
+                }`}
+              >
+                {mod.name}
+              </span>
+              {separatorChildCount > 0 ? (
+                <span className="shrink-0 rounded-sm border-[0.5px] border-[#202a2e] bg-[#0a0d0f] px-2 py-[3px] text-[11px] font-mono uppercase tracking-[0.12em] text-[#8aa6af] transition-colors duration-150 group-hover:border-[#29444e] group-hover:text-[#c6edf8]">
+                  {separatorChildCount} {separatorChildCount === 1 ? 'mod' : 'mods'}
+                </span>
+              ) : null}
+            </div>
+          )}
+          <div className="flex shrink-0 items-center gap-3">
+              {separatorMoveHint ? (
+                <span
+                  className={`rounded-sm border-[0.5px] px-2.5 py-[4px] text-[11px] brand-font font-bold uppercase tracking-[0.14em] ${
+                    separatorDropTarget
+                    ? 'border-[#4fd8ff]/45 bg-[#04131b] text-[#4fd8ff]'
+                    : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a4a4a4]'
+                }`}
+              >
+                {separatorDropTarget ? 'Drop Selected Here' : separatorMoveHint}
+              </span>
+            ) : null}
+          </div>
+        </div>
       </div>
     )
   }
 
   const color = TYPE_COLOR[mod.type] ?? '#64748B'
   const label = TYPE_LABEL[mod.type] ?? 'UNKNOWN'
+  const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
   const rowBackgroundClass = selected
     ? 'bg-[#0a0a0a]'
     : mod.enabled
@@ -105,187 +251,211 @@ export const ModRow: React.FC<ModRowProps> = ({
   }
 
   return (
-    <div
-      data-mod-row="true"
-      onClick={onSelect}
-      onDoubleClick={() => onOpenDetails(mod)}
-      onContextMenu={(event) => onContextMenu(event, mod)}
-      className={`library-mod-row grid h-[38px] gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity] duration-150 ${rowBackgroundClass} ${
-        mod.enabled
-          ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
-          : 'opacity-50 hover:opacity-86 hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
-      } ${selected ? 'ring-1 ring-inset ring-[#fcee09]/50' : ''}`}
-      style={{
-        gridTemplateColumns: '72px 80px minmax(280px,1fr) 110px 156px 184px 96px',
-      }}
-    >
+    <div className={`relative ${nested ? 'pl-6' : ''} ${animateOnEnter ? 'fade-up' : ''}`}>
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        data-mod-row="true"
+        draggable={dragEnabled && !isRenaming}
+        onDragStart={(event) => onDragStart?.(event, mod)}
+        onDragEnd={(event) => onDragEnd?.(event, mod)}
+        onDragOver={(event) => onRowDragOver?.(event, mod)}
+        onDragLeave={(event) => onRowDragLeave?.(event, mod)}
+        onDrop={(event) => onRowDrop?.(event, mod)}
+        onClick={onSelect}
+        onDoubleClick={() => onOpenDetails(mod)}
+        onContextMenu={(event) => onContextMenu(event, mod)}
+        className={`library-mod-row grid h-[38px] gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${
+          mod.enabled
+            ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
+            : 'hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+        } ${selected ? 'ring-1 ring-inset ring-[#fcee09]/50' : ''} ${
+          dragEnabled ? 'active:cursor-grabbing' : ''
+        } ${dragging ? 'opacity-45 translate-x-1' : ''}`}
         style={{
-          background: mod.enabled
-            ? 'linear-gradient(90deg, rgba(252,238,9,0.08) 0%, rgba(252,238,9,0.036) 15%, rgba(255,255,255,0.018) 34%, rgba(255,255,255,0) 66%)'
-            : 'linear-gradient(90deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 20%, rgba(255,255,255,0) 62%)',
+          gridTemplateColumns: '64px 56px minmax(320px,1fr) 110px 156px 184px 96px',
         }}
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-[#fcee09]/55 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-      />
-
-      <div className="flex items-center pl-2" onClick={handleToggle}>
-        <div
-          className={`relative h-4 w-8 rounded-full border-[0.5px] transition-all ${
-            mod.enabled
-              ? 'border-[#fcee09]/45 bg-[#2a2604] group-hover:border-[#fcee09]/65'
-              : 'border-[#222] bg-[#111] group-hover:border-[#333]'
-          }`}
-        >
+      >
+        {rowDropPosition ? (
           <div
-            className={`absolute top-1/2 h-[12px] w-[12px] -translate-y-1/2 rounded-full ${
-              mod.enabled
-                ? 'right-[1px] bg-[#fcee09]'
-                : 'left-[1px] bg-[#7a7a7a]'
+            aria-hidden="true"
+            className={`pointer-events-none absolute left-0 right-0 z-20 h-[2px] ${
+              rowDropPosition === 'before' ? 'top-0' : 'bottom-0'
             }`}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center text-[#8a8a8a] text-[12px] font-mono group-hover:text-[#d0d0d0] transition-colors">
-        {index}
-      </div>
-
-      <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
-        {isRenaming ? (
-          <input
-            autoFocus
-            value={renameValue}
-            onChange={(event) => onRenameChange(event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-            onDoubleClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') onRenameSave()
-              if (event.key === 'Escape') onRenameCancel()
+            style={{
+              background: '#4fd8ff',
+              boxShadow: '0 0 10px rgba(79,216,255,0.55)',
             }}
-            className="allow-text-selection h-6 w-full border-[0.5px] border-[#333] bg-[#0a0a0a] px-3 text-[12px] text-white focus:border-[#fcee09]/50 focus:outline-none"
           />
-        ) : (
-          <div className="flex min-w-0 items-center gap-2">
-            <span
-              className={`font-medium tracking-tight truncate transition-colors ${
-                mod.enabled ? 'text-[#e5e2e1] group-hover:text-[#ffffff]' : 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
-              }`}
-            >
-              {mod.name}
-            </span>
-            {recentBadge ? (
-              <span
-                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
-                style={{
-                  color: recentBadge === 'downgraded'
-                    ? '#f87171'
-                    : recentBadge === 'updated'
-                      ? '#60a5fa'
-                      : '#34d399',
-                  borderColor: recentBadge === 'downgraded'
-                    ? 'rgba(248,113,113,0.35)'
-                    : recentBadge === 'updated'
-                      ? 'rgba(96,165,250,0.35)'
-                      : 'rgba(52,211,153,0.35)',
-                  background: recentBadge === 'downgraded'
-                    ? 'rgba(248,113,113,0.12)'
-                    : recentBadge === 'updated'
-                      ? 'rgba(96,165,250,0.12)'
-                      : 'rgba(52,211,153,0.12)',
-                }}
-              >
-                {recentBadge === 'downgraded' ? 'Downgraded' : recentBadge === 'updated' ? 'Updated' : 'Installed'}
-              </span>
-            ) : null}
-          </div>
-        )}
-      </div>
-
-      <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]' : 'text-[#8a8a8a] group-hover:text-[#aaaaaa]'}`}>
-        {mod.version ?? '—'}
-      </div>
-
-      <div className="flex items-center">
-        <span
-          className={`px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm transition-colors ${
-            mod.enabled ? 'bg-[#111] border-[#222] group-hover:border-[#343434]' : 'bg-[#050505] border-[#222] group-hover:border-[#2e2e2e]'
-          }`}
-          style={{ color: mod.enabled ? color : '#8a8a8a' }}
-        >
-          {label}
-        </span>
-      </div>
-
-      <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#bdbdbd]' : 'text-[#8a8a8a] group-hover:text-[#9d9d9d]'}`}>
-        {mod.enabled ? formatWindowsDateTime(mod.installedAt) : '---'}
-      </div>
-
-      <div className="flex items-center justify-end gap-2">
-        {isRenaming ? (
-          <>
-            <Tooltip content="Save name">
-              <button
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onRenameSave()
-                }}
-                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#2b4f2f] bg-[#0a0a0a] text-[#6fe3b1] hover:border-[#6fe3b1]/45 transition-all"
-              >
-                <span className="material-symbols-outlined text-[15px]">check</span>
-              </button>
-            </Tooltip>
-            <Tooltip content="Cancel rename">
-              <button
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onRenameCancel()
-                }}
-                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] hover:border-[#8a8a8a] hover:text-white transition-all"
-              >
-                <span className="material-symbols-outlined text-[15px]">close</span>
-              </button>
-            </Tooltip>
-          </>
-        ) : (
-          <>
-            <Tooltip content="Rename mod">
-              <button
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onRename(mod)
-                }}
-                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
-              >
-                <span className="material-symbols-outlined text-[15px]">edit</span>
-              </button>
-            </Tooltip>
-            <Tooltip content="Remove mod">
-              <button
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onDelete(mod)
-                }}
-                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
-              >
-                <span className="material-symbols-outlined text-[15px]">delete</span>
-              </button>
-            </Tooltip>
-          </>
-        )}
-      </div>
-
-      {mod.enabled && (
+        ) : null}
         <div
-          className="absolute inset-y-0 left-0 w-[3px]"
-          style={{ background: ACTIVE_COLOR, boxShadow: `0 0 10px ${ACTIVE_COLOR}55` }}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          style={{
+            background: mod.enabled
+              ? 'linear-gradient(90deg, rgba(252,238,9,0.08) 0%, rgba(252,238,9,0.036) 15%, rgba(255,255,255,0.018) 34%, rgba(255,255,255,0) 66%)'
+              : 'linear-gradient(90deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 20%, rgba(255,255,255,0) 62%)',
+          }}
         />
-      )}
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          style={{ background: `${rowAccentColor}88` }}
+        />
+
+        <div className="flex items-center pl-2" onClick={handleToggle}>
+          <div
+            className={`relative h-4 w-8 rounded-full border-[0.5px] transition-all ${
+              mod.enabled
+                ? 'border-[#fcee09]/45 bg-[#2a2604] group-hover:border-[#fcee09]/65'
+                : 'border-[#222] bg-[#111] group-hover:border-[#333]'
+            }`}
+          >
+            <div
+              className={`absolute top-1/2 h-[12px] w-[12px] -translate-y-1/2 rounded-full ${
+                mod.enabled
+                  ? 'right-[1px] bg-[#fcee09]'
+                  : 'left-[1px] bg-[#7a7a7a]'
+              }`}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center text-[#8a8a8a] text-[12px] font-mono group-hover:text-[#d0d0d0] transition-colors">
+          {index}
+        </div>
+
+        <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
+          {isRenaming ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(event) => onRenameChange(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              onDoubleClick={(event) => event.stopPropagation()}
+              onBlur={onRenameSave}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') onRenameSave()
+                if (event.key === 'Escape') onRenameCancel()
+              }}
+              className="allow-text-selection h-8 w-full border-[0.5px] border-[#333] bg-[#0a0a0a] px-3 font-medium tracking-tight leading-none text-white focus:border-[#fcee09]/50 focus:outline-none"
+            />
+          ) : (
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className={`font-medium tracking-tight truncate transition-colors ${
+                  mod.enabled ? 'text-[#e5e2e1] group-hover:text-[#ffffff]' : 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
+                }`}
+              >
+                {mod.name}
+              </span>
+              {recentBadge ? (
+                <span
+                  className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                  style={{
+                    color: recentBadge === 'downgraded'
+                      ? '#f87171'
+                      : recentBadge === 'updated'
+                        ? '#60a5fa'
+                        : '#34d399',
+                    borderColor: recentBadge === 'downgraded'
+                      ? 'rgba(248,113,113,0.35)'
+                      : recentBadge === 'updated'
+                        ? 'rgba(96,165,250,0.35)'
+                        : 'rgba(52,211,153,0.35)',
+                    background: recentBadge === 'downgraded'
+                      ? 'rgba(248,113,113,0.12)'
+                      : recentBadge === 'updated'
+                        ? 'rgba(96,165,250,0.12)'
+                        : 'rgba(52,211,153,0.12)',
+                  }}
+                >
+                  {recentBadge === 'downgraded' ? 'Downgraded' : recentBadge === 'updated' ? 'Updated' : 'Installed'}
+                </span>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]' : 'text-[#9a9a9a] group-hover:text-[#c4c4c4]'}`}>
+          {mod.version ?? '—'}
+        </div>
+
+        <div className="flex items-center">
+          <span
+            className={`px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm transition-colors ${
+              mod.enabled ? 'bg-[#111] border-[#222] group-hover:border-[#343434]' : 'bg-[#111] border-[#222] group-hover:border-[#343434]'
+            }`}
+            style={{ color }}
+          >
+            {label}
+          </span>
+        </div>
+
+        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#bdbdbd]' : 'text-[#9a9a9a] group-hover:text-[#bdbdbd]'}`}>
+          {formatWindowsDateTime(mod.installedAt)}
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
+          {isRenaming ? (
+            <>
+              <Tooltip content="Save name">
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRenameSave()
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#2b4f2f] bg-[#0a0a0a] text-[#6fe3b1] hover:border-[#6fe3b1]/45 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[15px]">check</span>
+                </button>
+              </Tooltip>
+              <Tooltip content="Cancel rename">
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRenameCancel()
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] hover:border-[#8a8a8a] hover:text-white transition-all"
+                >
+                  <span className="material-symbols-outlined text-[15px]">close</span>
+                </button>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Tooltip content="Rename mod">
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRename(mod)
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
+                >
+                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                </button>
+              </Tooltip>
+              <Tooltip content="Remove mod">
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onDelete(mod)
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                >
+                  <span className="material-symbols-outlined text-[15px]">delete</span>
+                </button>
+              </Tooltip>
+            </>
+          )}
+        </div>
+
+        {mod.enabled && (
+          <div
+            className="absolute inset-y-0 left-0 w-[3px]"
+            style={{ background: rowAccentColor, boxShadow: `0 0 10px ${rowAccentColor}55` }}
+          />
+        )}
+      </div>
     </div>
   )
 }
@@ -295,6 +465,15 @@ function areModRowPropsEqual(prev: ModRowProps, next: ModRowProps): boolean {
     prev.mod === next.mod &&
     prev.index === next.index &&
     prev.selected === next.selected &&
+    prev.nested === next.nested &&
+    prev.animateOnEnter === next.animateOnEnter &&
+    prev.dragging === next.dragging &&
+    prev.dragEnabled === next.dragEnabled &&
+    prev.separatorDropTarget === next.separatorDropTarget &&
+    prev.separatorCollapsed === next.separatorCollapsed &&
+    prev.separatorChildCount === next.separatorChildCount &&
+    prev.separatorMoveHint === next.separatorMoveHint &&
+    prev.rowDropPosition === next.rowDropPosition &&
     prev.isRenaming === next.isRenaming &&
     prev.renameValue === next.renameValue
   )

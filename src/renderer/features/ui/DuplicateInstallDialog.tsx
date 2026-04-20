@@ -33,7 +33,9 @@ export const DuplicateInstallDialog: React.FC = () => {
   const handleAction = async (duplicateAction: 'replace' | 'copy') => {
     setSubmitting(true)
     const sourcePath = pendingInstallRequest.filePath
-    const targetModId = duplicateAction === 'replace' ? pendingInstallRequest.targetModId : undefined
+    // Pass targetModId for both actions: 'replace' uses it to identify which mod to remove,
+    // 'copy' uses it only for UI progress-row placement (installer ignores it for copy).
+    const targetModId = pendingInstallRequest.targetModId
     clearInstallPrompt()
 
     try {
