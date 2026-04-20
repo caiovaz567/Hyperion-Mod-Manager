@@ -67,6 +67,7 @@ export const ModList: React.FC = () => {
 
   const {
     filter,
+    setFilter,
     filteredMods,
     selectMod,
     installMod,
@@ -97,6 +98,7 @@ export const ModList: React.FC = () => {
     installCurrentFile,
   } = useAppStore((state) => ({
     filter: state.filter,
+    setFilter: state.setFilter,
     filteredMods: state.filteredMods,
     selectMod: state.selectMod,
     installMod: state.installMod,
@@ -818,7 +820,18 @@ export const ModList: React.FC = () => {
         <p className="ui-support-mono mt-1 flex items-center gap-2">
           TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
         </p>
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[280px] flex-1 max-w-[420px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#707070] text-[18px]">search</span>
+            <input
+              className="h-10 w-full bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] rounded-sm py-1.5 pl-9 pr-4 text-sm text-[#e5e2e1] placeholder-[#6f6f6f] transition-all focus:ring-[0.5px] focus:ring-[#fcee09] focus:border-[#fcee09] focus:outline-none focus:shadow-[0_0_10px_rgba(252,238,9,0.1)]"
+              placeholder="Search managed mods..."
+              type="text"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+            />
+          </div>
+
           <div className="flex items-center gap-2">
             <div ref={filterRef} className="relative">
               <button

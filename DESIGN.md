@@ -77,7 +77,7 @@ Accessibility:
 ### Header
 
 - Height: 56px
-- Left side: Hyperion mark + wordmark + search
+- Left side: Hyperion mark + wordmark
 - A subtle app version marker should live in the shell header so the current build is visible from any page without opening Settings
 - Right side: library utility buttons, single-step updater CTA, app logs button, native window controls
 - The terminal icon in the header opens App Logs; it is not an in-app terminal session
@@ -133,6 +133,7 @@ Alignment rules:
 - Dense table/list layout with active state clarity over ornament
 - Detail panel appears when a mod is selected
 - Visual emphasis goes to name, status, type, actions, and activation state
+- Mod search belongs to the library surface itself, not the global header, so filtering stays contextual to `Managed Mods`
 - Library status filtering should live in the screen itself, below the selection guidance, not in the global header
 - Use local segmented controls for `All`, `Enabled`, and `Disabled`; `All` may use the cyber blue accent while activation-oriented controls should reuse the same squared button language as Browse and other path actions
 - Enable/disable-all control should read as a compact rectangular command block, not a toggle switch and not a rounded pill

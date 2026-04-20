@@ -15,8 +15,6 @@ export const Header: React.FC = () => {
     updateError,
     downloadUpdate,
     installUpdate,
-    filter,
-    setFilter,
     addToast,
     openDialog,
   } = useAppStore()
@@ -84,7 +82,7 @@ export const Header: React.FC = () => {
       className="flex justify-between items-center w-full px-6 h-14 bg-[#050505] border-b-[0.5px] border-[#1a1a1a] z-50 flex-shrink-0"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      {/* Left: brand + search */}
+      {/* Left: brand */}
       <div className="flex items-center gap-6" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3 select-none">
           <span className="relative flex h-8 w-8 items-center justify-center rounded-[7px] border border-[#5f5a08] bg-[#fcee09] shadow-[0_0_18px_rgba(252,238,9,0.18)]">
@@ -98,16 +96,6 @@ export const Header: React.FC = () => {
               {appVersion}
             </span>
           </div>
-        </div>
-        <div className="relative flex items-center w-96 ml-8">
-          <span className="material-symbols-outlined absolute left-3 text-[#9a9a9a] text-[18px]">search</span>
-          <input
-            className="w-full bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] rounded-sm py-1.5 pl-9 pr-4 text-sm focus:ring-[0.5px] focus:ring-[#fcee09] focus:border-[#fcee09] focus:outline-none text-[#e5e2e1] placeholder-[#7f7f7f] transition-all focus:shadow-[0_0_10px_rgba(252,238,9,0.1)]"
-            placeholder="Search mods..."
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
         </div>
       </div>
 
