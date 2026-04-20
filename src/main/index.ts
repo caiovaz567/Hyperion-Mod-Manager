@@ -5,7 +5,8 @@ import {
   dialog,
   shell,
   protocol,
-  net
+  net,
+  screen
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -78,9 +79,11 @@ function collectDownloadEntries(dirPath: string, limit = 500): Array<{
   name: string
   size: number
   modifiedAt: string
+  downloadedAt?: string
   extension: string
   nxmModId?: number
   nxmFileId?: number
+  version?: string
 }> {
   if (!dirPath || !fs.existsSync(dirPath)) return []
 
@@ -89,9 +92,11 @@ function collectDownloadEntries(dirPath: string, limit = 500): Array<{
     name: string
     size: number
     modifiedAt: string
+    downloadedAt?: string
     extension: string
     nxmModId?: number
     nxmFileId?: number
+    version?: string
   }> = []
 
   const visit = (currentDir: string): void => {
@@ -111,9 +116,11 @@ function collectDownloadEntries(dirPath: string, limit = 500): Array<{
         name: entry.name,
         size: stats.size,
         modifiedAt: stats.mtime.toISOString(),
+        downloadedAt: nexusRecord?.createdAt,
         extension,
         nxmModId: nexusRecord?.modId,
         nxmFileId: nexusRecord?.fileId,
+        version: nexusRecord?.version,
       })
     }
   }
@@ -121,7 +128,17 @@ function collectDownloadEntries(dirPath: string, limit = 500): Array<{
   visit(dirPath)
 
   return results
-    .sort((left, right) => new Date(right.modifiedAt).getTime() - new Date(left.modifiedAt).getTime())
+    .sort((left, right) => {
+      const rightOrderTs = Date.parse(right.downloadedAt ?? right.modifiedAt)
+      const leftOrderTs = Date.parse(left.downloadedAt ?? left.modifiedAt)
+      if (rightOrderTs !== leftOrderTs) return rightOrderTs - leftOrderTs
+
+      const rightModifiedTs = Date.parse(right.modifiedAt)
+      const leftModifiedTs = Date.parse(left.modifiedAt)
+      if (rightModifiedTs !== leftModifiedTs) return rightModifiedTs - leftModifiedTs
+
+      return right.name.localeCompare(left.name, undefined, { sensitivity: 'base' })
+    })
     .slice(0, limit)
 }
 
@@ -242,12 +259,45 @@ function resolveWindowIconPath(): string {
   return path.join(app.getAppPath(), 'src', 'main', 'resources', 'icon.png')
 }
 
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+function getInitialMainWindowBounds(): {
+  width: number
+  height: number
+  minWidth: number
+  minHeight: number
+  x: number
+  y: number
+} {
+  const display = screen.getPrimaryDisplay()
+  const { x, y, width: workWidth, height: workHeight } = display.workArea
+
+  const maxWidth = Math.max(1100, workWidth - 96)
+  const maxHeight = Math.max(720, workHeight - 72)
+  const width = clampNumber(Math.round(workWidth * 0.82), Math.min(1360, maxWidth), maxWidth)
+  const height = clampNumber(Math.round(workHeight * 0.84), Math.min(860, maxHeight), maxHeight)
+
+  return {
+    width,
+    height,
+    minWidth: Math.min(1100, maxWidth),
+    minHeight: Math.min(720, maxHeight),
+    x: x + Math.round((workWidth - width) / 2),
+    y: y + Math.round((workHeight - height) / 2),
+  }
+}
+
 function createMainWindow(): BrowserWindow {
+  const bounds = getInitialMainWindowBounds()
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1100,
-    minHeight: 700,
+    width: bounds.width,
+    height: bounds.height,
+    minWidth: bounds.minWidth,
+    minHeight: bounds.minHeight,
+    x: bounds.x,
+    y: bounds.y,
     show: false,
     frame: false,
     title: 'Hyperion',
@@ -515,14 +565,15 @@ app.whenReady().then(async () => {
     if (!splash.isDestroyed()) {
       splash.hide()
       splash.setAlwaysOnTop(false)
-    }
-
-    mainWindow.show()
-    mainWindow.focus()
-
-    if (!splash.isDestroyed()) {
       splash.destroy()
     }
+
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+    mainWindow.show()
+    mainWindow.moveTop()
+    mainWindow.focus()
 
     flushPendingNxmUrls()
   }

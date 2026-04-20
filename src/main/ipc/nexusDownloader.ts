@@ -1,5 +1,6 @@
 import { app, ipcMain, net } from 'electron'
 import type { BrowserWindow } from 'electron'
+import type { IncomingMessage } from 'http'
 import https from 'https'
 import fs from 'fs'
 import path from 'path'
@@ -232,6 +233,21 @@ async function fetchFileVersion(
   return trimmed.length > 0 ? trimmed : undefined
 }
 
+function normalizeVersionString(value?: string): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return trimmed.replace(/^v/i, '')
+}
+
+function normalizeRequestedAt(value?: string): string {
+  if (typeof value !== 'string') return new Date().toISOString()
+  const trimmed = value.trim()
+  if (!trimmed) return new Date().toISOString()
+  const parsed = Date.parse(trimmed)
+  return Number.isNaN(parsed) ? new Date().toISOString() : new Date(parsed).toISOString()
+}
+
 async function fetchDownloadUrl(
   modId: number,
   fileId: number,
@@ -272,24 +288,64 @@ function downloadFile(
     let prevBytes = startByte
     let downloadedBytes = startByte
     let totalBytes = 0
+    let speedInterval: NodeJS.Timeout | null = null
+    let writer: fs.WriteStream | null = null
+    let settled = false
+    let responseStream: IncomingMessage | null = null
+    let req: ReturnType<typeof https.get> | null = null
 
-    const req = https.get(url, {
+    const cleanup = () => {
+      if (speedInterval) {
+        clearInterval(speedInterval)
+        speedInterval = null
+      }
+      signal.removeEventListener('abort', handleAbort)
+    }
+
+    const settleResolve = () => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve()
+    }
+
+    const settleReject = (error: unknown) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(error instanceof Error ? error : new Error(String(error)))
+    }
+
+    const handleAbort = () => {
+      const reason = signal.reason === 'pause' ? 'Paused' : 'Cancelled'
+      const abortError = new Error(reason)
+      responseStream?.destroy?.(abortError)
+      writer?.destroy(abortError)
+      req?.destroy(abortError)
+    }
+
+    signal.addEventListener('abort', handleAbort, { once: true })
+
+    req = https.get(url, {
       signal,
       headers: startByte > 0 ? { Range: `bytes=${startByte}-` } : undefined,
     }, (response) => {
+      responseStream = response
+
       if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
         // Follow redirect
-        req.destroy()
-        downloadFile(response.headers.location, destPath, onProgress, signal, startByte).then(resolve, reject)
+        req?.destroy()
+        cleanup()
+        downloadFile(response.headers.location, destPath, onProgress, signal, startByte).then(settleResolve, settleReject)
         return
       }
       if (response.statusCode === 416) {
         onProgress(downloadedBytes, downloadedBytes, 0)
-        resolve()
+        settleResolve()
         return
       }
       if (!response.statusCode || response.statusCode >= 400) {
-        reject(new Error(`HTTP ${response.statusCode}`))
+        settleReject(new Error(`HTTP ${response.statusCode}`))
         return
       }
 
@@ -305,40 +361,33 @@ function downloadFile(
         prevBytes = downloadedBytes
       }
 
-      const writer = fs.createWriteStream(destPath, { flags: isPartialResponse ? 'a' : 'w' })
+      writer = fs.createWriteStream(destPath, { flags: isPartialResponse ? 'a' : 'w' })
 
-      const speedInterval = setInterval(() => {
+      speedInterval = setInterval(() => {
         const delta = downloadedBytes - prevBytes
         prevBytes = downloadedBytes
         onProgress(downloadedBytes, totalBytes, delta)
       }, 1000)
 
       response.on('data', (chunk: Buffer) => { downloadedBytes += chunk.length })
+      response.on('error', settleReject)
       response.pipe(writer)
 
       writer.on('finish', () => {
-        clearInterval(speedInterval)
         onProgress(downloadedBytes, totalBytes, 0)
-        resolve()
+        settleResolve()
       })
 
-      writer.on('error', (err) => {
-        clearInterval(speedInterval)
-        reject(err)
-      })
+      writer.on('error', settleReject)
     })
 
     req.on('error', (err: NodeJS.ErrnoException) => {
       if (err.name === 'AbortError' || err.code === 'ERR_ABORTED') {
         const reason = signal.reason === 'pause' ? 'Paused' : 'Cancelled'
-        reject(new Error(reason))
+        settleReject(new Error(reason))
         return
       }
-      reject(err)
-    })
-
-    signal.addEventListener('abort', () => {
-      req.destroy()
+      settleReject(err)
     })
   })
 }
@@ -350,7 +399,9 @@ interface DownloadHandle {
   payload: NxmLinkPayload
   destPath: string
   fileName: string
+  startedAt: string
   status: 'downloading' | 'paused'
+  requestToken: number
   version?: string
 }
 
@@ -411,17 +462,32 @@ function splitArchiveFileName(fileName: string): { baseName: string; extension: 
   }
 }
 
+function stripDuplicateArchiveSuffix(baseName: string): string {
+  return baseName.replace(/\s+copy(?:\s+\d+)?$/i, '').trim() || baseName.trim()
+}
+
 function buildDuplicateArchiveName(fileName: string, index: number): string {
   const { baseName, extension } = splitArchiveFileName(fileName)
+  const normalizedBaseName = stripDuplicateArchiveSuffix(baseName)
   const suffix = index === 0 ? ' Copy' : ` Copy ${index + 1}`
-  return `${baseName}${suffix}${extension}`
+  return `${normalizedBaseName}${suffix}${extension}`
+}
+
+function getReservedDownloadTargets(): Set<string> {
+  const reserved = new Set<string>()
+  for (const handle of inFlightDownloads.values()) {
+    reserved.add(path.normalize(handle.destPath).toLowerCase())
+  }
+  return reserved
 }
 
 function resolveDuplicateDownloadTarget(downloadDir: string, fileName: string): { fileName: string; destPath: string } {
+  const reservedTargets = getReservedDownloadTargets()
   for (let index = 0; index < 500; index += 1) {
     const candidateName = buildDuplicateArchiveName(fileName, index)
     const candidatePath = path.join(downloadDir, candidateName)
-    if (!fs.existsSync(candidatePath)) {
+    const normalizedCandidatePath = path.normalize(candidatePath).toLowerCase()
+    if (!fs.existsSync(candidatePath) && !reservedTargets.has(normalizedCandidatePath)) {
       return {
         fileName: candidateName,
         destPath: candidatePath,
@@ -446,6 +512,8 @@ function beginDownload(
 
   const existingBytes = getExistingBytes(handle.destPath)
   const abort = new AbortController()
+  handle.requestToken += 1
+  const requestToken = handle.requestToken
 
   handle.abort = abort
   handle.status = 'downloading'
@@ -456,6 +524,10 @@ function beginDownload(
         cdnUrl,
         handle.destPath,
         (downloadedBytes, totalBytes, speedBps) => {
+          const latestHandle = inFlightDownloads.get(id)
+          if (!latestHandle || latestHandle.requestToken !== requestToken || latestHandle.status !== 'downloading') {
+            return
+          }
           safeSendToWindow(mainWindow, IPC.NXM_DOWNLOAD_PROGRESS, {
             id, downloadedBytes, totalBytes, speedBps,
           })
@@ -463,23 +535,27 @@ function beginDownload(
         abort.signal,
         existingBytes,
       )
+      const latestHandle = inFlightDownloads.get(id)
+      if (!latestHandle || latestHandle.requestToken !== requestToken) return
+
       inFlightDownloads.delete(id)
       upsertNexusDownloadRecord({
-        modId: handle.payload.modId,
-        fileId: handle.payload.fileId,
-        filePath: handle.destPath,
-        fileName: handle.fileName,
-        createdAt: new Date().toISOString(),
-        version: handle.version,
+        modId: latestHandle.payload.modId,
+        fileId: latestHandle.payload.fileId,
+        filePath: latestHandle.destPath,
+        fileName: latestHandle.fileName,
+        createdAt: latestHandle.startedAt,
+        version: latestHandle.version,
       })
       safeSendToWindow(mainWindow, IPC.NXM_DOWNLOAD_COMPLETE, {
         id,
-        savedPath: handle.destPath,
-        fileName: handle.fileName,
+        savedPath: latestHandle.destPath,
+        fileName: latestHandle.fileName,
+        version: latestHandle.version,
       })
     } catch (err) {
       const latestHandle = inFlightDownloads.get(id)
-      if (!latestHandle) return
+      if (!latestHandle || latestHandle.requestToken !== requestToken) return
 
       const message = err instanceof Error ? err.message : 'Download failed'
       if (message === 'Paused') {
@@ -521,6 +597,7 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     const settings = loadSettings()
     const payload = request.payload
     const allowDuplicate = request.allowDuplicate === true
+    const requestedAt = normalizeRequestedAt(request.requestedAt)
 
     pushGeneralLog(mainWindow, {
       level: 'info',
@@ -552,21 +629,6 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       return { ok: false, error: 'Download path not configured. Set it in Settings > Paths.' }
     }
 
-    const activeDownload = findActiveDownloadByNexusIds(payload.modId, payload.fileId)
-    if (activeDownload) {
-      pushGeneralLog(mainWindow, {
-        level: 'info',
-        source: 'nexus',
-        message: 'NXM download ignored because it is already active',
-        details: {
-          modId: payload.modId,
-          fileId: payload.fileId,
-          activeFileName: activeDownload.fileName,
-        },
-      })
-      return { ok: false, error: `This file is already in the queue: ${activeDownload.fileName}` }
-    }
-
     const downloadDir = settings.downloadPath
     try {
       fs.mkdirSync(downloadDir, { recursive: true })
@@ -580,6 +642,35 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       return {
         ok: false,
         error: error instanceof Error ? error.message : 'Could not prepare downloads folder',
+      }
+    }
+
+    const activeDownload = findActiveDownloadByNexusIds(payload.modId, payload.fileId)
+    if (activeDownload && !allowDuplicate) {
+      pushGeneralLog(mainWindow, {
+        level: 'info',
+        source: 'nexus',
+        message: 'NXM download matched an active transfer',
+        details: {
+          modId: payload.modId,
+          fileId: payload.fileId,
+          activeFileName: activeDownload.fileName,
+        },
+      })
+      const duplicateTarget = resolveDuplicateDownloadTarget(downloadDir, activeDownload.fileName)
+      return {
+        ok: true,
+        data: {
+          status: 'duplicate',
+          duplicate: {
+            modId: payload.modId,
+            fileId: payload.fileId,
+            existingFileName: activeDownload.fileName,
+            existingFilePath: activeDownload.destPath,
+            incomingFileName: duplicateTarget.fileName,
+            existingIsDownloading: true,
+          },
+        } satisfies NxmDownloadStartResponse,
       }
     }
 
@@ -606,6 +697,7 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
             existingFileName: existingDownload.fileName,
             existingFilePath: existingDownload.filePath,
             incomingFileName: duplicateTarget.fileName,
+            existingIsDownloading: false,
           },
         } satisfies NxmDownloadStartResponse,
       }
@@ -634,31 +726,28 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     } catch {
       rawName = ''
     }
-    const resolvedFileName = existingDownload?.fileName || rawName || `mod-${payload.modId}-file-${payload.fileId}.zip`
-    const target = existingDownload && allowDuplicate
+    const resolvedFileName = activeDownload?.fileName || existingDownload?.fileName || rawName || `mod-${payload.modId}-file-${payload.fileId}.zip`
+    const target = (existingDownload || activeDownload) && allowDuplicate
       ? resolveDuplicateDownloadTarget(downloadDir, resolvedFileName)
       : {
           fileName: resolvedFileName,
           destPath: path.join(downloadDir, resolvedFileName),
         }
 
+    const detectedVersion = await fetchFileVersion(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
+      .then((version) => normalizeVersionString(version))
+      .catch(() => undefined)
+
     inFlightDownloads.set(id, {
       abort: null,
       payload,
       destPath: target.destPath,
       fileName: target.fileName,
+      startedAt: requestedAt,
       status: 'downloading',
-      version: undefined,
+      requestToken: 0,
+      version: detectedVersion,
     })
-
-    void fetchFileVersion(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
-      .then((version) => {
-        const handle = inFlightDownloads.get(id)
-        if (handle && version) {
-          handle.version = version
-        }
-      })
-      .catch(() => undefined)
 
     beginDownload(id, mainWindow, cdnUrl)
 
@@ -674,7 +763,17 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       },
     })
 
-    return { ok: true, data: { status: 'started', id, fileName: target.fileName } satisfies NxmDownloadStartResponse }
+    return {
+      ok: true,
+      data: {
+        status: 'started',
+        id,
+        fileName: target.fileName,
+        startedAt: requestedAt,
+        savedPath: target.destPath,
+        version: detectedVersion,
+      } satisfies NxmDownloadStartResponse,
+    }
   })
 
   ipcMain.handle(IPC.NXM_DOWNLOAD_PAUSE, (_event, id: string) => {
@@ -683,6 +782,7 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       return { ok: false, error: 'Download is not currently active' }
     }
 
+    handle.status = 'paused'
     handle.abort.abort('pause')
     return { ok: true }
   })

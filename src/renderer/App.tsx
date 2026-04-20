@@ -8,6 +8,7 @@ import { Sidebar } from './features/ui/Sidebar'
 import { ToastContainer } from './features/ui/ToastContainer'
 import { DuplicateDownloadDialog } from './features/ui/DuplicateDownloadDialog'
 import { DuplicateInstallDialog } from './features/ui/DuplicateInstallDialog'
+import { VersionMismatchDialog } from './features/ui/VersionMismatchDialog'
 import { WelcomeScreen } from './features/ui/WelcomeScreen'
 import { ModList } from './features/library/ModList'
 import { DownloadsPane } from './features/downloads/DownloadsPane'
@@ -213,6 +214,7 @@ export const App: React.FC = () => {
         </div>
         <DuplicateDownloadDialog />
         <DuplicateInstallDialog />
+        <VersionMismatchDialog />
         {dialogs.appLogs && (
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
         )}

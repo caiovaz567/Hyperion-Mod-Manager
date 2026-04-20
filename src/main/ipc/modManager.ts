@@ -7,6 +7,7 @@ import { IPC } from '../../shared/types'
 import type { ModMetadata, IpcResult, PurgeModsResult } from '../../shared/types'
 import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
+import { detectModType } from './archiveParser'
 import {
   listFilesRecursive,
   getPathSizeSafe,
@@ -160,6 +161,62 @@ function isRedmodContent(mod: ModMetadata, relFile: string): boolean {
   )
 }
 
+function hasKnownGameRootPrefix(parts: string[]): boolean {
+  const first = parts[0]?.toLowerCase()
+  return Boolean(first) && GAME_ROOT_DIRS.has(first)
+}
+
+function inferLegacyRedscriptRootPath(normalized: string, parts: string[]): string | null {
+  const first = parts[0]?.toLowerCase()
+  const second = parts[1]?.toLowerCase()
+
+  if (!first) return null
+
+  if (first === 'tools') {
+    return path.join('engine', normalized)
+  }
+
+  if (first === 'config' && (second === 'base' || second === 'platform')) {
+    return path.join('engine', normalized)
+  }
+
+  if (
+    first === 'scripts' ||
+    first === 'tweaks' ||
+    first === 'cache' ||
+    (first === 'config' && second === 'cybercmd')
+  ) {
+    return path.join('r6', normalized)
+  }
+
+  return null
+}
+
+function inferLegacyFlattenedDeployPath(mod: ModMetadata, normalized: string, parts: string[]): string | null {
+  if (!normalized || hasKnownGameRootPrefix(parts)) return null
+
+  const modFolderKey = getModFolderKey(mod)
+
+  switch (mod.type) {
+    case 'engine':
+      return path.join('engine', normalized)
+    case 'r6':
+      return path.join('r6', normalized)
+    case 'redscript':
+      return inferLegacyRedscriptRootPath(normalized, parts)
+    case 'red4ext':
+      return path.join('red4ext', normalized)
+    case 'bin':
+      return parts[0]?.toLowerCase() === 'x64'
+        ? path.join('bin', normalized)
+        : path.join('bin', 'x64', normalized)
+    case 'cet':
+      return path.join('bin', 'x64', 'plugins', 'cyber_engine_tweaks', 'mods', modFolderKey, normalized)
+    default:
+      return null
+  }
+}
+
 function getDeployRelativePath(mod: ModMetadata, relFile: string): string {
   const normalized = normalizeRelativePath(relFile)
   const parts = splitSegments(normalized)
@@ -175,6 +232,11 @@ function getDeployRelativePath(mod: ModMetadata, relFile: string): string {
   const cetIndex = findSequenceIndex(parts, ['cyber_engine_tweaks', 'mods'])
   if (cetIndex >= 0) {
     return path.join('bin', 'x64', 'plugins', ...parts.slice(cetIndex))
+  }
+
+  const legacyFlattenedPath = inferLegacyFlattenedDeployPath(mod, normalized, parts)
+  if (legacyFlattenedPath) {
+    return legacyFlattenedPath
   }
 
   const pluginsIndex = findSequenceIndex(parts, ['plugins'])
@@ -315,6 +377,12 @@ export async function scanMods(libraryPath: string): Promise<ModMetadata[]> {
           const normalizedName = normalizeModName(meta.name)
           if (normalizedName !== meta.name) {
             meta.name = normalizedName
+            shouldWrite = true
+          }
+
+          const detectedType = detectModType(modDir)
+          if (detectedType !== 'unknown' && meta.type !== detectedType) {
+            meta.type = detectedType
             shouldWrite = true
           }
 

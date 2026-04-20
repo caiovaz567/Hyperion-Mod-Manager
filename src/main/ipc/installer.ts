@@ -24,6 +24,7 @@ import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
 type GetMainWindow = () => BrowserWindow | null
 
 const SUPPORTED_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
+const PRESERVED_ARCHIVE_ROOT_DIRS = new Set(['archive', 'archives', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
 
 interface ArchiveExtractor {
   binPath: string
@@ -218,6 +219,10 @@ function uniqueDisplayName(existingMods: ModMetadata[], base: string): string {
     candidate = `${base} Copy ${index}`
   }
   return candidate
+}
+
+function shouldPreserveArchiveRootFolder(folderName: string): boolean {
+  return PRESERVED_ARCHIVE_ROOT_DIRS.has(folderName.trim().toLowerCase())
 }
 
 function extractVersionFromName(rawName: string): string | undefined {
@@ -428,11 +433,12 @@ async function installMod(
     sendProgress(win, 'Detecting mod type...', 95)
 
     // Flatten single-subfolder wrapping (common in mod archives)
-    const tempContents = fs.readdirSync(tempDir)
+    const tempContents = fs.readdirSync(tempDir, { withFileTypes: true })
     let extractRoot = tempDir
     if (tempContents.length === 1) {
-      const single = path.join(tempDir, tempContents[0])
-      if (fs.statSync(single).isDirectory()) {
+      const [singleEntry] = tempContents
+      const single = path.join(tempDir, singleEntry.name)
+      if (singleEntry.isDirectory() && !shouldPreserveArchiveRootFolder(singleEntry.name)) {
         extractRoot = single
       }
     }

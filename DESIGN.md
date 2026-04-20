@@ -54,7 +54,7 @@ Accessibility:
 - DM Sans: primary UI font for labels, panels, forms, lists
 - Monospace only for technical values such as timestamps, versions, paths, counters
 - Small support text should prefer the same visual token used by download dates: readable 14px sizing, restrained gray, and AA contrast at minimum
-- Dates and timestamps should follow the user's Windows-style local format in UI surfaces: `DD/MM/YYYY HH:mm` (example: `19/04/2026 15:47`)
+- Dates and timestamps should follow the user's Windows-style local format in UI surfaces: `DD/MM/YYYY HH:mm:ss` (example: `19/04/2026 15:47:08`)
 
 ### Motion
 
@@ -70,6 +70,7 @@ Accessibility:
 - Frameless Electron window
 - Custom header with drag region across the top bar
 - Main renderer stays hidden until splash handoff is complete
+- Initial desktop window size should scale from the primary display work area instead of a single fixed size; 1080p, 1440p, and 4K should all open into a comfortably large workspace
 - Background uses a subtle static atmospheric field from App.tsx and globals.css
 - Avoid animated parallax star layers in the main shell; keep the background understated and low-cost to render
 
@@ -77,6 +78,7 @@ Accessibility:
 
 - Height: 56px
 - Left side: Hyperion mark + wordmark + search
+- A subtle app version marker should live in the shell header so the current build is visible from any page without opening Settings
 - Right side: library utility buttons, single-step updater CTA, app logs button, native window controls
 - The terminal icon in the header opens App Logs; it is not an in-app terminal session
 
@@ -122,6 +124,8 @@ Alignment rules:
 - Onboarding is a dedicated first-run workspace focused on game path, managed library path, and optional downloads intake path
 - Game path carries explicit validation emphasis because it gates launch and deployment safety checks
 - Clear primary CTA and minimal distractions
+- Show the current Hyperion version here as a subdued detail so first-run/setup states still expose build context even before the main shell appears
+- On large displays, the full setup surface should remain centered in the viewport and scale to a moderately wider layout instead of staying as a narrow top-anchored column
 
 ### Library
 
@@ -144,11 +148,24 @@ Alignment rules:
 - Header includes refresh and open-folder actions
 - Summary strip shows configured path, file count, and zip-ready count
 - Download rows prioritize file name, format, modified date, install/reinstall action, and delete action
+- Download ordering should remain stable across navigation and library changes; Nexus archives should keep the chronology of when the user initiated each download request, not the order in which transfers happen to finish or related mods get installed/removed
+- Nexus downloads must remain in Downloads with a persistent `NEW` badge until a successful install clears that state; finishing a download must not auto-install the mod
+- When Nexus metadata is available, Downloads should surface the resolved file version so multiple staged versions are distinguishable before install
 - Install/extract progress launched from Downloads should reuse the same active-row language as live downloads instead of falling back to a tiny button-only state
 - Archive extraction is its own phase and should use a distinct cool accent from the default download/install yellow, while later install/finalization can return to the product accent
 - When extracting from `.zip`, `.rar`, or `.7z`, show the current internal archive entry when available so the user can see what is being unpacked in real time
 - If the user confirms `Replace` or `Install as Copy` from a duplicate-install prompt, dismiss the confirmation immediately and hand off to the shared install progress UI instead of keeping the dialog visible during extraction/install
 - If a Nexus archive already exists in Downloads, use the shared confirmation dialog instead of a toast-only rejection and preview the renamed duplicate archive before the user confirms
+- If the same Nexus archive is already downloading, reuse that same duplicate-download confirmation dialog instead of blocking the request; make it clear that one transfer is already in progress and preview the next duplicate name
+- Repeated `Download Again` requests for the same Nexus file should serialize behind the first request and still end in the shared duplicate-download confirmation flow; do not fall back to a warning snackbar/toast just because the first request is still spinning up
+- If multiple Nexus versions of the same mod are downloaded, allow every archive to finish downloading and defer the decision to install time with a clear version-comparison prompt
+- Archive installs must preserve real game-root folders such as `engine`, `r6`, `bin`, `archive`, and `red4ext`; never flatten those directories away during extraction, because their contents must deploy back into the game root with those prefixes intact
+- The version-comparison prompt should use the cyber blue accent treatment and fit common desktop heights without introducing an internal scrollbar
+- Downgrade states such as `Older Archive` should escalate with the error red token instead of blending into neutral or blue status chrome
+- Version mismatch decisions should be explicit per install attempt; do not show a remember-this-choice checkbox in the prompt
+- While an archive is actively downloading or paused, its active progress row should own that slot in Downloads; do not render a second local-file row for the same archive path until the transfer leaves the active state
+- Paused downloads should switch from the default yellow transfer language to a cooler accent, show a `Paused` badge, and swap the primary row control from `Pause` to `Resume`
+- Pause and resume should flip the row state immediately on click, use compact icon buttons in the actions column, and never let stale progress events from an earlier transfer attempt fight with the current row state
 
 ### Settings
 
@@ -159,6 +176,7 @@ Alignment rules:
 - Settings navigation should feel like an integrated extension panel: section tabs connected to the content surface rather than floating above it
 - Avoid nested scrolling inside Settings content when the main app surface already handles vertical scroll
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
+- Nexus settings should describe the manual download-to-install flow clearly; do not expose a global Nexus auto-install toggle in the primary UX
 
 ### App Logs
 

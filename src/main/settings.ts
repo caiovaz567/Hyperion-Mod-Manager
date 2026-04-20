@@ -10,6 +10,18 @@ function getManagedRoot(): string {
   return path.join(app.getPath('documents'), 'Hyperion')
 }
 
+function normalizePerModChoices(
+  rawChoices?: Partial<Record<string, 'replace' | 'copy' | 'none'>>,
+): Record<string, 'replace' | 'copy'> {
+  if (!rawChoices) return {}
+
+  return Object.fromEntries(
+    Object.entries(rawChoices).filter((entry): entry is [string, 'replace' | 'copy'] =>
+      entry[1] === 'replace' || entry[1] === 'copy'
+    )
+  )
+}
+
 function getDownloadPathFromLibrary(libraryPath?: string): string {
   const normalizedLibraryPath = libraryPath?.trim()
   if (!normalizedLibraryPath) {
@@ -46,6 +58,7 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
     theme: 'dark',
     autoUpdate: raw?.autoUpdate ?? true,
     nexusApiKey: raw?.nexusApiKey ?? '',
+    autoInstallPerMod: normalizePerModChoices(raw?.autoInstallPerMod),
   }
 }
 

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
+import { Tooltip } from './Tooltip'
+import { useAppVersion } from '../../hooks/useAppVersion'
 
 function getParentDirectory(targetPath: string): string {
   const normalizedPath = targetPath.trim().replace(/[\\/]+$/, '')
@@ -14,6 +16,7 @@ function getParentDirectory(targetPath: string): string {
 }
 
 export const WelcomeScreen: React.FC = () => {
+  const appVersion = useAppVersion()
   const {
     settings,
     updateSettings,
@@ -64,7 +67,13 @@ export const WelcomeScreen: React.FC = () => {
   }, [defaultPaths?.libraryPath, settings?.downloadPath, settings?.gamePath, settings?.libraryPath])
 
   useEffect(() => {
-    checkGamePath(gamePath).then(setGamePathValid).catch(() => setGamePathValid(false))
+    checkGamePath(gamePath).then((valid) => {
+      console.log(`[WelcomeScreen] checkGamePath(${gamePath}) => ${valid}`)
+      setGamePathValid(valid)
+    }).catch((err) => {
+      console.error(`[WelcomeScreen] checkGamePath failed:`, err)
+      setGamePathValid(false)
+    })
   }, [checkGamePath, gamePath])
 
   useEffect(() => {
@@ -113,13 +122,23 @@ export const WelcomeScreen: React.FC = () => {
     setDetectingGame(false)
 
     if (!result.ok || !result.data) {
+      console.error(`[WelcomeScreen] detectGamePath failed:`, result.error)
       if (!silent) {
         addToast(result.error ?? 'Could not auto-detect Cyberpunk 2077', 'warning', 2600)
       }
       return
     }
 
+    console.log(`[WelcomeScreen] detectGamePath succeeded: ${result.data}`)
     setGamePath(result.data)
+    try {
+      const isValid = await checkGamePath(result.data)
+      console.log(`[WelcomeScreen] revalidated detected game path (${result.data}) => ${isValid}`)
+      setGamePathValid(isValid)
+    } catch (err) {
+      console.error('[WelcomeScreen] revalidating detected game path failed:', err)
+      setGamePathValid(false)
+    }
     if (!silent) {
       addToast('Game path default loaded', 'success', 1800)
     }
@@ -184,22 +203,26 @@ export const WelcomeScreen: React.FC = () => {
   const sectionDotClass = 'relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[#fcee09]'
 
   return (
-    <div className="relative h-full overflow-auto animate-settings-in flex items-center justify-center bg-[#050505] p-6">
+    <div className="relative h-full overflow-y-auto animate-settings-in bg-[#050505]">
       <div
         className="absolute inset-x-0 top-0 h-12"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       />
-      <div className="w-full max-w-[680px]">
+      <div className="mx-auto flex min-h-full w-full items-center justify-center px-3 py-6 sm:px-5 sm:py-8 lg:px-8 xl:px-10">
+        <div className="w-full max-w-[clamp(720px,44vw,980px)]">
 
         {/* Page header */}
-        <div className="flex items-end justify-between mb-5">
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="brand-font text-xl font-bold tracking-[0.18em] uppercase text-white">Workspace Setup</h1>
+            <h1 className="brand-font text-lg font-bold tracking-[0.18em] uppercase text-white sm:text-xl">Workspace Setup</h1>
             <p className="ui-support-mono mt-2 uppercase tracking-[0.15em]">
               Configure required paths to initialize Hyperion
             </p>
+            <div className="ui-support-mono mt-2 text-[10px] uppercase tracking-[0.16em] text-[#5f5f5f]">
+              Hyperion {appVersion}
+            </div>
           </div>
-          <div className="relative shrink-0 overflow-hidden rounded-sm border-[0.5px] border-[#6a5b10] bg-[linear-gradient(180deg,#171303,#100d02)] px-3 py-2 text-[9px] font-mono uppercase tracking-[0.16em] text-[#f1df88] shadow-[inset_0_1px_0_rgba(252,238,9,0.08)]">
+          <div className="relative w-fit shrink-0 overflow-hidden rounded-sm border-[0.5px] border-[#6a5b10] bg-[linear-gradient(180deg,#171303,#100d02)] px-3 py-2 text-[9px] font-mono uppercase tracking-[0.16em] text-[#f1df88] shadow-[inset_0_1px_0_rgba(252,238,9,0.08)]">
             <span className="absolute inset-0 animate-[firstrun-glow_2.4s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent,rgba(252,238,9,0.08),transparent)]" />
             <span className="relative">First Run</span>
           </div>
@@ -209,8 +232,8 @@ export const WelcomeScreen: React.FC = () => {
         <div className="border-[0.5px] border-[#1a1a1a] bg-[#070707] shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
 
           {/* Game Path */}
-          <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
-            <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+          <div className="border-b-[0.5px] border-[#1a1a1a] px-4 py-4 sm:px-5 sm:py-5">
+            <div className="mb-2 flex min-h-[20px] flex-wrap items-center gap-2">
               <div className={sectionDotClass} />
               <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Game Path</span>
               <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
@@ -228,17 +251,17 @@ export const WelcomeScreen: React.FC = () => {
             }`}>
               <div className="break-all">{gamePath || <span className="text-[#6b6b6b]">Select Cyberpunk 2077 directory...</span>}</div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => void applyGameDefault()} disabled={detectingGame} className={accentBtn}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button onClick={() => void applyGameDefault()} disabled={detectingGame} className={`${accentBtn} w-full sm:w-auto`}>
                 {detectingGame ? 'Detecting...' : 'Auto Detect'}
               </button>
-              <button onClick={browseGame} className={`${browseBtn} ml-auto`}>Browse</button>
+              <button onClick={browseGame} className={`${browseBtn} w-full sm:ml-auto sm:w-auto`}>Browse</button>
             </div>
           </div>
 
           {/* Mod Library */}
-          <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
-            <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+          <div className="border-b-[0.5px] border-[#1a1a1a] px-4 py-4 sm:px-5 sm:py-5">
+            <div className="mb-2 flex min-h-[20px] flex-wrap items-center gap-2">
               <div className={sectionDotClass} />
               <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Mod Library</span>
               <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
@@ -249,15 +272,15 @@ export const WelcomeScreen: React.FC = () => {
             <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
               <div className="break-all">{libraryPath || <span className="text-[#6b6b6b]">Select mod library directory...</span>}</div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={applyLibraryDefault} disabled={!defaultPaths} className={accentBtn}>Use Default</button>
-              <button onClick={browseLibrary} className={`${browseBtn} ml-auto`}>Browse</button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button onClick={applyLibraryDefault} disabled={!defaultPaths} className={`${accentBtn} w-full sm:w-auto`}>Use Default</button>
+              <button onClick={browseLibrary} className={`${browseBtn} w-full sm:ml-auto sm:w-auto`}>Browse</button>
             </div>
           </div>
 
           {/* Downloads */}
-          <div className="px-5 py-5">
-            <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+          <div className="px-4 py-4 sm:px-5 sm:py-5">
+            <div className="mb-2 flex min-h-[20px] flex-wrap items-center gap-2">
               <div className="relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[rgba(252,238,9,0.35)]" />
               <span className="text-sm uppercase tracking-widest text-[#d0d0d0] brand-font font-bold">Downloads Intake</span>
               <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Optional</span>
@@ -268,27 +291,40 @@ export const WelcomeScreen: React.FC = () => {
             <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
               <div className="break-all">{effectiveDownloadPath || <span className="text-[#6b6b6b]">Waiting for path definition...</span>}</div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={applyDownloadsDefault} className={accentBtn}>Use Default</button>
-              <button onClick={browseDownloads} className={`${browseBtn} ml-auto`}>Browse</button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button onClick={applyDownloadsDefault} className={`${accentBtn} w-full sm:w-auto`}>Use Default</button>
+              <button onClick={browseDownloads} className={`${browseBtn} w-full sm:ml-auto sm:w-auto`}>Browse</button>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-5 pt-5 border-t-[0.5px] border-[#1a1a1a] gap-6">
+        <div className="mt-5 flex flex-col gap-4 border-t-[0.5px] border-[#1a1a1a] pt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
           <p className="ui-support-mono">
             Hyperion initializes only after both required paths validate.
           </p>
-          <button
-            onClick={applyPaths}
-            disabled={!gamePathValid || !libraryPathValid}
-            className="shrink-0 px-6 py-3 bg-[#fcee09] text-[#050505] rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:hover:bg-[#1c1b07]"
+          <Tooltip
+            content={
+              !gamePathValid && !libraryPathValid
+                ? 'Set a valid Game Path and Mod Library'
+                : !gamePathValid
+                ? 'Set a valid Game Path'
+                : 'Set a valid Mod Library'
+            }
+            side="top"
+            wrapperClassName="inline-flex"
           >
-            Initialize Workspace
-          </button>
+            <button
+              onClick={applyPaths}
+              disabled={!gamePathValid || !libraryPathValid}
+              className="w-full shrink-0 rounded-sm bg-[#fcee09] px-6 py-3 text-[10px] brand-font font-bold uppercase tracking-widest text-[#050505] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:opacity-40 disabled:hover:bg-[#1c1b07] sm:w-auto"
+            >
+              Initialize Workspace
+            </button>
+          </Tooltip>
         </div>
 
+        </div>
       </div>
     </div>
   )

@@ -10,9 +10,13 @@ import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 
-const DOWNLOADS_GRID_TEMPLATE = 'minmax(420px,1fr) 260px 132px'
+const DOWNLOADS_GRID_TEMPLATE = 'minmax(360px,1fr) 110px 220px 132px'
 const DOWNLOAD_ROW_HEIGHT = 56
 const DOWNLOAD_VIRTUALIZATION_THRESHOLD = 120
+
+type DownloadListRow =
+  | { kind: 'active'; key: string; orderTs: number; active: ReturnType<typeof useAppStore.getState>['activeDownloads'][number] }
+  | { kind: 'local'; key: string; orderTs: number; entry: DownloadEntry }
 
 const formatSpeed = (bps: number): string => {
   if (bps <= 0) return '—'
@@ -162,18 +166,21 @@ export const DownloadsPane: React.FC = () => {
     const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
     if (installedMod) {
       openReinstallPrompt(installedMod)
-      markFileAsOld(entry.path)
       return
     }
 
-    const installResult = await installMod(entry.path)
+    const installResult = await installMod(entry.path, {
+      nexusModId: entry.nxmModId,
+      nexusFileId: entry.nxmFileId,
+      sourceFileName: entry.name,
+      sourceVersion: entry.version,
+    })
     if (!installResult.ok || !installResult.data) {
       addToast(installResult.error ?? 'Install failed', 'error')
       return
     }
 
     if (installResult.data.status === 'installed' && installResult.data.mod) {
-      markFileAsOld(entry.path)
       await scanMods()
       const enableResult = await enableMod(installResult.data.mod.uuid)
       if (!enableResult.ok) {
@@ -231,7 +238,44 @@ export const DownloadsPane: React.FC = () => {
     await doRefresh()
   }
 
-  const totalRows = activeDownloads.length + localFiles.length
+  const orderedRows = useMemo<DownloadListRow[]>(() => {
+    const activeRows: DownloadListRow[] = activeDownloads.map((download) => ({
+      kind: 'active',
+      key: `active:${download.id}`,
+      orderTs: Number.isNaN(Date.parse(download.startedAt)) ? 0 : Date.parse(download.startedAt),
+      active: download,
+    }))
+
+    const activeDownloadPaths = new Set(
+      activeDownloads
+        .filter((download) => download.status === 'downloading' || download.status === 'paused' || download.status === 'queued')
+        .map((download) => download.savedPath?.trim().toLowerCase())
+        .filter((value): value is string => Boolean(value))
+    )
+
+    const localRows: DownloadListRow[] = localFiles
+      .filter((entry) => !activeDownloadPaths.has(entry.path.trim().toLowerCase()))
+      .map((entry) => {
+      const orderSource = entry.downloadedAt ?? entry.modifiedAt
+      const orderTs = Date.parse(orderSource)
+      const modifiedAtTs = Date.parse(entry.modifiedAt)
+
+      return {
+        kind: 'local',
+        key: `local:${entry.path}`,
+        orderTs: Number.isNaN(orderTs) ? (Number.isNaN(modifiedAtTs) ? 0 : modifiedAtTs) : orderTs,
+        entry,
+      }
+    })
+
+    return [...activeRows, ...localRows].sort((left, right) => {
+      if (right.orderTs !== left.orderTs) return right.orderTs - left.orderTs
+      if (left.kind !== right.kind) return left.kind === 'active' ? -1 : 1
+      return left.key.localeCompare(right.key)
+    })
+  }, [activeDownloads, localFiles])
+
+  const totalRows = orderedRows.length
   const virtualizedDownloads = useVirtualRows({
     containerRef: downloadsScrollRef,
     count: totalRows,
@@ -239,18 +283,9 @@ export const DownloadsPane: React.FC = () => {
     overscan: 12,
     enabled: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD,
   })
-  const visibleActiveDownloads = useMemo(
-    () => activeDownloads.slice(
-      Math.min(activeDownloads.length, virtualizedDownloads.startIndex),
-      Math.min(activeDownloads.length, virtualizedDownloads.endIndex),
-    ),
-    [activeDownloads, virtualizedDownloads.endIndex, virtualizedDownloads.startIndex]
-  )
-  const visibleLocalStart = Math.max(0, virtualizedDownloads.startIndex - activeDownloads.length)
-  const visibleLocalEnd = Math.max(0, virtualizedDownloads.endIndex - activeDownloads.length)
-  const visibleLocalFiles = useMemo(
-    () => localFiles.slice(visibleLocalStart, visibleLocalEnd),
-    [localFiles, visibleLocalEnd, visibleLocalStart]
+  const visibleRows = useMemo(
+    () => orderedRows.slice(virtualizedDownloads.startIndex, virtualizedDownloads.endIndex),
+    [orderedRows, virtualizedDownloads.endIndex, virtualizedDownloads.startIndex]
   )
 
   return (
@@ -307,6 +342,9 @@ export const DownloadsPane: React.FC = () => {
                   Archive Name
                 </div>
                 <div className="flex h-8 items-center text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                  Version
+                </div>
+                <div className="flex h-8 items-center text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
                   Download
                 </div>
                 <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
@@ -344,19 +382,27 @@ export const DownloadsPane: React.FC = () => {
                     paddingBottom: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingBottom : 0,
                   }}
                 >
-                  {visibleActiveDownloads.map((dl) => {
+                  {visibleRows.map((row, visibleIndex) => {
+                    if (row.kind === 'active') {
+                      const dl = row.active
                     const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
                     const isDone = dl.status === 'done'
                     const isError = dl.status === 'error'
                     const isPaused = dl.status === 'paused'
-                    const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
+                    const accent = isDone ? '#34d399' : isError ? '#f87171' : isPaused ? '#60a5fa' : '#fcee09'
+                    const rowBorder = isError ? '#3a1313' : isPaused ? '#19304f' : '#1e1a00'
+                    const rowTint = isError
+                      ? 'rgba(248,113,113,0.04)'
+                      : isPaused
+                        ? 'rgba(96,165,250,0.05)'
+                        : 'rgba(252,238,9,0.035)'
                     const eta = isDone || isError || isPaused ? null : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
                     const progressSummary = isError
                       ? dl.error ?? 'Download failed'
                       : isDone
                         ? 'Ready to install'
                         : isPaused
-                          ? `${pct}% paused`
+                          ? `Paused at ${pct}%`
                         : `${pct}% complete`
                     const transferSummary = isError
                       ? 'Transfer interrupted'
@@ -368,14 +414,14 @@ export const DownloadsPane: React.FC = () => {
                       : isDone
                         ? 'Waiting for scan'
                         : isPaused
-                          ? 'Paused'
+                          ? 'Resume to continue'
                         : `${formatSpeed(dl.speedBps)}${eta ? ` · ETA ${eta}` : ''}`
 
                     return (
                       <div
-                        key={dl.id}
+                        key={row.key}
                         className="relative h-14 overflow-hidden border-b-[0.5px] border-[#1e1a00]"
-                        style={{ background: 'rgba(252,238,9,0.035)' }}
+                        style={{ background: rowTint, borderColor: rowBorder }}
                       >
                         <div
                           aria-hidden="true"
@@ -384,6 +430,8 @@ export const DownloadsPane: React.FC = () => {
                             width: `${Math.max(0, Math.min(pct, 100))}%`,
                             background: isError
                               ? 'linear-gradient(90deg, rgba(248,113,113,0.18) 0%, rgba(248,113,113,0.08) 100%)'
+                              : isPaused
+                                ? 'linear-gradient(90deg, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.07) 100%)'
                               : 'linear-gradient(90deg, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.09) 100%)',
                           }}
                         />
@@ -421,20 +469,24 @@ export const DownloadsPane: React.FC = () => {
                             </div>
                             <span
                               className="text-sm font-mono tracking-tight"
-                              style={{ color: isError ? '#fca5a5' : accent }}
+                              style={{ color: isError ? '#fca5a5' : isPaused ? '#93c5fd' : accent }}
                             >
                               {transferSummary}
                             </span>
                           </div>
 
+                          <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a]">
+                            {dl.version ?? '—'}
+                          </div>
+
                           <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
                             <span
                               className="truncate"
-                              style={{ color: isError ? '#fca5a5' : isDone ? '#86efac' : '#d6d6d6' }}
+                              style={{ color: isError ? '#fca5a5' : isDone ? '#86efac' : isPaused ? '#dbeafe' : '#d6d6d6' }}
                             >
                               {progressSummary}
                             </span>
-                            <span className="truncate text-[#9a9a9a]">
+                            <span className={`truncate ${isPaused ? 'text-[#93a8c8]' : 'text-[#9a9a9a]'}`}>
                               {speedSummary}
                             </span>
                           </div>
@@ -446,7 +498,7 @@ export const DownloadsPane: React.FC = () => {
                                   <Tooltip content="Resume download">
                                     <button
                                       onClick={() => void resumeDownload(dl.id)}
-                                      className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#2f2a05] bg-[#0a0a0a]/90 text-[#fcee09] hover:border-[#fcee09]/60 hover:bg-[#151200] transition-all"
+                                      className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#1d3d63] bg-[#07111d]/95 text-[#60a5fa] hover:border-[#60a5fa]/70 hover:bg-[#0b1724] transition-all"
                                     >
                                       <span className="material-symbols-outlined text-[16px]">play_arrow</span>
                                     </button>
@@ -475,10 +527,10 @@ export const DownloadsPane: React.FC = () => {
                         </div>
                       </div>
                     )
-                  })}
+                    }
 
-                  {visibleLocalFiles.map((entry, visibleIndex) => {
-                  const index = visibleLocalStart + visibleIndex
+                  const entry = row.entry
+                  const index = virtualizedDownloads.startIndex + visibleIndex
                   const isInstalling = installing && installSourcePath === entry.path
                   const installAppearance = isInstalling
                     ? getInstallProgressAppearance(installStatus)
@@ -495,7 +547,7 @@ export const DownloadsPane: React.FC = () => {
 
                     return (
                       <div
-                        key={entry.path}
+                        key={row.key}
                         className="relative h-14 overflow-hidden border-b-[0.5px]"
                         style={{
                           background: installAppearance.rowTint,
@@ -555,6 +607,10 @@ export const DownloadsPane: React.FC = () => {
                             </span>
                           </div>
 
+                          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+                            {entry.version ?? '—'}
+                          </div>
+
                           <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
                             <span className="truncate text-[#d8d8d8]">
                               {progressSummary}
@@ -582,7 +638,7 @@ export const DownloadsPane: React.FC = () => {
 
                   return (
                     <div
-                      key={entry.path}
+                      key={row.key}
                       className={`grid h-14 gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
                       style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
                     >
@@ -622,17 +678,22 @@ export const DownloadsPane: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="text-sm font-mono text-[#9a9a9a] tracking-tight group-hover:text-[#c2c2c2] transition-colors">
+                        <span className="truncate text-sm font-mono tracking-tight text-[#9a9a9a] transition-colors group-hover:text-[#c2c2c2]">
                           {formatSize(entry.size)}
                         </span>
                       </div>
 
-                      {/* Col 2: modified date */}
+                      {/* Col 2: version */}
+                      <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#c4c4c4] transition-colors">
+                        {entry.version ?? '—'}
+                      </div>
+
+                      {/* Col 3: modified date */}
                       <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
                         {formatWindowsDateTime(entry.modifiedAt)}
                       </div>
 
-                      {/* Col 3: install + delete */}
+                      {/* Col 4: install + delete */}
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => void handleInstall(entry)}

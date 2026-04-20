@@ -14,6 +14,7 @@ export interface UISlice {
   dialogs: DialogState
   activeView: 'library' | 'downloads' | 'settings'
   viewHistory: Array<'library' | 'downloads' | 'settings'>
+  recentLibraryBadges: Record<string, 'installed' | 'updated' | 'downgraded'>
 
   setStatus: (message: string) => void
   addToast: (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -22,6 +23,8 @@ export interface UISlice {
   closeDialog: (name: keyof DialogState) => void
   setActiveView: (view: UISlice['activeView']) => void
   goBack: () => void
+  setRecentLibraryBadge: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
+  clearRecentLibraryBadge: (modId: string) => void
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
@@ -34,6 +37,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   },
   activeView: 'library',
   viewHistory: [],
+  recentLibraryBadges: {},
 
   setStatus: (message) => set({ statusMessage: message }),
 
@@ -83,5 +87,28 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
       activeView: previousView,
       viewHistory: nextHistory,
     }
-  })
+  }),
+
+  setRecentLibraryBadge: (modId, badge, duration = 15000) => {
+    set((state) => ({
+      recentLibraryBadges: { ...state.recentLibraryBadges, [modId]: badge }
+    }))
+
+    setTimeout(() => {
+      set((state) => {
+        if (!(modId in state.recentLibraryBadges)) return state
+        const next = { ...state.recentLibraryBadges }
+        delete next[modId]
+        return { recentLibraryBadges: next }
+      })
+    }, duration)
+  },
+
+  clearRecentLibraryBadge: (modId) =>
+    set((state) => {
+      if (!(modId in state.recentLibraryBadges)) return state
+      const next = { ...state.recentLibraryBadges }
+      delete next[modId]
+      return { recentLibraryBadges: next }
+    })
 })

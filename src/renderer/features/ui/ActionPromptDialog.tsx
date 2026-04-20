@@ -17,6 +17,7 @@ interface ActionPromptDialogProps {
   onCancel: () => void
   submitting?: boolean
   detailContent?: React.ReactNode
+  maxWidthClassName?: string
 }
 
 export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
@@ -36,23 +37,24 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
   onCancel,
   submitting = false,
   detailContent,
+  maxWidthClassName,
 }) => {
   return (
-    <div data-action-prompt="true" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-      <div className="bg-[#050505] border-[0.5px] border-[#222] shadow-[0_20px_50px_rgba(0,0,0,0.8)] w-full max-w-md p-8 relative">
+    <div data-action-prompt="true" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-3 backdrop-blur-sm sm:px-4">
+      <div className={`relative w-full ${maxWidthClassName ?? 'max-w-md'} border-[0.5px] border-[#222] bg-[#050505] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] sm:p-8 max-h-[min(92vh,760px)] overflow-y-auto hyperion-scrollbar`}>
         <div
           className="absolute top-0 left-0 w-full h-[2px]"
           style={{ background: accentColor, boxShadow: `0 0 10px ${accentGlow}` }}
         />
 
-        <div className="flex items-center gap-3 mb-6" style={{ color: accentColor }}>
+        <div className="mb-5 flex items-start gap-3 sm:mb-6 sm:items-center" style={{ color: accentColor }}>
           <span className="material-symbols-outlined text-2xl">{icon}</span>
-          <h2 className="brand-font text-xl font-bold tracking-tighter uppercase">{title}</h2>
+          <h2 className="brand-font text-lg font-bold tracking-tighter uppercase sm:text-xl">{title}</h2>
         </div>
 
         <p className="text-[#9a9a9a] text-sm leading-relaxed mb-3">{description}</p>
         {(detailContent || (detailLabel && detailValue)) && (
-          <div className="mb-8 overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0b0b0b] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+          <div className="mb-6 overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0b0b0b] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:mb-8">
             <div
               className="h-px w-full"
               style={{ background: accentColor, boxShadow: `0 0 10px ${accentGlow}` }}
@@ -90,7 +92,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
             <button
               onClick={onSecondary}
               disabled={submitting}
-                className="w-full bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white font-bold py-3 text-xs tracking-widest uppercase rounded-sm disabled:opacity-60 hover:border-[#9a9a9a] hover:bg-[#111] hover:shadow-[0_0_12px_rgba(255,255,255,0.05)] transition-all"
+              className="w-full bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white font-bold py-3 text-xs tracking-widest uppercase rounded-sm disabled:opacity-60 hover:border-[#9a9a9a] hover:bg-[#111] hover:shadow-[0_0_12px_rgba(255,255,255,0.05)] transition-all"
               style={{ '--hover-color': accentColor } as React.CSSProperties}
             >
               {secondaryLabel}

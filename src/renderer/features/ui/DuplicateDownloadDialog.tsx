@@ -36,8 +36,12 @@ export const DuplicateDownloadDialog: React.FC = () => {
     <ActionPromptDialog
       accentColor="#fcee09"
       accentGlow="rgba(252,238,9,0.5)"
-      title="File Already Exists"
-      description="Hyperion found this file in your downloads folder already. If you continue, the new download will be saved as a separate copy with a clear duplicate label."
+      title={duplicateDownloadPrompt.existingIsDownloading ? 'File Already Downloading' : 'File Already Exists'}
+      description={
+        duplicateDownloadPrompt.existingIsDownloading
+          ? 'Hyperion is already downloading this archive right now. If you continue, the new request will be saved as a separate copy so both downloads can finish without colliding.'
+          : 'Hyperion found this file in your downloads folder already. If you continue, the new download will be saved as a separate copy with a clear duplicate label.'
+      }
       icon="warning"
       primaryLabel="Download Again"
       onPrimary={() => void handleConfirm()}
@@ -47,7 +51,9 @@ export const DuplicateDownloadDialog: React.FC = () => {
         <div className="px-4 py-4">
           <div className="space-y-4">
             <div>
-              <div className="ui-support-mono uppercase tracking-[0.18em]">Existing archive</div>
+              <div className="ui-support-mono uppercase tracking-[0.18em]">
+                {duplicateDownloadPrompt.existingIsDownloading ? 'Archive downloading now' : 'Existing archive'}
+              </div>
               <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-white">
                 {duplicateDownloadPrompt.existingFileName}
               </div>

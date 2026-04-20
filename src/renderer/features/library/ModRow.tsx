@@ -64,10 +64,11 @@ export const ModRow: React.FC<ModRowProps> = ({
   onRenameSave,
   onRenameCancel,
 }) => {
-  const { enableMod, disableMod, addToast } = useAppStore((state) => ({
+  const { enableMod, disableMod, addToast, recentBadge } = useAppStore((state) => ({
     enableMod: state.enableMod,
     disableMod: state.disableMod,
     addToast: state.addToast,
+    recentBadge: state.recentLibraryBadges[mod.uuid],
   }), shallow)
 
   if (mod.kind === 'separator') {
@@ -170,13 +171,39 @@ export const ModRow: React.FC<ModRowProps> = ({
             className="allow-text-selection h-6 w-full border-[0.5px] border-[#333] bg-[#0a0a0a] px-3 text-[12px] text-white focus:border-[#fcee09]/50 focus:outline-none"
           />
         ) : (
-          <span
-            className={`font-medium tracking-tight truncate transition-colors ${
-              mod.enabled ? 'text-[#e5e2e1] group-hover:text-[#ffffff]' : 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
-            }`}
-          >
-            {mod.name}
-          </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className={`font-medium tracking-tight truncate transition-colors ${
+                mod.enabled ? 'text-[#e5e2e1] group-hover:text-[#ffffff]' : 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
+              }`}
+            >
+              {mod.name}
+            </span>
+            {recentBadge ? (
+              <span
+                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                style={{
+                  color: recentBadge === 'downgraded'
+                    ? '#f87171'
+                    : recentBadge === 'updated'
+                      ? '#60a5fa'
+                      : '#34d399',
+                  borderColor: recentBadge === 'downgraded'
+                    ? 'rgba(248,113,113,0.35)'
+                    : recentBadge === 'updated'
+                      ? 'rgba(96,165,250,0.35)'
+                      : 'rgba(52,211,153,0.35)',
+                  background: recentBadge === 'downgraded'
+                    ? 'rgba(248,113,113,0.12)'
+                    : recentBadge === 'updated'
+                      ? 'rgba(96,165,250,0.12)'
+                      : 'rgba(52,211,153,0.12)',
+                }}
+              >
+                {recentBadge === 'downgraded' ? 'Downgraded' : recentBadge === 'updated' ? 'Updated' : 'Installed'}
+              </span>
+            ) : null}
+          </div>
         )}
       </div>
 

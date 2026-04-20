@@ -16,9 +16,133 @@ import type {
 import { parseNxmUrl } from '../../../shared/nxm'
 import { IpcService } from '../../services/IpcService'
 
-// Module-level set so concurrent async calls can't both slip through
-// before reactive state has a chance to update
-const pendingDownloadKeys = new Set<string>()
+// Serialize Nexus start requests per mod:file key so repeated clicks keep
+// their order and fall through to the duplicate prompt instead of racing.
+const pendingDownloadStarts = new Map<string, Promise<void>>()
+const copySuffixPattern = /\sCopy(?:\s\d+)?$/i
+
+function extractVersionFromFileName(rawName: string): string | undefined {
+  const cleaned = rawName
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
+    .replace(/[_]+/g, ' ')
+    .trim()
+
+  const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)
+  if (dashParts.length > 1) {
+    for (let index = 1; index < dashParts.length; index += 1) {
+      const trailing = dashParts.slice(index)
+      const versionLike = trailing.every((part) => /^v?\d+[a-z0-9.]*$/i.test(part))
+      if (versionLike) {
+        return trailing.map((part) => part.replace(/^v/i, '')).join('.')
+      }
+    }
+  }
+
+  const match = /[-_ ]v?(\d+(?:[._-]\d+)+)$/i.exec(cleaned)
+  if (match) return match[1].replace(/[_-]/g, '.')
+
+  return undefined
+}
+
+function normalizeVersion(value?: string): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  return trimmed.replace(/^v/i, '')
+}
+
+function tokenizeVersion(value?: string): string[] {
+  if (!value) return []
+  return value
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean)
+}
+
+function compareVersionTokens(left?: string, right?: string): number | null {
+  const leftTokens = tokenizeVersion(left)
+  const rightTokens = tokenizeVersion(right)
+  if (!leftTokens.length || !rightTokens.length) return null
+
+  const length = Math.max(leftTokens.length, rightTokens.length)
+  for (let index = 0; index < length; index += 1) {
+    const leftToken = leftTokens[index] ?? '0'
+    const rightToken = rightTokens[index] ?? '0'
+    const leftNumber = Number(leftToken)
+    const rightNumber = Number(rightToken)
+    const bothNumeric = !Number.isNaN(leftNumber) && !Number.isNaN(rightNumber)
+
+    if (bothNumeric) {
+      if (leftNumber === rightNumber) continue
+      return leftNumber < rightNumber ? -1 : 1
+    }
+
+    if (leftToken === rightToken) continue
+    return leftToken.localeCompare(rightToken)
+  }
+
+  return 0
+}
+
+function getVersionRelation(existingVersion?: string, incomingVersion?: string): 'upgrade' | 'downgrade' | 'different' | 'unknown' {
+  const comparison = compareVersionTokens(existingVersion, incomingVersion)
+  if (comparison === null) return 'unknown'
+  if (comparison < 0) return 'upgrade'
+  if (comparison > 0) return 'downgrade'
+  return 'different'
+}
+
+function persistNewFiles(next: string[]): void {
+  try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
+}
+
+function removeNewFilePath(entries: string[], filePath: string): string[] {
+  const normalizedPath = filePath.trim().toLowerCase()
+  return entries.filter((entryPath) => entryPath.trim().toLowerCase() !== normalizedPath)
+}
+
+function isCopyVariant(name: string): boolean {
+  return copySuffixPattern.test(name.trim())
+}
+
+function getInstalledTimestamp(installedAt?: string): number {
+  if (!installedAt) return 0
+  const parsed = Date.parse(installedAt)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function selectPreferredNexusMod(
+  mods: ModMetadata[],
+  nexusModId: number,
+  incomingVersion?: string,
+): ModMetadata | undefined {
+  let candidates = mods.filter((mod) => mod.kind === 'mod' && mod.nexusModId === nexusModId)
+  if (!candidates.length) return undefined
+
+  if (incomingVersion) {
+    const exactVersionMatches = candidates.filter((mod) => normalizeVersion(mod.version) === incomingVersion)
+    if (exactVersionMatches.length > 0) {
+      candidates = exactVersionMatches
+    }
+  }
+
+  return [...candidates].sort((left, right) => {
+    const copyDelta = Number(isCopyVariant(left.name)) - Number(isCopyVariant(right.name))
+    if (copyDelta !== 0) return copyDelta
+
+    const installedDelta = getInstalledTimestamp(right.installedAt) - getInstalledTimestamp(left.installedAt)
+    if (installedDelta !== 0) return installedDelta
+
+    return left.order - right.order
+  })[0]
+}
+
+function shouldPromptForVersionDecision(existingVersion?: string, incomingVersion?: string): boolean {
+  if (!existingVersion || !incomingVersion) return true
+  return existingVersion !== incomingVersion
+}
 
 export interface InstallPromptInfo {
   mode: 'duplicate' | 'reinstall'
@@ -30,6 +154,17 @@ export interface InstallPromptInfo {
 
 export interface DuplicateDownloadPromptInfo extends DuplicateNxmDownloadInfo {
   payload: NxmLinkPayload
+}
+
+export interface VersionMismatchPromptInfo {
+  nexusModId: number
+  existingModId: string
+  existingModName: string
+  existingVersion?: string
+  incomingVersion?: string
+  sourcePath: string
+  sourceFileName?: string
+  sourceVersion?: string
 }
 
 export interface DownloadsSlice {
@@ -44,6 +179,7 @@ export interface DownloadsSlice {
   installPrompt: InstallPromptInfo | null
   pendingInstallRequest: InstallModRequest | null
   duplicateDownloadPrompt: DuplicateDownloadPromptInfo | null
+  versionMismatchPrompt: VersionMismatchPromptInfo | null
   activeDownloads: ActiveDownload[]
   localFiles: DownloadEntry[]
   newFiles: string[]
@@ -58,6 +194,8 @@ export interface DownloadsSlice {
   clearInstallPrompt: () => void
   confirmDuplicateDownload: () => Promise<void>
   clearDuplicateDownloadPrompt: () => void
+  confirmVersionMismatch: (action: 'replace' | 'copy' | 'skip') => Promise<void>
+  clearVersionMismatchPrompt: () => void
   clearInstall: () => void
   refreshLocalFiles: () => Promise<void>
   startNxmDownload: (payload: NxmLinkPayload, options?: { allowDuplicate?: boolean }) => Promise<void>
@@ -83,6 +221,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   installPrompt: null,
   pendingInstallRequest: null,
   duplicateDownloadPrompt: null,
+  versionMismatchPrompt: null,
   newFiles: (() => {
     try { return JSON.parse(localStorage.getItem('hyperion:newFiles') ?? '[]') as string[] }
     catch { return [] }
@@ -92,6 +231,41 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   localFiles: [],
 
   installMod: async (filePath, request = {}) => {
+    const state = get() as DownloadsSlice & {
+      mods?: ModMetadata[]
+    }
+    const nexusModId = request.nexusModId
+    const incomingVersion = normalizeVersion(request.sourceVersion)
+      ?? (typeof nexusModId === 'number' ? undefined : extractVersionFromFileName(request.sourceFileName ?? filePath))
+    const existingMod = typeof nexusModId === 'number'
+      ? selectPreferredNexusMod(state.mods ?? [], nexusModId, incomingVersion)
+      : undefined
+    const existingVersion = normalizeVersion(existingMod?.version)
+
+    if (!request.skipVersionMismatchPrompt && nexusModId && existingMod && !request.duplicateAction && shouldPromptForVersionDecision(existingVersion, incomingVersion)) {
+      set({
+        versionMismatchPrompt: {
+          nexusModId,
+          existingModId: existingMod.uuid,
+          existingModName: existingMod.name,
+          existingVersion,
+          incomingVersion,
+          sourcePath: filePath,
+          sourceFileName: request.sourceFileName,
+          sourceVersion: request.sourceVersion,
+        },
+      })
+      return { ok: true, data: { status: 'version-mismatch' } }
+    }
+
+    if (!request.skipVersionMismatchPrompt && nexusModId && existingMod && !request.duplicateAction) {
+      request = {
+        ...request,
+        duplicateAction: 'replace',
+        targetModId: existingMod.uuid,
+      }
+    }
+
     set({
       installing: true,
       installProgress: 0,
@@ -125,25 +299,40 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     })
 
     if (result.ok && result.data) {
-      if (result.data.status === 'duplicate' && result.data.duplicate) {
+      const resultData = result.data
+
+      if (resultData.status === 'duplicate' && resultData.duplicate) {
         set({
           installPrompt: {
             mode: 'duplicate',
-            existingModId: result.data.duplicate.existingModId,
-            existingModName: result.data.duplicate.existingModName,
-            incomingModName: result.data.duplicate.incomingModName,
-            sourcePath: result.data.duplicate.sourcePath,
+            existingModId: resultData.duplicate.existingModId,
+            existingModName: resultData.duplicate.existingModName,
+            incomingModName: resultData.duplicate.incomingModName,
+            sourcePath: resultData.duplicate.sourcePath,
           },
           pendingInstallRequest: {
             filePath,
-            targetModId: result.data.duplicate.existingModId,
+            targetModId: resultData.duplicate.existingModId,
             ...request,
             duplicateAction: 'prompt',
           },
         })
+      } else if (resultData.status === 'installed') {
+        set((state) => {
+          const nextNewFiles = removeNewFilePath(state.newFiles, filePath)
+          if (nextNewFiles.length !== state.newFiles.length) {
+            persistNewFiles(nextNewFiles)
+          }
+          return {
+            pendingMod: resultData.mod ?? null,
+            installPrompt: null,
+            pendingInstallRequest: null,
+            newFiles: nextNewFiles,
+          }
+        })
       } else {
         set({
-          pendingMod: result.data.mod ?? null,
+          pendingMod: resultData.mod ?? null,
           installPrompt: null,
           pendingInstallRequest: null,
         })
@@ -189,7 +378,22 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     })
 
     if (result.ok && result.data?.status === 'installed') {
-      set({ pendingMod: result.data.mod ?? null })
+      set((state) => {
+        const sourcePath = targetMod?.sourcePath
+        if (!sourcePath) {
+          return { pendingMod: result.data?.mod ?? null }
+        }
+
+        const nextNewFiles = removeNewFilePath(state.newFiles, sourcePath)
+        if (nextNewFiles.length !== state.newFiles.length) {
+          persistNewFiles(nextNewFiles)
+        }
+
+        return {
+          pendingMod: result.data?.mod ?? null,
+          newFiles: nextNewFiles,
+        }
+      })
     }
 
     return result
@@ -234,6 +438,57 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       duplicateDownloadPrompt: null,
     }),
 
+  confirmVersionMismatch: async (action) => {
+    const prompt = get().versionMismatchPrompt
+    const state = get() as DownloadsSlice & {
+      addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+      scanMods?: () => Promise<unknown>
+      enableMod?: (modId: string) => Promise<IpcResult>
+      setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
+    }
+
+    if (!prompt) return
+
+    set({ versionMismatchPrompt: null })
+
+    if (action === 'skip') return
+
+    const result = await get().installMod(prompt.sourcePath, {
+      duplicateAction: action,
+      targetModId: action === 'replace' ? prompt.existingModId : undefined,
+      nexusModId: prompt.nexusModId,
+      sourceFileName: prompt.sourceFileName,
+      sourceVersion: prompt.sourceVersion,
+      skipVersionMismatchPrompt: true,
+    })
+
+    if (!result.ok || !result.data) {
+      state.addToast?.(result.error ?? 'Install failed', 'error')
+      return
+    }
+
+    if (result.data.status === 'installed' && result.data.mod) {
+      await state.scanMods?.()
+      const enableResult = await state.enableMod?.(result.data.mod.uuid)
+      if (enableResult && !enableResult.ok) {
+        state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+      } else {
+        state.addToast?.(`${result.data.mod.name} installed & activated`, 'success')
+      }
+      const badge = action === 'replace'
+        ? (getVersionRelation(prompt.existingVersion, prompt.incomingVersion) === 'downgrade' ? 'downgraded' : 'updated')
+        : 'installed'
+      state.setRecentLibraryBadge?.(result.data.mod.uuid, badge)
+    } else if (result.data.status === 'conflict') {
+      state.addToast?.('File conflicts detected during install', 'warning')
+    }
+  },
+
+  clearVersionMismatchPrompt: () =>
+    set({
+      versionMismatchPrompt: null,
+    }),
+
   clearInstall: () =>
     set({
       installing: false,
@@ -247,6 +502,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       installPrompt: null,
       pendingInstallRequest: null,
       duplicateDownloadPrompt: null,
+      versionMismatchPrompt: null,
     }),
 
   refreshLocalFiles: async () => {
@@ -268,85 +524,101 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       state.addToast?.(message, tone, 2600)
     }
 
-    // Synchronous guard (module-level Set) prevents a race condition where
-    // two NXM_LINK_RECEIVED events arrive before the first async call
-    // updates reactive state, letting both slip through the activeDownloads check.
-    if (pendingDownloadKeys.has(key)) return
-    const alreadyActive = get().activeDownloads.find(
-      (d) => d.nxmModId === payload.modId && d.nxmFileId === payload.fileId &&
-        (d.status === 'queued' || d.status === 'downloading' || d.status === 'paused')
-    )
-    if (alreadyActive) return
-
-    pendingDownloadKeys.add(key)
-    try {
-      const result = await IpcService.invoke<IpcResult<NxmDownloadStartResponse>>(
-        IPC.NXM_DOWNLOAD_START,
-        {
-          payload,
-          allowDuplicate: options.allowDuplicate === true,
-        }
-      )
-      if (!result.ok || !result.data) {
-        notify(result.error ?? 'Could not start Nexus download', 'warning')
-        return
-      }
-
-      if (result.data.status === 'duplicate' && result.data.duplicate) {
-        set({
-          duplicateDownloadPrompt: {
-            ...result.data.duplicate,
-            payload,
-          },
-        })
-        return
-      }
-
-      if (result.data.status !== 'started' || !result.data.id || !result.data.fileName) {
-        notify('Could not start Nexus download', 'warning')
-        return
-      }
-
-      const { id, fileName } = result.data
-      set((state) => ({
-        duplicateDownloadPrompt: null,
-        activeDownloads: [
-          ...state.activeDownloads,
+    const previousStart = pendingDownloadStarts.get(key) ?? Promise.resolve()
+    let currentStart: Promise<void>
+    currentStart = previousStart
+      .catch(() => undefined)
+      .then(async () => {
+        const requestedAt = new Date().toISOString()
+        const result = await IpcService.invoke<IpcResult<NxmDownloadStartResponse>>(
+          IPC.NXM_DOWNLOAD_START,
           {
-            id,
-            nxmModId: payload.modId,
-            nxmFileId: payload.fileId,
-            fileName,
-            totalBytes: 0,
-            downloadedBytes: 0,
-            speedBps: 0,
-            status: 'downloading' as const,
-          },
-        ],
-      }))
-    } finally {
-      pendingDownloadKeys.delete(key)
-    }
+            payload,
+            allowDuplicate: options.allowDuplicate === true,
+            requestedAt,
+          }
+        )
+        if (!result.ok || !result.data) {
+          notify(result.error ?? 'Could not start Nexus download', 'warning')
+          return
+        }
+
+        if (result.data.status === 'duplicate' && result.data.duplicate) {
+          set({
+            duplicateDownloadPrompt: {
+              ...result.data.duplicate,
+              payload,
+            },
+          })
+          return
+        }
+
+        if (result.data.status !== 'started' || !result.data.id || !result.data.fileName) {
+          notify('Could not start Nexus download', 'warning')
+          return
+        }
+
+        const { id, fileName } = result.data
+        set((state) => ({
+          duplicateDownloadPrompt: null,
+          activeDownloads: [
+            ...state.activeDownloads,
+            {
+              id,
+              nxmModId: payload.modId,
+              nxmFileId: payload.fileId,
+              fileName,
+              startedAt: result.data?.startedAt ?? requestedAt,
+              totalBytes: 0,
+              downloadedBytes: 0,
+              speedBps: 0,
+              status: 'downloading' as const,
+              savedPath: result.data?.savedPath,
+              version: result.data?.version,
+            },
+          ],
+        }))
+      })
+      .finally(() => {
+        if (pendingDownloadStarts.get(key) === currentStart) {
+          pendingDownloadStarts.delete(key)
+        }
+      })
+
+    pendingDownloadStarts.set(key, currentStart)
+    await currentStart
   },
 
   pauseDownload: async (id) => {
+    set((state) => ({
+      activeDownloads: state.activeDownloads.map((d) =>
+        d.id === id ? { ...d, status: 'paused' as const, speedBps: 0, error: undefined } : d
+      ),
+    }))
+
     const result = await IpcService.invoke<IpcResult>(IPC.NXM_DOWNLOAD_PAUSE, id)
-    if (!result.ok) return
+    if (result.ok) return
 
     set((state) => ({
       activeDownloads: state.activeDownloads.map((d) =>
-        d.id === id ? { ...d, status: 'paused' as const, speedBps: 0 } : d
+        d.id === id ? { ...d, status: 'downloading' as const } : d
       ),
     }))
   },
 
   resumeDownload: async (id) => {
-    const result = await IpcService.invoke<IpcResult>(IPC.NXM_DOWNLOAD_RESUME, id)
-    if (!result.ok) return
-
     set((state) => ({
       activeDownloads: state.activeDownloads.map((d) =>
         d.id === id ? { ...d, status: 'downloading' as const, error: undefined } : d
+      ),
+    }))
+
+    const result = await IpcService.invoke<IpcResult>(IPC.NXM_DOWNLOAD_RESUME, id)
+    if (result.ok) return
+
+    set((state) => ({
+      activeDownloads: state.activeDownloads.map((d) =>
+        d.id === id ? { ...d, status: 'paused' as const, speedBps: 0 } : d
       ),
     }))
   },
@@ -360,8 +632,8 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
 
   markFileAsOld: (filePath) => {
     set((state) => {
-      const next = state.newFiles.filter((p) => p !== filePath)
-      try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
+      const next = removeNewFilePath(state.newFiles, filePath)
+      persistNewFiles(next)
       return { newFiles: next }
     })
   },
@@ -386,18 +658,26 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       }
       set((state) => ({
         activeDownloads: state.activeDownloads.map((d) =>
-          d.id === id ? { ...d, downloadedBytes, totalBytes, speedBps, status: 'downloading' as const } : d
+          d.id === id
+            ? {
+                ...d,
+                downloadedBytes,
+                totalBytes,
+                speedBps: d.status === 'paused' ? 0 : speedBps,
+                status: d.status === 'paused' ? 'paused' as const : 'downloading' as const,
+              }
+            : d
         ),
       }))
     })
 
     const unsubComplete = IpcService.on(IPC.NXM_DOWNLOAD_COMPLETE, (...args) => {
-      const { id, savedPath } = args[0] as { id: string; savedPath: string; fileName: string }
+      const { id, savedPath } = args[0] as { id: string; savedPath: string }
       // Remove the active row immediately and refresh local files so the file
       // appears with the NEW badge without a double-row overlap period.
       set((state) => {
         const next = [...new Set([...state.newFiles, savedPath])]
-        try { localStorage.setItem('hyperion:newFiles', JSON.stringify(next)) } catch { /* ignore */ }
+        persistNewFiles(next)
         return { activeDownloads: state.activeDownloads.filter((d) => d.id !== id), newFiles: next }
       })
       get().refreshLocalFiles().catch(() => undefined)

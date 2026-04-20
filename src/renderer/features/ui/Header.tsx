@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
 import { Tooltip } from './Tooltip'
+import { useAppVersion } from '../../hooks/useAppVersion'
 
 export const Header: React.FC = () => {
+  const appVersion = useAppVersion()
   const {
     updateAvailable,
     updateDownloading,
@@ -88,9 +90,14 @@ export const Header: React.FC = () => {
           <span className="relative flex h-8 w-8 items-center justify-center rounded-[7px] border border-[#5f5a08] bg-[#fcee09] shadow-[0_0_18px_rgba(252,238,9,0.18)]">
             <span className="h-3 w-3 rounded-[2px] bg-[#050505]" />
           </span>
-          <span className="brand-font font-black tracking-tighter text-2xl text-white">
-            HYPERION
-          </span>
+          <div className="flex items-end gap-2">
+            <span className="brand-font font-black tracking-tighter text-2xl text-white">
+              HYPERION
+            </span>
+            <span className="ui-support-mono pb-[2px] text-[10px] uppercase tracking-[0.16em] text-[#5f5f5f]">
+              {appVersion}
+            </span>
+          </div>
         </div>
         <div className="relative flex items-center w-96 ml-8">
           <span className="material-symbols-outlined absolute left-3 text-[#9a9a9a] text-[18px]">search</span>

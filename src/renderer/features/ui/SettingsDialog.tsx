@@ -26,7 +26,6 @@ export const SettingsPage: React.FC = () => {
   const [detectingGame, setDetectingGame] = useState(false)
   const [gamePathValid, setGamePathValid] = useState(false)
   const [libraryPathValid, setLibraryPathValid] = useState(false)
-  const [appVersion, setAppVersion] = useState('—')
   const [activeTab, setActiveTab] = useState<'paths' | 'workspace' | 'nexus'>('paths')
   const [nexusApiKey, setNexusApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
@@ -58,12 +57,6 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     checkLibraryPath(libraryPath).then(setLibraryPathValid).catch(() => setLibraryPathValid(false))
   }, [checkLibraryPath, libraryPath])
-
-  useEffect(() => {
-    IpcService.invoke<string>(IPC.GET_APP_VERSION)
-      .then((version) => setAppVersion(version || '—'))
-      .catch(() => setAppVersion('—'))
-  }, [])
 
   useEffect(() => {
     if (!settings) return
@@ -212,12 +205,12 @@ export const SettingsPage: React.FC = () => {
   }`
 
   return (
-    <div className="h-full overflow-y-auto hyperion-scrollbar stable-scroll-gutter pb-16 animate-settings-in">
-      <div className="max-w-5xl mx-auto px-10 py-12">
+    <div className="h-full overflow-y-auto hyperion-scrollbar stable-scroll-gutter pb-10 animate-settings-in sm:pb-16">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-12">
 
         {/* Page header */}
-        <div className="mb-10">
-          <h1 className="brand-font text-[1.5rem] font-black tracking-[0.08em] text-white uppercase leading-none mb-2">
+        <div className="mb-6 sm:mb-10">
+          <h1 className="brand-font mb-2 text-[1.2rem] font-black uppercase leading-none tracking-[0.08em] text-white sm:text-[1.5rem]">
             Configuration
           </h1>
           <p className="ui-support-mono uppercase tracking-[0.14em] text-[#a6a6a6]">
@@ -225,12 +218,12 @@ export const SettingsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="border-t-[0.5px] border-[#1a1a1a] mb-10" />
+        <div className="mb-6 border-t-[0.5px] border-[#1a1a1a] sm:mb-10" />
 
         <div className="grid gap-0 border-[0.5px] border-[#1a1a1a] bg-[#070707] shadow-[0_6px_18px_rgba(0,0,0,0.24)] lg:grid-cols-[168px_minmax(0,1fr)]">
-          <aside className="border-b-[0.5px] border-[#1a1a1a] bg-[linear-gradient(180deg,rgba(12,12,12,0.98),rgba(8,8,8,0.98))] p-4 lg:border-b-0 lg:border-r-[0.5px]">
+          <aside className="border-b-[0.5px] border-[#1a1a1a] bg-[linear-gradient(180deg,rgba(12,12,12,0.98),rgba(8,8,8,0.98))] p-3 sm:p-4 lg:border-b-0 lg:border-r-[0.5px]">
             <div className="ui-support-mono mb-4 uppercase tracking-[0.18em] text-[#b6b6b6]">Sections</div>
-            <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
               <button
                 type="button"
                 onClick={() => setActiveTab('paths')}
@@ -461,6 +454,43 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
+            <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
+              <div className="flex items-center gap-2 mb-2 min-h-[20px]">
+                <div className={sectionDotClass} />
+                <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Nexus Download Flow</span>
+                <span className={`${metaBadgeClass} border-[#4a3f08] bg-[#0d0b00] text-[#fcee09]`}>Manual</span>
+                <span className={`ml-auto ${statusBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>
+                  Downloads Only
+                </span>
+              </div>
+              <p className="ui-support-mono mb-4">
+                Nexus downloads stay in Downloads with the <span className="text-[#fcee09]">NEW</span> tag until you install them. Hyperion only asks for version decisions when the user actually starts an install.
+              </p>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-4">
+                  <div className="ui-support-mono uppercase tracking-[0.16em] text-[#d6d6d6]">After download</div>
+                  <div className="ui-support-mono mt-2">
+                    The archive is staged in the downloads list and keeps its `NEW` state until a successful install happens.
+                  </div>
+                </div>
+
+                <div className="rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-4">
+                  <div className="ui-support-mono uppercase tracking-[0.16em] text-[#d6d6d6]">When versions differ</div>
+                  <div className="ui-support-mono mt-2">
+                    If the same Nexus mod is already installed with another version, Hyperion shows a replace-or-copy confirmation before proceeding.
+                  </div>
+                </div>
+
+                <div className="rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-4">
+                  <div className="ui-support-mono uppercase tracking-[0.16em] text-[#d6d6d6]">Multiple versions</div>
+                  <div className="ui-support-mono mt-2">
+                    You can stage multiple Nexus versions in Downloads at the same time; Hyperion only asks you to replace or install as copy when you actually install one.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="px-5 py-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-[16px] text-[#6a6a6a]">info</span>
@@ -475,9 +505,6 @@ export const SettingsPage: React.FC = () => {
           </section>
         </div>
 
-        <div className="ui-support-mono mt-12 text-right uppercase tracking-[0.16em]">
-          Hyperion {appVersion}
-        </div>
       </div>
     </div>
   )

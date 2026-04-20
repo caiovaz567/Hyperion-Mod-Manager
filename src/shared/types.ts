@@ -47,6 +47,7 @@ export interface AppSettings {
   theme: 'dark'
   autoUpdate: boolean
   nexusApiKey: string
+  autoInstallPerMod?: Record<string, 'replace' | 'copy' | 'none'>
 }
 
 // ─── Nexus / NXM ─────────────────────────────────────────────────────────────
@@ -56,12 +57,14 @@ export interface ActiveDownload {
   nxmModId: number
   nxmFileId: number
   fileName: string
+  startedAt: string
   totalBytes: number
   downloadedBytes: number
   speedBps: number
   status: 'queued' | 'downloading' | 'paused' | 'done' | 'error'
   error?: string
   savedPath?: string
+  version?: string
 }
 
 export interface NxmLinkPayload {
@@ -79,17 +82,22 @@ export interface DuplicateNxmDownloadInfo {
   existingFileName: string
   existingFilePath: string
   incomingFileName: string
+  existingIsDownloading?: boolean
 }
 
 export interface NxmDownloadStartRequest {
   payload: NxmLinkPayload
   allowDuplicate?: boolean
+  requestedAt?: string
 }
 
 export interface NxmDownloadStartResponse {
   status: 'started' | 'duplicate'
   id?: string
   fileName?: string
+  startedAt?: string
+  savedPath?: string
+  version?: string
   duplicate?: DuplicateNxmDownloadInfo
 }
 
@@ -145,9 +153,11 @@ export interface DownloadEntry {
   name: string
   size: number
   modifiedAt: string
+  downloadedAt?: string
   extension: string
   nxmModId?: number
   nxmFileId?: number
+  version?: string
 }
 
 // ─── Install ──────────────────────────────────────────────────────────────────
@@ -179,10 +189,15 @@ export interface InstallModRequest {
   filePath: string
   duplicateAction?: InstallDuplicateAction
   targetModId?: string
+  nexusModId?: number
+  nexusFileId?: number
+  sourceFileName?: string
+  sourceVersion?: string
+  skipVersionMismatchPrompt?: boolean
 }
 
 export interface InstallModResponse {
-  status: 'installed' | 'duplicate' | 'conflict'
+  status: 'installed' | 'duplicate' | 'conflict' | 'version-mismatch'
   mod?: ModMetadata
   conflicts?: ConflictInfo[]
   duplicate?: DuplicateModInfo

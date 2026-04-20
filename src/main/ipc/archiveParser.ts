@@ -8,6 +8,42 @@ interface ArchiveFileEntry {
   hash: bigint
 }
 
+function normalizeForDetection(filePath: string): string {
+  return filePath
+    .split(/[\\/]+/)
+    .filter(Boolean)
+    .join('/')
+    .toLowerCase()
+}
+
+function isRedscriptRuntimePayload(files: string[]): boolean {
+  return files.some((file) => (
+    file === 'engine/config/base/scripts.ini' ||
+    file === 'config/base/scripts.ini' ||
+    file === 'engine/tools/scc.exe' ||
+    file === 'tools/scc.exe' ||
+    file === 'r6/config/cybercmd/scc.toml' ||
+    file === 'config/cybercmd/scc.toml'
+  ))
+}
+
+function looksLikeRootlessEnginePayload(files: string[]): boolean {
+  return files.some((file) => (
+    file.startsWith('tools/') ||
+    file.startsWith('config/base/') ||
+    file.startsWith('config/platform/')
+  ))
+}
+
+function looksLikeRootlessR6Payload(files: string[]): boolean {
+  return files.some((file) => (
+    file.startsWith('scripts/') ||
+    file.startsWith('tweaks/') ||
+    file.startsWith('cache/') ||
+    file.startsWith('config/cybercmd/')
+  ))
+}
+
 /**
  * Parses a RED4 .archive file and extracts FNV1a64 hashes of contained resources.
  */
@@ -69,12 +105,13 @@ export function detectModType(modDir: string): ModType {
   if (!fs.existsSync(modDir)) return 'unknown'
 
   const files = getAllFiles(modDir)
+  const relativeFiles = files.map((filePath) => normalizeForDetection(path.relative(modDir, filePath)))
   const dirs = getTopLevelDirs(modDir)
 
   // archive mod: has .archive files in archive/pc/mod or root
-  if (files.some((f) => f.endsWith('.archive'))) {
+  if (relativeFiles.some((f) => f.endsWith('.archive'))) {
     // Check if it also contains mod.json (redmod)
-    if (files.some((f) => path.basename(f) === 'info.json') && dirs.includes('archives')) {
+    if (relativeFiles.some((f) => path.basename(f) === 'info.json') && dirs.includes('archives')) {
       return 'redmod'
     }
     return 'archive'
@@ -82,47 +119,52 @@ export function detectModType(modDir: string): ModType {
 
   // redmod: contains info.json + archives/ folder
   if (
-    files.some((f) => path.basename(f) === 'info.json') &&
+    relativeFiles.some((f) => path.basename(f) === 'info.json') &&
     dirs.includes('archives')
   ) {
     return 'redmod'
   }
 
   // CET: contains init.lua or .lua files in a root folder
-  if (files.some((f) => f.endsWith('.lua'))) {
+  if (relativeFiles.some((f) => f.endsWith('.lua'))) {
     return 'cet'
   }
 
   // redscript: contains .reds files
-  if (files.some((f) => f.endsWith('.reds'))) {
+  if (relativeFiles.some((f) => f.endsWith('.reds'))) {
+    return 'redscript'
+  }
+
+  // redscript runtime/framework: ships engine + r6 glue without .reds sources
+  if (isRedscriptRuntimePayload(relativeFiles)) {
     return 'redscript'
   }
 
   // tweakxl: contains .yaml or .yml tweaks
   if (
-    files.some((f) => f.endsWith('.yaml') || f.endsWith('.yml')) &&
-    (modDir.includes('tweaks') || files.some((f) => f.includes('tweaks')))
+    relativeFiles.some((f) => f.endsWith('.yaml') || f.endsWith('.yml')) &&
+    (modDir.includes('tweaks') || relativeFiles.some((f) => f.includes('tweaks')))
   ) {
     return 'tweakxl'
   }
 
   // red4ext: contains .dll files and red4ext folder
-  if (files.some((f) => f.endsWith('.dll')) && dirs.includes('red4ext')) {
+  if (relativeFiles.some((f) => f.endsWith('.dll')) && dirs.includes('red4ext')) {
     return 'red4ext'
   }
 
   // bin: contains dlls in bin/x64
-  if (files.some((f) => f.endsWith('.dll'))) {
+  if (relativeFiles.some((f) => f.endsWith('.dll'))) {
     return 'bin'
   }
 
   // r6: scripts, tweaks, config
-  if (dirs.includes('r6')) {
+  if (dirs.includes('r6') || looksLikeRootlessR6Payload(relativeFiles)) {
     return 'r6'
   }
 
   // engine
-  if (dirs.includes('engine')) {
+  if (dirs.includes('engine') || looksLikeRootlessEnginePayload(relativeFiles)) {
     return 'engine'
   }
 
