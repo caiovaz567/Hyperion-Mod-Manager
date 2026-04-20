@@ -16,6 +16,7 @@ export const Header: React.FC = () => {
     filter,
     setFilter,
     addToast,
+    openDialog,
   } = useAppStore()
   const [autoApplyUpdate, setAutoApplyUpdate] = useState(false)
 
@@ -138,15 +139,15 @@ export const Header: React.FC = () => {
         )}
 
         {updateError && !updateAvailable && (
-          <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8a8a8a]">
+          <div className="ui-support-mono uppercase tracking-[0.14em]">
             Update check failed
           </div>
         )}
 
-        <Tooltip content="Logs">
+        <Tooltip content="App Logs">
           <button
             className={chromeButtonClass}
-            onClick={() => undefined}
+            onClick={() => openDialog('appLogs')}
           >
             <span className="material-symbols-outlined text-[18px]">terminal</span>
           </button>

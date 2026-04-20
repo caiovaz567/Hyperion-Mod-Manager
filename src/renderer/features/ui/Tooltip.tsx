@@ -8,6 +8,7 @@ interface TooltipProps {
   children: React.ReactNode
   side?: TooltipSide
   wrapperClassName?: string
+  contentClassName?: string
 }
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -15,6 +16,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   children,
   side = 'top',
   wrapperClassName,
+  contentClassName,
 }) => {
   const anchorRef = useRef<HTMLSpanElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -65,7 +67,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       {visible && typeof document !== 'undefined' && createPortal(
         <div
           ref={tooltipRef}
-          className="pointer-events-none fixed z-[220] overflow-hidden rounded-sm border-[0.5px] border-[#2b2b2b] bg-[#111111] px-2.5 py-1.5 text-[9px] brand-font font-bold uppercase tracking-[0.16em] text-[#d3d3d3] shadow-[0_10px_24px_rgba(0,0,0,0.42)]"
+          className={`pointer-events-none fixed z-[220] overflow-hidden rounded-sm border-[0.5px] border-[#2b2b2b] bg-[#111111] px-2.5 py-1.5 text-[9px] brand-font font-bold uppercase tracking-[0.16em] text-[#d3d3d3] shadow-[0_10px_24px_rgba(0,0,0,0.42)] ${contentClassName ?? ''}`}
           style={{ left: position.left, top: position.top }}
           role="tooltip"
         >

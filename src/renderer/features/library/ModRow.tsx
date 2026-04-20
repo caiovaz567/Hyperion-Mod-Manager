@@ -3,6 +3,7 @@ import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { Tooltip } from '../ui/Tooltip'
+import { formatWindowsDateTime } from '../../utils/dateFormat'
 
 interface ModRowProps {
   mod: ModMetadata
@@ -47,19 +48,6 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 const ACTIVE_COLOR = '#fcee09'
-const formatDate = (dateStr?: string): string => {
-  if (!dateStr) return '—'
-  const date = new Date(dateStr)
-  if (Number.isNaN(date.getTime())) return '—'
-
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
-  const ss = String(date.getSeconds()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
-}
 
 export const ModRow: React.FC<ModRowProps> = ({
   mod,
@@ -121,7 +109,7 @@ export const ModRow: React.FC<ModRowProps> = ({
       onClick={onSelect}
       onDoubleClick={() => onOpenDetails(mod)}
       onContextMenu={(event) => onContextMenu(event, mod)}
-      className={`library-mod-row grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity] duration-150 ${rowBackgroundClass} ${
+      className={`library-mod-row grid h-[38px] gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity] duration-150 ${rowBackgroundClass} ${
         mod.enabled
           ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
           : 'opacity-50 hover:opacity-86 hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
@@ -208,7 +196,7 @@ export const ModRow: React.FC<ModRowProps> = ({
       </div>
 
       <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#bdbdbd]' : 'text-[#8a8a8a] group-hover:text-[#9d9d9d]'}`}>
-        {mod.enabled ? formatDate(mod.installedAt) : '---'}
+        {mod.enabled ? formatWindowsDateTime(mod.installedAt) : '---'}
       </div>
 
       <div className="flex items-center justify-end gap-2">
@@ -286,4 +274,3 @@ function areModRowPropsEqual(prev: ModRowProps, next: ModRowProps): boolean {
 }
 
 export const MemoModRow = React.memo(ModRow, areModRowPropsEqual)
-

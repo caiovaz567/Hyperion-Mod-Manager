@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
@@ -6,15 +6,13 @@ import type { DownloadEntry, IpcResult, ModMetadata } from '@shared/types'
 import { IPC } from '@shared/types'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { Tooltip } from '../ui/Tooltip'
+import { formatWindowsDateTime } from '../../utils/dateFormat'
+import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
+import { useVirtualRows } from '../../hooks/useVirtualRows'
 
-const DOWNLOADS_GRID_TEMPLATE = 'minmax(280px,1fr) 156px 184px 130px'
-
-const FORMAT_COLOR: Record<string, string> = {
-  zip: '#60A5FA',
-  rar: '#A78BFA',
-  '7z': '#fbbf24',
-}
-const formatColor = (ext: string) => FORMAT_COLOR[ext.replace('.', '').toLowerCase()] ?? '#64748B'
+const DOWNLOADS_GRID_TEMPLATE = 'minmax(420px,1fr) 260px 132px'
+const DOWNLOAD_ROW_HEIGHT = 56
+const DOWNLOAD_VIRTUALIZATION_THRESHOLD = 120
 
 const formatSpeed = (bps: number): string => {
   if (bps <= 0) return '—'
@@ -39,18 +37,6 @@ const formatETA = (downloaded: number, total: number, speed: number): string => 
   const hours = Math.floor(minutes / 60)
   const m = minutes % 60
   return `${hours}h ${String(m).padStart(2, '0')}m`
-}
-
-const formatDate = (value: string): string => {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
-  const ss = String(date.getSeconds()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
 }
 
 const copySuffixPattern = /\sCopy(?:\s\d+)?$/i
@@ -81,7 +67,15 @@ export const DownloadsPane: React.FC = () => {
     libraryPathValid,
     activeDownloads,
     localFiles,
+    installing,
+    installSourcePath,
+    installProgress,
+    installStatus,
+    installCurrentFile,
     refreshLocalFiles,
+    downloadsLoadedPath,
+    pauseDownload,
+    resumeDownload,
     cancelDownload,
     newFiles,
     markFileAsOld,
@@ -98,7 +92,15 @@ export const DownloadsPane: React.FC = () => {
     libraryPathValid: state.libraryPathValid,
     activeDownloads: state.activeDownloads,
     localFiles: state.localFiles,
+    installing: state.installing,
+    installSourcePath: state.installSourcePath,
+    installProgress: state.installProgress,
+    installStatus: state.installStatus,
+    installCurrentFile: state.installCurrentFile,
     refreshLocalFiles: state.refreshLocalFiles,
+    downloadsLoadedPath: state.downloadsLoadedPath,
+    pauseDownload: state.pauseDownload,
+    resumeDownload: state.resumeDownload,
     cancelDownload: state.cancelDownload,
     newFiles: state.newFiles,
     markFileAsOld: state.markFileAsOld,
@@ -109,8 +111,10 @@ export const DownloadsPane: React.FC = () => {
   )
 
   const [loading, setLoading] = useState(true)
-  const [installingPath, setInstallingPath] = useState<string | null>(null)
   const [pendingDeleteDownload, setPendingDeleteDownload] = useState<DownloadEntry | null>(null)
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
+  const [deletingAll, setDeletingAll] = useState(false)
+  const downloadsScrollRef = useRef<HTMLDivElement>(null)
 
   const doRefresh = async () => {
     setLoading(true)
@@ -119,8 +123,19 @@ export const DownloadsPane: React.FC = () => {
   }
 
   useEffect(() => {
+    const downloadPath = settings?.downloadPath ?? ''
+    if (!downloadPath) {
+      setLoading(false)
+      return
+    }
+
+    if (downloadsLoadedPath === downloadPath) {
+      setLoading(false)
+      return
+    }
+
     doRefresh().catch(() => setLoading(false))
-  }, [settings?.downloadPath])
+  }, [downloadsLoadedPath, settings?.downloadPath])
 
   const installedBySourcePath = useMemo(() => {
     const map = new Map<string, ModMetadata>()
@@ -151,14 +166,11 @@ export const DownloadsPane: React.FC = () => {
       return
     }
 
-    setInstallingPath(entry.path)
     const installResult = await installMod(entry.path)
     if (!installResult.ok || !installResult.data) {
       addToast(installResult.error ?? 'Install failed', 'error')
-      setInstallingPath(null)
       return
     }
-    setInstallingPath(null)
 
     if (installResult.data.status === 'installed' && installResult.data.mod) {
       markFileAsOld(entry.path)
@@ -196,7 +208,50 @@ export const DownloadsPane: React.FC = () => {
     await doRefresh()
   }
 
+  const handleDeleteAllDownloads = async () => {
+    setDeletingAll(true)
+    const result = await IpcService.invoke<IpcResult<{ removed: number; failed: number }>>(
+      IPC.DELETE_ALL_DOWNLOADS,
+    )
+    setDeletingAll(false)
+    setDeleteAllOpen(false)
+    if (!result.ok) {
+      addToast(result.error ?? 'Could not delete downloads', 'error')
+      return
+    }
+    for (const entry of localFiles) markFileAsOld(entry.path)
+    const removed = result.data?.removed ?? 0
+    const failed = result.data?.failed ?? 0
+    if (removed > 0) {
+      addToast(`${removed} download${removed === 1 ? '' : 's'} deleted`, 'success')
+    }
+    if (failed > 0) {
+      addToast(`${failed} download${failed === 1 ? '' : 's'} could not be deleted`, 'warning')
+    }
+    await doRefresh()
+  }
+
   const totalRows = activeDownloads.length + localFiles.length
+  const virtualizedDownloads = useVirtualRows({
+    containerRef: downloadsScrollRef,
+    count: totalRows,
+    rowHeight: DOWNLOAD_ROW_HEIGHT,
+    overscan: 12,
+    enabled: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD,
+  })
+  const visibleActiveDownloads = useMemo(
+    () => activeDownloads.slice(
+      Math.min(activeDownloads.length, virtualizedDownloads.startIndex),
+      Math.min(activeDownloads.length, virtualizedDownloads.endIndex),
+    ),
+    [activeDownloads, virtualizedDownloads.endIndex, virtualizedDownloads.startIndex]
+  )
+  const visibleLocalStart = Math.max(0, virtualizedDownloads.startIndex - activeDownloads.length)
+  const visibleLocalEnd = Math.max(0, virtualizedDownloads.endIndex - activeDownloads.length)
+  const visibleLocalFiles = useMemo(
+    () => localFiles.slice(visibleLocalStart, visibleLocalEnd),
+    [localFiles, visibleLocalEnd, visibleLocalStart]
+  )
 
   return (
     <div className="h-full animate-settings-in">
@@ -207,7 +262,7 @@ export const DownloadsPane: React.FC = () => {
           <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
             Downloads
           </h1>
-          <p className="text-[#9a9a9a] text-xs mt-1 flex items-center gap-2 font-mono tracking-tight">
+          <p className="ui-support-mono mt-1 flex items-center gap-2">
             LOCAL: {localFiles.length}
             {activeDownloads.length > 0 && <>&nbsp;|&nbsp; ACTIVE: {activeDownloads.length}</>}
           </p>
@@ -226,118 +281,40 @@ export const DownloadsPane: React.FC = () => {
               <span className="material-symbols-outlined text-[16px]">folder_open</span>
               Open Folder
             </button>
+            <Tooltip content="Delete every file in the downloads folder">
+              <button
+                onClick={() => setDeleteAllOpen(true)}
+                disabled={localFiles.length === 0}
+                className="flex h-10 w-10 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1] disabled:opacity-40 disabled:hover:border-[#3a1010] disabled:hover:bg-[#0d0404] disabled:hover:text-[#f18d8d] disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+              </button>
+            </Tooltip>
           </div>
         </div>
 
         {/* Unified table */}
         <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
           <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
-            <div className="hyperion-scrollbar h-full overflow-y-auto">
+            <div ref={downloadsScrollRef} className="hyperion-scrollbar h-full overflow-y-auto">
 
               {/* Sticky column headers */}
               <div
                 className="sticky top-0 z-10 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
                 style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
               >
-                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                <div className="flex h-8 items-center text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
                   Archive Name
                 </div>
-                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                  Format
+                <div className="flex h-8 items-center text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                  Download
                 </div>
-                <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                  Modified
-                </div>
-                <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+                <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
                   Actions
                 </div>
               </div>
 
-              {/* Active download rows — inline at the top */}
-              {activeDownloads.map((dl) => {
-                const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
-                const isDone = dl.status === 'done'
-                const isError = dl.status === 'error'
-                const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
-                const eta = isDone || isError ? null : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
-                const dlExt = dl.fileName.split('.').pop()?.toLowerCase() ?? ''
-                const dlColor = FORMAT_COLOR[dlExt] ?? '#64748B'
-
-                return (
-                  <div
-                    key={dl.id}
-                    className="grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1e1a00] relative overflow-hidden"
-                    style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE, background: 'rgba(252,238,9,0.03)' }}
-                  >
-                    {/* Left accent bar */}
-                    <div
-                      className="absolute inset-y-0 left-0 w-[3px]"
-                      style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
-                    />
-
-                    {/* Col 1: name + tall progress bar with stats inside */}
-                    <div className="flex flex-col justify-center gap-[5px] overflow-hidden pl-1">
-                      <span className="font-medium tracking-tight truncate text-sm text-white">
-                        {dl.fileName}
-                      </span>
-                      {!isDone && !isError ? (
-                        <div className="relative h-6 rounded-sm overflow-hidden" style={{ background: '#0e0e0e', border: '0.5px solid #1e1e1e' }}>
-                          {/* Fill */}
-                          <div
-                            className="absolute inset-y-0 left-0 transition-all duration-500"
-                            style={{ width: `${pct}%`, background: `${accent}22` }}
-                          />
-                          {/* Leading edge line */}
-                          <div
-                            className="absolute inset-y-0 w-px transition-all duration-500"
-                            style={{ left: `${Math.min(pct, 99.6)}%`, background: accent, boxShadow: `0 0 6px ${accent}aa` }}
-                          />
-                          {/* Stats text inside */}
-                          <div className="relative z-10 flex h-full items-center justify-between px-2.5">
-                            <span className="text-[10px] font-mono" style={{ color: accent }}>
-                              {formatSize(dl.downloadedBytes)} / {formatSize(dl.totalBytes)} · {pct}%
-                            </span>
-                            <span className="text-[10px] font-mono text-[#8a8a8a]">
-                              {formatSpeed(dl.speedBps)}{eta ? ` · ETA ${eta}` : ''}
-                            </span>
-                          </div>
-                        </div>
-                      ) : isError ? (
-                        <span className="text-[10px] font-mono text-[#f87171] truncate">{dl.error ?? 'Download failed'}</span>
-                      ) : null}
-                    </div>
-
-                    {/* Col 2: format badge */}
-                    <div className="flex items-center">
-                      <span
-                        className="inline-flex h-5 items-center px-1.5 rounded-sm text-[10px] font-bold font-mono tracking-wide uppercase border-[0.5px]"
-                        style={{ color: dlColor, borderColor: `${dlColor}40`, background: `${dlColor}12` }}
-                      >
-                        {dlExt || '?'}
-                      </span>
-                    </div>
-
-                    {/* Col 3: empty — MODIFIED doesn't apply to active downloads */}
-                    <div />
-
-                    {/* Col 4: cancel */}
-                    <div className="flex items-center justify-end">
-                      {!isDone && !isError && (
-                        <Tooltip content="Cancel download">
-                          <button
-                            onClick={() => void cancelDownload(dl.id)}
-                            className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">close</span>
-                          </button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Local file rows */}
+              {/* Rows */}
               {loading ? (
                 <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
                   Scanning downloads...
@@ -361,20 +338,252 @@ export const DownloadsPane: React.FC = () => {
                   )}
                 </div>
               ) : (
-                localFiles.map((entry, index) => {
-                  const isInstalling = installingPath === entry.path
+                <div
+                  style={{
+                    paddingTop: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingTop : 0,
+                    paddingBottom: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingBottom : 0,
+                  }}
+                >
+                  {visibleActiveDownloads.map((dl) => {
+                    const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
+                    const isDone = dl.status === 'done'
+                    const isError = dl.status === 'error'
+                    const isPaused = dl.status === 'paused'
+                    const accent = isDone ? '#34d399' : isError ? '#f87171' : '#fcee09'
+                    const eta = isDone || isError || isPaused ? null : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
+                    const progressSummary = isError
+                      ? dl.error ?? 'Download failed'
+                      : isDone
+                        ? 'Ready to install'
+                        : isPaused
+                          ? `${pct}% paused`
+                        : `${pct}% complete`
+                    const transferSummary = isError
+                      ? 'Transfer interrupted'
+                      : isDone
+                        ? `${formatSize(dl.totalBytes)} downloaded`
+                        : `${formatSize(dl.downloadedBytes)} / ${formatSize(dl.totalBytes)}`
+                    const speedSummary = isError
+                      ? 'Try again'
+                      : isDone
+                        ? 'Waiting for scan'
+                        : isPaused
+                          ? 'Paused'
+                        : `${formatSpeed(dl.speedBps)}${eta ? ` · ETA ${eta}` : ''}`
+
+                    return (
+                      <div
+                        key={dl.id}
+                        className="relative h-14 overflow-hidden border-b-[0.5px] border-[#1e1a00]"
+                        style={{ background: 'rgba(252,238,9,0.035)' }}
+                      >
+                        <div
+                          aria-hidden="true"
+                          className="absolute inset-y-0 left-0 transition-all duration-500"
+                          style={{
+                            width: `${Math.max(0, Math.min(pct, 100))}%`,
+                            background: isError
+                              ? 'linear-gradient(90deg, rgba(248,113,113,0.18) 0%, rgba(248,113,113,0.08) 100%)'
+                              : 'linear-gradient(90deg, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.09) 100%)',
+                          }}
+                        />
+                        {!isError && !isDone && !isPaused && (
+                          <div
+                            aria-hidden="true"
+                            className="absolute inset-y-0 w-[2px] transition-all duration-500"
+                            style={{
+                              left: `calc(${Math.min(pct, 99.6)}% - 1px)`,
+                              background: accent,
+                              boxShadow: `0 0 10px ${accent}aa`,
+                            }}
+                          />
+                        )}
+                        <div
+                          className="absolute inset-y-0 left-0 w-[3px]"
+                          style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
+                        />
+
+                        <div
+                          className="relative z-10 grid h-14 gap-4 pl-6 pr-6 py-[5px]"
+                          style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+                        >
+                          <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
+                                {dl.fileName}
+                              </span>
+                              <span
+                                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                                style={{ color: accent, borderColor: `${accent}55`, background: `${accent}12` }}
+                              >
+                                {isError ? 'Error' : isDone ? 'Done' : isPaused ? 'Paused' : 'Downloading'}
+                              </span>
+                            </div>
+                            <span
+                              className="text-sm font-mono tracking-tight"
+                              style={{ color: isError ? '#fca5a5' : accent }}
+                            >
+                              {transferSummary}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
+                            <span
+                              className="truncate"
+                              style={{ color: isError ? '#fca5a5' : isDone ? '#86efac' : '#d6d6d6' }}
+                            >
+                              {progressSummary}
+                            </span>
+                            <span className="truncate text-[#9a9a9a]">
+                              {speedSummary}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2">
+                            {!isDone && !isError && (
+                              <>
+                                {isPaused ? (
+                                  <Tooltip content="Resume download">
+                                    <button
+                                      onClick={() => void resumeDownload(dl.id)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#2f2a05] bg-[#0a0a0a]/90 text-[#fcee09] hover:border-[#fcee09]/60 hover:bg-[#151200] transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                                    </button>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip content="Pause download">
+                                    <button
+                                      onClick={() => void pauseDownload(dl.id)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a]/90 text-[#c9c9c9] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">pause</span>
+                                    </button>
+                                  </Tooltip>
+                                )}
+                                <Tooltip content="Cancel download">
+                                  <button
+                                    onClick={() => void cancelDownload(dl.id)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a]/90 text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">close</span>
+                                  </button>
+                                </Tooltip>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {visibleLocalFiles.map((entry, visibleIndex) => {
+                  const index = visibleLocalStart + visibleIndex
+                  const isInstalling = installing && installSourcePath === entry.path
+                  const installAppearance = isInstalling
+                    ? getInstallProgressAppearance(installStatus)
+                    : null
                   const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
                   const isNew = newFilesSet.has(entry.path.toLowerCase())
-                  const ext = entry.extension.replace('.', '').toUpperCase()
-                  const color = formatColor(entry.extension)
                   const rowBg = index % 2 === 0
                     ? 'bg-[#050505] hover:bg-[#141414]'
                     : 'bg-[#0a0a0a] hover:bg-[#161616]'
 
+                  if (isInstalling && installAppearance) {
+                    const progressSummary = `${installStatus || installAppearance.label} ${installProgress > 0 ? `${installProgress}%` : ''}`.trim()
+                    const progressDetail = installCurrentFile || installAppearance.detailFallback
+
+                    return (
+                      <div
+                        key={entry.path}
+                        className="relative h-14 overflow-hidden border-b-[0.5px]"
+                        style={{
+                          background: installAppearance.rowTint,
+                          borderColor: installAppearance.softBorder,
+                        }}
+                      >
+                        <div
+                          aria-hidden="true"
+                          className="absolute inset-y-0 left-0 transition-all duration-500"
+                          style={{
+                            width: `${Math.max(0, Math.min(installProgress, 100))}%`,
+                            background: installAppearance.fill,
+                          }}
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="absolute inset-y-0 w-[2px] transition-all duration-500"
+                          style={{
+                            left: `calc(${Math.max(0, Math.min(installProgress, 99.6))}% - 1px)`,
+                            background: installAppearance.accent,
+                            boxShadow: `0 0 10px ${installAppearance.accent}aa`,
+                          }}
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="absolute inset-y-0 left-0 w-[3px]"
+                          style={{
+                            background: installAppearance.accent,
+                            boxShadow: `0 0 8px ${installAppearance.accent}55`,
+                          }}
+                        />
+                        <div
+                          className="relative z-10 grid h-14 gap-4 pl-6 pr-6 py-[5px]"
+                          style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
+                        >
+                          <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
+                                {entry.name}
+                              </span>
+                              <span
+                                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                                style={{
+                                  color: installAppearance.accent,
+                                  borderColor: `${installAppearance.accent}55`,
+                                  background: `${installAppearance.accent}12`,
+                                }}
+                              >
+                                {installAppearance.label}
+                              </span>
+                            </div>
+                            <span
+                              className="truncate text-sm font-mono tracking-tight"
+                              style={{ color: installAppearance.accent }}
+                            >
+                              {progressDetail}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
+                            <span className="truncate text-[#d8d8d8]">
+                              {progressSummary}
+                            </span>
+                            <span className="truncate text-[#9a9a9a]">
+                              {installAppearance.summary}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2">
+                            <div
+                              className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+                              style={{
+                                borderColor: `${installAppearance.accent}44`,
+                                color: installAppearance.accent,
+                              }}
+                            >
+                              <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
                   return (
                     <div
                       key={entry.path}
-                      className={`grid gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
+                      className={`grid h-14 gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
                       style={{ gridTemplateColumns: DOWNLOADS_GRID_TEMPLATE }}
                     >
                       {/* Hover gradient overlay */}
@@ -402,7 +611,7 @@ export const DownloadsPane: React.FC = () => {
                       )}
 
                       {/* Col 1: name + size + NEW badge */}
-                      <div className="flex flex-col justify-center gap-0.5 overflow-hidden">
+                      <div className="flex flex-col justify-center gap-1 overflow-hidden">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
                             {entry.name}
@@ -413,27 +622,17 @@ export const DownloadsPane: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="text-xs font-mono text-[#7a7a7a] tracking-tight">
+                        <span className="text-sm font-mono text-[#9a9a9a] tracking-tight group-hover:text-[#c2c2c2] transition-colors">
                           {formatSize(entry.size)}
                         </span>
                       </div>
 
-                      {/* Col 2: format badge with color */}
-                      <div className="flex items-center">
-                        <span
-                          className="px-2.5 py-[3px] border-[0.5px] bg-[#111] group-hover:border-[#343434] text-[10px] uppercase tracking-widest rounded-sm transition-colors"
-                          style={{ color, borderColor: `${color}33` }}
-                        >
-                          {ext}
-                        </span>
-                      </div>
-
-                      {/* Col 3: modified date */}
+                      {/* Col 2: modified date */}
                       <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
-                        {formatDate(entry.modifiedAt)}
+                        {formatWindowsDateTime(entry.modifiedAt)}
                       </div>
 
-                      {/* Col 4: install + delete */}
+                      {/* Col 3: install + delete */}
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => void handleInstall(entry)}
@@ -462,7 +661,8 @@ export const DownloadsPane: React.FC = () => {
                       </div>
                     </div>
                   )
-                })
+                })}
+                </div>
               )}
             </div>
           </div>
@@ -475,13 +675,30 @@ export const DownloadsPane: React.FC = () => {
           accentGlow="rgba(255,77,79,0.45)"
           title="Delete Download"
           description={`You are about to permanently delete ${pendingDeleteDownload.name} from your downloads path.`}
-          detailLabel="Target file"
+          detailLabel="File to delete"
           detailValue={pendingDeleteDownload.name}
           icon="delete"
           primaryLabel="Delete"
           onPrimary={() => void handleDeleteDownload()}
           onCancel={() => setPendingDeleteDownload(null)}
           primaryTextColor="#ffffff"
+        />
+      )}
+
+      {deleteAllOpen && (
+        <ActionPromptDialog
+          accentColor="#ff4d4f"
+          accentGlow="rgba(255,77,79,0.4)"
+          title="Delete All Downloads"
+          description="This permanently deletes every archive currently listed in your downloads folder. Files already installed as mods will not be affected."
+          detailLabel="Files to delete"
+          detailValue={String(localFiles.length)}
+          icon="delete_sweep"
+          primaryLabel="Delete Everything"
+          primaryTextColor="#ffffff"
+          onPrimary={() => void handleDeleteAllDownloads()}
+          onCancel={() => setDeleteAllOpen(false)}
+          submitting={deletingAll}
         />
       )}
     </div>

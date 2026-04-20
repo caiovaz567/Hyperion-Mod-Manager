@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Switch from '@mui/material/Switch'
 import type { ModMetadata } from '@shared/types'
+import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { useAppStore } from '../../store/useAppStore'
 
 interface ModCardProps {
@@ -174,7 +175,7 @@ export const ModCard: React.FC<ModCardProps> = ({ mod, selected, onSelect, index
           fontFamily: '"Share Tech Mono", monospace',
           fontSize: '0.58rem'
         }}>
-          {mod.installedAt ? new Date(mod.installedAt).toLocaleDateString() : '—'}
+          {formatWindowsDateTime(mod.installedAt)}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
           <Typography sx={{

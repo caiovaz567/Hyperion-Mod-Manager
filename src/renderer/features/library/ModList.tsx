@@ -10,6 +10,8 @@ import { DetailPanel } from './DetailPanel'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { Tooltip } from '../ui/Tooltip'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
+import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
+import { useVirtualRows } from '../../hooks/useVirtualRows'
 
 interface ContextMenuState {
   mod: ModMetadata
@@ -30,10 +32,19 @@ type LibrarySortKey = 'name' | 'type' | 'installedAt'
 type SortDirection = 'asc' | 'desc'
 
 const LIBRARY_GRID_TEMPLATE = '72px 80px minmax(280px,1fr) 110px 156px 184px 96px'
+const MOD_ROW_HEIGHT = 38
+const MOD_VIRTUALIZATION_THRESHOLD = 120
+
+const getInstallDisplayName = (sourcePath: string, currentFile: string): string => {
+  const raw = currentFile || sourcePath
+  if (!raw) return 'Installing mod'
+  const normalized = raw.replace(/\//g, '\\')
+  const parts = normalized.split('\\').filter(Boolean)
+  return parts[parts.length - 1] ?? raw
+}
 
 export const ModList: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false)
-  const [isInstalling, setIsInstalling] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -51,6 +62,7 @@ export const ModList: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
+  const listScrollRef = useRef<HTMLDivElement>(null)
   const [isBulkToggling, setIsBulkToggling] = useState(false)
 
   const {
@@ -76,6 +88,10 @@ export const ModList: React.FC = () => {
     gamePathValid,
     libraryPathValid,
     typeFilter,
+    installing,
+    installSourcePath,
+    installTargetModId,
+    installPlacement,
     installProgress,
     installStatus,
     installCurrentFile,
@@ -102,12 +118,17 @@ export const ModList: React.FC = () => {
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
     typeFilter: state.typeFilter,
+    installing: state.installing,
+    installSourcePath: state.installSourcePath,
+    installTargetModId: state.installTargetModId,
+    installPlacement: state.installPlacement,
     installProgress: state.installProgress,
     installStatus: state.installStatus,
     installCurrentFile: state.installCurrentFile,
   }), shallow)
 
   const hasRequiredPaths = Boolean(settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid)
+  const installAppearance = getInstallProgressAppearance(installStatus)
 
   const finalizeInstalledMod = useCallback(async (
     mod: ModMetadata,
@@ -192,10 +213,34 @@ export const ModList: React.FC = () => {
   const bulkToggleTooltip = libraryStatusFilter === 'enabled'
     ? 'Unavailable while Enabled filter is active'
     : 'Unavailable while Disabled filter is active'
+  const installTargetMod = installTargetModId
+    ? allMods.find((mod) => mod.uuid === installTargetModId) ?? null
+    : null
+  const installDisplayName = installTargetMod?.name ?? getInstallDisplayName(installSourcePath, installCurrentFile)
+  const hasAppendInstallRow = installing && installPlacement === 'append'
 
   selectedIdsRef.current = selectedIds
   selectionAnchorIdRef.current = selectionAnchorId
   displayedModsRef.current = displayedMods
+
+  const virtualizedMods = useVirtualRows({
+    containerRef: listScrollRef,
+    count: displayedMods.length + (hasAppendInstallRow ? 1 : 0),
+    rowHeight: MOD_ROW_HEIGHT,
+    overscan: 14,
+    enabled: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD,
+  })
+
+  const visibleMods = useMemo(
+    () => displayedMods.slice(
+      virtualizedMods.startIndex,
+      Math.min(virtualizedMods.endIndex, displayedMods.length)
+    ),
+    [displayedMods, virtualizedMods.endIndex, virtualizedMods.startIndex]
+  )
+  const showAppendInstallRow = hasAppendInstallRow &&
+    virtualizedMods.startIndex <= displayedMods.length &&
+    virtualizedMods.endIndex > displayedMods.length
 
   const sortStateFor = (key: LibrarySortKey): 'ascending' | 'descending' | 'none' => {
     if (sortKey !== key) return 'none'
@@ -277,15 +322,11 @@ export const ModList: React.FC = () => {
       return
     }
 
-    setIsInstalling(true)
     const installResult = await installMod(filePath)
     if (!installResult.ok || !installResult.data) {
       addToast(installResult.error ?? 'Install failed', 'error')
-      setIsInstalling(false)
       return
     }
-
-    setIsInstalling(false)
 
     if (installResult.data.status === 'installed' && installResult.data.mod) {
       await finalizeInstalledMod(installResult.data.mod, `${installResult.data.mod.name} installed & activated`)
@@ -545,6 +586,21 @@ export const ModList: React.FC = () => {
     setContextMenu(null)
   }
 
+  const handleContextOpenOnNexus = async () => {
+    if (!contextMenu) return
+    const mod = contextMenu.mod
+    const modId = mod.nexusModId ?? mod.nexusFileId
+    if (!modId) {
+      addToast('No Nexus link stored for this mod', 'warning')
+      setContextMenu(null)
+      return
+    }
+
+    const url = `https://www.nexusmods.com/cyberpunk2077/mods/${mod.nexusModId ?? mod.nexusFileId}`
+    await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
+    setContextMenu(null)
+  }
+
   const handleDeleteMod = async (mod: ModMetadata) => {
     const result = await deleteMod(mod.uuid)
     if (!result.ok) {
@@ -617,6 +673,118 @@ export const ModList: React.FC = () => {
   const destructiveButtonClass = `${browseLikeButtonClass} border-[#5b1818] bg-[#160707] text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1]`
   const disabledBrowseLikeButtonClass = `${browseLikeButtonClass} cursor-not-allowed border-[#303030] bg-[#131313] text-[#666666] shadow-none`
 
+  const renderInstallRow = () => (
+    <div
+      className="relative h-[38px] overflow-hidden border-b-[0.5px]"
+      style={{
+        background: installAppearance.rowTint,
+        borderColor: installAppearance.softBorder,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 transition-all duration-500"
+        style={{
+          width: `${Math.max(0, Math.min(installProgress, 100))}%`,
+          background: installAppearance.fill,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 w-[2px] transition-all duration-500"
+        style={{
+          left: `calc(${Math.max(0, Math.min(installProgress, 99.6))}% - 1px)`,
+          background: installAppearance.accent,
+          boxShadow: `0 0 10px ${installAppearance.accent}aa`,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{
+          background: installAppearance.accent,
+          boxShadow: `0 0 8px ${installAppearance.accent}55`,
+        }}
+      />
+      <div
+        className="relative z-10 grid h-[38px] gap-4 pl-6 pr-6 py-[5px]"
+        style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
+      >
+        <div className="flex items-center pl-2">
+          <div
+            className="flex h-4 w-8 items-center justify-center rounded-full border-[0.5px]"
+            style={{
+              borderColor: `${installAppearance.accent}44`,
+              background: '#0a0a0a',
+            }}
+          >
+            <span
+              className="material-symbols-outlined animate-spin text-[12px]"
+              style={{ color: installAppearance.accent }}
+            >
+              progress_activity
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center text-[12px] font-mono text-[#9a9a9a]">
+          ...
+        </div>
+        <div className="flex min-w-0 flex-col justify-center gap-0.5 overflow-hidden">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
+              {installDisplayName}
+            </span>
+            <span
+              className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+              style={{
+                color: installAppearance.accent,
+                borderColor: `${installAppearance.accent}55`,
+                background: `${installAppearance.accent}12`,
+              }}
+            >
+              {installAppearance.label}
+            </span>
+          </div>
+          <span
+            className="truncate text-sm font-mono tracking-tight"
+            style={{ color: installAppearance.accent }}
+          >
+            {installCurrentFile || installAppearance.detailFallback}
+          </span>
+        </div>
+        <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          {installProgress > 0 ? `${installProgress}%` : '...'}
+        </div>
+        <div className="flex items-center">
+          <span
+            className="px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm"
+            style={{
+              color: installAppearance.accent,
+              borderColor: `${installAppearance.accent}40`,
+              background: '#0a0a0a',
+            }}
+          >
+            {installAppearance.label}
+          </span>
+        </div>
+        <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          {installStatus || installAppearance.summary}
+        </div>
+        <div className="flex items-center justify-end">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+            style={{
+              borderColor: `${installAppearance.accent}44`,
+              color: installAppearance.accent,
+            }}
+          >
+            <span className="material-symbols-outlined animate-spin text-[15px]">progress_activity</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="h-full animate-settings-in">
     <div
@@ -629,31 +797,6 @@ export const ModList: React.FC = () => {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/90 border-[1px] border-[#fcee09]/40 pointer-events-none">
           <span className="material-symbols-outlined text-[48px] text-[#fcee09] mb-4">file_download</span>
           <span className="brand-font text-sm text-[#fcee09] tracking-widest uppercase">Drop to install mod</span>
-        </div>
-      )}
-
-      {isInstalling && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/92 pointer-events-none px-16">
-          <span className="material-symbols-outlined text-[36px] text-[#fcee09] mb-5 animate-spin">progress_activity</span>
-          <span className="brand-font text-sm text-white tracking-widest uppercase mb-1">
-            {installStatus || 'Installing...'}
-          </span>
-          {installCurrentFile && (
-            <span className="font-mono text-[11px] text-[#7a7a7a] mb-4 max-w-[480px] truncate text-center">
-              {installCurrentFile}
-            </span>
-          )}
-          <div className="w-full max-w-[420px] mt-2">
-            <div className="h-[3px] bg-[#1a1a1a] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#fcee09] transition-all duration-300"
-                style={{ width: `${installProgress}%`, boxShadow: '0 0 8px rgba(252,238,9,0.5)' }}
-              />
-            </div>
-            <div className="flex justify-between mt-1.5">
-              <span className="font-mono text-[10px] text-[#5a5a5a]">{installProgress}%</span>
-            </div>
-          </div>
         </div>
       )}
 
@@ -672,7 +815,7 @@ export const ModList: React.FC = () => {
             </span>
           </Tooltip>
         </div>
-        <p className="text-[#9a9a9a] text-xs mt-1 flex items-center gap-2 font-mono tracking-tight">
+        <p className="ui-support-mono mt-1 flex items-center gap-2">
           TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
         </p>
         <div className="mt-3 flex items-center gap-3">
@@ -722,13 +865,14 @@ export const ModList: React.FC = () => {
         </div>
       </div>
 
-      {/* Table — has its own scroll, toolbar stays fixed above */}
+        {/* Table — has its own scroll, toolbar stays fixed above */}
       <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
-        <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)] flex flex-col">
+        <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
+          <div ref={listScrollRef} className="hyperion-scrollbar managed-mods-scroll h-full overflow-y-auto">
 
-          {/* Column header — never scrolls */}
+          {/* Sticky column header — scrolls with content area so columns align with row cells */}
           <div
-            className="shrink-0 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+            className="sticky top-0 z-10 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
             style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
           >
             <div className="flex h-8 items-center pl-2">
@@ -763,24 +907,24 @@ export const ModList: React.FC = () => {
                 </span>
               </Tooltip>
             </div>
-            <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">#</div>
+            <div className="flex h-8 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">#</div>
             <button
               onClick={() => handleSort('name')}
               aria-label={`Sort by mod name${sortKey === 'name' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
               className="flex h-8 w-full items-center justify-start gap-0.5 text-left"
             >
-              <span className={`text-xs uppercase tracking-widest brand-font font-bold ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
+              <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
                 Mod Name
               </span>
               <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'name' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
             </button>
-            <div className="flex h-8 items-center text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Version</div>
+            <div className="flex h-8 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Version</div>
             <button
               onClick={() => handleSort('type')}
               aria-label={`Sort by type${sortKey === 'type' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
               className="flex h-8 w-full items-center justify-start gap-0.5 text-left"
             >
-              <span className={`text-xs uppercase tracking-widest brand-font font-bold ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
+              <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
                 Type
               </span>
               <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'type' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
@@ -790,16 +934,16 @@ export const ModList: React.FC = () => {
               aria-label={`Sort by installed date${sortKey === 'installedAt' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
               className="flex h-8 w-full items-center justify-start gap-0.5 text-left"
             >
-              <span className={`text-xs uppercase tracking-widest brand-font font-bold ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
+              <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
                 Date
               </span>
               <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'installedAt' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
             </button>
-            <div className="flex h-8 items-center justify-end text-xs uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
+            <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
           </div>
 
-          {/* Scrollable rows */}
-          <div className="hyperion-scrollbar managed-mods-scroll flex-1 overflow-y-auto">
+          {/* Rows (inside same scroll container as sticky header) */}
+          <div>
             {displayedMods.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">inventory_2</span>
@@ -825,8 +969,18 @@ export const ModList: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div>
-                {displayedMods.map((mod, index) => (
+              <div
+                style={{
+                  paddingTop: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD ? virtualizedMods.paddingTop : 0,
+                  paddingBottom: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD ? virtualizedMods.paddingBottom : 0,
+                }}
+              >
+                {visibleMods.map((mod, visibleIndex) => {
+                  const index = virtualizedMods.startIndex + visibleIndex
+                  if (installing && installPlacement === 'replace' && mod.uuid === installTargetModId) {
+                    return <React.Fragment key={`install-${mod.uuid}`}>{renderInstallRow()}</React.Fragment>
+                  }
+                  return (
                   <MemoModRow
                     key={mod.uuid}
                     mod={mod}
@@ -843,11 +997,14 @@ export const ModList: React.FC = () => {
                     onRenameSave={handleSaveRename}
                     onRenameCancel={handleCancelRename}
                   />
-                ))}
+                  )
+                })}
+                {showAppendInstallRow ? renderInstallRow() : null}
               </div>
             )}
           </div>
 
+          </div>
         </div>
       </div>
 
@@ -899,6 +1056,15 @@ export const ModList: React.FC = () => {
             <span>Disable</span>
           </button>
           <div className="my-1 border-t-[0.5px] border-[#222]" />
+          { (contextMenu.mod.nexusModId || contextMenu.mod.nexusFileId) && (
+            <button
+              onClick={handleContextOpenOnNexus}
+              className="flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase"
+            >
+              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+              <span>Open on Nexus</span>
+            </button>
+          )}
           <button
             onClick={handleContextOpenFolder}
             className="flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase"
@@ -931,7 +1097,7 @@ export const ModList: React.FC = () => {
           accentGlow="rgba(255,77,79,0.45)"
           title="Delete Mod"
           description={`You are about to permanently delete ${pendingDeleteMod.name} from your mod library.`}
-          detailLabel="Target mod"
+          detailLabel="Mod being deleted"
           detailValue={pendingDeleteMod.name}
           icon="delete"
           primaryLabel="Delete"
@@ -968,10 +1134,10 @@ export const ModList: React.FC = () => {
           detailContent={(
             <div className="px-4 py-3">
               <div className="flex items-center justify-between gap-3 border-b-[0.5px] border-[#1d1d1d] pb-3">
-                <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#8d8d8d]">
+                <div className="text-sm font-mono text-[#9a9a9a]">
                   Mods being uninstalled
                 </div>
-                <div className="rounded-sm border-[0.5px] border-[#4a1c1c] bg-[#160909] px-2 py-1 text-[9px] font-mono uppercase tracking-[0.14em] text-[#ffb4ab]">
+                <div className="rounded-sm border-[0.5px] border-[#4a1c1c] bg-[#160909] px-2.5 py-1 text-sm font-mono text-[#ffb4ab]">
                   {pendingAction.count} selected
                 </div>
               </div>

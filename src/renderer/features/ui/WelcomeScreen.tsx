@@ -179,8 +179,8 @@ export const WelcomeScreen: React.FC = () => {
 
   const browseBtn = 'px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/30 text-[#fcee09] rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest hover:bg-[#fcee09] hover:text-[#050505] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]'
   const accentBtn = 'px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] text-[#9a9a9a] rounded-sm text-[10px] brand-font font-semibold uppercase tracking-widest hover:text-white hover:border-[#7a7a7a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#9a9a9a] disabled:hover:border-[#1a1a1a]'
-  const statusBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2.5 text-[9px] font-mono uppercase leading-none tracking-[0.14em]'
-  const metaBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[9px] font-mono uppercase leading-none tracking-[0.14em]'
+  const statusBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2.5 text-[10px] font-mono uppercase leading-none tracking-[0.14em]'
+  const metaBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[10px] font-mono uppercase leading-none tracking-[0.14em]'
   const sectionDotClass = 'relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[#fcee09]'
 
   return (
@@ -195,7 +195,7 @@ export const WelcomeScreen: React.FC = () => {
         <div className="flex items-end justify-between mb-5">
           <div>
             <h1 className="brand-font text-xl font-bold tracking-[0.18em] uppercase text-white">Workspace Setup</h1>
-            <p className="mt-2 text-[11px] text-[#8a8a8a] font-mono tracking-[0.15em] uppercase">
+            <p className="ui-support-mono mt-2 uppercase tracking-[0.15em]">
               Configure required paths to initialize Hyperion
             </p>
           </div>
@@ -212,7 +212,7 @@ export const WelcomeScreen: React.FC = () => {
           <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
             <div className="flex items-center gap-2 mb-2 min-h-[20px]">
               <div className={sectionDotClass} />
-              <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Game Path</span>
+              <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Game Path</span>
               <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
               <span className={`ml-auto ${statusBadgeClass} ${
                 missingGame ? 'border-[#7e6d12] bg-[#0d0b00] text-[#fcee09]' : 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
@@ -220,7 +220,7 @@ export const WelcomeScreen: React.FC = () => {
                 {activeGameState}
               </span>
             </div>
-            <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+            <p className="ui-support-mono mb-3">
               Cyberpunk 2077 installation root — used for executable validation and mod deployment.
             </p>
             <div className={`allow-text-selection border-[0.5px] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0 ${
@@ -240,10 +240,10 @@ export const WelcomeScreen: React.FC = () => {
           <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
             <div className="flex items-center gap-2 mb-2 min-h-[20px]">
               <div className={sectionDotClass} />
-              <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Mod Library</span>
+              <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Mod Library</span>
               <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
             </div>
-            <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+            <p className="ui-support-mono mb-3">
               Managed archive repository for mod metadata, staging, and deployment recovery.
             </p>
             <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
@@ -259,10 +259,10 @@ export const WelcomeScreen: React.FC = () => {
           <div className="px-5 py-5">
             <div className="flex items-center gap-2 mb-2 min-h-[20px]">
               <div className="relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[rgba(252,238,9,0.35)]" />
-              <span className="text-[9px] uppercase tracking-widest text-[#d0d0d0] brand-font font-bold">Downloads Intake</span>
+              <span className="text-sm uppercase tracking-widest text-[#d0d0d0] brand-font font-bold">Downloads Intake</span>
               <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Optional</span>
             </div>
-            <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+            <p className="ui-support-mono mb-3">
               Source folder for incoming archives. Defaults to a sibling folder beside the library.
             </p>
             <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
@@ -277,7 +277,7 @@ export const WelcomeScreen: React.FC = () => {
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-5 pt-5 border-t-[0.5px] border-[#1a1a1a] gap-6">
-          <p className="text-[12px] text-[#9a9a9a] font-mono leading-relaxed">
+          <p className="ui-support-mono">
             Hyperion initializes only after both required paths validate.
           </p>
           <button

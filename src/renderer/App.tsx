@@ -6,14 +6,24 @@ import { IPC } from '../shared/types'
 import { Header } from './features/ui/Header'
 import { Sidebar } from './features/ui/Sidebar'
 import { ToastContainer } from './features/ui/ToastContainer'
+import { DuplicateDownloadDialog } from './features/ui/DuplicateDownloadDialog'
 import { DuplicateInstallDialog } from './features/ui/DuplicateInstallDialog'
 import { WelcomeScreen } from './features/ui/WelcomeScreen'
 import { ModList } from './features/library/ModList'
 import { DownloadsPane } from './features/downloads/DownloadsPane'
 import { SettingsPage } from './features/ui/SettingsDialog'
+import { AppLogsDialog } from './features/ui/NexusRequestLogDialog'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
+
+async function waitForFirstPaint(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve())
+    })
+  })
+}
 
 async function waitForCriticalFonts(): Promise<void> {
   const fontSet = document.fonts
@@ -39,6 +49,7 @@ export const App: React.FC = () => {
     detectGamePath,
     scanMods,
     restoreEnabledMods,
+    refreshLocalFiles,
     checkForUpdates,
     setupUpdateListeners,
     setupNxmListeners,
@@ -48,14 +59,15 @@ export const App: React.FC = () => {
     addToast,
     gamePathValid,
     libraryPathValid,
-    validateGamePath,
-    validateLibraryPath,
+    dialogs,
+    closeDialog,
   } = useAppStore((state) => ({
     loadSettings: state.loadSettings,
     updateSettings: state.updateSettings,
     detectGamePath: state.detectGamePath,
     scanMods: state.scanMods,
     restoreEnabledMods: state.restoreEnabledMods,
+    refreshLocalFiles: state.refreshLocalFiles,
     checkForUpdates: state.checkForUpdates,
     setupUpdateListeners: state.setupUpdateListeners,
     setupNxmListeners: state.setupNxmListeners,
@@ -65,42 +77,61 @@ export const App: React.FC = () => {
     addToast: state.addToast,
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
-    validateGamePath: state.validateGamePath,
-    validateLibraryPath: state.validateLibraryPath,
+    dialogs: state.dialogs,
+    closeDialog: state.closeDialog,
   }), shallow)
 
   const [booting, setBooting] = useState(true)
 
   useEffect(() => {
     let cleanup: (() => void) | undefined
+    let disposed = false
 
     const boot = async () => {
       const bootStartedAt = Date.now()
-      setStatus('Loading settings...')
+      const fontsReadyPromise = waitForCriticalFonts()
+      const updateBootStatus = (message: string) => {
+        setStatus(message)
+        IpcService.send(IPC.APP_BOOT_STATUS, message)
+      }
+
+      updateBootStatus('Loading settings...')
       let currentSettings = await loadSettings()
+      let { gamePathValid: hasValidGamePath, libraryPathValid: hasValidLibraryPath } = useAppStore.getState()
 
       if (!currentSettings.gamePath?.trim()) {
-        setStatus('Detecting game path...')
+        updateBootStatus('Detecting game path...')
         const detectedGame = await detectGamePath()
         if (detectedGame.ok && detectedGame.data) {
           await updateSettings({ gamePath: detectedGame.data })
           currentSettings = { ...currentSettings, gamePath: detectedGame.data }
+          ;({ gamePathValid: hasValidGamePath, libraryPathValid: hasValidLibraryPath } = useAppStore.getState())
           addToast('Game path auto-detected', 'success', 2200)
         }
       }
 
-      setStatus('Scanning mods...')
-      const scannedMods = await scanMods()
-
-      const hasValidGamePath = await validateGamePath(currentSettings.gamePath)
-      const hasValidLibraryPath = await validateLibraryPath(currentSettings.libraryPath)
-
       const cleanupUpdates = setupUpdateListeners()
       const cleanupNxm = setupNxmListeners()
-      cleanup = () => { cleanupUpdates(); cleanupNxm() }
+      const releaseListeners = () => { cleanupUpdates(); cleanupNxm() }
+
+      if (disposed) {
+        releaseListeners()
+        return
+      }
+
+      cleanup = releaseListeners
+
+      updateBootStatus('Scanning mod library...')
+      const scannedMods = await scanMods()
 
       if (hasValidGamePath && hasValidLibraryPath) {
-        void restoreEnabledMods(scannedMods).catch(() => undefined)
+        updateBootStatus('Restoring enabled mods...')
+        await restoreEnabledMods(scannedMods).catch(() => undefined)
+      }
+
+      if (currentSettings.downloadPath?.trim()) {
+        updateBootStatus('Scanning downloads...')
+        await refreshLocalFiles().catch(() => undefined)
       }
 
       if (!import.meta.env.DEV && currentSettings.autoUpdate) {
@@ -111,31 +142,37 @@ export const App: React.FC = () => {
       const remaining = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed)
 
       await Promise.all([
-        waitForCriticalFonts(),
+        fontsReadyPromise,
         remaining > 0
           ? new Promise((resolve) => window.setTimeout(resolve, remaining))
           : Promise.resolve(),
       ])
 
-      setStatus('Ready')
+      if (disposed) return
+
+      updateBootStatus('Ready')
       setBooting(false)
-      // RAF ensures React has rendered the full UI to the DOM before we
-      // signal the main process to show the window.
-      window.requestAnimationFrame(() => {
-        IpcService.send(IPC.APP_READY)
-      })
+      await waitForFirstPaint()
+      if (disposed) return
+      IpcService.send(IPC.APP_READY)
     }
 
     boot().catch((error) => {
+      if (disposed) return
       console.error(error)
+      IpcService.send(IPC.APP_BOOT_STATUS, 'Starting interface...')
       setStatus('Ready')
       setBooting(false)
-      window.requestAnimationFrame(() => {
+      void waitForFirstPaint().then(() => {
+        if (disposed) return
         IpcService.send(IPC.APP_READY)
       })
     })
 
-    return () => cleanup?.()
+    return () => {
+      disposed = true
+      cleanup?.()
+    }
   }, [])
 
   useEffect(() => {
@@ -174,7 +211,11 @@ export const App: React.FC = () => {
             {!missingRequiredPaths && activeView === 'downloads' && <DownloadsPane />}
           </main>
         </div>
+        <DuplicateDownloadDialog />
         <DuplicateInstallDialog />
+        {dialogs.appLogs && (
+          <AppLogsDialog onClose={() => closeDialog('appLogs')} />
+        )}
         <ToastContainer />
       </div>
     </div>

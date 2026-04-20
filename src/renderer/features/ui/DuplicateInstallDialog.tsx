@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { ActionPromptDialog } from './ActionPromptDialog'
 
@@ -14,43 +14,53 @@ export const DuplicateInstallDialog: React.FC = () => {
   } = useAppStore()
   const [submitting, setSubmitting] = useState(false)
 
+  useEffect(() => {
+    if (!installPrompt || !pendingInstallRequest) {
+      setSubmitting(false)
+    }
+  }, [installPrompt, pendingInstallRequest])
+
   if (!installPrompt || !pendingInstallRequest) {
     return null
   }
 
   const handleClose = () => {
     if (submitting) return
+    setSubmitting(false)
     clearInstallPrompt()
   }
 
   const handleAction = async (duplicateAction: 'replace' | 'copy') => {
     setSubmitting(true)
-
-    const result = await installMod(pendingInstallRequest.filePath, {
-      duplicateAction,
-      targetModId: pendingInstallRequest.targetModId,
-    })
-
-    if (!result.ok || !result.data) {
-      addToast(result.error ?? 'Install failed', 'error')
-      setSubmitting(false)
-      return
-    }
-
-    if (result.data.status === 'installed' && result.data.mod) {
-      await scanMods()
-      const enableResult = await enableMod(result.data.mod.uuid)
-      if (!enableResult.ok) {
-        addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
-      } else {
-        addToast(`${result.data.mod.name} installed & activated`, 'success')
-      }
-    } else if (result.data.status === 'conflict') {
-      addToast('File conflicts detected during install', 'warning')
-    }
-
+    const sourcePath = pendingInstallRequest.filePath
+    const targetModId = duplicateAction === 'replace' ? pendingInstallRequest.targetModId : undefined
     clearInstallPrompt()
-    setSubmitting(false)
+
+    try {
+      const result = await installMod(sourcePath, {
+        duplicateAction,
+        targetModId,
+      })
+
+      if (!result.ok || !result.data) {
+        addToast(result.error ?? 'Install failed', 'error')
+        return
+      }
+
+      if (result.data.status === 'installed' && result.data.mod) {
+        await scanMods()
+        const enableResult = await enableMod(result.data.mod.uuid)
+        if (!enableResult.ok) {
+          addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+        } else {
+          addToast(`${result.data.mod.name} installed & activated`, 'success')
+        }
+      } else if (result.data.status === 'conflict') {
+        addToast('File conflicts detected during install', 'warning')
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const title = installPrompt.mode === 'reinstall' ? 'Reinstall Mod' : 'Mod Already Installed'

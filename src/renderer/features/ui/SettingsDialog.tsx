@@ -202,8 +202,8 @@ export const SettingsPage: React.FC = () => {
   const saveBlocked = !gamePathValid || !libraryPathValid
   const browseBtn = 'px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/30 text-[#fcee09] rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest hover:bg-[#fcee09] hover:text-[#050505] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]'
   const accentBtn = 'px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] text-[#9a9a9a] rounded-sm text-[10px] brand-font font-semibold uppercase tracking-widest hover:text-white hover:border-[#7a7a7a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#9a9a9a] disabled:hover:border-[#1a1a1a]'
-  const statusBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2.5 text-[9px] font-mono uppercase leading-none tracking-[0.14em]'
-  const metaBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[9px] font-mono uppercase leading-none tracking-[0.14em]'
+  const statusBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2.5 text-[10px] font-mono uppercase leading-none tracking-[0.14em]'
+  const metaBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[10px] font-mono uppercase leading-none tracking-[0.14em]'
   const sectionDotClass = 'relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[#fcee09]'
   const tabButtonClass = (tab: 'paths' | 'workspace' | 'nexus') => `group relative flex w-full items-center gap-3 overflow-hidden rounded-sm border-[0.5px] px-3 py-3 text-left transition-all duration-200 ${
     activeTab === tab
@@ -220,7 +220,7 @@ export const SettingsPage: React.FC = () => {
           <h1 className="brand-font text-[1.5rem] font-black tracking-[0.08em] text-white uppercase leading-none mb-2">
             Configuration
           </h1>
-          <p className="text-[12px] tracking-[0.14em] text-[#a6a6a6] uppercase font-mono">
+          <p className="ui-support-mono uppercase tracking-[0.14em] text-[#a6a6a6]">
             Paths, workspace modules &amp; library controls
           </p>
         </div>
@@ -229,7 +229,7 @@ export const SettingsPage: React.FC = () => {
 
         <div className="grid gap-0 border-[0.5px] border-[#1a1a1a] bg-[#070707] shadow-[0_6px_18px_rgba(0,0,0,0.24)] lg:grid-cols-[168px_minmax(0,1fr)]">
           <aside className="border-b-[0.5px] border-[#1a1a1a] bg-[linear-gradient(180deg,rgba(12,12,12,0.98),rgba(8,8,8,0.98))] p-4 lg:border-b-0 lg:border-r-[0.5px]">
-            <div className="mb-4 text-[11px] uppercase tracking-[0.18em] text-[#b6b6b6] font-mono">Sections</div>
+            <div className="ui-support-mono mb-4 uppercase tracking-[0.18em] text-[#b6b6b6]">Sections</div>
             <div className="space-y-2">
               <button
                 type="button"
@@ -238,7 +238,7 @@ export const SettingsPage: React.FC = () => {
               >
                 <span className={`absolute inset-y-0 left-0 w-[2px] ${activeTab === 'paths' ? 'bg-[#fcee09]' : 'bg-transparent group-hover:bg-[#2f2f2f]'}`} />
                 <span className={`h-1.5 w-1.5 flex-shrink-0 ${activeTab === 'paths' ? 'bg-[#fcee09]' : 'bg-[#3a3a3a]'}`} />
-                <span className="text-[10px] uppercase tracking-[0.18em] font-mono">Paths</span>
+                <span className="ui-support-mono uppercase tracking-[0.18em]">Paths</span>
               </button>
               <button
                 type="button"
@@ -247,7 +247,7 @@ export const SettingsPage: React.FC = () => {
               >
                 <span className={`absolute inset-y-0 left-0 w-[2px] ${activeTab === 'workspace' ? 'bg-[#fcee09]' : 'bg-transparent group-hover:bg-[#2f2f2f]'}`} />
                 <span className={`h-1.5 w-1.5 flex-shrink-0 ${activeTab === 'workspace' ? 'bg-[#fcee09]' : 'bg-[#3a3a3a]'}`} />
-                <span className="text-[10px] uppercase tracking-[0.18em] font-mono">Workspace</span>
+                <span className="ui-support-mono uppercase tracking-[0.18em]">Workspace</span>
               </button>
               <button
                 type="button"
@@ -256,7 +256,7 @@ export const SettingsPage: React.FC = () => {
               >
                 <span className={`absolute inset-y-0 left-0 w-[2px] ${activeTab === 'nexus' ? 'bg-[#fcee09]' : 'bg-transparent group-hover:bg-[#2f2f2f]'}`} />
                 <span className={`h-1.5 w-1.5 flex-shrink-0 ${activeTab === 'nexus' ? 'bg-[#fcee09]' : 'bg-[#3a3a3a]'}`} />
-                <span className="text-[10px] uppercase tracking-[0.18em] font-mono">Nexus</span>
+                <span className="ui-support-mono uppercase tracking-[0.18em]">Nexus</span>
               </button>
             </div>
           </aside>
@@ -265,10 +265,10 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'paths' && (
           <div>
             <div className="border-b-[0.5px] border-[#1a1a1a] px-5 py-5">
-              <div className="text-[10px] tracking-[0.2em] text-[#8a8a8a] uppercase font-mono font-bold mb-2">
+              <div className="ui-support-mono mb-2 uppercase tracking-[0.2em] font-bold text-[#9a9a9a]">
                 Core Directories
               </div>
-              <p className="text-[12px] text-[#7f7f7f] font-mono leading-relaxed">
+              <p className="ui-support-mono">
                 Required paths define launch, deployment, archive storage, and download intake behavior.
               </p>
             </div>
@@ -277,13 +277,13 @@ export const SettingsPage: React.FC = () => {
             <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
               <div className="flex items-center gap-2 mb-2 min-h-[20px]">
                 <div className={sectionDotClass} />
-                <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Game Path</span>
+                <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Game Path</span>
                 <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
                 <span className={`ml-auto ${statusBadgeClass} ${gamePathValid ? 'border-[#1d3d2e] bg-[#091410] text-[#34d399]' : 'border-[#7e6d12] bg-[#0d0b00] text-[#fcee09]'}`}>
                   {gamePathValid ? 'Valid Path' : 'Target Required'}
                 </span>
               </div>
-              <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+              <p className="ui-support-mono mb-3">
                 Root Cyberpunk 2077 folder used for launch validation and deployment targeting.
               </p>
               <div className={`allow-text-selection border-[0.5px] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0 ${gamePathValid ? 'border-[#1a1a1a]' : 'border-[#6a5a10]'}`}>
@@ -302,13 +302,13 @@ export const SettingsPage: React.FC = () => {
             <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
               <div className="flex items-center gap-2 mb-2 min-h-[20px]">
                 <div className={sectionDotClass} />
-                <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Mod Library</span>
+                <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Mod Library</span>
                 <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
                 <span className={`ml-auto ${statusBadgeClass} ${libraryPathValid ? 'border-[#1d3d2e] bg-[#091410] text-[#34d399]' : 'border-[#7e6d12] bg-[#0d0b00] text-[#fcee09]'}`}>
                   {libraryPathValid ? 'Valid Path' : 'Target Required'}
                 </span>
               </div>
-              <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+              <p className="ui-support-mono mb-3">
                 Managed archive repository for metadata, reinstalls, autosave scanning, and recovery.
               </p>
               <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
@@ -327,10 +327,10 @@ export const SettingsPage: React.FC = () => {
             <div className="px-5 py-5">
               <div className="flex items-center gap-2 mb-2 min-h-[20px]">
                 <div className="relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[rgba(252,238,9,0.35)]" />
-                <span className="text-[9px] uppercase tracking-widest text-[#d0d0d0] brand-font font-bold">Downloads Intake</span>
+                <span className="text-sm uppercase tracking-widest text-[#d0d0d0] brand-font font-bold">Downloads Intake</span>
                 <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Optional</span>
               </div>
-              <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+              <p className="ui-support-mono mb-3">
                 Optional archive source folder used for incoming downloads and staged installs.
               </p>
               <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
@@ -348,7 +348,7 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           {saveBlocked && (
-            <div className="m-5 mt-0 border-[0.5px] border-[#4a3f08] bg-[#151202] px-4 py-3 text-[11px] font-mono uppercase tracking-[0.14em] text-[#fcee09]">
+            <div className="m-5 mt-0 border-[0.5px] border-[#4a3f08] bg-[#151202] px-4 py-3 text-sm font-mono uppercase tracking-[0.14em] text-[#fcee09]">
               Changes stay local until the game path and mod library are valid.
             </div>
           )}
@@ -357,10 +357,10 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'workspace' && (
           <div>
             <div className="border-b-[0.5px] border-[#1a1a1a] px-5 py-5">
-              <div className="text-[10px] tracking-[0.2em] text-[#8a8a8a] uppercase font-mono font-bold mb-2">
+              <div className="ui-support-mono mb-2 uppercase tracking-[0.2em] font-bold text-[#9a9a9a]">
                 Workspace Controls
               </div>
-              <p className="text-[12px] text-[#7f7f7f] font-mono leading-relaxed">
+              <p className="ui-support-mono">
                 Secondary tab scaffold connected to the same settings surface for future modules.
               </p>
             </div>
@@ -368,20 +368,20 @@ export const SettingsPage: React.FC = () => {
             <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
               <div className="flex items-center gap-2 mb-2 min-h-[20px]">
                 <div className={sectionDotClass} />
-                <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Future Module</span>
+                <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Future Module</span>
                 <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Preview</span>
               </div>
-              <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+              <p className="ui-support-mono mb-3">
                 Use this area for future extension-like settings groups without changing the panel structure.
               </p>
-              <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-4 text-[12px] text-[#8a8a8a] font-mono leading-relaxed">
+              <div className="ui-support-mono border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-4">
                 Example future sections: update behavior, indexing rules, workspace automation, or extension-integrated modules.
               </div>
             </div>
 
             <div className="px-5 py-5">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-[#6f6f6f] font-mono mb-3">Status</div>
-              <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 text-[11px] font-mono uppercase tracking-[0.14em] text-[#8a8a8a]">
+              <div className="ui-support-mono mb-3 uppercase tracking-[0.18em]">Status</div>
+              <div className="ui-support-mono border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 uppercase tracking-[0.14em]">
                 Workspace tab scaffold ready for expansion.
               </div>
             </div>
@@ -390,10 +390,10 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'nexus' && (
           <div>
             <div className="border-b-[0.5px] border-[#1a1a1a] px-5 py-5">
-              <div className="text-[10px] tracking-[0.2em] text-[#8a8a8a] uppercase font-mono font-bold mb-2">
+              <div className="ui-support-mono mb-2 uppercase tracking-[0.2em] font-bold text-[#9a9a9a]">
                 Nexus Mods Integration
               </div>
-              <p className="text-[12px] text-[#7f7f7f] font-mono leading-relaxed">
+              <p className="ui-support-mono">
                 Personal API key enables "Mod Manager Download" buttons on nexusmods.com to route directly into Hyperion.
               </p>
             </div>
@@ -401,7 +401,7 @@ export const SettingsPage: React.FC = () => {
             <div className="px-5 py-5 border-b-[0.5px] border-[#1a1a1a]">
               <div className="flex items-center gap-2 mb-2 min-h-[20px]">
                 <div className={sectionDotClass} />
-                <span className="text-[9px] uppercase tracking-widest text-white brand-font font-bold">Personal API Key</span>
+                <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Personal API Key</span>
                 <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Optional</span>
                 {nexusApiKey.trim() ? (
                   nexusValidateResult ? (
@@ -425,7 +425,7 @@ export const SettingsPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <p className="text-[12px] text-[#9a9a9a] font-mono mb-3 leading-relaxed">
+              <p className="ui-support-mono mb-3">
                 Generate a Personal API key at nexusmods.com → Account → API Keys.
               </p>
               <div className="flex items-center border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] mb-3">
@@ -456,7 +456,7 @@ export const SettingsPage: React.FC = () => {
                   {nexusValidating ? 'Connecting...' : 'Test Connection'}
                 </button>
                 {nexusValidateResult && !nexusValidateResult.ok && (
-                  <span className="text-[11px] font-mono text-[#f87171]">{nexusValidateResult.error}</span>
+                  <span className="ui-support-mono text-[#f87171]">{nexusValidateResult.error}</span>
                 )}
               </div>
             </div>
@@ -464,10 +464,10 @@ export const SettingsPage: React.FC = () => {
             <div className="px-5 py-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-[16px] text-[#6a6a6a]">info</span>
-                <span className="text-[10px] uppercase tracking-[0.18em] text-[#6f6f6f] font-mono">Protocol Handler</span>
+                <span className="ui-support-mono uppercase tracking-[0.18em]">Protocol Handler</span>
               </div>
-              <div className="border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 text-[11px] font-mono text-[#8a8a8a] leading-relaxed">
-                nxm:// links open in Hyperion automatically once the app has been launched at least once. No manual registration required.
+              <div className="ui-support-mono border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3">
+                nxm:// links open in Hyperion automatically once the app has been launched at least once. App logs are available from the header logs button near the window controls.
               </div>
             </div>
           </div>
@@ -475,10 +475,9 @@ export const SettingsPage: React.FC = () => {
           </section>
         </div>
 
-        <div className="mt-12 text-right text-[10px] uppercase tracking-[0.16em] text-[#7a7a7a] font-mono">
+        <div className="ui-support-mono mt-12 text-right uppercase tracking-[0.16em]">
           Hyperion {appVersion}
         </div>
-
       </div>
     </div>
   )
@@ -486,5 +485,3 @@ export const SettingsPage: React.FC = () => {
 
 // Legacy export alias
 export const SettingsDialog = SettingsPage
-
-

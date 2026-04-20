@@ -21,6 +21,7 @@
   --text-secondary: rgba(242, 242, 242, 0.72);
   --text-muted:     rgba(242, 242, 242, 0.5);
   --text-disabled:  rgba(242, 242, 242, 0.46);
+  --text-support:   #9A9A9A;
   --text-accent:    #FCEE09;
 
   /* Accent */
@@ -110,6 +111,20 @@ select,
 .fade-up       { animation: fade-up 0.2s ease-out both; }
 .fade-in       { animation: fade-in 0.2s ease-out both; }
 .slide-in-left { animation: slide-in-left 0.18s ease-out both; }
+
+.ui-support-text {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-support);
+}
+
+.ui-support-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--text-support);
+}
 
 /* ── Global app background ── */
 .hyperion-shell {

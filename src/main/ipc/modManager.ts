@@ -1,9 +1,11 @@
 import { ipcMain } from 'electron'
+import type { BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import { IPC } from '../../shared/types'
 import type { ModMetadata, IpcResult, PurgeModsResult } from '../../shared/types'
+import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
 import {
   listFilesRecursive,
@@ -445,7 +447,7 @@ export async function purgeMods(
 
 // ─── Handler Registration ─────────────────────────────────────────────────────
 
-export function registerModManagerHandlers(): void {
+export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.SCAN_MODS, async (): Promise<IpcResult<ModMetadata[]>> => {
     try {
       const settings = loadSettings()
@@ -466,7 +468,16 @@ export function registerModManagerHandlers(): void {
       const mods = await scanMods(settings.libraryPath)
       const mod = mods.find((m) => m.uuid === modId)
       if (!mod) return { ok: false, error: 'Mod not found' }
-      return enableMod(mod, settings.gamePath, settings.libraryPath)
+      const result = await enableMod(mod, settings.gamePath, settings.libraryPath)
+      if (!result.ok) {
+        pushGeneralLog(getMainWindow?.() ?? null, {
+          level: 'error',
+          source: 'mods',
+          message: `Enable mod failed: ${mod.name}`,
+          details: { modId: mod.uuid, modName: mod.name, error: result.error },
+        })
+      }
+      return result
     }
   )
 
@@ -477,7 +488,16 @@ export function registerModManagerHandlers(): void {
       const mods = await scanMods(settings.libraryPath)
       const mod = mods.find((m) => m.uuid === modId)
       if (!mod) return { ok: false, error: 'Mod not found' }
-      return disableMod(mod, settings.gamePath, settings.libraryPath)
+      const result = await disableMod(mod, settings.gamePath, settings.libraryPath)
+      if (!result.ok) {
+        pushGeneralLog(getMainWindow?.() ?? null, {
+          level: 'error',
+          source: 'mods',
+          message: `Disable mod failed: ${mod.name}`,
+          details: { modId: mod.uuid, modName: mod.name, error: result.error },
+        })
+      }
+      return result
     }
   )
 
