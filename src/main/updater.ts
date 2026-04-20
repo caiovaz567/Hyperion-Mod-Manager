@@ -1,20 +1,21 @@
 import { autoUpdater } from 'electron-updater'
 import type { BrowserWindow } from 'electron'
 import { IPC } from '../shared/types'
+import { safeSendToWindow } from './logStore'
 
 export function initializeUpdates(mainWindow: BrowserWindow): void {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('update-available', (info) => {
-    mainWindow.webContents.send(IPC.UPDATE_AVAILABLE, {
+    safeSendToWindow(mainWindow, IPC.UPDATE_AVAILABLE, {
       version: info.version,
       releaseNotes: info.releaseNotes
     })
   })
 
   autoUpdater.on('download-progress', (progress) => {
-    mainWindow.webContents.send(IPC.UPDATE_PROGRESS, {
+    safeSendToWindow(mainWindow, IPC.UPDATE_PROGRESS, {
       percent: Math.round(progress.percent),
       bytesPerSecond: progress.bytesPerSecond,
       transferred: progress.transferred,
@@ -23,13 +24,13 @@ export function initializeUpdates(mainWindow: BrowserWindow): void {
   })
 
   autoUpdater.on('update-downloaded', (info) => {
-    mainWindow.webContents.send(IPC.UPDATE_DOWNLOADED, {
+    safeSendToWindow(mainWindow, IPC.UPDATE_DOWNLOADED, {
       version: info.version
     })
   })
 
   autoUpdater.on('error', (err) => {
-    mainWindow.webContents.send(IPC.UPDATE_ERROR, err.message)
+    safeSendToWindow(mainWindow, IPC.UPDATE_ERROR, err.message)
   })
 
   // Register IPC handlers for update actions
@@ -41,7 +42,7 @@ export function initializeUpdates(mainWindow: BrowserWindow): void {
       return { ok: true }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      mainWindow.webContents.send(IPC.UPDATE_ERROR, message)
+      safeSendToWindow(mainWindow, IPC.UPDATE_ERROR, message)
       return { ok: false, error: message }
     }
   })
@@ -52,7 +53,7 @@ export function initializeUpdates(mainWindow: BrowserWindow): void {
       return { ok: true }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      mainWindow.webContents.send(IPC.UPDATE_ERROR, message)
+      safeSendToWindow(mainWindow, IPC.UPDATE_ERROR, message)
       return { ok: false, error: message }
     }
   })

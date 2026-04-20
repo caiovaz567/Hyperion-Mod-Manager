@@ -5,6 +5,7 @@ import type { Toast, ToastSeverity } from '../../../shared/types'
 export interface DialogState {
   settings: boolean
   about: boolean
+  appLogs: boolean
 }
 
 export interface UISlice {
@@ -28,7 +29,8 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   toasts: [],
   dialogs: {
     settings: false,
-    about: false
+    about: false,
+    appLogs: false,
   },
   activeView: 'library',
   viewHistory: [],

@@ -1,4 +1,4 @@
-# HYPERION - Design Specification v2.1
+# HYPERION - Design Specification
 
 ## 1. Product Direction
 
@@ -45,12 +45,16 @@ Hard no:
 Accessibility:
 - All visible text must meet at least WCAG AA contrast against its immediate background
 - Use $4.5:1$ for normal text and $3:1$ for large text
+- Helper/support copy must not drop below the Downloads timestamp baseline: `text-sm` / roughly 14px with the same readable gray value used by download dates (`#9A9A9A` or stronger)
+- This minimum applies especially to Settings, dialogs, logs, and explanatory copy; avoid 9-12px body text on dark surfaces unless the text is purely badge chrome
 
 ### Typography
 
 - Syne: logo, high-level titles, uppercase emphasis
 - DM Sans: primary UI font for labels, panels, forms, lists
 - Monospace only for technical values such as timestamps, versions, paths, counters
+- Small support text should prefer the same visual token used by download dates: readable 14px sizing, restrained gray, and AA contrast at minimum
+- Dates and timestamps should follow the user's Windows-style local format in UI surfaces: `DD/MM/YYYY HH:mm` (example: `19/04/2026 15:47`)
 
 ### Motion
 
@@ -73,8 +77,8 @@ Accessibility:
 
 - Height: 56px
 - Left side: Hyperion mark + wordmark + search
-- Right side: library utility buttons, single-step updater CTA, logs placeholder icon, native window controls
-- The terminal icon in the header currently means Logs placeholder, not an in-app terminal session
+- Right side: library utility buttons, single-step updater CTA, app logs button, native window controls
+- The terminal icon in the header opens App Logs; it is not an in-app terminal session
 
 ### Sidebar
 
@@ -140,6 +144,11 @@ Alignment rules:
 - Header includes refresh and open-folder actions
 - Summary strip shows configured path, file count, and zip-ready count
 - Download rows prioritize file name, format, modified date, install/reinstall action, and delete action
+- Install/extract progress launched from Downloads should reuse the same active-row language as live downloads instead of falling back to a tiny button-only state
+- Archive extraction is its own phase and should use a distinct cool accent from the default download/install yellow, while later install/finalization can return to the product accent
+- When extracting from `.zip`, `.rar`, or `.7z`, show the current internal archive entry when available so the user can see what is being unpacked in real time
+- If the user confirms `Replace` or `Install as Copy` from a duplicate-install prompt, dismiss the confirmation immediately and hand off to the shared install progress UI instead of keeping the dialog visible during extraction/install
+- If a Nexus archive already exists in Downloads, use the shared confirmation dialog instead of a toast-only rejection and preview the renamed duplicate archive before the user confirms
 
 ### Settings
 
@@ -149,6 +158,30 @@ Alignment rules:
 - Core directories section should mirror the Welcome screen visual system: unified dark card, path blocks in monospace, compact status badges, and the same primary/secondary button treatment
 - Settings navigation should feel like an integrated extension panel: section tabs connected to the content surface rather than floating above it
 - Avoid nested scrolling inside Settings content when the main app surface already handles vertical scroll
+- Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
+
+### App Logs
+
+- App Logs is a global overlay opened from the header terminal icon
+- It should group diagnostics into clear tabs rather than separate scattered dialogs
+- Use at least two tabs: `General` for app/runtime events and `Requests` for Nexus API traffic
+- Log rows should stay single-line and compact in the collapsed state
+- Expanding a row reveals structured content below the same row instead of opening a second screen
+- Request payloads and structured log details should use a collapsible tree viewer similar to a JSON formatter
+- The payload/detail viewer should feel like an inspector preview: dark code-like surface, collapsible rows, inline summaries for arrays/objects, and clear color separation between keys and value types
+- Even when using syntax-style differentiation, App Logs should stay inside the Hyperion palette: primary text for keys, accent yellow for string emphasis, status/info colors for typed values, and restrained gray for structure chrome
+- Payload actions such as copy should live in the same header row as the payload block they affect
+- Secret-bearing payload fields should stay masked by default; if reveal is offered, it must be an explicit local toggle in the inspector and copy actions should respect the current masked/revealed state
+- Sensitive tokens embedded in logged URLs or endpoints should be masked before they reach the viewer; URL surfaces should never expose raw credentials by default
+- Request rows should prioritize `method`, `endpoint`, `status code`, and API response time; avoid extra diagnostic chrome unless it clearly helps
+- Long request URLs should be read primarily in the expanded inspector content, not via cramped hover tooltips over collapsed rows
+- Hover and selected states in App Logs should be clearly visible through stronger surface change and a distinct active border
+- The top-right destructive action in App Logs clears the full log store; the tab strip may expose a second destructive icon aligned to the far right that clears only the currently selected tab and names that scope in its tooltip
+- The tab strip, counters, and right-side actions in App Logs should align to the exact same inner content width as the log table below; left and right empty space should feel symmetrical with no extra right drift
+- Tab buttons and tab-scoped action icons in App Logs should share the same visual height and sit on a single centered horizontal axis
+- On large desktop windows, App Logs should expand into a wider workspace instead of staying as a narrow centered card; keep a modest viewport margin, but use the available horizontal space for inspection tasks
+- Clear and close actions in App Logs should use icon buttons consistent with the header/window-control language
+- Any support copy, labels, counters, and tree text inside logs must follow the shared readable small-text baseline and AA contrast rule
 
 ## 5. Components
 

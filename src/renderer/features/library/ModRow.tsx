@@ -3,6 +3,7 @@ import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { Tooltip } from '../ui/Tooltip'
+import { formatWindowsDateTime } from '../../utils/dateFormat'
 
 interface ModRowProps {
   mod: ModMetadata
@@ -47,19 +48,6 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 const ACTIVE_COLOR = '#fcee09'
-const formatDate = (dateStr?: string): string => {
-  if (!dateStr) return '—'
-  const date = new Date(dateStr)
-  if (Number.isNaN(date.getTime())) return '—'
-
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
-  const ss = String(date.getSeconds()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
-}
 
 export const ModRow: React.FC<ModRowProps> = ({
   mod,
@@ -86,7 +74,7 @@ export const ModRow: React.FC<ModRowProps> = ({
     return (
       <div
         onClick={onSelect}
-        className="flex items-center gap-4 px-6 py-2 cursor-pointer border-b-[0.5px] border-[#1a1a1a] hover:bg-[#0a0a0a] transition-colors"
+        className="flex items-center gap-4 px-6 py-1 cursor-pointer border-b-[0.5px] border-[#1a1a1a] hover:bg-[#0a0a0a] transition-colors"
       >
         <div className="flex-1 h-px bg-[#1a1a1a]" />
         <span className="text-[10px] brand-font font-bold text-[#8a8a8a] uppercase tracking-widest whitespace-nowrap flex-shrink-0">
@@ -121,13 +109,13 @@ export const ModRow: React.FC<ModRowProps> = ({
       onClick={onSelect}
       onDoubleClick={() => onOpenDetails(mod)}
       onContextMenu={(event) => onContextMenu(event, mod)}
-      className={`library-mod-row grid gap-4 pl-6 pr-6 py-3 border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity] duration-150 ${rowBackgroundClass} ${
+      className={`library-mod-row grid h-[38px] gap-4 pl-6 pr-6 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity] duration-150 ${rowBackgroundClass} ${
         mod.enabled
           ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
           : 'opacity-50 hover:opacity-86 hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
       } ${selected ? 'ring-1 ring-inset ring-[#fcee09]/50' : ''}`}
       style={{
-        gridTemplateColumns: '72px 64px minmax(280px,1fr) 110px 156px 184px 96px',
+        gridTemplateColumns: '72px 80px minmax(280px,1fr) 110px 156px 184px 96px',
       }}
     >
       <div
@@ -179,7 +167,7 @@ export const ModRow: React.FC<ModRowProps> = ({
               if (event.key === 'Enter') onRenameSave()
               if (event.key === 'Escape') onRenameCancel()
             }}
-            className="allow-text-selection h-8 w-full border-[0.5px] border-[#333] bg-[#0a0a0a] px-3 text-[13px] text-white focus:border-[#fcee09]/50 focus:outline-none"
+            className="allow-text-selection h-6 w-full border-[0.5px] border-[#333] bg-[#0a0a0a] px-3 text-[12px] text-white focus:border-[#fcee09]/50 focus:outline-none"
           />
         ) : (
           <span
@@ -192,7 +180,7 @@ export const ModRow: React.FC<ModRowProps> = ({
         )}
       </div>
 
-      <div className={`flex items-center text-[11px] font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]' : 'text-[#8a8a8a] group-hover:text-[#aaaaaa]'}`}>
+      <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]' : 'text-[#8a8a8a] group-hover:text-[#aaaaaa]'}`}>
         {mod.version ?? '—'}
       </div>
 
@@ -207,8 +195,8 @@ export const ModRow: React.FC<ModRowProps> = ({
         </span>
       </div>
 
-      <div className={`flex items-center text-[11px] font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#bdbdbd]' : 'text-[#8a8a8a] group-hover:text-[#9d9d9d]'}`}>
-        {mod.enabled ? formatDate(mod.installedAt) : '---'}
+      <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#bdbdbd]' : 'text-[#8a8a8a] group-hover:text-[#9d9d9d]'}`}>
+        {mod.enabled ? formatWindowsDateTime(mod.installedAt) : '---'}
       </div>
 
       <div className="flex items-center justify-end gap-2">
@@ -220,7 +208,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   event.stopPropagation()
                   onRenameSave()
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#2b4f2f] bg-[#0a0a0a] text-[#6fe3b1] hover:border-[#6fe3b1]/45 transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#2b4f2f] bg-[#0a0a0a] text-[#6fe3b1] hover:border-[#6fe3b1]/45 transition-all"
               >
                 <span className="material-symbols-outlined text-[15px]">check</span>
               </button>
@@ -231,7 +219,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   event.stopPropagation()
                   onRenameCancel()
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] hover:border-[#8a8a8a] hover:text-white transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] hover:border-[#8a8a8a] hover:text-white transition-all"
               >
                 <span className="material-symbols-outlined text-[15px]">close</span>
               </button>
@@ -245,7 +233,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   event.stopPropagation()
                   onRename(mod)
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
               >
                 <span className="material-symbols-outlined text-[15px]">edit</span>
               </button>
@@ -256,7 +244,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   event.stopPropagation()
                   onDelete(mod)
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
               >
                 <span className="material-symbols-outlined text-[15px]">delete</span>
               </button>
@@ -286,4 +274,3 @@ function areModRowPropsEqual(prev: ModRowProps, next: ModRowProps): boolean {
 }
 
 export const MemoModRow = React.memo(ModRow, areModRowPropsEqual)
-

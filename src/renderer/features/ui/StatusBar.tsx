@@ -1,11 +1,13 @@
 import React from 'react'
 import Box from '@mui/material/Box'
 import { useAppStore } from '../../store/useAppStore'
+import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
 
 export const StatusBar: React.FC = () => {
   const { statusMessage, mods, installing, installProgress, installStatus } = useAppStore()
   const enabledCount = mods.filter((m) => m.enabled && m.kind === 'mod').length
   const totalCount = mods.filter((m) => m.kind === 'mod').length
+  const installAppearance = getInstallProgressAppearance(installStatus)
 
   const label = installing
     ? `${installStatus ?? 'Installing...'} ${installProgress > 0 ? `${installProgress}%` : ''}`.trim()
@@ -31,8 +33,9 @@ export const StatusBar: React.FC = () => {
             <Box sx={{
               height: '100%',
               width: `${installProgress}%`,
-              background: '#FCEE09',
+              background: installAppearance.accent,
               borderRadius: 1,
+              boxShadow: `0 0 8px ${installAppearance.accent}66`,
               transition: 'width 0.3s ease'
             }} />
           </Box>
@@ -40,7 +43,7 @@ export const StatusBar: React.FC = () => {
         <Box component="span" sx={{
           fontSize: '0.72rem',
           fontFamily: '"DM Sans", sans-serif',
-          color: 'rgba(242,242,242,0.58)',
+          color: installing ? installAppearance.accent : 'rgba(242,242,242,0.58)',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis'

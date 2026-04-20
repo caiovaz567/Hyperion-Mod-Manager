@@ -44,7 +44,8 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
       ? (raw?.downloadPath?.trim() || getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath)
       : (getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath),
     theme: 'dark',
-    autoUpdate: raw?.autoUpdate ?? true
+    autoUpdate: raw?.autoUpdate ?? true,
+    nexusApiKey: raw?.nexusApiKey ?? '',
   }
 }
 

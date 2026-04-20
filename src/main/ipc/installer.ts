@@ -1,8 +1,8 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import { spawn, spawnSync } from 'child_process'
 import { v4 as uuidv4 } from 'uuid'
-import AdmZip from 'adm-zip'
 import { IPC } from '../../shared/types'
 import type {
   ModMetadata,
@@ -13,28 +13,176 @@ import type {
   InstallModRequest,
   InstallModResponse,
 } from '../../shared/types'
+import { pushGeneralLog, safeSendToWindow } from '../logStore'
 import { loadSettings } from '../settings'
 import { detectModType } from './archiveParser'
 import { resolveHashes } from './hashResolver'
 import { disableMod, findModDir, scanMods } from './modManager'
 import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
+import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
 
 type GetMainWindow = () => BrowserWindow | null
+
+const SUPPORTED_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
+
+interface ArchiveExtractor {
+  binPath: string
+  label: string
+  supportsRar: boolean
+}
+
+const rarSupportCache = new Map<string, boolean>()
+const PACKAGED_7ZIP_DIR = path.join(process.resourcesPath, 'tools', '7zip')
+
+function unpackElectronAsarPath(filePath: string): string {
+  return filePath.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1')
+}
+
+function resolveDevBundled7ZipBinary(): string {
+  const packageRoot = path.dirname(require.resolve('7zip-bin-full/package.json'))
+
+  if (process.platform === 'win32') {
+    return path.join(packageRoot, 'win', process.arch, '7z.exe')
+  }
+
+  if (process.platform === 'darwin') {
+    return path.join(packageRoot, 'mac', process.arch, '7zz')
+  }
+
+  return path.join(packageRoot, 'linux', process.arch, '7zz')
+}
+
+function resolvePackagedBundled7ZipBinary(): string {
+  const binaryName = process.platform === 'win32' ? '7z.exe' : '7zz'
+  return path.join(PACKAGED_7ZIP_DIR, binaryName)
+}
+
+function buildErrorDetails(error: unknown, extra?: Record<string, unknown>): Record<string, unknown> {
+  if (error instanceof Error) {
+    const errorWithCode = error as Error & { code?: string }
+    return {
+      ...extra,
+      error: error.message,
+      code: errorWithCode.code,
+    }
+  }
+
+  return {
+    ...extra,
+    error: String(error),
+  }
+}
 
 function sendProgress(
   win: BrowserWindow | null,
   step: string,
-  percent: number
+  percent: number,
+  currentFile?: string
 ): void {
-  win?.webContents.send(IPC.INSTALL_PROGRESS, { step, percent })
+  safeSendToWindow(win, IPC.INSTALL_PROGRESS, { step, percent, currentFile })
 }
 
-/**
- * Extracts a ZIP archive to a temp directory.
- */
-function extractZip(archivePath: string, destDir: string): void {
-  const zip = new AdmZip(archivePath)
-  zip.extractAllTo(destDir, true)
+function supportsRarExtraction(binPath: string): boolean {
+  const cached = rarSupportCache.get(binPath)
+  if (cached !== undefined) return cached
+
+  try {
+    const result = spawnSync(binPath, ['i'], {
+      encoding: 'utf-8',
+      windowsHide: true,
+    })
+    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+    const supported = output.includes(' Rar      rar') || output.includes(' Rar5     rar')
+    rarSupportCache.set(binPath, supported)
+    return supported
+  } catch {
+    rarSupportCache.set(binPath, false)
+    return false
+  }
+}
+
+function resolveArchiveExtractor(extension: string): ArchiveExtractor {
+  void extension
+  const binPath = app.isPackaged
+    ? resolvePackagedBundled7ZipBinary()
+    : unpackElectronAsarPath(resolveDevBundled7ZipBinary())
+
+  return {
+    binPath,
+    label: '7z',
+    supportsRar: fs.existsSync(binPath) && supportsRarExtraction(binPath),
+  }
+}
+
+function countArchiveFiles(extractor: ArchiveExtractor, archivePath: string): Promise<number> {
+  return new Promise((resolve) => {
+    const args = ['l', '-ba', '-slt', archivePath]
+    const proc = spawn(extractor.binPath, args, { windowsHide: true })
+    let count = 0
+    let buffer = ''
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString()
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (line.startsWith('Attr = ') && !line.includes('D')) count++
+        if (/^Attributes = [^D]/.test(line)) count++
+      }
+    })
+
+    proc.on('close', () => resolve(Math.max(count, 1)))
+    proc.on('error', () => resolve(1))
+  })
+}
+
+function extractArchiveAsync(
+  extractor: ArchiveExtractor,
+  archivePath: string,
+  destDir: string,
+  totalFiles: number,
+  onFile: (name: string, percent: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const args = ['x', archivePath, `-o${destDir}`, '-y', '-bb1', '-bd']
+    const proc = spawn(extractor.binPath, args, { windowsHide: true })
+    let extracted = 0
+    let buffer = ''
+    let stderrBuffer = ''
+    let stdoutTail = ''
+
+    proc.stdout.on('data', (chunk: Buffer) => {
+      const text = chunk.toString()
+      stdoutTail = `${stdoutTail}${text}`.slice(-4000)
+      buffer += text
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        const trimmed = line.trimStart()
+        if (trimmed.startsWith('- ') || trimmed.startsWith('Extracting  ')) {
+          const name = trimmed.replace(/^(- |Extracting\s+)/, '').trim()
+          extracted++
+          const percent = Math.min(99, Math.round((extracted / totalFiles) * 90) + 5)
+          onFile(name, percent)
+        }
+      }
+    })
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      stderrBuffer = `${stderrBuffer}${chunk.toString()}`.slice(-4000)
+    })
+
+    proc.on('close', (code) => {
+      if (code === 0 || code === null) resolve()
+      else {
+        const details = `${stderrBuffer}\n${stdoutTail}`.trim()
+        const suffix = details ? `: ${details.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(-3).join(' | ')}` : ''
+        reject(new Error(`Extraction failed via ${extractor.label} (exit code ${code})${suffix}`))
+      }
+    })
+
+    proc.on('error', (err) => reject(new Error(`Could not start extractor ${extractor.label}: ${err.message}`)))
+  })
 }
 
 /**
@@ -70,6 +218,30 @@ function uniqueDisplayName(existingMods: ModMetadata[], base: string): string {
     candidate = `${base} Copy ${index}`
   }
   return candidate
+}
+
+function extractVersionFromName(rawName: string): string | undefined {
+  const cleaned = rawName
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
+    .replace(/[_]+/g, ' ')
+    .trim()
+
+  const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)
+  if (dashParts.length > 1) {
+    for (let index = 1; index < dashParts.length; index += 1) {
+      const trailing = dashParts.slice(index)
+      const versionLike = trailing.every((part) => /^v?\d+[a-z0-9.]*$/i.test(part))
+      if (versionLike) {
+        return trailing.map((part) => part.replace(/^v/i, '')).join('.')
+      }
+    }
+  }
+
+  const match = /[-_ ]v?(\d+(?:[._-]\d+)+)$/i.exec(cleaned)
+  if (match) return match[1].replace(/[_-]/g, '.')
+
+  return undefined
 }
 
 function normalizeModName(rawName: string): string {
@@ -140,6 +312,12 @@ function findDuplicateMod(
   }) ?? null
 }
 
+function getNextInstallOrder(existingMods: ModMetadata[]): number {
+  return existingMods
+    .filter((mod) => mod.kind === 'mod')
+    .reduce((highestOrder, mod) => Math.max(highestOrder, mod.order), -1) + 1
+}
+
 async function removeExistingMod(
   mod: ModMetadata,
   settings: ReturnType<typeof loadSettings>
@@ -163,39 +341,91 @@ async function installMod(
 ): Promise<IpcResult<InstallModResponse>> {
   const request = normalizeInstallRequest(requestInput)
   const { filePath, duplicateAction = 'prompt', targetModId } = request
+  const targetModMatchId = duplicateAction === 'replace' ? targetModId : undefined
   const ext = path.extname(filePath).toLowerCase()
-  const isDir = fs.statSync(filePath).isDirectory()
-
-  if (!isDir && ext !== '.zip') {
-    return { ok: false, error: `Unsupported format: ${ext}. Only .zip archives are supported.` }
-  }
-
-  const rawName = isDir ? path.basename(filePath) : path.basename(filePath, ext)
-  const normalizedName = normalizeModName(rawName)
-  const folderBase = sanitizeFolderName(rawName)
+  const extractor = resolveArchiveExtractor(ext)
+  let isDir = false
+  let normalizedName = path.basename(filePath, ext) || path.basename(filePath)
+  let folderBase = sanitizeFolderName(normalizedName)
   const tempDir = path.join(settings.libraryPath, `_tmp_${uuidv4()}`)
+  let modDir = ''
 
   try {
-    sendProgress(win, 'Extracting...', 10)
+    isDir = fs.statSync(filePath).isDirectory()
+    if (!isDir && !SUPPORTED_EXTENSIONS.has(ext)) {
+      pushGeneralLog(win, {
+        level: 'error',
+        source: 'install',
+        message: 'Install failed: unsupported format',
+        details: { filePath, extension: ext },
+      })
+      return { ok: false, error: `Unsupported format: ${ext}. Supported: .zip, .7z, .rar` }
+    }
+    if (!isDir && !fs.existsSync(extractor.binPath)) {
+      pushGeneralLog(win, {
+        level: 'error',
+        source: 'install',
+        message: 'Install failed: bundled extractor is missing',
+        details: {
+          filePath,
+          extractor: extractor.label,
+          extractorPath: extractor.binPath,
+          packaged: app.isPackaged,
+        },
+      })
+      return {
+        ok: false,
+        error: 'The bundled Hyperion extractor is missing. Reinstall Hyperion or rebuild the app package.',
+      }
+    }
+    if (!isDir && ext === '.rar' && !extractor.supportsRar) {
+      pushGeneralLog(win, {
+        level: 'error',
+        source: 'install',
+        message: 'Install failed: RAR extraction is unavailable',
+        details: {
+          filePath,
+          extractor: extractor.label,
+          extractorPath: extractor.binPath,
+          extension: ext,
+        },
+      })
+      return {
+        ok: false,
+        error: 'The bundled Hyperion extractor does not have RAR support available. Reinstall Hyperion or rebuild the app package.',
+      }
+    }
+
+    const rawName = isDir ? path.basename(filePath) : path.basename(filePath, ext)
+    normalizedName = normalizeModName(rawName)
+    folderBase = sanitizeFolderName(rawName)
+
+    pushGeneralLog(win, {
+      level: 'info',
+      source: 'install',
+      message: `Install started: ${normalizedName}`,
+      details: {
+        filePath,
+        duplicateAction,
+        targetModId,
+      },
+    })
+
+    sendProgress(win, 'Preparing...', 5)
     fs.mkdirSync(tempDir, { recursive: true })
 
     if (isDir) {
-      // Copy folder contents directly
-      const srcEntries = fs.readdirSync(filePath, { withFileTypes: true })
-      for (const entry of srcEntries) {
-        const src = path.join(filePath, entry.name)
-        const dest = path.join(tempDir, entry.name)
-        if (entry.isDirectory()) {
-          copyDirSync(src, dest)
-        } else {
-          fs.copyFileSync(src, dest)
-        }
-      }
+      sendProgress(win, 'Copying files...', 10)
+      copyDirSync(filePath, tempDir)
     } else {
-      extractZip(filePath, tempDir)
+      sendProgress(win, 'Reading archive...', 8)
+      const totalFiles = await countArchiveFiles(extractor, filePath)
+      await extractArchiveAsync(extractor, filePath, tempDir, totalFiles, (name, percent) => {
+        sendProgress(win, 'Extracting...', percent, name.replace(/\\/g, '/'))
+      })
     }
 
-    sendProgress(win, 'Detecting mod type...', 40)
+    sendProgress(win, 'Detecting mod type...', 95)
 
     // Flatten single-subfolder wrapping (common in mod archives)
     const tempContents = fs.readdirSync(tempDir)
@@ -209,11 +439,15 @@ async function installMod(
 
     const modType = detectModType(extractRoot)
 
-    sendProgress(win, 'Checking for conflicts...', 60)
+    sendProgress(win, 'Checking for conflicts...', 96)
 
     // Detect conflicts using archive hashes
     const existingMods = await scanMods(settings.libraryPath)
-    const duplicateMod = findDuplicateMod(existingMods, normalizedName, folderBase, targetModId)
+    const duplicateMod = findDuplicateMod(existingMods, normalizedName, folderBase, targetModMatchId)
+    const nextInstallOrder = getNextInstallOrder(existingMods)
+    const installOrder = duplicateAction === 'replace'
+      ? (duplicateMod?.order ?? existingMods.length)
+      : nextInstallOrder
 
     if (duplicateMod && duplicateAction === 'prompt') {
       fs.rmSync(tempDir, { recursive: true, force: true })
@@ -247,9 +481,9 @@ async function installMod(
     const folderName = duplicateAction === 'replace' && duplicateMod?.folderName
       ? duplicateMod.folderName
       : uniqueFolderName(settings.libraryPath, sanitizeFolderName(modName))
-    const modDir = path.join(settings.libraryPath, folderName)
+    modDir = path.join(settings.libraryPath, folderName)
     const enabledMods = existingMods.filter(
-      (m) => m.enabled && m.kind === 'mod' && m.uuid !== duplicateMod?.uuid
+      (m) => m.enabled && m.kind === 'mod' && (duplicateAction !== 'replace' || m.uuid !== duplicateMod?.uuid)
     )
 
     const conflicts = await checkConflicts(extractRoot, modName, enabledMods, settings)
@@ -258,16 +492,26 @@ async function installMod(
       // Clean up temp, return conflicts for user resolution
       fs.rmSync(tempDir, { recursive: true, force: true })
       sendProgress(win, 'Conflicts detected', 100)
+      pushGeneralLog(win, {
+        level: 'warn',
+        source: 'install',
+        message: `Install conflict detected: ${modName}`,
+        details: {
+          filePath,
+          conflictCount: conflicts.length,
+          conflicts,
+        },
+      })
       return {
         ok: true,
         data: {
           status: 'conflict',
           mod: buildPartialMeta(
-            duplicateMod?.uuid ?? uuidv4(),
+            duplicateAction === 'replace' ? (duplicateMod?.uuid ?? uuidv4()) : uuidv4(),
             modName,
             modType,
             extractRoot,
-            duplicateMod?.order ?? existingMods.length,
+            installOrder,
             folderName,
             filePath,
             isDir ? 'directory' : 'archive'
@@ -277,7 +521,7 @@ async function installMod(
       }
     }
 
-    sendProgress(win, 'Installing...', 80)
+    sendProgress(win, 'Installing...', 97)
 
     // Move to library
     fs.mkdirSync(modDir, { recursive: true })
@@ -289,13 +533,14 @@ async function installMod(
 
     // Generate hashes for .archive files
     const hashes = await resolveHashes(modDir)
+    const nexusRecord = findNexusDownloadRecordByPath(filePath)
 
     const meta: ModMetadata = {
       uuid: (duplicateAction === 'replace' && duplicateMod?.uuid) ? duplicateMod.uuid : uuidv4(),
       name: modName,
       type: modType,
       kind: 'mod',
-      order: duplicateMod?.order ?? existingMods.length,
+      order: installOrder,
       enabled: false,
       installedAt: new Date().toISOString(),
       sourceModifiedAt: getSourceModifiedAt(filePath),
@@ -305,6 +550,9 @@ async function installMod(
       folderName,
       sourcePath: filePath,
       sourceType: isDir ? 'directory' : 'archive',
+      nexusModId: nexusRecord?.modId,
+      nexusFileId: nexusRecord?.fileId,
+      version: nexusRecord?.version ?? extractVersionFromName(rawName),
     }
 
     // Write metadata
@@ -315,6 +563,16 @@ async function installMod(
     )
 
     sendProgress(win, 'Done', 100)
+    pushGeneralLog(win, {
+      level: 'info',
+      source: 'install',
+      message: `Install completed: ${meta.name}`,
+      details: {
+        modId: meta.uuid,
+        filePath,
+        folderName,
+      },
+    })
     return {
       ok: true,
       data: {
@@ -326,7 +584,16 @@ async function installMod(
   } catch (err: unknown) {
     // Cleanup on failure
     fs.rmSync(tempDir, { recursive: true, force: true })
-    if (fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true })
+    if (modDir && fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true })
+    pushGeneralLog(win, {
+      level: 'error',
+      source: 'install',
+      message: `Install failed: ${normalizedName}`,
+      details: buildErrorDetails(err, {
+        filePath,
+        targetModId,
+      }),
+    })
     return { ok: false, error: String(err) }
   }
 }

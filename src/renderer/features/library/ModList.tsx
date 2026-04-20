@@ -10,6 +10,8 @@ import { DetailPanel } from './DetailPanel'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { Tooltip } from '../ui/Tooltip'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
+import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
+import { useVirtualRows } from '../../hooks/useVirtualRows'
 
 interface ContextMenuState {
   mod: ModMetadata
@@ -29,11 +31,20 @@ type PendingActionState =
 type LibrarySortKey = 'name' | 'type' | 'installedAt'
 type SortDirection = 'asc' | 'desc'
 
-const LIBRARY_GRID_TEMPLATE = '72px 64px minmax(280px,1fr) 110px 156px 184px 96px'
+const LIBRARY_GRID_TEMPLATE = '72px 80px minmax(280px,1fr) 110px 156px 184px 96px'
+const MOD_ROW_HEIGHT = 38
+const MOD_VIRTUALIZATION_THRESHOLD = 120
+
+const getInstallDisplayName = (sourcePath: string, currentFile: string): string => {
+  const raw = currentFile || sourcePath
+  if (!raw) return 'Installing mod'
+  const normalized = raw.replace(/\//g, '\\')
+  const parts = normalized.split('\\').filter(Boolean)
+  return parts[parts.length - 1] ?? raw
+}
 
 export const ModList: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false)
-  const [isInstalling, setIsInstalling] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -49,6 +60,10 @@ export const ModList: React.FC = () => {
   const [submittingAction, setSubmittingAction] = useState(false)
   const [sortKey, setSortKey] = useState<LibrarySortKey | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement>(null)
+  const listScrollRef = useRef<HTMLDivElement>(null)
+  const [isBulkToggling, setIsBulkToggling] = useState(false)
 
   const {
     filter,
@@ -73,6 +88,13 @@ export const ModList: React.FC = () => {
     gamePathValid,
     libraryPathValid,
     typeFilter,
+    installing,
+    installSourcePath,
+    installTargetModId,
+    installPlacement,
+    installProgress,
+    installStatus,
+    installCurrentFile,
   } = useAppStore((state) => ({
     filter: state.filter,
     filteredMods: state.filteredMods,
@@ -96,9 +118,17 @@ export const ModList: React.FC = () => {
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
     typeFilter: state.typeFilter,
+    installing: state.installing,
+    installSourcePath: state.installSourcePath,
+    installTargetModId: state.installTargetModId,
+    installPlacement: state.installPlacement,
+    installProgress: state.installProgress,
+    installStatus: state.installStatus,
+    installCurrentFile: state.installCurrentFile,
   }), shallow)
 
   const hasRequiredPaths = Boolean(settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid)
+  const installAppearance = getInstallProgressAppearance(installStatus)
 
   const finalizeInstalledMod = useCallback(async (
     mod: ModMetadata,
@@ -183,10 +213,34 @@ export const ModList: React.FC = () => {
   const bulkToggleTooltip = libraryStatusFilter === 'enabled'
     ? 'Unavailable while Enabled filter is active'
     : 'Unavailable while Disabled filter is active'
+  const installTargetMod = installTargetModId
+    ? allMods.find((mod) => mod.uuid === installTargetModId) ?? null
+    : null
+  const installDisplayName = installTargetMod?.name ?? getInstallDisplayName(installSourcePath, installCurrentFile)
+  const hasAppendInstallRow = installing && installPlacement === 'append'
 
   selectedIdsRef.current = selectedIds
   selectionAnchorIdRef.current = selectionAnchorId
   displayedModsRef.current = displayedMods
+
+  const virtualizedMods = useVirtualRows({
+    containerRef: listScrollRef,
+    count: displayedMods.length + (hasAppendInstallRow ? 1 : 0),
+    rowHeight: MOD_ROW_HEIGHT,
+    overscan: 14,
+    enabled: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD,
+  })
+
+  const visibleMods = useMemo(
+    () => displayedMods.slice(
+      virtualizedMods.startIndex,
+      Math.min(virtualizedMods.endIndex, displayedMods.length)
+    ),
+    [displayedMods, virtualizedMods.endIndex, virtualizedMods.startIndex]
+  )
+  const showAppendInstallRow = hasAppendInstallRow &&
+    virtualizedMods.startIndex <= displayedMods.length &&
+    virtualizedMods.endIndex > displayedMods.length
 
   const sortStateFor = (key: LibrarySortKey): 'ascending' | 'descending' | 'none' => {
     if (sortKey !== key) return 'none'
@@ -247,6 +301,15 @@ export const ModList: React.FC = () => {
   }, [displayedMods])
 
   useEffect(() => {
+    if (!filterOpen) return
+    const close = (e: MouseEvent) => {
+      if (!filterRef.current?.contains(e.target as Node)) setFilterOpen(false)
+    }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [filterOpen])
+
+  useEffect(() => {
     if (!libraryDeleteAllRequestedAt) return
     setPendingAction({ type: 'delete-all', count: totalCount })
     clearLibraryDeleteAllRequest()
@@ -259,15 +322,11 @@ export const ModList: React.FC = () => {
       return
     }
 
-    setIsInstalling(true)
     const installResult = await installMod(filePath)
     if (!installResult.ok || !installResult.data) {
       addToast(installResult.error ?? 'Install failed', 'error')
-      setIsInstalling(false)
       return
     }
-
-    setIsInstalling(false)
 
     if (installResult.data.status === 'installed' && installResult.data.mod) {
       await finalizeInstalledMod(installResult.data.mod, `${installResult.data.mod.name} installed & activated`)
@@ -527,6 +586,21 @@ export const ModList: React.FC = () => {
     setContextMenu(null)
   }
 
+  const handleContextOpenOnNexus = async () => {
+    if (!contextMenu) return
+    const mod = contextMenu.mod
+    const modId = mod.nexusModId ?? mod.nexusFileId
+    if (!modId) {
+      addToast('No Nexus link stored for this mod', 'warning')
+      setContextMenu(null)
+      return
+    }
+
+    const url = `https://www.nexusmods.com/cyberpunk2077/mods/${mod.nexusModId ?? mod.nexusFileId}`
+    await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
+    setContextMenu(null)
+  }
+
   const handleDeleteMod = async (mod: ModMetadata) => {
     const result = await deleteMod(mod.uuid)
     if (!result.ok) {
@@ -599,10 +673,122 @@ export const ModList: React.FC = () => {
   const destructiveButtonClass = `${browseLikeButtonClass} border-[#5b1818] bg-[#160707] text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1]`
   const disabledBrowseLikeButtonClass = `${browseLikeButtonClass} cursor-not-allowed border-[#303030] bg-[#131313] text-[#666666] shadow-none`
 
-  return (
-    <div className="h-full pb-16 animate-settings-in">
+  const renderInstallRow = () => (
     <div
-      className="flex h-full overflow-hidden relative select-none"
+      className="relative h-[38px] overflow-hidden border-b-[0.5px]"
+      style={{
+        background: installAppearance.rowTint,
+        borderColor: installAppearance.softBorder,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 transition-all duration-500"
+        style={{
+          width: `${Math.max(0, Math.min(installProgress, 100))}%`,
+          background: installAppearance.fill,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 w-[2px] transition-all duration-500"
+        style={{
+          left: `calc(${Math.max(0, Math.min(installProgress, 99.6))}% - 1px)`,
+          background: installAppearance.accent,
+          boxShadow: `0 0 10px ${installAppearance.accent}aa`,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{
+          background: installAppearance.accent,
+          boxShadow: `0 0 8px ${installAppearance.accent}55`,
+        }}
+      />
+      <div
+        className="relative z-10 grid h-[38px] gap-4 pl-6 pr-6 py-[5px]"
+        style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
+      >
+        <div className="flex items-center pl-2">
+          <div
+            className="flex h-4 w-8 items-center justify-center rounded-full border-[0.5px]"
+            style={{
+              borderColor: `${installAppearance.accent}44`,
+              background: '#0a0a0a',
+            }}
+          >
+            <span
+              className="material-symbols-outlined animate-spin text-[12px]"
+              style={{ color: installAppearance.accent }}
+            >
+              progress_activity
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center text-[12px] font-mono text-[#9a9a9a]">
+          ...
+        </div>
+        <div className="flex min-w-0 flex-col justify-center gap-0.5 overflow-hidden">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
+              {installDisplayName}
+            </span>
+            <span
+              className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+              style={{
+                color: installAppearance.accent,
+                borderColor: `${installAppearance.accent}55`,
+                background: `${installAppearance.accent}12`,
+              }}
+            >
+              {installAppearance.label}
+            </span>
+          </div>
+          <span
+            className="truncate text-sm font-mono tracking-tight"
+            style={{ color: installAppearance.accent }}
+          >
+            {installCurrentFile || installAppearance.detailFallback}
+          </span>
+        </div>
+        <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          {installProgress > 0 ? `${installProgress}%` : '...'}
+        </div>
+        <div className="flex items-center">
+          <span
+            className="px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm"
+            style={{
+              color: installAppearance.accent,
+              borderColor: `${installAppearance.accent}40`,
+              background: '#0a0a0a',
+            }}
+          >
+            {installAppearance.label}
+          </span>
+        </div>
+        <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          {installStatus || installAppearance.summary}
+        </div>
+        <div className="flex items-center justify-end">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+            style={{
+              borderColor: `${installAppearance.accent}44`,
+              color: installAppearance.accent,
+            }}
+          >
+            <span className="material-symbols-outlined animate-spin text-[15px]">progress_activity</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="h-full animate-settings-in">
+    <div
+      className="flex flex-col h-full overflow-hidden relative select-none"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -614,128 +800,150 @@ export const ModList: React.FC = () => {
         </div>
       )}
 
-      {isInstalling && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/90 pointer-events-none">
-          <span className="material-symbols-outlined text-[40px] text-[#fcee09] mb-4 animate-spin">progress_activity</span>
-          <span className="brand-font text-sm text-[#9a9a9a] tracking-widest uppercase">Installing...</span>
+      {/* Fixed header — does not scroll */}
+      <div className="shrink-0 px-8 pt-6 pb-3 w-full">
+        <div className="flex items-center gap-2">
+          <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
+            Managed Mods
+          </h1>
+          <Tooltip
+            content="Shift+Click selects ranges · Ctrl+Click adds individual mods · Ctrl+A selects all visible mods"
+            side="bottom"
+          >
+            <span className="material-symbols-outlined text-[16px] text-[#4a4a4a] hover:text-[#7a7a7a] transition-colors cursor-default mt-0.5">
+              help_outline
+            </span>
+          </Tooltip>
         </div>
-      )}
-
-      <div className="hyperion-scrollbar managed-mods-scroll flex-1 overflow-y-auto">
-        <div className="p-8 pb-24 max-w-[1600px] mx-auto">
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
-                Managed Mods
-              </h1>
-              <p className="text-[#9a9a9a] text-xs mt-1.5 flex items-center gap-2 font-mono tracking-tight">
-                TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
-              </p>
-              <p className="text-[#818181] text-[10px] mt-2 font-mono uppercase tracking-[0.18em] leading-relaxed">
-                Tip: Shift+Click selects ranges. Ctrl+Click adds single mods. Ctrl+A selects every visible mod and opens bulk actions.
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setLibraryStatusFilter('all')}
-                  className={`${browseLikeButtonClass} ${
-                    libraryStatusFilter === 'all'
-                      ? 'border-[#4fd8ff] bg-[#4fd8ff] text-[#051218]'
-                      : 'border-[#1f4c57] bg-transparent text-[#88dceb] hover:border-[#4fd8ff] hover:text-[#b8f3ff]'
-                  }`}
-                >
-                  <span className="brand-font font-bold">All</span>
-                </button>
-                <button
-                  onClick={() => setLibraryStatusFilter('enabled')}
-                  className={`${libraryStatusFilter === 'enabled' ? activeBrowseLikeButtonClass : darkBrowseLikeButtonClass} inline-flex gap-2`}
-                >
-                  <span className="brand-font font-bold">Enabled</span>
-                </button>
-                <button
-                  onClick={() => setLibraryStatusFilter('disabled')}
-                  className={`${libraryStatusFilter === 'disabled' ? activeBrowseLikeButtonClass : darkBrowseLikeButtonClass} inline-flex gap-2`}
-                >
-                  <span className="brand-font font-bold">Disabled</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-nowrap gap-3 items-center justify-end">
-              <Tooltip content="Delete every mod from the current library">
-                <button
-                  onClick={() => requestLibraryDeleteAll()}
-                  className={destructiveButtonClass}
-                >
-                  <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-                  Delete All
-                </button>
-              </Tooltip>
-
-              <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : allVisibleEnabled ? 'Disable every visible mod' : 'Enable every visible mod'}>
-                <span className="inline-flex">
-                  <button
-                    onClick={() => runBulkToggle(visibleModIds, allVisibleEnabled ? 'disable' : 'enable')}
-                    disabled={bulkToggleDisabled}
-                    className={`${bulkToggleDisabled ? disabledBrowseLikeButtonClass : allVisibleEnabled ? darkBrowseLikeButtonClass : activeBrowseLikeButtonClass} shadow-[0_0_16px_rgba(252,238,9,0.1)]`}
-                  >
-                    <span className="brand-font text-[10px] font-bold uppercase tracking-[0.18em]">
-                      {allVisibleEnabled ? 'Disable All' : 'Enable All'}
-                    </span>
-                  </button>
-                </span>
-              </Tooltip>
-
+        <p className="ui-support-mono mt-1 flex items-center gap-2">
+          TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
+        </p>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div ref={filterRef} className="relative">
               <button
-                onClick={handleInstallClick}
-                className="flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-sm bg-[#fcee09] px-4 text-xs brand-font font-bold uppercase tracking-widest text-[#050505] transition-colors shadow-[0_0_20px_rgba(252,238,9,0.15)] hover:bg-white"
+                onClick={() => setFilterOpen((v) => !v)}
+                className={`group flex h-10 items-center gap-2 rounded-sm border-[0.5px] pl-3 pr-3 text-xs brand-font font-bold uppercase tracking-widest transition-colors ${filterOpen ? 'border-[#fcee09]/50 bg-[#0d0d0d] text-[#fcee09]' : 'border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:border-[#fcee09]/70 hover:text-[#e8e8e8]'}`}
               >
-                <span className="material-symbols-outlined text-[16px]">add</span>
-                Install Mod
+                <span className={`material-symbols-outlined text-[16px] transition-colors ${filterOpen ? 'text-[#fcee09]' : 'text-[#6a6a6a] group-hover:text-[#e8e8e8]'}`}>filter_list</span>
+                {libraryStatusFilter === 'all' ? 'All' : libraryStatusFilter === 'enabled' ? 'Enabled' : 'Disabled'}
+                <span className={`material-symbols-outlined text-[14px] transition-transform transition-colors duration-150 ${filterOpen ? 'rotate-180 text-[#fcee09]' : 'text-[#6a6a6a] group-hover:text-[#e8e8e8]'}`}>expand_more</span>
               </button>
+              {filterOpen && (
+                <div className="absolute top-full left-0 mt-1 z-[200] min-w-[130px] rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] shadow-[0_8px_24px_rgba(0,0,0,0.6)] py-1">
+                  {(['all', 'enabled', 'disabled'] as LibraryStatusFilter[]).map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => { setLibraryStatusFilter(opt); setFilterOpen(false) }}
+                      className={`flex w-full items-center px-4 py-2.5 text-xs brand-font font-bold uppercase tracking-widest transition-colors ${libraryStatusFilter === opt ? 'text-[#fcee09] bg-[#111]' : 'text-[#9d9d9d] hover:text-[#fcee09] hover:bg-[#0d0d0d]'}`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
-            <div
-              className="grid gap-4 px-6 py-0 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
-              style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
-            >
-                <div className="flex h-10 items-center pl-2 text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold whitespace-nowrap">Status</div>
-                <div className="flex h-10 items-center text-[10px] uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">#</div>
-                <button
-                  onClick={() => handleSort('name')}
-                  aria-label={`Sort by mod name${sortKey === 'name' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-10 w-full items-center justify-start gap-0.5 text-left"
-                >
-                  <span className={`text-[10px] uppercase tracking-widest brand-font font-bold ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
-                    Mod Name
-                  </span>
-                  <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'name' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
-                </button>
-                <div className="flex h-10 items-center text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold">Version</div>
-                <button
-                  onClick={() => handleSort('type')}
-                  aria-label={`Sort by type${sortKey === 'type' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-10 w-full items-center justify-start gap-0.5 text-left"
-                >
-                  <span className={`text-[10px] uppercase tracking-widest brand-font font-bold ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
-                    Type
-                  </span>
-                  <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'type' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
-                </button>
-                <button
-                  onClick={() => handleSort('installedAt')}
-                  aria-label={`Sort by installed date${sortKey === 'installedAt' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-10 w-full items-center justify-start gap-0.5 text-left"
-                >
-                  <span className={`text-[10px] uppercase tracking-widest brand-font font-bold ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
-                    Date
-                  </span>
-                  <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'installedAt' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
-                </button>
-                <div className="flex h-10 items-center justify-end text-[9px] uppercase tracking-widest text-[#8a8a8a] brand-font font-bold">Actions</div>
-            </div>
+          <button
+            onClick={handleInstallClick}
+            className="flex h-10 shrink-0 items-center whitespace-nowrap rounded-sm bg-[#fcee09] px-5 text-xs brand-font font-bold uppercase tracking-widest text-[#050505] transition-colors shadow-[0_0_20px_rgba(252,238,9,0.15)] hover:bg-white"
+          >
+            Install Mod
+          </button>
 
+          <div className="h-5 w-px bg-[#2a2a2a]" />
+
+          <Tooltip content="Delete every mod from the current library">
+            <button
+              onClick={() => requestLibraryDeleteAll()}
+              className="flex h-10 w-10 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
+            >
+              <span className="material-symbols-outlined text-[22px]">delete_forever</span>
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+
+        {/* Table — has its own scroll, toolbar stays fixed above */}
+      <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
+        <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
+          <div ref={listScrollRef} className="hyperion-scrollbar managed-mods-scroll h-full overflow-y-auto">
+
+          {/* Sticky column header — scrolls with content area so columns align with row cells */}
+          <div
+            className="sticky top-0 z-10 grid gap-4 px-6 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+            style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
+          >
+            <div className="flex h-8 items-center pl-2">
+              <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : isBulkToggling ? 'Applying…' : allVisibleEnabled ? 'Disable all visible mods' : 'Enable all visible mods'}>
+                <span className="inline-flex">
+                  <button
+                    onClick={async () => {
+                      if (isBulkToggling) return
+                      setIsBulkToggling(true)
+                      await runBulkToggle(visibleModIds, allVisibleEnabled ? 'disable' : 'enable')
+                      setIsBulkToggling(false)
+                    }}
+                    disabled={bulkToggleDisabled || isBulkToggling}
+                    className={`relative h-5 w-10 rounded-full border-[0.5px] transition-all duration-200 ${
+                      bulkToggleDisabled
+                        ? 'cursor-not-allowed border-[#1a1a1a] bg-[#0a0a0a]'
+                        : isBulkToggling
+                          ? 'cursor-wait border-[#4fd8ff]/50 bg-[#041a20] animate-cyan-glow'
+                          : allVisibleEnabled
+                            ? 'border-[#4fd8ff]/55 bg-[#041a20] shadow-[0_0_10px_rgba(79,216,255,0.2)] hover:border-[#4fd8ff]/75'
+                            : 'border-[#222] bg-[#111] hover:border-[#333]'
+                    }`}
+                  >
+                    <div className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full transition-all duration-200 ${
+                      bulkToggleDisabled
+                        ? 'left-[2px] bg-[#2a2a2a]'
+                        : allVisibleEnabled
+                          ? 'right-[2px] bg-[#4fd8ff]'
+                          : 'left-[2px] bg-[#5a5a5a]'
+                    }`} />
+                  </button>
+                </span>
+              </Tooltip>
+            </div>
+            <div className="flex h-8 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">#</div>
+            <button
+              onClick={() => handleSort('name')}
+              aria-label={`Sort by mod name${sortKey === 'name' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
+              className="flex h-8 w-full items-center justify-start gap-0.5 text-left"
+            >
+              <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
+                Mod Name
+              </span>
+              <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'name' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
+            </button>
+            <div className="flex h-8 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Version</div>
+            <button
+              onClick={() => handleSort('type')}
+              aria-label={`Sort by type${sortKey === 'type' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
+              className="flex h-8 w-full items-center justify-start gap-0.5 text-left"
+            >
+              <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
+                Type
+              </span>
+              <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'type' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'type' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
+            </button>
+            <button
+              onClick={() => handleSort('installedAt')}
+              aria-label={`Sort by installed date${sortKey === 'installedAt' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
+              className="flex h-8 w-full items-center justify-start gap-0.5 text-left"
+            >
+              <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>
+                Date
+              </span>
+              <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'installedAt' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">{sortKey === 'installedAt' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span>
+            </button>
+            <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
+          </div>
+
+          {/* Rows (inside same scroll container as sticky header) */}
+          <div>
             {displayedMods.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">inventory_2</span>
@@ -761,8 +969,18 @@ export const ModList: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div>
-                {displayedMods.map((mod, index) => (
+              <div
+                style={{
+                  paddingTop: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD ? virtualizedMods.paddingTop : 0,
+                  paddingBottom: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD ? virtualizedMods.paddingBottom : 0,
+                }}
+              >
+                {visibleMods.map((mod, visibleIndex) => {
+                  const index = virtualizedMods.startIndex + visibleIndex
+                  if (installing && installPlacement === 'replace' && mod.uuid === installTargetModId) {
+                    return <React.Fragment key={`install-${mod.uuid}`}>{renderInstallRow()}</React.Fragment>
+                  }
+                  return (
                   <MemoModRow
                     key={mod.uuid}
                     mod={mod}
@@ -779,9 +997,13 @@ export const ModList: React.FC = () => {
                     onRenameSave={handleSaveRename}
                     onRenameCancel={handleCancelRename}
                   />
-                ))}
+                  )
+                })}
+                {showAppendInstallRow ? renderInstallRow() : null}
               </div>
             )}
+          </div>
+
           </div>
         </div>
       </div>
@@ -834,6 +1056,15 @@ export const ModList: React.FC = () => {
             <span>Disable</span>
           </button>
           <div className="my-1 border-t-[0.5px] border-[#222]" />
+          { (contextMenu.mod.nexusModId || contextMenu.mod.nexusFileId) && (
+            <button
+              onClick={handleContextOpenOnNexus}
+              className="flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase"
+            >
+              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+              <span>Open on Nexus</span>
+            </button>
+          )}
           <button
             onClick={handleContextOpenFolder}
             className="flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase"
@@ -866,7 +1097,7 @@ export const ModList: React.FC = () => {
           accentGlow="rgba(255,77,79,0.45)"
           title="Delete Mod"
           description={`You are about to permanently delete ${pendingDeleteMod.name} from your mod library.`}
-          detailLabel="Target mod"
+          detailLabel="Mod being deleted"
           detailValue={pendingDeleteMod.name}
           icon="delete"
           primaryLabel="Delete"
@@ -903,10 +1134,10 @@ export const ModList: React.FC = () => {
           detailContent={(
             <div className="px-4 py-3">
               <div className="flex items-center justify-between gap-3 border-b-[0.5px] border-[#1d1d1d] pb-3">
-                <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#8d8d8d]">
+                <div className="text-sm font-mono text-[#9a9a9a]">
                   Mods being uninstalled
                 </div>
-                <div className="rounded-sm border-[0.5px] border-[#4a1c1c] bg-[#160909] px-2 py-1 text-[9px] font-mono uppercase tracking-[0.14em] text-[#ffb4ab]">
+                <div className="rounded-sm border-[0.5px] border-[#4a1c1c] bg-[#160909] px-2.5 py-1 text-sm font-mono text-[#ffb4ab]">
                   {pendingAction.count} selected
                 </div>
               </div>

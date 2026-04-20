@@ -59,10 +59,13 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
             />
             {detailContent ?? (
               <div className="px-4 py-3">
-                <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#7f7f7f]">
+                <div className="text-sm text-[#9a9a9a] font-mono">
                   {detailLabel}
                 </div>
-                <div className="mt-2 break-words text-[13px] font-medium tracking-[0.01em] text-white">
+                <div
+                  className="mt-2 break-words text-sm font-semibold tracking-[0.01em] text-white"
+                  title={detailValue}
+                >
                   {detailValue}
                 </div>
               </div>

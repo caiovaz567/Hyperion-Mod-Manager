@@ -15,7 +15,11 @@ import { initializeUpdates } from './updater'
 import { registerModManagerHandlers } from './ipc/modManager'
 import { registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
+import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
 import { IPC } from '../shared/types'
+import { parseNxmUrl } from '../shared/nxm'
+import { clearAppLogs, getAppLogsSnapshot, pushGeneralLog, safeSendToWindow } from './logStore'
+import { findNexusDownloadRecordByPath, removeNexusDownloadRecordByPath } from './nexusDownloadRegistry'
 
 const DOWNLOAD_EXTENSIONS = new Set(['.zip', '.rar', '.7z'])
 const GAME_EXECUTABLE_RELATIVE_PATH = path.join('bin', 'x64', 'Cyberpunk2077.exe')
@@ -36,12 +40,47 @@ function resolveGameExecutable(gamePath: string): string {
   return normalizedPath
 }
 
+function isValidConfiguredGamePath(gamePath?: string): boolean {
+  const normalizedPath = gamePath?.trim()
+  if (!normalizedPath) return false
+
+  try {
+    return fs.existsSync(resolveGameExecutable(normalizedPath))
+  } catch {
+    return false
+  }
+}
+
+function isUsableDirectoryPath(targetPath?: string): boolean {
+  if (!targetPath?.trim()) return false
+  if (!path.isAbsolute(targetPath)) return false
+
+  if (fs.existsSync(targetPath)) {
+    try {
+      return fs.statSync(targetPath).isDirectory()
+    } catch {
+      return false
+    }
+  }
+
+  const parentDir = path.dirname(targetPath)
+  if (!parentDir || parentDir === targetPath) return false
+
+  try {
+    return fs.existsSync(parentDir) && fs.statSync(parentDir).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 function collectDownloadEntries(dirPath: string, limit = 500): Array<{
   path: string
   name: string
   size: number
   modifiedAt: string
   extension: string
+  nxmModId?: number
+  nxmFileId?: number
 }> {
   if (!dirPath || !fs.existsSync(dirPath)) return []
 
@@ -51,6 +90,8 @@ function collectDownloadEntries(dirPath: string, limit = 500): Array<{
     size: number
     modifiedAt: string
     extension: string
+    nxmModId?: number
+    nxmFileId?: number
   }> = []
 
   const visit = (currentDir: string): void => {
@@ -64,12 +105,15 @@ function collectDownloadEntries(dirPath: string, limit = 500): Array<{
       const extension = path.extname(entry.name).toLowerCase()
       if (!DOWNLOAD_EXTENSIONS.has(extension)) continue
       const stats = fs.statSync(fullPath)
+      const nexusRecord = findNexusDownloadRecordByPath(fullPath)
       results.push({
         path: fullPath,
         name: entry.name,
         size: stats.size,
         modifiedAt: stats.mtime.toISOString(),
-        extension
+        extension,
+        nxmModId: nexusRecord?.modId,
+        nxmFileId: nexusRecord?.fileId,
       })
     }
   }
@@ -92,6 +136,95 @@ if (!app.isPackaged) {
 }
 
 let mainWindow: BrowserWindow | null = null
+let rendererReady = false
+const pendingNxmUrls: string[] = []
+
+function normalizeNxmProtocolArg(value?: string): string | null {
+  if (!value) return null
+  const normalized = value.trim().replace(/^"+|"+$/g, '')
+  return /^nxm:\/\//i.test(normalized) ? normalized : null
+}
+
+function findNxmProtocolArg(args: string[]): string | null {
+  for (const arg of args) {
+    const normalized = normalizeNxmProtocolArg(arg)
+    if (normalized) return normalized
+  }
+  return null
+}
+
+function describeNxmUrl(raw: string): Record<string, unknown> {
+  const parsed = parseNxmUrl(raw)
+  if (!parsed) return { rawScheme: 'nxm', parsed: false }
+  return {
+    rawScheme: 'nxm',
+    parsed: true,
+    modId: parsed.modId,
+    fileId: parsed.fileId,
+  }
+}
+
+const startupNxmArg = findNxmProtocolArg(process.argv)
+if (startupNxmArg) {
+  pendingNxmUrls.push(startupNxmArg)
+  pushGeneralLog(mainWindow, {
+    level: 'info',
+    source: 'nexus',
+    message: 'NXM link detected in startup arguments',
+    details: describeNxmUrl(startupNxmArg),
+  })
+}
+
+function flushPendingNxmUrls(): void {
+  if (!rendererReady || !mainWindow) return
+
+  while (pendingNxmUrls.length > 0) {
+    const nextUrl = pendingNxmUrls[0]
+    if (!safeSendToWindow(mainWindow, IPC.NXM_LINK_RECEIVED, nextUrl)) {
+      return
+    }
+    pendingNxmUrls.shift()
+  }
+}
+
+function enqueueOrSendNxmUrl(url: string): void {
+  if (!rendererReady || !mainWindow || !safeSendToWindow(mainWindow, IPC.NXM_LINK_RECEIVED, url)) {
+    pendingNxmUrls.push(url)
+    return
+  }
+
+  flushPendingNxmUrls()
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
+
+app.on('second-instance', (_event, argv) => {
+  const nxm = findNxmProtocolArg(argv)
+  if (nxm) {
+    pushGeneralLog(mainWindow, {
+      level: 'info',
+      source: 'nexus',
+      message: 'NXM link received from second instance',
+      details: describeNxmUrl(nxm),
+    })
+    enqueueOrSendNxmUrl(nxm)
+  }
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+})
+
+app.on('open-url', (_event, url) => {
+  pushGeneralLog(mainWindow, {
+    level: 'info',
+    source: 'nexus',
+    message: 'NXM link received from OS open-url event',
+    details: describeNxmUrl(url),
+  })
+  enqueueOrSendNxmUrl(url)
+})
 
 function resolveWindowIconPath(): string {
   if (process.platform === 'win32') {
@@ -143,8 +276,40 @@ function registerGlobalHandlers(): void {
   ipcMain.handle(IPC.GET_SETTINGS, () => loadSettings())
   ipcMain.handle(IPC.GET_PATH_DEFAULTS, () => getPathDefaults())
   ipcMain.handle(IPC.SET_SETTINGS, (_event, settings) => {
-    saveSettings(settings)
-    return { ok: true }
+    try {
+      saveSettings(settings)
+
+      if (settings.gamePath?.trim() && !isValidConfiguredGamePath(settings.gamePath)) {
+        pushGeneralLog(mainWindow, {
+          level: 'warn',
+          source: 'settings',
+          message: 'Game path invalid',
+          details: { gamePath: settings.gamePath },
+        })
+      }
+
+      if (settings.downloadPath?.trim() && !isUsableDirectoryPath(settings.downloadPath)) {
+        pushGeneralLog(mainWindow, {
+          level: 'warn',
+          source: 'settings',
+          message: 'Downloads path invalid',
+          details: { downloadPath: settings.downloadPath },
+        })
+      }
+
+      return { ok: true }
+    } catch (error) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'filesystem',
+        message: 'Settings save failed',
+        details: error instanceof Error ? { error: error.message } : { error: String(error) },
+      })
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Could not save settings',
+      }
+    }
   })
 
   // File dialogs
@@ -164,9 +329,26 @@ function registerGlobalHandlers(): void {
   ipcMain.handle(IPC.LIST_DOWNLOADS, () => {
     const settings = loadSettings()
     if (!settings.downloadPath) return { ok: true, data: [] }
+    if (!isUsableDirectoryPath(settings.downloadPath)) {
+      pushGeneralLog(mainWindow, {
+        level: 'warn',
+        source: 'downloads',
+        message: 'Downloads path invalid',
+        details: { downloadPath: settings.downloadPath },
+      })
+      return { ok: false, error: 'Downloads path is invalid' }
+    }
     try {
       return { ok: true, data: collectDownloadEntries(settings.downloadPath) }
     } catch (error) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'filesystem',
+        message: 'Downloads folder read failed',
+        details: error instanceof Error
+          ? { downloadPath: settings.downloadPath, error: error.message }
+          : { downloadPath: settings.downloadPath, error: String(error) },
+      })
       return {
         ok: false,
         error: error instanceof Error ? error.message : 'Could not read downloads folder'
@@ -181,11 +363,73 @@ function registerGlobalHandlers(): void {
       }
 
       fs.rmSync(downloadPath, { force: true })
+      removeNexusDownloadRecordByPath(downloadPath)
       return { ok: true }
     } catch (error) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'filesystem',
+        message: 'Download delete failed',
+        details: error instanceof Error
+          ? { downloadPath, error: error.message }
+          : { downloadPath, error: String(error) },
+      })
       return {
         ok: false,
         error: error instanceof Error ? error.message : 'Could not delete download file'
+      }
+    }
+  })
+
+  ipcMain.handle(IPC.DELETE_ALL_DOWNLOADS, () => {
+    const settings = loadSettings()
+    if (!settings.downloadPath) return { ok: false, error: 'Downloads path not configured' }
+    if (!isUsableDirectoryPath(settings.downloadPath)) {
+      return { ok: false, error: 'Downloads path is invalid' }
+    }
+
+    try {
+      const entries = collectDownloadEntries(settings.downloadPath)
+      let removed = 0
+      let failed = 0
+      const failures: Array<{ path: string; error: string }> = []
+
+      for (const entry of entries) {
+        try {
+          fs.rmSync(entry.path, { force: true })
+          removeNexusDownloadRecordByPath(entry.path)
+          removed += 1
+        } catch (error) {
+          failed += 1
+          failures.push({
+            path: entry.path,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+
+      if (failures.length > 0) {
+        pushGeneralLog(mainWindow, {
+          level: 'warn',
+          source: 'filesystem',
+          message: 'Some downloads could not be deleted',
+          details: { failures },
+        })
+      }
+
+      return { ok: true, data: { removed, failed } }
+    } catch (error) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'filesystem',
+        message: 'Delete all downloads failed',
+        details: error instanceof Error
+          ? { downloadPath: settings.downloadPath, error: error.message }
+          : { downloadPath: settings.downloadPath, error: String(error) },
+      })
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Could not delete downloads',
       }
     }
   })
@@ -216,14 +460,29 @@ function registerGlobalHandlers(): void {
     if (!settings.gamePath) return { ok: false, error: 'Game path not configured' }
     const launchTarget = resolveGameExecutable(settings.gamePath)
     const errMsg = await shell.openPath(launchTarget)
-    if (errMsg) return { ok: false, error: errMsg }
+    if (errMsg) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'launcher',
+        message: 'Game launch failed',
+        details: { launchTarget, error: errMsg },
+      })
+      return { ok: false, error: errMsg }
+    }
     return { ok: true }
   })
 
   ipcMain.handle(IPC.GET_APP_VERSION, () => app.getVersion())
+  ipcMain.handle(IPC.APP_LOGS_GET, () => ({ ok: true, data: getAppLogsSnapshot() }))
+  ipcMain.handle(IPC.APP_LOGS_CLEAR, (_event, kind: 'general' | 'requests' | 'all' = 'all') => {
+    clearAppLogs(kind)
+    return { ok: true }
+  })
 
   // Window controls (titlebar buttons)
-  ipcMain.on('window:minimize', () => mainWindow?.minimize())
+  ipcMain.on('window:minimize', () => {
+    mainWindow?.minimize()
+  })
   ipcMain.on('window:maximize', () => {
     if (mainWindow?.isMaximized()) {
       mainWindow.unmaximize()
@@ -231,24 +490,60 @@ function registerGlobalHandlers(): void {
       mainWindow?.maximize()
     }
   })
-  ipcMain.on('window:close', () => mainWindow?.close())
+  ipcMain.on('window:close', () => {
+    mainWindow?.close()
+  })
 }
 
 app.whenReady().then(async () => {
   // Show splash while loading
   const splash = createSplashWindow()
+  let mainWindowReadyToShow = false
+
+  const updateSplashStatus = (message: string) => {
+    if (splash.isDestroyed()) return
+    const serialized = JSON.stringify(message)
+    splash.webContents.executeJavaScript(`
+      const s = document.getElementById('status');
+      if (s) s.textContent = ${serialized};
+    `).catch(() => { /* splash element may not exist */ })
+  }
+
+  const revealMainWindow = () => {
+    if (!rendererReady || !mainWindowReadyToShow || !mainWindow) return
+
+    if (!splash.isDestroyed()) {
+      splash.hide()
+      splash.setAlwaysOnTop(false)
+    }
+
+    mainWindow.show()
+    mainWindow.focus()
+
+    if (!splash.isDestroyed()) {
+      splash.destroy()
+    }
+
+    flushPendingNxmUrls()
+  }
 
   splash.webContents.on('did-finish-load', () => {
-    splash.webContents.executeJavaScript(`
-      const s = document.getElementById('status'); if (s) s.textContent = 'Loading...';
-    `).catch(() => {/* splash element may not exist */})
+    updateSplashStatus('Loading settings...')
   })
+
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient('nxm')
+  } else {
+    // In dev mode pass the app path and -- so Electron doesn't treat the nxm:// URL as a module path
+    app.setAsDefaultProtocolClient('nxm', process.execPath, [app.getAppPath(), '--'])
+  }
 
   // Register all IPC handlers
   registerGlobalHandlers()
-  registerModManagerHandlers()
+  registerModManagerHandlers(() => mainWindow)
   registerInstallerHandlers(() => mainWindow)
   registerGameDetectorHandlers()
+  registerNexusDownloaderHandlers(() => mainWindow)
 
   // Load initial settings
   const settings = loadSettings()
@@ -260,23 +555,63 @@ app.whenReady().then(async () => {
 
   // Create main window (hidden)
   mainWindow = createMainWindow()
+  pushGeneralLog(mainWindow, {
+    level: 'info',
+    source: 'app',
+    message: 'App started',
+    details: { packaged: app.isPackaged, version: app.getVersion() },
+  })
+
+  if (settings.gamePath?.trim() && !isValidConfiguredGamePath(settings.gamePath)) {
+    pushGeneralLog(mainWindow, {
+      level: 'warn',
+      source: 'settings',
+      message: 'Game path invalid',
+      details: { gamePath: settings.gamePath },
+    })
+  }
+
+  if (settings.downloadPath?.trim() && !isUsableDirectoryPath(settings.downloadPath)) {
+    pushGeneralLog(mainWindow, {
+      level: 'warn',
+      source: 'settings',
+      message: 'Downloads path invalid',
+      details: { downloadPath: settings.downloadPath },
+    })
+  }
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindowReadyToShow = true
+    revealMainWindow()
+  })
 
   // Initialize auto-updater
   initializeUpdates(mainWindow)
 
-  // When renderer is ready, close splash and show main window
+  // Reveal the main window only when Electron has a first paint ready and
+  // the renderer explicitly signals that the boot sequence is complete.
+  ipcMain.on(IPC.APP_BOOT_STATUS, (_event, message: string) => {
+    updateSplashStatus(message)
+  })
+
   ipcMain.once(IPC.APP_READY, () => {
-    if (!splash.isDestroyed()) {
-      splash.close()
-    }
-    mainWindow?.show()
-    mainWindow?.focus()
+    rendererReady = true
+    flushPendingNxmUrls()
+    revealMainWindow()
   })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createMainWindow()
     }
+  })
+})
+
+app.on('before-quit', () => {
+  pushGeneralLog(mainWindow, {
+    level: 'info',
+    source: 'app',
+    message: 'App shutting down',
   })
 })
 

@@ -33,6 +33,8 @@ export interface ModMetadata {
   folderName?: string
   sourcePath?: string
   sourceType?: 'archive' | 'directory'
+  nexusModId?: number
+  nexusFileId?: number
   deployedPaths?: string[]
 }
 
@@ -44,7 +46,94 @@ export interface AppSettings {
   downloadPath: string
   theme: 'dark'
   autoUpdate: boolean
+  nexusApiKey: string
 }
+
+// ─── Nexus / NXM ─────────────────────────────────────────────────────────────
+
+export interface ActiveDownload {
+  id: string
+  nxmModId: number
+  nxmFileId: number
+  fileName: string
+  totalBytes: number
+  downloadedBytes: number
+  speedBps: number
+  status: 'queued' | 'downloading' | 'paused' | 'done' | 'error'
+  error?: string
+  savedPath?: string
+}
+
+export interface NxmLinkPayload {
+  modId: number
+  fileId: number
+  key: string
+  expires: number
+  userId: number
+  raw: string
+}
+
+export interface DuplicateNxmDownloadInfo {
+  modId: number
+  fileId: number
+  existingFileName: string
+  existingFilePath: string
+  incomingFileName: string
+}
+
+export interface NxmDownloadStartRequest {
+  payload: NxmLinkPayload
+  allowDuplicate?: boolean
+}
+
+export interface NxmDownloadStartResponse {
+  status: 'started' | 'duplicate'
+  id?: string
+  fileName?: string
+  duplicate?: DuplicateNxmDownloadInfo
+}
+
+export interface NexusValidateResult {
+  userId: number
+  key: string
+  name: string
+  isPremium: boolean
+  email: string
+}
+
+export interface NexusApiLogEntry {
+  id: string
+  timestamp: string
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  endpoint: string
+  url: string
+  requestContext?: unknown
+  requestBody?: unknown
+  responseBody?: unknown
+  payload?: unknown
+  status: 'success' | 'error'
+  statusCode?: number
+  durationMs: number
+  error?: string
+}
+
+export interface AppGeneralLogEntry {
+  id: string
+  timestamp: string
+  level: 'info' | 'warn' | 'error'
+  source: string
+  message: string
+  details?: unknown
+}
+
+export interface AppLogsSnapshot {
+  general: AppGeneralLogEntry[]
+  requests: NexusApiLogEntry[]
+}
+
+export type AppLogsUpdate =
+  | { kind: 'general'; entry: AppGeneralLogEntry }
+  | { kind: 'requests'; entry: NexusApiLogEntry }
 
 export interface PathDefaults {
   libraryPath: string
@@ -57,6 +146,8 @@ export interface DownloadEntry {
   size: number
   modifiedAt: string
   extension: string
+  nxmModId?: number
+  nxmFileId?: number
 }
 
 // ─── Install ──────────────────────────────────────────────────────────────────
@@ -64,6 +155,7 @@ export interface DownloadEntry {
 export interface InstallProgress {
   step: string
   percent: number
+  currentFile?: string
 }
 
 export interface ConflictInfo {
@@ -163,6 +255,7 @@ export const IPC = {
   INSTALL_PROGRESS: 'install:progress',
   LIST_DOWNLOADS: 'downloads:list',
   DELETE_DOWNLOAD: 'downloads:delete',
+  DELETE_ALL_DOWNLOADS: 'downloads:deleteAll',
 
   // Game
   DETECT_GAME: 'game:detect',
@@ -179,8 +272,26 @@ export const IPC = {
   UPDATE_DOWNLOADED: 'update:downloaded',
   UPDATE_ERROR: 'update:error',
 
+  // Nexus / NXM
+  NXM_LINK_RECEIVED:     'nxm:linkReceived',
+  NXM_DOWNLOAD_START:    'nxm:downloadStart',
+  NXM_DOWNLOAD_PROGRESS: 'nxm:downloadProgress',
+  NXM_DOWNLOAD_COMPLETE: 'nxm:downloadComplete',
+  NXM_DOWNLOAD_ERROR:    'nxm:downloadError',
+  NXM_DOWNLOAD_CANCEL:   'nxm:downloadCancel',
+  NXM_DOWNLOAD_PAUSE:    'nxm:downloadPause',
+  NXM_DOWNLOAD_RESUME:   'nxm:downloadResume',
+  NEXUS_VALIDATE_KEY:    'nexus:validateKey',
+  NEXUS_API_LOG_LIST:    'nexus:apiLogList',
+  NEXUS_API_LOG_CLEAR:   'nexus:apiLogClear',
+  NEXUS_API_LOG_UPDATED: 'nexus:apiLogUpdated',
+  APP_LOGS_GET:          'app:logsGet',
+  APP_LOGS_CLEAR:        'app:logsClear',
+  APP_LOGS_UPDATED:      'app:logsUpdated',
+
   // App / Dialogs
   APP_READY: 'app:ready',
+  APP_BOOT_STATUS: 'app:bootStatus',
   OPEN_FILE_DIALOG: 'dialog:openFile',
   OPEN_FOLDER_DIALOG: 'dialog:openFolder',
   OPEN_PATH: 'shell:openPath',
