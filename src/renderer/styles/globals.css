@@ -120,11 +120,15 @@ select,
 }
 
 .ui-support-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-family: 'DM Sans', sans-serif;
   font-size: 0.875rem;
   line-height: 1.45;
-  letter-spacing: -0.01em;
+  font-feature-settings: 'tnum' 1;
   color: var(--text-support);
+}
+
+.font-mono {
+  font-feature-settings: 'tnum' 1;
 }
 
 /* ── Global app background ── */

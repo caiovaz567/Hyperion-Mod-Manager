@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
+import { useNexusAccount } from '../../hooks/useNexusAccount'
 
 interface NavItem {
   icon: string
@@ -10,6 +11,16 @@ interface NavItem {
   action?: () => void
   active?: boolean
   disabled?: boolean
+}
+
+function getAccountInitials(name?: string) {
+  const trimmed = name?.trim()
+  if (!trimmed) return 'NX'
+  const parts = trimmed.split(/\s+/).filter(Boolean)
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
 }
 
 export const Sidebar: React.FC = () => {
@@ -20,6 +31,7 @@ export const Sidebar: React.FC = () => {
     settings: state.settings,
     gamePathValid: state.gamePathValid,
   }), shallow)
+  const nexusAccount = useNexusAccount(settings?.nexusApiKey, 250)
 
   const navItems: NavItem[] = [
     { icon: 'inventory_2', label: 'Mod Library', action: () => setActiveView('library'), active: activeView === 'library' },
@@ -56,15 +68,66 @@ export const Sidebar: React.FC = () => {
     }
   }
 
+  const subscriptionToneClass =
+    nexusAccount.status === 'connected'
+      ? nexusAccount.data.isPremium
+        ? 'border-[#6a5714] bg-[#151003] text-[#f7d154]'
+        : 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]'
+      : nexusAccount.status === 'checking'
+        ? 'border-[#4a3f08] bg-[#0d0b00] text-[#fcee09]'
+        : 'border-[#2a2a2a] bg-[#111111] text-[#8a8a8a]'
+
+  const avatarToneClass =
+    nexusAccount.status === 'connected'
+      ? nexusAccount.data.isPremium
+        ? 'border-[#6a5714] bg-[#151003] text-[#f7d154]'
+        : 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]'
+      : nexusAccount.status === 'checking'
+        ? 'border-[#4a3f08] bg-[#0d0b00] text-[#fcee09]'
+        : 'border-[#222] bg-[#111] text-[#e5e2e1]'
+
+  const accountLabel =
+    nexusAccount.status === 'connected'
+      ? nexusAccount.data.isPremium
+        ? 'PREMIUM'
+        : 'FREE'
+      : nexusAccount.status === 'checking'
+        ? 'CHECKING'
+        : 'OFFLINE'
+
+  const accountSubLabel =
+    nexusAccount.status === 'connected'
+      ? 'NEXUS CONNECTED'
+      : nexusAccount.status === 'checking'
+        ? 'VALIDATING'
+        : 'NOT CONNECTED'
+
   return (
     <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[#1a1a1a] bg-[#050505] py-8 text-sm tracking-tight text-[#fcee09] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
-      <div className="mb-8 flex items-center gap-4 whitespace-nowrap px-6 opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
-        <div className="ml-[2px] flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#111] text-[#e5e2e1]">
-          <span className="material-symbols-outlined text-[18px]">terminal</span>
+      <div className="mb-8 flex items-center gap-4 whitespace-nowrap px-5">
+        <div
+          className={`ml-[2px] flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
+        >
+          {nexusAccount.status === 'connected' ? (
+            getAccountInitials(nexusAccount.data.name)
+          ) : (
+            <span className="material-symbols-outlined text-[18px]">
+              {nexusAccount.status === 'checking' ? 'sync' : 'person'}
+            </span>
+          )}
         </div>
-        <div>
-          <div className="text-xs font-bold tracking-wider text-[#e5e2e1]">SYS_ADMIN</div>
-          <div className="text-[10px] tracking-widest text-[#fcee09] opacity-70 drop-shadow-[0_0_2px_rgba(252,238,9,0.5)]">ONLINE</div>
+        <div className="min-w-0 overflow-hidden opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
+          <div className="truncate text-xs font-bold tracking-wider text-[#e5e2e1]">
+            {nexusAccount.status === 'connected' ? nexusAccount.data.name : 'NEXUS ACCOUNT'}
+          </div>
+          <div className="mt-1 flex flex-col items-start gap-1">
+            <span
+              className={`inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[9px] font-semibold tracking-[0.16em] ${subscriptionToneClass}`}
+            >
+              {accountLabel}
+            </span>
+            <span className="text-[10px] tracking-widest text-[#8f8f8f]">{accountSubLabel}</span>
+          </div>
         </div>
       </div>
 

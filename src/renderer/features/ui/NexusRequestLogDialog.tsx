@@ -40,10 +40,10 @@ const generalLevelBadgeClass: Record<AppGeneralLogEntry['level'], string> = {
 }
 
 const tabButtonClass = (active: boolean) =>
-  `relative inline-flex h-10 items-center gap-2 rounded-sm border-[0.5px] px-4 text-[10px] font-bold uppercase tracking-[0.16em] transition-colors ${
+  `min-w-[118px] rounded-sm px-4 py-2.5 text-center transition-colors ${
     active
-      ? 'border-[#6a5b10] bg-[#151202] text-[#fcee09]'
-      : 'border-[#222] bg-[#0a0a0a] text-[#9a9a9a] hover:border-[#3a3a3a] hover:text-white'
+      ? 'bg-[#120f03] text-[#fcee09]'
+      : 'bg-transparent text-[#9c9c9c] hover:bg-[#0d0d0d] hover:text-[#d9d9d9]'
   }`
 
 const inlineBadgeClass = 'inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[10px] font-mono uppercase tracking-[0.14em]'
@@ -459,14 +459,6 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
     })
   }
 
-  const handleClearAll = async () => {
-    await IpcService.invoke<IpcResult>(IPC.APP_LOGS_CLEAR, 'all')
-    setGeneralEntries([])
-    setExpandedGeneralIds(new Set())
-    setRequestEntries([])
-    setExpandedRequestIds(new Set())
-  }
-
   const handleClearTab = async () => {
     const target = activeTab === 'general' ? 'general' : 'requests'
     await IpcService.invoke<IpcResult>(IPC.APP_LOGS_CLEAR, target)
@@ -637,15 +629,6 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Tooltip content="Clear all logs">
-              <button
-                type="button"
-                onClick={() => void handleClearAll()}
-                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] transition-colors hover:border-[#4a1212] hover:text-[#f87171]"
-              >
-                <span className="material-symbols-outlined text-[18px]">delete</span>
-              </button>
-            </Tooltip>
             <Tooltip content="Close logs">
               <button
                 type="button"
@@ -666,14 +649,18 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           }}
         >
           <div className="flex items-center justify-between gap-6">
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="inline-flex shrink-0 flex-wrap items-center gap-1 border-[0.5px] border-[#1a1a1a] bg-[#070707] p-1">
               <button type="button" onClick={() => setActiveTab('general')} className={tabButtonClass(activeTab === 'general')}>
-                <span>General</span>
-                <span className="ui-support-mono text-[#cfcfcf]">{generalEntries.length}</span>
+                <span className="brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em]">General</span>
+                <span className="ml-2 brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em] text-inherit/85">
+                  {generalEntries.length}
+                </span>
               </button>
               <button type="button" onClick={() => setActiveTab('requests')} className={tabButtonClass(activeTab === 'requests')}>
-                <span>Requests</span>
-                <span className="ui-support-mono text-[#cfcfcf]">{requestEntries.length}</span>
+                <span className="brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em]">Requests</span>
+                <span className="ml-2 brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em] text-inherit/85">
+                  {requestEntries.length}
+                </span>
               </button>
             </div>
             <div className="flex min-w-0 items-center justify-end gap-2">
@@ -685,9 +672,14 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                   type="button"
                   aria-label={clearTabLabel}
                   onClick={() => void handleClearTab()}
-                  className="flex h-10 w-10 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] transition-colors hover:border-[#4a1212] hover:text-[#f87171]"
+                  className="flex h-[46px] min-w-[50px] items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
                 >
-                  <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: '24px', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
+                  >
+                    delete
+                  </span>
                 </button>
               </Tooltip>
             </div>

@@ -26,6 +26,18 @@ const GAME_DOMAIN = 'cyberpunk2077'
 const NEXUS_REQUEST_TIMEOUT_MS = 20_000
 const inFlightApiRequests = new Map<string, Promise<IpcResult<unknown>>>()
 
+interface RawNexusValidateResult {
+  userId?: number | string
+  user_id?: number | string
+  key?: string
+  name?: string
+  username?: string
+  isPremium?: boolean | string | number
+  is_premium?: boolean | string | number
+  premium?: boolean | string | number
+  email?: string
+}
+
 interface LoggedSecretValue {
   __hyperionSecret: true
   masked: string
@@ -202,16 +214,59 @@ async function nexusGet<T>(
   return requestPromise
 }
 
+function normalizeBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value !== 0
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return normalized === 'true' || normalized === '1' || normalized === 'yes'
+  }
+  return false
+}
+
+function normalizeNexusValidateResult(
+  payload: RawNexusValidateResult,
+  apiKey: string,
+): NexusValidateResult {
+  const rawUserId = payload.userId ?? payload.user_id
+  const normalizedUserId =
+    typeof rawUserId === 'number'
+      ? rawUserId
+      : typeof rawUserId === 'string'
+      ? Number.parseInt(rawUserId, 10) || 0
+      : 0
+
+  return {
+    userId: normalizedUserId,
+    key: typeof payload.key === 'string' && payload.key.trim() ? payload.key : apiKey,
+    name:
+      (typeof payload.name === 'string' && payload.name.trim()) ||
+      (typeof payload.username === 'string' && payload.username.trim()) ||
+      'Unknown User',
+    isPremium: normalizeBoolean(payload.isPremium ?? payload.is_premium ?? payload.premium),
+    email: typeof payload.email === 'string' ? payload.email : '',
+  }
+}
+
 export async function validateNexusApiKey(
   apiKey: string,
   mainWindow: BrowserWindow | null,
 ): Promise<IpcResult<NexusValidateResult>> {
-  return nexusGet<NexusValidateResult>(
+  const result = await nexusGet<RawNexusValidateResult>(
     '/users/validate.json',
     apiKey,
     mainWindow,
     { apiKey },
   )
+
+  if (!result.ok || !result.data) {
+    return result as IpcResult<NexusValidateResult>
+  }
+
+  return {
+    ok: true,
+    data: normalizeNexusValidateResult(result.data, apiKey),
+  }
 }
 
 async function fetchFileVersion(

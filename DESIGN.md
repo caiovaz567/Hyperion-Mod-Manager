@@ -11,13 +11,6 @@ Primary goals:
 - Strong hierarchy without noisy sci-fi decoration
 - UI that feels deliberate, not generic or over-stylized
 
-Hard no:
-- Tron neon palettes
-- scanlines or grid overlays
-- skewed shapes
-- pulse/flicker effects
-- decorative chrome with no functional meaning
-
 ## 2. Foundation
 
 ### Core palette
@@ -51,8 +44,10 @@ Accessibility:
 ### Typography
 
 - Syne: logo, high-level titles, uppercase emphasis
-- DM Sans: primary UI font for labels, panels, forms, lists
-- Monospace only for technical values such as timestamps, versions, paths, counters
+- DM Sans: primary UI font for labels, panels, forms, lists, dialogs, helper copy, buttons, and readable support text
+- Oxanium may remain available only where a shipped screen already depends on it as a screen-title accent; do not spread it casually through routine UI
+- Monospace is reserved for clearly technical values only, such as code-like payload inspection or highly technical diagnostics
+- Do not use monospace for small helper copy, explanatory paragraphs, or secondary UI descriptions; those should use DM Sans instead
 - Small support text should prefer the same visual token used by download dates: readable 14px sizing, restrained gray, and AA contrast at minimum
 - Dates and timestamps should follow the user's Windows-style local format in UI surfaces: `DD/MM/YYYY HH:mm:ss` (example: `19/04/2026 15:47:08`)
 
@@ -87,9 +82,9 @@ Accessibility:
 Current implementation state:
 - Collapsed width: 80px
 - Expanded width: 256px on hover
-- Top decorative profile block is hidden while collapsed and revealed on hover
-- Top decorative block contains a terminal glyph + SYS_ADMIN / ONLINE label
-- This top terminal glyph is reference decoration only, not a feature entry
+- Top account block is hidden while collapsed and revealed on hover
+- Top account block should reflect real Nexus connection state when available: account name plus `Premium Connected` / `Free Connected`
+- When Nexus is not configured, the block should fall back to a neutral `Nexus Account / Not Connected` treatment instead of faux online-system language
 
 Navigation order:
 1. Mod Library
@@ -198,13 +193,32 @@ Alignment rules:
 ### Settings
 
 - Accessible as a full content view, not merely a hidden modal afterthought
-- Used for game path, library path, downloads path, and update preferences
+- Used for game path, library path, downloads path, Nexus connection, library maintenance, and app-level utilities
 - Should feel operational and clear, not decorative
+- Settings should be organized into three explicit sections only: `Paths`, `Nexus`, and `Updates`
+- Do not keep a generic `Workspace` section or placeholder future-module scaffold in the primary UX
+- The hero area should summarize current readiness at a glance: Game Path, Mod Library, Downloads, and Nexus state
 - Core directories section should mirror the Welcome screen visual system: unified dark card, path blocks in monospace, compact status badges, and the same primary/secondary button treatment
 - Settings navigation should feel like an integrated extension panel: section tabs connected to the content surface rather than floating above it
+- Settings should use a calmer, narrower reading width than Library/Downloads; avoid stretching form decisions across the full desktop when the content is fundamentally linear
+- Tabs in Settings should read as a compact segmented strip, not as giant stacked menu blocks
+- Settings section guides and accent lines should stay on the product yellow; do not switch section-guide color by tab context
+- Inside each section, prefer a small number of large decision cards over many nested bordered boxes competing for attention
+- In Settings, controls and follow-up actions should stay left-aligned within their card instead of jumping to the far right edge
+- Avoid vague top-level status labels such as `Ready`; if status chrome is present, it should communicate a concrete state like `Valid Path`, `Configured`, `Connected`, or a version number
+- Tiny overtracked labels in Settings should be avoided; section eyebrow text and helper labels must keep readable contrast and a stronger 13px+ presence
 - Avoid nested scrolling inside Settings content when the main app surface already handles vertical scroll
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
+- `Paths` should remain the primary section and emphasize consequence-aware states such as launch blocked or installs blocked when required targets are invalid
+- Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold treatment, while `Free` uses the cool info-blue treatment
+- The sidebar should always expose a compact Nexus identity marker (avatar or initials) even when the rail is collapsed; expanding the rail may reveal the full name and subscription label
+- Sidebar avatars/identity markers should use the same squared border language as other Hyperion controls and buttons; avoid soft pill or circular treatments that break the shell rhythm
+- In the expanded sidebar account block, stack the content clearly as `name -> subscription badge -> connection state` so the subscription tag does not drift between labels
 - Nexus settings should describe the manual download-to-install flow clearly; do not expose a global Nexus auto-install toggle in the primary UX
+- Nexus API validation should happen automatically after the key changes; avoid a dedicated `Test Connection` button as a primary interaction
+- When Nexus validation succeeds, show real account identity details such as display name, premium/free state, and user id/email rather than generic placeholder text
+- Keep library maintenance tools in the main library workflow instead of duplicating them inside Settings
+- The third Settings section should focus on Hyperion application updates only; diagnostics and app logs remain available from the shell header
 
 ### App Logs
 
