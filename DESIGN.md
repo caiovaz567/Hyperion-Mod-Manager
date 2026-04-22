@@ -165,7 +165,14 @@ Alignment rules:
 ### Downloads
 
 - Separate screen sourced from configured downloads directory
-- Header includes refresh and open-folder actions
+- Header includes a contextual search field plus refresh and open-folder actions
+- The Downloads search field should reuse the same squared chrome, yellow border rhythm, and hover/focus treatment as the Managed Mods search instead of introducing a second search style
+- Downloads toolbar buttons should reuse the same bordered action language as Managed Mods so both screens read as one product system
+- Downloads should behave like a real sortable table: `Archive Name`, `Status`, `Version`, `Size`, and `Downloaded At` must support the same `asc -> desc -> default` sort cycle used in Managed Mods
+- Downloads should remember the user's last search and sort state between visits/restarts instead of resetting to the default table every time
+- `Status` in Downloads is an operational column (`Downloading`, `Paused`, `Installed`, `Downloaded`, `Error`, etc.); temporary attention markers such as `NEW` remain badges on the archive name rather than becoming status values
+- Because the table now has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` inside the `Actions` column
+- Status badges in Downloads should stay visually stable while hovering the row; the row hover may brighten the line, but the badge itself should not morph into another semantic state
 - Summary strip shows configured path, file count, and zip-ready count
 - Download rows prioritize file name, format, modified date, install/reinstall action, and delete action
 - Download ordering should remain stable across navigation and library changes; Nexus archives should keep the chronology of when the user initiated each download request, not the order in which transfers happen to finish or related mods get installed/removed
@@ -175,8 +182,8 @@ Alignment rules:
 - Archive extraction is its own phase and should use a distinct cool accent from the default download/install yellow, while later install/finalization can return to the product accent
 - When extracting from `.zip`, `.rar`, or `.7z`, show the current internal archive entry when available so the user can see what is being unpacked in real time
 - If the user confirms `Replace` or `Install as Copy` from a duplicate-install prompt, dismiss the confirmation immediately and hand off to the shared install progress UI instead of keeping the dialog visible during extraction/install
-- Downloads rows should support a right-click menu with reveal-in-Explorer, copy-path, install/reinstall, pause/resume/cancel, delete, and refresh-style utilities that match the row state
-- In Downloads row context menus, `Install` or `Reinstall` should appear before file utilities such as reveal-in-Explorer or copy-path
+- Downloads rows should support a right-click menu with reveal-in-Explorer, install/reinstall, pause/resume/cancel, delete, and refresh-style utilities that match the row state
+- In Downloads row context menus, `Install` or `Reinstall` should appear before file utilities such as reveal-in-Explorer
 - Revealing a download in Explorer should select the exact file the user clicked, not just open the parent folder
 - If a Nexus archive already exists in Downloads, use the shared confirmation dialog instead of a toast-only rejection and preview the renamed duplicate archive before the user confirms
 - If the same Nexus archive is already downloading, reuse that same duplicate-download confirmation dialog instead of blocking the request; make it clear that one transfer is already in progress and preview the next duplicate name

@@ -211,14 +211,21 @@ export const ModList: React.FC = () => {
 
   useEffect(() => {
     const closeMenu = () => setContextMenu(null)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') closeMenu()
+    }
     window.addEventListener('click', closeMenu)
     window.addEventListener('resize', closeMenu)
     window.addEventListener('scroll', closeMenu, true)
+    window.addEventListener('blur', closeMenu)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('click', closeMenu)
       window.removeEventListener('resize', closeMenu)
       window.removeEventListener('scroll', closeMenu, true)
+      window.removeEventListener('blur', closeMenu)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 

@@ -400,6 +400,7 @@ export const ModRow: React.FC<ModRowProps> = ({
             <>
               <Tooltip content="Save name">
                 <button
+                  onMouseDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
                     event.stopPropagation()
                     onRenameSave()
@@ -411,6 +412,7 @@ export const ModRow: React.FC<ModRowProps> = ({
               </Tooltip>
               <Tooltip content="Cancel rename">
                 <button
+                  onMouseDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
                     event.stopPropagation()
                     onRenameCancel()
@@ -440,7 +442,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onDelete(mod)
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
                 >
                   <span className="material-symbols-outlined text-[15px]">delete</span>
                 </button>
