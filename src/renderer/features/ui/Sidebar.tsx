@@ -104,9 +104,9 @@ export const Sidebar: React.FC = () => {
 
   return (
     <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[#1a1a1a] bg-[#050505] py-8 text-sm tracking-tight text-[#fcee09] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
-      <div className="mb-8 flex items-center gap-4 whitespace-nowrap px-5">
+      <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
         <div
-          className={`ml-[2px] flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
         >
           {nexusAccount.status === 'connected' ? (
             getAccountInitials(nexusAccount.data.name)
@@ -116,7 +116,7 @@ export const Sidebar: React.FC = () => {
             </span>
           )}
         </div>
-        <div className="min-w-0 overflow-hidden opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
+        <div className="pointer-events-none min-w-0 overflow-hidden opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
           <div className="truncate text-xs font-bold tracking-wider text-[#e5e2e1]">
             {nexusAccount.status === 'connected' ? nexusAccount.data.name : 'NEXUS ACCOUNT'}
           </div>

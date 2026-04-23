@@ -22,7 +22,7 @@ interface ModRowProps {
   onContextMenu: (event: React.MouseEvent, mod: ModMetadata) => void
   onRename: (mod: ModMetadata) => void
   onDelete: (mod: ModMetadata) => void
-  onOpenDetails: (mod: ModMetadata) => void
+  onOpenDetails: (mod: ModMetadata, initialTab?: 'files' | 'conflicts') => void
   isRenaming: boolean
   renameValue: string
   onRenameChange: (value: string) => void
@@ -99,11 +99,12 @@ export const ModRow: React.FC<ModRowProps> = ({
   onSeparatorDragLeave,
   onSeparatorDrop,
 }) => {
-  const { enableMod, disableMod, addToast, recentBadge } = useAppStore((state) => ({
+  const { enableMod, disableMod, addToast, recentBadge, conflictHighlight } = useAppStore((state) => ({
     enableMod: state.enableMod,
     disableMod: state.disableMod,
     addToast: state.addToast,
     recentBadge: state.recentLibraryBadges[mod.uuid],
+    conflictHighlight: state.conflictHighlight,
   }), shallow)
 
   if (mod.kind === 'separator') {
@@ -234,7 +235,28 @@ export const ModRow: React.FC<ModRowProps> = ({
   const color = TYPE_COLOR[mod.type] ?? '#64748B'
   const label = TYPE_LABEL[mod.type] ?? 'UNKNOWN'
   const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
-  const rowBackgroundClass = selected
+  const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0 }
+  const hasConflictSummary = conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0
+  const conflictTooltipContent = [
+    'Conflict details',
+    conflictSummary.overwrites > 0 ? `This mod wins ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}.` : null,
+    conflictSummary.overwrittenBy > 0 ? `Other mods win ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}.` : null,
+    'Click to open the Conflicts tab.',
+  ].filter(Boolean).join('\n')
+  const isConflictFocused = conflictHighlight.active && conflictHighlight.focusModId === mod.uuid
+  const isWinHighlighted = conflictHighlight.active && conflictHighlight.wins.includes(mod.uuid)
+  const isLossHighlighted = conflictHighlight.active && conflictHighlight.losses.includes(mod.uuid)
+  const conflictTone = isConflictFocused
+    ? 'focus'
+    : isWinHighlighted && isLossHighlighted
+      ? 'mixed'
+      : isWinHighlighted
+        ? 'win'
+        : isLossHighlighted
+          ? 'loss'
+          : 'none'
+
+  const baseRowBackgroundClass = selected
     ? 'bg-[#0a0a0a]'
     : mod.enabled
       ? index % 2 === 0
@@ -243,6 +265,78 @@ export const ModRow: React.FC<ModRowProps> = ({
       : index % 2 === 0
         ? 'bg-[#040404] hover:bg-[#101010]'
         : 'bg-[#080808] hover:bg-[#121212]'
+  const rowBackgroundClass = conflictTone === 'focus'
+    ? 'bg-[rgba(252,238,9,0.1)]'
+    : conflictTone === 'win'
+      ? 'bg-[rgba(52,211,153,0.1)]'
+      : conflictTone === 'loss'
+        ? 'bg-[rgba(248,113,113,0.1)]'
+        : conflictTone === 'mixed'
+          ? 'bg-[rgba(252,238,9,0.08)]'
+          : baseRowBackgroundClass
+  const rowHoverClass = conflictTone === 'focus'
+    ? 'hover:border-[#5a5714] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_0_0_1px_rgba(252,238,9,0.12)]'
+    : conflictTone === 'win'
+      ? 'hover:border-[#1f5133] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),inset_0_0_0_1px_rgba(52,211,153,0.11)]'
+      : conflictTone === 'loss'
+        ? 'hover:border-[#5a2020] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(248,113,113,0.1)]'
+        : conflictTone === 'mixed'
+          ? 'hover:border-[#4b470d] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(252,238,9,0.1)]'
+          : mod.enabled
+            ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
+            : 'hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+  const selectedRingClass = conflictTone === 'focus'
+    ? 'ring-1 ring-inset ring-[#fcee09]/42'
+    : selected
+      ? 'ring-1 ring-inset ring-[#fcee09]/50'
+      : ''
+  const hoverGradient = conflictTone === 'focus'
+    ? 'linear-gradient(90deg, rgba(252,238,9,0.12) 0%, rgba(252,238,9,0.05) 18%, rgba(255,255,255,0.012) 34%, rgba(255,255,255,0) 66%)'
+    : conflictTone === 'win'
+      ? 'linear-gradient(90deg, rgba(52,211,153,0.12) 0%, rgba(52,211,153,0.045) 18%, rgba(255,255,255,0.015) 36%, rgba(255,255,255,0) 68%)'
+      : conflictTone === 'loss'
+        ? 'linear-gradient(90deg, rgba(248,113,113,0.12) 0%, rgba(248,113,113,0.045) 18%, rgba(255,255,255,0.015) 36%, rgba(255,255,255,0) 68%)'
+        : conflictTone === 'mixed'
+          ? 'linear-gradient(90deg, rgba(252,238,9,0.11) 0%, rgba(252,238,9,0.04) 18%, rgba(255,255,255,0.015) 36%, rgba(255,255,255,0) 68%)'
+          : mod.enabled
+            ? 'linear-gradient(90deg, rgba(252,238,9,0.08) 0%, rgba(252,238,9,0.036) 15%, rgba(255,255,255,0.018) 34%, rgba(255,255,255,0) 66%)'
+            : 'linear-gradient(90deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 20%, rgba(255,255,255,0) 62%)'
+  const indexTextClass = conflictTone === 'none'
+    ? 'text-[#8a8a8a] group-hover:text-[#d0d0d0]'
+    : 'text-[#c9c9c9]'
+  const primaryTextClass = mod.enabled
+    ? conflictTone === 'focus'
+      ? 'text-[#fcee09]'
+      : conflictTone === 'none'
+        ? 'text-[#e5e2e1] group-hover:text-[#ffffff]'
+        : 'text-[#f2f2f2]'
+    : conflictTone === 'none'
+      ? 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
+      : 'text-[#b9b9b9] line-through'
+  const secondaryTextClass = conflictTone === 'none'
+    ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]'
+    : 'text-[#c7c7c7]'
+  const typeChipClass = conflictTone === 'none'
+    ? 'bg-[#111] border-[#222] group-hover:border-[#343434]'
+    : 'bg-[rgba(17,17,17,0.84)] border-[rgba(255,255,255,0.09)]'
+  const leftRailColor = conflictTone === 'focus'
+    ? '#FCEE09'
+    : conflictTone === 'win'
+      ? '#34D399'
+      : conflictTone === 'loss'
+        ? '#F87171'
+        : conflictTone === 'mixed'
+          ? '#FCEE09'
+          : rowAccentColor
+  const leftRailShadow = conflictTone === 'focus'
+    ? '0 0 12px rgba(252,238,9,0.24)'
+    : conflictTone === 'win'
+      ? '0 0 12px rgba(52,211,153,0.24)'
+      : conflictTone === 'loss'
+        ? '0 0 12px rgba(248,113,113,0.24)'
+        : conflictTone === 'mixed'
+          ? '0 0 12px rgba(252,238,9,0.2)'
+          : `0 0 10px ${rowAccentColor}55`
 
   const handleToggle = async (event: React.MouseEvent) => {
     event.stopPropagation()
@@ -263,11 +357,7 @@ export const ModRow: React.FC<ModRowProps> = ({
         onClick={onSelect}
         onDoubleClick={() => onOpenDetails(mod)}
         onContextMenu={(event) => onContextMenu(event, mod)}
-        className={`library-mod-row grid h-[38px] gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${
-          mod.enabled
-            ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
-            : 'hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
-        } ${selected ? 'ring-1 ring-inset ring-[#fcee09]/50' : ''} ${
+        className={`library-mod-row grid h-[38px] gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${rowHoverClass} ${selectedRingClass} ${
           dragEnabled ? 'active:cursor-grabbing' : ''
         } ${dragging ? 'opacity-45 translate-x-1' : ''}`}
         style={{
@@ -289,17 +379,13 @@ export const ModRow: React.FC<ModRowProps> = ({
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-          style={{
-            background: mod.enabled
-              ? 'linear-gradient(90deg, rgba(252,238,9,0.08) 0%, rgba(252,238,9,0.036) 15%, rgba(255,255,255,0.018) 34%, rgba(255,255,255,0) 66%)'
-              : 'linear-gradient(90deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 20%, rgba(255,255,255,0) 62%)',
-          }}
+          style={{ background: hoverGradient }}
         />
 
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-0 left-0 w-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-          style={{ background: `${rowAccentColor}88` }}
+          style={{ background: conflictTone === 'none' ? `${rowAccentColor}88` : `${leftRailColor}aa` }}
         />
 
         <div className="flex items-center pl-2" onClick={handleToggle}>
@@ -320,7 +406,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center text-[#8a8a8a] text-[12px] font-mono group-hover:text-[#d0d0d0] transition-colors">
+        <div className={`flex items-center text-[12px] font-mono transition-colors ${indexTextClass}`}>
           {index}
         </div>
 
@@ -332,7 +418,6 @@ export const ModRow: React.FC<ModRowProps> = ({
               onChange={(event) => onRenameChange(event.target.value)}
               onClick={(event) => event.stopPropagation()}
               onDoubleClick={(event) => event.stopPropagation()}
-              onBlur={onRenameSave}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') onRenameSave()
                 if (event.key === 'Escape') onRenameCancel()
@@ -341,13 +426,13 @@ export const ModRow: React.FC<ModRowProps> = ({
             />
           ) : (
             <div className="flex min-w-0 items-center gap-2">
-              <span
-                className={`font-medium tracking-tight truncate transition-colors ${
-                  mod.enabled ? 'text-[#e5e2e1] group-hover:text-[#ffffff]' : 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
-                }`}
-              >
-                {mod.name}
-              </span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={`font-medium tracking-tight truncate transition-colors ${primaryTextClass}`}
+                >
+                  {mod.name}
+                </span>
+              </div>
               {recentBadge ? (
                 <span
                   className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
@@ -372,26 +457,47 @@ export const ModRow: React.FC<ModRowProps> = ({
                   {recentBadge === 'downgraded' ? 'Downgraded' : recentBadge === 'updated' ? 'Updated' : 'Installed'}
                 </span>
               ) : null}
+              {hasConflictSummary ? (
+                <Tooltip content={conflictTooltipContent} side="bottom" variant="help">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onOpenDetails(mod, 'conflicts')
+                    }}
+                    className="inline-flex shrink-0 items-center gap-1"
+                  >
+                    {conflictSummary.overwrites > 0 ? (
+                      <span className="min-w-[36px] border-[0.5px] border-[#1f5133] bg-[rgba(52,211,153,0.1)] px-2.5 py-[3px] text-center text-[10px] font-mono font-bold text-[#34d399]">
+                        +{conflictSummary.overwrites}
+                      </span>
+                    ) : null}
+                    {conflictSummary.overwrittenBy > 0 ? (
+                      <span className="min-w-[36px] border-[0.5px] border-[#5a2020] bg-[rgba(248,113,113,0.1)] px-2.5 py-[3px] text-center text-[10px] font-mono font-bold text-[#f87171]">
+                        −{conflictSummary.overwrittenBy}
+                      </span>
+                    ) : null}
+                  </button>
+                </Tooltip>
+              ) : null}
             </div>
           )}
         </div>
 
-        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]' : 'text-[#9a9a9a] group-hover:text-[#c4c4c4]'}`}>
+        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
           {mod.version ?? '—'}
         </div>
 
         <div className="flex items-center">
           <span
-            className={`px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm transition-colors ${
-              mod.enabled ? 'bg-[#111] border-[#222] group-hover:border-[#343434]' : 'bg-[#111] border-[#222] group-hover:border-[#343434]'
-            }`}
+            className={`px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm transition-colors ${typeChipClass}`}
             style={{ color }}
           >
             {label}
           </span>
         </div>
 
-        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${mod.enabled ? 'text-[#9a9a9a] group-hover:text-[#bdbdbd]' : 'text-[#9a9a9a] group-hover:text-[#bdbdbd]'}`}>
+        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
           {formatWindowsDateTime(mod.installedAt)}
         </div>
 
@@ -400,7 +506,10 @@ export const ModRow: React.FC<ModRowProps> = ({
             <>
               <Tooltip content="Save name">
                 <button
-                  onMouseDown={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
                   onClick={(event) => {
                     event.stopPropagation()
                     onRenameSave()
@@ -412,7 +521,10 @@ export const ModRow: React.FC<ModRowProps> = ({
               </Tooltip>
               <Tooltip content="Cancel rename">
                 <button
-                  onMouseDown={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
                   onClick={(event) => {
                     event.stopPropagation()
                     onRenameCancel()
@@ -451,10 +563,10 @@ export const ModRow: React.FC<ModRowProps> = ({
           )}
         </div>
 
-        {mod.enabled && (
+        {(mod.enabled || conflictTone !== 'none') && (
           <div
             className="absolute inset-y-0 left-0 w-[3px]"
-            style={{ background: rowAccentColor, boxShadow: `0 0 10px ${rowAccentColor}55` }}
+            style={{ background: leftRailColor, boxShadow: leftRailShadow }}
           />
         )}
       </div>

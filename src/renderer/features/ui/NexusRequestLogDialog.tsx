@@ -616,7 +616,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           <div>
             <div className="mb-2 flex items-center gap-3">
               <span className="material-symbols-outlined text-[20px] text-[#fcee09]">terminal</span>
-              <h2 className="brand-font text-[1.15rem] font-bold uppercase tracking-[0.12em] text-white">
+              <h2 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
                 App Logs
               </h2>
               <span className={`${inlineBadgeClass} border-[#4a3f08] bg-[#171303] text-[#fcee09]`}>

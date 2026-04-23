@@ -5,6 +5,8 @@ interface SeparatorNameDialogProps {
   description: string
   value: string
   submitLabel: string
+  inputLabel?: string
+  placeholder?: string
   selectOnOpen?: boolean
   onChange: (value: string) => void
   onSubmit: () => void
@@ -17,6 +19,8 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
   description,
   value,
   submitLabel,
+  inputLabel = 'Separator Name',
+  placeholder,
   selectOnOpen = false,
   onChange,
   onSubmit,
@@ -66,7 +70,10 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
     <div
       data-action-prompt="true"
       className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-      onClick={onCancel}
+      onClick={(event) => {
+        event.stopPropagation()
+        onCancel()
+      }}
     >
       <div
         className="relative w-full max-w-[480px] overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
@@ -88,7 +95,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
 
           <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a]">
             <div className="border-b-[0.5px] border-[#171717] px-4 py-2 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#7f7f7f]">
-              Separator Name
+              {inputLabel}
             </div>
             <div className="px-4 py-4">
               <input
@@ -96,6 +103,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
                 autoFocus
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
+                placeholder={placeholder}
                 className="h-11 w-full border-[0.5px] border-[#2d2d2d] bg-[#050505] px-4 text-sm font-medium tracking-[0.01em] text-white transition-colors focus:border-[#fcee09]/60 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.1)]"
               />
             </div>

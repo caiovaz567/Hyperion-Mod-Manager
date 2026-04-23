@@ -1,12 +1,14 @@
 import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
-import type { ModMetadata, IpcResult, PurgeModsResult } from '../../../shared/types'
+import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo, ModConflictSummary } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
+import { recomputeConflictStateFromExistingConflicts } from '../../utils/modConflictState'
 
 export type LibraryStatusFilter = 'all' | 'enabled' | 'disabled'
 
 export interface LibrarySlice {
   mods: ModMetadata[]
+  conflicts: ConflictInfo[]
   filter: string
   typeFilter: string
   selectedModId: string | null
@@ -23,6 +25,7 @@ export interface LibrarySlice {
   createSeparator: (name?: string) => Promise<ModMetadata | null>
   reorderMods: (orderedIds: string[]) => Promise<void>
   updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
+  refreshConflicts: (options?: { immediate?: boolean }) => Promise<void>
   setFilter: (filter: string) => void
   setTypeFilter: (type: string) => void
   setLibraryStatusFilter: (filter: LibraryStatusFilter) => void
@@ -36,11 +39,116 @@ export interface LibrarySlice {
   totalCount: () => number
 }
 
+type ConflictCalculationResult = {
+  summaries: ModConflictSummary[]
+  conflicts: ConflictInfo[]
+}
+
+let conflictRefreshTimer: ReturnType<typeof setTimeout> | null = null
+let scheduledConflictRefresh: Promise<void> | null = null
+let resolveScheduledConflictRefresh: (() => void) | null = null
+let activeConflictRefresh: Promise<void> | null = null
+
+const applyConflictState = (
+  set: Parameters<StateCreator<LibrarySlice, [], [], LibrarySlice>>[0],
+  summaries: ModConflictSummary[],
+  conflicts: ConflictInfo[]
+) => {
+  const summaryMap = new Map(summaries.map((summary) => [summary.modId, summary]))
+
+  set((state) => ({
+    mods: state.mods.map((mod) => ({
+      ...mod,
+      conflictSummary: summaryMap.get(mod.uuid)
+        ? {
+            overwrites: summaryMap.get(mod.uuid)!.overwrites,
+            overwrittenBy: summaryMap.get(mod.uuid)!.overwrittenBy,
+          }
+        : { overwrites: 0, overwrittenBy: 0 },
+    })),
+    conflicts,
+  }))
+}
+
+const clearConflictState = (
+  set: Parameters<StateCreator<LibrarySlice, [], [], LibrarySlice>>[0]
+) => {
+  set((state) => ({
+    mods: state.mods.map((mod) => ({
+      ...mod,
+      conflictSummary: { overwrites: 0, overwrittenBy: 0 },
+    })),
+    conflicts: [],
+  }))
+}
+
+const runConflictRefresh = async (
+  set: Parameters<StateCreator<LibrarySlice, [], [], LibrarySlice>>[0]
+): Promise<void> => {
+  try {
+    const conflictResult = await IpcService.invoke<IpcResult<ConflictCalculationResult>>(IPC.CALCULATE_MOD_CONFLICTS)
+    if (conflictResult.ok && conflictResult.data) {
+      applyConflictState(set, conflictResult.data.summaries ?? [], conflictResult.data.conflicts ?? [])
+      return
+    }
+  } catch {
+    // Fall through to clear stale state.
+  }
+
+  clearConflictState(set)
+}
+
+const scheduleConflictRefresh = (
+  set: Parameters<StateCreator<LibrarySlice, [], [], LibrarySlice>>[0],
+  immediate = false
+): Promise<void> => {
+  const delay = immediate ? 0 : 80
+
+  if (conflictRefreshTimer !== null) {
+    clearTimeout(conflictRefreshTimer)
+    conflictRefreshTimer = null
+  }
+
+  if (!scheduledConflictRefresh) {
+    scheduledConflictRefresh = new Promise<void>((resolve) => {
+      resolveScheduledConflictRefresh = resolve
+    })
+  }
+
+  conflictRefreshTimer = setTimeout(() => {
+    conflictRefreshTimer = null
+    const finalize = resolveScheduledConflictRefresh
+    resolveScheduledConflictRefresh = null
+    const currentScheduled = scheduledConflictRefresh
+    scheduledConflictRefresh = null
+
+    const execute = async () => {
+      if (activeConflictRefresh) {
+        await activeConflictRefresh
+      }
+
+      activeConflictRefresh = runConflictRefresh(set)
+      try {
+        await activeConflictRefresh
+      } finally {
+        activeConflictRefresh = null
+        finalize?.()
+      }
+    }
+
+    void execute()
+    void currentScheduled
+  }, delay)
+
+  return scheduledConflictRefresh
+}
+
 export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice> = (
   set,
   get
 ) => ({
   mods: [],
+  conflicts: [],
   filter: '',
   typeFilter: '',
   selectedModId: null,
@@ -51,6 +159,8 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS)
     if (result.ok && result.data) {
       set({ mods: result.data })
+      await scheduleConflictRefresh(set, true)
+
       return result.data
     }
     return []
@@ -59,24 +169,17 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   restoreEnabledMods: async (modsToRestore) => {
     const sourceMods = modsToRestore ?? get().mods
     const enabledMods = sourceMods.filter((mod) => mod.kind === 'mod' && mod.enabled)
-    const results: IpcResult[] = []
-
-    for (const mod of enabledMods) {
-      const result = await IpcService.invoke<IpcResult>(IPC.ENABLE_MOD, mod.uuid)
-      results.push(result)
+    if (enabledMods.length === 0) {
+      return []
     }
 
-    if (enabledMods.length > 0) {
-      set((state) => ({
-        mods: state.mods.map((mod) =>
-          enabledMods.some((enabledMod) => enabledMod.uuid === mod.uuid)
-            ? { ...mod, enabled: true }
-            : mod
-        )
-      }))
+    const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.RESTORE_ENABLED_MODS)
+    if (result.ok && result.data) {
+      set({ mods: result.data })
+      await scheduleConflictRefresh(set, true)
     }
 
-    return results
+    return [result]
   },
 
   enableMod: async (id) => {
@@ -87,6 +190,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
           m.uuid === id ? { ...m, enabled: true } : m
         )
       }))
+      void scheduleConflictRefresh(set)
     }
     return result
   },
@@ -99,6 +203,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
           m.uuid === id ? { ...m, enabled: false } : m
         )
       }))
+      void scheduleConflictRefresh(set)
     }
     return result
   },
@@ -113,6 +218,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
             : mod
         )
       }))
+      void scheduleConflictRefresh(set)
     }
     return result
   },
@@ -125,6 +231,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         selectedModId:
           state.selectedModId === id ? null : state.selectedModId
       }))
+      void scheduleConflictRefresh(set)
     }
     return result
   },
@@ -141,7 +248,6 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   reorderMods: async (orderedIds) => {
-    await IpcService.invoke(IPC.REORDER_MODS, orderedIds)
     set((state) => {
       const orderMap = new Map(orderedIds.map((id, i) => [id, i]))
       const reordered = state.mods
@@ -152,6 +258,17 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         .sort((a, b) => a.order - b.order)
       return { mods: reordered }
     })
+
+    const { mods, conflicts } = get()
+    const optimisticConflictState = recomputeConflictStateFromExistingConflicts(mods, conflicts)
+    applyConflictState(set, optimisticConflictState.summaries, optimisticConflictState.conflicts)
+
+    void scheduleConflictRefresh(set)
+
+    const result = await IpcService.invoke<IpcResult>(IPC.REORDER_MODS, orderedIds)
+    if (!result.ok) {
+      await get().scanMods()
+    }
   },
 
   updateModMetadata: async (id, updates) => {
@@ -164,7 +281,22 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       set((state) => ({
         mods: state.mods.map((m) => (m.uuid === id ? result.data! : m))
       }))
+
+      if (
+        'enabled' in updates ||
+        'order' in updates ||
+        'files' in updates ||
+        'emptyDirs' in updates ||
+        'hashes' in updates ||
+        'deployedPaths' in updates ||
+        'kind' in updates
+      ) {
+        void scheduleConflictRefresh(set)
+      }
     }
+  },
+  refreshConflicts: async (options) => {
+    await scheduleConflictRefresh(set, options?.immediate ?? false)
   },
   setFilter: (filter) => set({ filter }),
   setTypeFilter: (typeFilter) => set({ typeFilter }),

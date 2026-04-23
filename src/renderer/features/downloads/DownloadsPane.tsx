@@ -333,7 +333,7 @@ export const DownloadsPane: React.FC = () => {
     }
 
     if (installResult.data.status === 'conflict') {
-      addToast('File conflicts detected during install', 'warning')
+      return
     }
   }
 
@@ -659,7 +659,7 @@ export const DownloadsPane: React.FC = () => {
   }, [sortDirection, sortKey])
 
   const browseLikeButtonClass = 'flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] px-4 text-[10px] brand-font font-bold uppercase tracking-widest transition-colors'
-  const darkBrowseLikeButtonClass = `${browseLikeButtonClass} border-[#fcee09]/50 bg-[#0a0a0a] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]`
+  const darkBrowseLikeButtonClass = `${browseLikeButtonClass} group border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-[#fcee09] [&_.material-symbols-outlined]:transition-colors hover:[&_.material-symbols-outlined]:!text-[#050505]`
   const destructiveToolbarButtonClass = `${browseLikeButtonClass} w-10 border-[#5b1818] bg-[#160707] px-0 text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1] disabled:cursor-not-allowed disabled:border-[#3a1010] disabled:bg-[#0d0404] disabled:text-[#7c4a4a]`
   const downloadMenuButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase'
   const downloadMenuSubtleButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#9d9d9d] hover:bg-[#111] hover:text-white transition-colors gap-3 tracking-wider font-semibold uppercase'
@@ -783,10 +783,13 @@ export const DownloadsPane: React.FC = () => {
 
         {/* Fixed header */}
         <div className="shrink-0 px-6 pt-6 pb-3 w-full">
-          <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
+          <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
             Downloads
           </h1>
-          <p className="ui-support-mono mt-1 flex items-center gap-2">
+          <p
+            className="mt-1 flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]"
+            style={{ fontFamily: '"DM Sans", sans-serif' }}
+          >
             LOCAL: {localFiles.length}
             {activeDownloads.length > 0 && <>&nbsp;|&nbsp; ACTIVE: {activeDownloads.length}</>}
             {searchQuery.trim() && <>&nbsp;|&nbsp; SHOWN: {totalRows}</>}

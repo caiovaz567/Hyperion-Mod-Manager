@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
 import type {
   ActiveDownload,
+  ConflictInfo,
   DownloadEntry,
   DuplicateNxmDownloadInfo,
   DuplicateModInfo,
@@ -43,6 +44,43 @@ function extractVersionFromFileName(rawName: string): string | undefined {
   if (match) return match[1].replace(/[_-]/g, '.')
 
   return undefined
+}
+
+function stripArchiveExtension(rawName: string): string {
+  return rawName.replace(/\.(zip|7z|rar)$/i, '')
+}
+
+function normalizeSourceIdentity(rawName: string): string {
+  const cleaned = stripArchiveExtension(rawName)
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
+    .replace(/[_]+/g, ' ')
+    .trim()
+
+  const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)
+  if (dashParts.length > 1) {
+    for (let index = 1; index < dashParts.length; index += 1) {
+      const trailing = dashParts.slice(index)
+      const versionLike = trailing.every((part) => /^v?\d+[a-z0-9.]*$/i.test(part))
+      if (versionLike) {
+        return dashParts.slice(0, index).join(' - ').trim().toLowerCase()
+      }
+    }
+  }
+
+  return cleaned
+    .replace(/[-_]?v?\d+(?:[._-]\d+)+(?:[._-]\d+)*$/i, '')
+    .replace(/[-_ ]+$/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function getInstalledSourceIdentity(mod: ModMetadata): string | undefined {
+  const rawSourceName = mod.sourcePath
+    ? mod.sourcePath.replace(/\\/g, '/').split('/').pop()
+    : mod.name
+  if (!rawSourceName?.trim()) return undefined
+  return normalizeSourceIdentity(rawSourceName)
 }
 
 function normalizeVersion(value?: string): string | undefined {
@@ -116,10 +154,24 @@ function getInstalledTimestamp(installedAt?: string): number {
 function selectPreferredNexusMod(
   mods: ModMetadata[],
   nexusModId: number,
+  incomingSourceIdentity?: string,
+  incomingFileId?: number,
   incomingVersion?: string,
 ): ModMetadata | undefined {
   let candidates = mods.filter((mod) => mod.kind === 'mod' && mod.nexusModId === nexusModId)
   if (!candidates.length) return undefined
+
+  if (incomingSourceIdentity) {
+    candidates = candidates.filter((mod) => getInstalledSourceIdentity(mod) === incomingSourceIdentity)
+    if (!candidates.length) return undefined
+  }
+
+  if (typeof incomingFileId === 'number') {
+    const exactFileMatches = candidates.filter((mod) => mod.nexusFileId === incomingFileId)
+    if (exactFileMatches.length > 0) {
+      candidates = exactFileMatches
+    }
+  }
 
   if (incomingVersion) {
     const exactVersionMatches = candidates.filter((mod) => normalizeVersion(mod.version) === incomingVersion)
@@ -160,11 +212,19 @@ export interface VersionMismatchPromptInfo {
   nexusModId: number
   existingModId: string
   existingModName: string
+  existingSourceFileName?: string
+  matchedSourceIdentity?: string
   existingVersion?: string
   incomingVersion?: string
   sourcePath: string
   sourceFileName?: string
   sourceVersion?: string
+}
+
+export interface OverwriteConflictPromptInfo {
+  mod: ModMetadata
+  conflicts: ConflictInfo[]
+  request: InstallModRequest
 }
 
 export interface DownloadsSlice {
@@ -180,6 +240,7 @@ export interface DownloadsSlice {
   pendingInstallRequest: InstallModRequest | null
   duplicateDownloadPrompt: DuplicateDownloadPromptInfo | null
   versionMismatchPrompt: VersionMismatchPromptInfo | null
+  overwriteConflictPrompt: OverwriteConflictPromptInfo | null
   activeDownloads: ActiveDownload[]
   localFiles: DownloadEntry[]
   newFiles: string[]
@@ -196,6 +257,8 @@ export interface DownloadsSlice {
   clearDuplicateDownloadPrompt: () => void
   confirmVersionMismatch: (action: 'replace' | 'copy' | 'skip') => Promise<void>
   clearVersionMismatchPrompt: () => void
+  confirmOverwriteConflicts: (proceed: boolean) => Promise<void>
+  clearOverwriteConflictPrompt: () => void
   clearInstall: () => void
   refreshLocalFiles: () => Promise<void>
   startNxmDownload: (payload: NxmLinkPayload, options?: { allowDuplicate?: boolean }) => Promise<void>
@@ -222,6 +285,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   pendingInstallRequest: null,
   duplicateDownloadPrompt: null,
   versionMismatchPrompt: null,
+  overwriteConflictPrompt: null,
   newFiles: (() => {
     try { return JSON.parse(localStorage.getItem('hyperion:newFiles') ?? '[]') as string[] }
     catch { return [] }
@@ -235,10 +299,13 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       mods?: ModMetadata[]
     }
     const nexusModId = request.nexusModId
+    const incomingSourceIdentity = request.sourceFileName
+      ? normalizeSourceIdentity(request.sourceFileName)
+      : undefined
     const incomingVersion = normalizeVersion(request.sourceVersion)
       ?? (typeof nexusModId === 'number' ? undefined : extractVersionFromFileName(request.sourceFileName ?? filePath))
     const existingMod = typeof nexusModId === 'number'
-      ? selectPreferredNexusMod(state.mods ?? [], nexusModId, incomingVersion)
+      ? selectPreferredNexusMod(state.mods ?? [], nexusModId, incomingSourceIdentity, request.nexusFileId, incomingVersion)
       : undefined
     const existingVersion = normalizeVersion(existingMod?.version)
 
@@ -248,6 +315,10 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           nexusModId,
           existingModId: existingMod.uuid,
           existingModName: existingMod.name,
+          existingSourceFileName: existingMod.sourcePath
+            ? existingMod.sourcePath.replace(/\\/g, '/').split('/').pop()
+            : undefined,
+          matchedSourceIdentity: incomingSourceIdentity,
           existingVersion,
           incomingVersion,
           sourcePath: filePath,
@@ -316,6 +387,12 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             ...request,
             duplicateAction: 'prompt',
           },
+          overwriteConflictPrompt: null,
+        })
+      } else if (resultData.status === 'conflict' && resultData.mod && resultData.conflicts?.length) {
+        return await get().installMod(filePath, {
+          ...request,
+          allowOverwriteConflicts: true,
         })
       } else if (resultData.status === 'installed') {
         set((state) => {
@@ -327,6 +404,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             pendingMod: resultData.mod ?? null,
             installPrompt: null,
             pendingInstallRequest: null,
+            overwriteConflictPrompt: null,
             newFiles: nextNewFiles,
           }
         })
@@ -335,6 +413,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           pendingMod: resultData.mod ?? null,
           installPrompt: null,
           pendingInstallRequest: null,
+          overwriteConflictPrompt: null,
         })
       }
     }
@@ -480,13 +559,56 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         : 'installed'
       state.setRecentLibraryBadge?.(result.data.mod.uuid, badge)
     } else if (result.data.status === 'conflict') {
-      state.addToast?.('File conflicts detected during install', 'warning')
+      return
     }
   },
 
   clearVersionMismatchPrompt: () =>
     set({
       versionMismatchPrompt: null,
+    }),
+
+  confirmOverwriteConflicts: async (proceed) => {
+    const prompt = get().overwriteConflictPrompt
+    const state = get() as DownloadsSlice & {
+      addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+      scanMods?: () => Promise<unknown>
+      enableMod?: (modId: string) => Promise<IpcResult>
+      setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
+    }
+
+    if (!prompt) return
+
+    set({ overwriteConflictPrompt: null })
+
+    if (!proceed) return
+
+    const { filePath, ...request } = prompt.request
+    const result = await get().installMod(filePath, {
+      ...request,
+      allowOverwriteConflicts: true,
+    })
+
+    if (!result.ok || !result.data) {
+      state.addToast?.(result.error ?? 'Install failed', 'error')
+      return
+    }
+
+    if (result.data.status === 'installed' && result.data.mod) {
+      await state.scanMods?.()
+      const enableResult = await state.enableMod?.(result.data.mod.uuid)
+      if (enableResult && !enableResult.ok) {
+        state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+      } else {
+        state.addToast?.(`${result.data.mod.name} installed & activated`, 'success')
+      }
+      state.setRecentLibraryBadge?.(result.data.mod.uuid, 'installed')
+    }
+  },
+
+  clearOverwriteConflictPrompt: () =>
+    set({
+      overwriteConflictPrompt: null,
     }),
 
   clearInstall: () =>
@@ -503,6 +625,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       pendingInstallRequest: null,
       duplicateDownloadPrompt: null,
       versionMismatchPrompt: null,
+      overwriteConflictPrompt: null,
     }),
 
   refreshLocalFiles: async () => {

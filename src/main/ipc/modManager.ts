@@ -4,7 +4,14 @@ import path from 'path'
 import fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import { IPC } from '../../shared/types'
-import type { ModMetadata, IpcResult, PurgeModsResult } from '../../shared/types'
+import type {
+  ModMetadata,
+  IpcResult,
+  PurgeModsResult,
+  ModTreeCreateEntryRequest,
+  ModTreeRenameEntryRequest,
+  ModTreeDeleteEntryRequest,
+} from '../../shared/types'
 import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
 import { detectModType } from './archiveParser'
@@ -50,6 +57,17 @@ function sanitizeSeparatorFolderName(rawName: string): string {
   return cleaned || 'New Separator'
 }
 
+function sanitizeModTreeEntryName(rawName: string): string {
+  const cleaned = rawName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[ ]+$/g, '')
+
+  if (!cleaned || cleaned === '.' || cleaned === '..') return ''
+  return cleaned
+}
+
 function getUniqueSeparatorFolderName(
   libraryPath: string,
   rawName: string,
@@ -87,7 +105,7 @@ function getModFolderKey(mod: ModMetadata): string {
   return mod.uuid
 }
 
-function normalizeRelativePath(relPath: string): string {
+export function normalizeRelativePath(relPath: string): string {
   return relPath
     .split(/[\\/]+/)
     .filter((segment) => Boolean(segment) && segment !== '.' && segment !== '..')
@@ -248,7 +266,7 @@ function inferLegacyFlattenedDeployPath(mod: ModMetadata, normalized: string, pa
   }
 }
 
-function getDeployRelativePath(mod: ModMetadata, relFile: string): string {
+export function getDeployRelativePath(mod: ModMetadata, relFile: string): string {
   const normalized = normalizeRelativePath(relFile)
   const parts = splitSegments(normalized)
   const modFolderKey = getModFolderKey(mod)
@@ -318,7 +336,7 @@ function getDeployRelativePath(mod: ModMetadata, relFile: string): string {
   return normalized
 }
 
-function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
+export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
   if (Array.isArray(mod.deployedPaths) && mod.deployedPaths.length > 0) {
     return mod.deployedPaths
   }
@@ -327,6 +345,70 @@ function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
   return mod.files
     .filter((relFile) => relFile !== '_metadata.json')
     .map((relFile) => getDeployRelativePath(mod, relFile))
+}
+
+async function redeployEnabledMods(
+  gamePath: string,
+  libraryPath: string
+): Promise<IpcResult<ModMetadata[]>> {
+  if (!gamePath) return { ok: false, error: 'Game path not set' }
+
+  const mods = await scanMods(libraryPath)
+  const enabledMods = mods.filter((mod) => mod.kind === 'mod' && mod.enabled)
+
+  try {
+    await prepareBaseGameDir(gamePath)
+
+    for (const mod of enabledMods) {
+      await removeLegacyFolderLink(gamePath, mod)
+      for (const deployedRelativePath of getTrackedDeploymentPaths(mod)) {
+        removeDeployedFile(path.join(gamePath, deployedRelativePath), gamePath)
+      }
+    }
+
+    for (const mod of enabledMods) {
+      const resolvedMod = findModDir(libraryPath, mod.uuid)
+      const metadata = resolvedMod?.mod ?? mod
+      const modFolderKey = getModFolderKey(metadata)
+      const modDir = resolvedMod?.dir ?? path.join(libraryPath, modFolderKey)
+      const modFiles = Array.isArray(metadata.files) ? metadata.files : []
+      const deployedPaths: string[] = []
+
+      for (const relFile of modFiles) {
+        if (relFile === '_metadata.json') continue
+
+        const normalizedRelativePath = normalizeRelativePath(relFile)
+        const src = path.join(modDir, normalizedRelativePath)
+        if (!fs.existsSync(src)) continue
+
+        const relativeDeployPath = getDeployRelativePath(metadata, normalizedRelativePath)
+        const dest = resolveDeploymentTarget(gamePath, relativeDeployPath)
+        if (!dest) continue
+
+        fs.mkdirSync(path.dirname(dest), { recursive: true })
+        fs.copyFileSync(src, dest)
+        deployedPaths.push(normalizeRelativePath(path.relative(gamePath, dest)))
+      }
+
+      metadata.deployedPaths = Array.from(new Set(deployedPaths))
+      writeMetadata(modDir, metadata)
+    }
+
+    for (const mod of mods) {
+      if (mod.kind !== 'mod' || mod.enabled || !Array.isArray(mod.deployedPaths) || mod.deployedPaths.length === 0) {
+        continue
+      }
+
+      const resolvedMod = findModDir(libraryPath, mod.uuid)
+      if (!resolvedMod) continue
+      resolvedMod.mod.deployedPaths = []
+      writeMetadata(resolvedMod.dir, resolvedMod.mod)
+    }
+
+    return { ok: true, data: await scanMods(libraryPath) }
+  } catch (err: unknown) {
+    return { ok: false, error: String(err) }
+  }
 }
 
 // ─── Metadata helpers ─────────────────────────────────────────────────────────
@@ -349,6 +431,47 @@ function writeMetadata(modDir: string, meta: ModMetadata): void {
     JSON.stringify(meta, null, 2),
     'utf-8'
   )
+}
+
+function normalizeEmptyDirs(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return Array.from(
+    new Set(
+      value
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .map((entry) => normalizeRelativePath(entry))
+        .filter(Boolean)
+    )
+  ).sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true }))
+}
+
+function setEmptyDirs(meta: ModMetadata, emptyDirs: string[]): void {
+  if (emptyDirs.length > 0) {
+    meta.emptyDirs = emptyDirs
+  } else if (meta.emptyDirs !== undefined) {
+    delete meta.emptyDirs
+  }
+}
+
+function collectEmptyDirsFrom(startDir: string, stopDir: string): string[] {
+  const results: string[] = []
+  const resolvedStopDir = path.resolve(stopDir)
+  let currentDir = path.resolve(startDir)
+
+  while (currentDir.startsWith(`${resolvedStopDir}${path.sep}`)) {
+    try {
+      if (!fs.existsSync(currentDir)) break
+      const stats = fs.statSync(currentDir)
+      if (!stats.isDirectory()) break
+      if (fs.readdirSync(currentDir).length > 0) break
+      results.push(normalizeRelativePath(path.relative(resolvedStopDir, currentDir)))
+      currentDir = path.dirname(currentDir)
+    } catch {
+      break
+    }
+  }
+
+  return results.filter(Boolean)
 }
 
 async function createSeparator(libraryPath: string, rawName: string): Promise<IpcResult<ModMetadata>> {
@@ -381,6 +504,163 @@ async function createSeparator(libraryPath: string, rawName: string): Promise<Ip
   fs.mkdirSync(modDir, { recursive: true })
   writeMetadata(modDir, separator)
   return { ok: true, data: separator }
+}
+
+function resolvePathInsideModDir(modDir: string, relativePath = ''): { normalized: string; absolute: string } | null {
+  const normalized = normalizeRelativePath(relativePath)
+  const resolvedModDir = path.resolve(modDir)
+  const absolute = normalized ? path.resolve(modDir, normalized) : resolvedModDir
+
+  if (absolute !== resolvedModDir && !absolute.startsWith(`${resolvedModDir}${path.sep}`)) {
+    return null
+  }
+
+  return { normalized, absolute }
+}
+
+async function refreshModAfterTreeMutation(
+  modId: string,
+  libraryPath: string,
+  gamePath: string
+): Promise<IpcResult<ModMetadata>> {
+  let scannedMods = await scanMods(libraryPath)
+  let updatedMod = scannedMods.find((entry) => entry.uuid === modId)
+  if (!updatedMod) return { ok: false, error: 'Mod not found after file operation' }
+
+  if (updatedMod.enabled) {
+    const syncResult = await enableMod(updatedMod, gamePath, libraryPath)
+    if (!syncResult.ok) {
+      return { ok: false, error: syncResult.error ?? 'Could not resync modified mod' }
+    }
+
+    scannedMods = await scanMods(libraryPath)
+    updatedMod = scannedMods.find((entry) => entry.uuid === modId)
+    if (!updatedMod) return { ok: false, error: 'Mod not found after resync' }
+  }
+
+  return { ok: true, data: updatedMod }
+}
+
+async function createModTreeEntry(
+  request: ModTreeCreateEntryRequest,
+  libraryPath: string,
+  gamePath: string
+): Promise<IpcResult<ModMetadata>> {
+  const found = findModDir(libraryPath, request.modId)
+  if (!found) return { ok: false, error: 'Mod directory not found' }
+
+  const entryName = sanitizeModTreeEntryName(request.name)
+  if (!entryName) return { ok: false, error: 'Entry name cannot be empty' }
+
+  const parentInfo = resolvePathInsideModDir(found.dir, request.parentRelativePath)
+  if (!parentInfo) return { ok: false, error: 'Invalid parent path' }
+
+  fs.mkdirSync(parentInfo.absolute, { recursive: true })
+
+  const targetInfo = resolvePathInsideModDir(found.dir, path.join(parentInfo.normalized, entryName))
+  if (!targetInfo) return { ok: false, error: 'Invalid entry path' }
+  if (path.basename(targetInfo.absolute) === '_metadata.json') {
+    return { ok: false, error: 'Reserved file name' }
+  }
+  if (fs.existsSync(targetInfo.absolute)) {
+    return { ok: false, error: 'An entry with this name already exists' }
+  }
+
+  if (request.kind === 'folder') {
+    fs.mkdirSync(targetInfo.absolute, { recursive: true })
+    const nextEmptyDirs = normalizeEmptyDirs([...(found.mod.emptyDirs ?? []), targetInfo.normalized])
+    setEmptyDirs(found.mod, nextEmptyDirs)
+    writeMetadata(found.dir, found.mod)
+  } else {
+    fs.mkdirSync(path.dirname(targetInfo.absolute), { recursive: true })
+    fs.writeFileSync(targetInfo.absolute, '', 'utf-8')
+    const createdParent = normalizeRelativePath(parentInfo.normalized)
+    const nextEmptyDirs = normalizeEmptyDirs(
+      (found.mod.emptyDirs ?? []).filter((entry) => entry !== createdParent)
+    )
+    setEmptyDirs(found.mod, nextEmptyDirs)
+    writeMetadata(found.dir, found.mod)
+  }
+
+  return refreshModAfterTreeMutation(request.modId, libraryPath, gamePath)
+}
+
+async function renameModTreeEntry(
+  request: ModTreeRenameEntryRequest,
+  libraryPath: string,
+  gamePath: string
+): Promise<IpcResult<ModMetadata>> {
+  const found = findModDir(libraryPath, request.modId)
+  if (!found) return { ok: false, error: 'Mod directory not found' }
+
+  const nextName = sanitizeModTreeEntryName(request.nextName)
+  if (!nextName) return { ok: false, error: 'Entry name cannot be empty' }
+
+  const sourceInfo = resolvePathInsideModDir(found.dir, request.relativePath)
+  if (!sourceInfo || !sourceInfo.normalized) return { ok: false, error: 'Invalid entry path' }
+  if (path.basename(sourceInfo.absolute) === '_metadata.json') {
+    return { ok: false, error: 'Reserved file cannot be renamed' }
+  }
+  if (!fs.existsSync(sourceInfo.absolute)) return { ok: false, error: 'Entry not found' }
+
+  const targetInfo = resolvePathInsideModDir(found.dir, path.join(path.dirname(sourceInfo.normalized), nextName))
+  if (!targetInfo) return { ok: false, error: 'Invalid destination path' }
+  if (path.basename(targetInfo.absolute) === '_metadata.json') {
+    return { ok: false, error: 'Reserved file name' }
+  }
+  if (sourceInfo.absolute === targetInfo.absolute) {
+    return refreshModAfterTreeMutation(request.modId, libraryPath, gamePath)
+  }
+  if (fs.existsSync(targetInfo.absolute)) {
+    return { ok: false, error: 'An entry with this name already exists' }
+  }
+
+  fs.renameSync(sourceInfo.absolute, targetInfo.absolute)
+  if (found.mod.kind === 'mod') {
+    const sourcePrefix = `${sourceInfo.normalized}${path.sep}`
+    const nextEmptyDirs = normalizeEmptyDirs(
+      (found.mod.emptyDirs ?? []).map((entry) => {
+        if (entry === sourceInfo.normalized) return targetInfo.normalized
+        if (entry.startsWith(sourcePrefix)) {
+          return normalizeRelativePath(path.join(targetInfo.normalized, entry.slice(sourcePrefix.length)))
+        }
+        return entry
+      })
+    )
+    setEmptyDirs(found.mod, nextEmptyDirs)
+    writeMetadata(found.dir, found.mod)
+  }
+  return refreshModAfterTreeMutation(request.modId, libraryPath, gamePath)
+}
+
+async function deleteModTreeEntry(
+  request: ModTreeDeleteEntryRequest,
+  libraryPath: string,
+  gamePath: string
+): Promise<IpcResult<ModMetadata>> {
+  const found = findModDir(libraryPath, request.modId)
+  if (!found) return { ok: false, error: 'Mod directory not found' }
+
+  const targetInfo = resolvePathInsideModDir(found.dir, request.relativePath)
+  if (!targetInfo || !targetInfo.normalized) return { ok: false, error: 'Invalid entry path' }
+  if (path.basename(targetInfo.absolute) === '_metadata.json') {
+    return { ok: false, error: 'Reserved file cannot be deleted' }
+  }
+  if (!fs.existsSync(targetInfo.absolute)) return { ok: false, error: 'Entry not found' }
+
+  fs.rmSync(targetInfo.absolute, { recursive: true, force: true })
+  if (found.mod.kind === 'mod') {
+    const removedPrefix = `${targetInfo.normalized}${path.sep}`
+    const parentRelativePath = normalizeRelativePath(path.dirname(targetInfo.normalized))
+    const nextEmptyDirs = normalizeEmptyDirs([
+      ...(found.mod.emptyDirs ?? []).filter((entry) => entry !== targetInfo.normalized && !entry.startsWith(removedPrefix)),
+      ...collectEmptyDirsFrom(path.dirname(targetInfo.absolute), found.dir)
+        .filter((entry) => entry !== parentRelativePath || entry.length > 0),
+    ])
+    setEmptyDirs(found.mod, nextEmptyDirs)
+    writeMetadata(found.dir, found.mod)
+  }
+  return refreshModAfterTreeMutation(request.modId, libraryPath, gamePath)
 }
 
 // ─── Core Functions ──────────────────────────────────────────────────────────
@@ -432,9 +712,45 @@ export async function scanMods(libraryPath: string): Promise<ModMetadata[]> {
             shouldWrite = true
           }
 
+          const normalizedEmptyDirs = normalizeEmptyDirs(meta.emptyDirs)
+          if (!Array.isArray(meta.emptyDirs) || normalizedEmptyDirs.length !== meta.emptyDirs.length || meta.emptyDirs.some((entry, index) => entry !== normalizedEmptyDirs[index])) {
+            setEmptyDirs(meta, normalizedEmptyDirs)
+            shouldWrite = true
+          }
+
           if (meta.deployedPaths && !Array.isArray(meta.deployedPaths)) {
             delete meta.deployedPaths
             shouldWrite = true
+          }
+
+          if (typeof meta.notes !== 'string' || meta.notes.trim().length === 0) {
+            if (meta.notes !== undefined) {
+              delete meta.notes
+              shouldWrite = true
+            }
+          } else if (meta.notes !== meta.notes.trim()) {
+            meta.notes = meta.notes.trim()
+            shouldWrite = true
+          }
+
+          if (meta.previewImagePath !== undefined && typeof meta.previewImagePath !== 'string') {
+            delete meta.previewImagePath
+            shouldWrite = true
+          }
+
+          if (meta.galleryImagePaths !== undefined) {
+            const normalizedGallery = Array.isArray(meta.galleryImagePaths)
+              ? meta.galleryImagePaths.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+              : []
+
+            if (!Array.isArray(meta.galleryImagePaths) || normalizedGallery.length !== meta.galleryImagePaths.length) {
+              if (normalizedGallery.length > 0) {
+                meta.galleryImagePaths = normalizedGallery
+              } else {
+                delete meta.galleryImagePaths
+              }
+              shouldWrite = true
+            }
           }
 
           const normalizedName = normalizeModName(meta.name)
@@ -483,45 +799,17 @@ export async function enableMod(
   if (!gamePath) return { ok: false, error: 'Game path not set' }
 
   const resolvedMod = findModDir(libraryPath, mod.uuid)
-  const metadata = resolvedMod?.mod ?? mod
-  const modFolderKey = getModFolderKey(metadata)
-  const modDir = resolvedMod?.dir ?? path.join(libraryPath, modFolderKey)
-  const modFiles = Array.isArray(metadata.files) ? metadata.files : []
+  if (!resolvedMod) return { ok: false, error: 'Mod directory not found' }
 
-  try {
-    await prepareBaseGameDir(gamePath)
-    await removeLegacyFolderLink(gamePath, metadata)
-
-    for (const deployedRelativePath of getTrackedDeploymentPaths(metadata)) {
-      removeDeployedFile(path.join(gamePath, deployedRelativePath), gamePath)
-    }
-
-    const deployedPaths: string[] = []
-
-    for (const relFile of modFiles) {
-      if (relFile === '_metadata.json') continue
-
-      const normalizedRelativePath = normalizeRelativePath(relFile)
-      const src = path.join(modDir, normalizedRelativePath)
-      if (!fs.existsSync(src)) continue
-
-      const relativeDeployPath = getDeployRelativePath(metadata, normalizedRelativePath)
-      const dest = resolveDeploymentTarget(gamePath, relativeDeployPath)
-      if (!dest) continue
-
-      fs.mkdirSync(path.dirname(dest), { recursive: true })
-      fs.copyFileSync(src, dest)
-      deployedPaths.push(normalizeRelativePath(path.relative(gamePath, dest)))
-    }
-
-    metadata.enabled = true
-    metadata.enabledAt = new Date().toISOString()
-    metadata.deployedPaths = deployedPaths
-    writeMetadata(modDir, metadata)
-    return { ok: true }
-  } catch (err: unknown) {
-    return { ok: false, error: String(err) }
+  resolvedMod.mod.enabled = true
+  if (!resolvedMod.mod.enabledAt) {
+    resolvedMod.mod.enabledAt = new Date().toISOString()
   }
+  writeMetadata(resolvedMod.dir, resolvedMod.mod)
+
+  const redeployResult = await redeployEnabledMods(gamePath, libraryPath)
+  if (!redeployResult.ok) return { ok: false, error: redeployResult.error }
+  return { ok: true }
 }
 
 export async function disableMod(
@@ -532,24 +820,15 @@ export async function disableMod(
   if (!gamePath) return { ok: false, error: 'Game path not set' }
 
   const resolvedMod = findModDir(libraryPath, mod.uuid)
-  const metadata = resolvedMod?.mod ?? mod
-  const modFolderKey = getModFolderKey(metadata)
-  const modDir = resolvedMod?.dir ?? path.join(libraryPath, modFolderKey)
+  if (!resolvedMod) return { ok: false, error: 'Mod directory not found' }
 
-  try {
-    await removeLegacyFolderLink(gamePath, metadata)
+  resolvedMod.mod.enabled = false
+  resolvedMod.mod.deployedPaths = []
+  writeMetadata(resolvedMod.dir, resolvedMod.mod)
 
-    for (const deployedRelativePath of getTrackedDeploymentPaths(metadata)) {
-      removeDeployedFile(path.join(gamePath, deployedRelativePath), gamePath)
-    }
-
-    metadata.enabled = false
-    metadata.deployedPaths = []
-    writeMetadata(modDir, metadata)
-    return { ok: true }
-  } catch (err: unknown) {
-    return { ok: false, error: String(err) }
-  }
+  const redeployResult = await redeployEnabledMods(gamePath, libraryPath)
+  if (!redeployResult.ok) return { ok: false, error: redeployResult.error }
+  return { ok: true }
 }
 
 export async function purgeMods(
@@ -564,13 +843,28 @@ export async function purgeMods(
   let purged = 0
   let failed = 0
 
-  for (const mod of enabledMods) {
-    const result = await disableMod(mod, gamePath, libraryPath)
-    if (result.ok) {
+  try {
+    await prepareBaseGameDir(gamePath)
+
+    for (const mod of enabledMods) {
+      await removeLegacyFolderLink(gamePath, mod)
+      for (const deployedRelativePath of getTrackedDeploymentPaths(mod)) {
+        removeDeployedFile(path.join(gamePath, deployedRelativePath), gamePath)
+      }
+
+      const resolvedMod = findModDir(libraryPath, mod.uuid)
+      if (!resolvedMod) {
+        failed += 1
+        continue
+      }
+
+      resolvedMod.mod.enabled = false
+      resolvedMod.mod.deployedPaths = []
+      writeMetadata(resolvedMod.dir, resolvedMod.mod)
       purged += 1
-    } else {
-      failed += 1
     }
+  } catch {
+    failed += 1
   }
 
   return { ok: failed === 0, data: { purged, failed }, error: failed > 0 ? `${failed} mod(s) could not be purged` : undefined }
@@ -633,6 +927,14 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
   )
 
   ipcMain.handle(
+    IPC.RESTORE_ENABLED_MODS,
+    async (): Promise<IpcResult<ModMetadata[]>> => {
+      const settings = loadSettings()
+      return redeployEnabledMods(settings.gamePath, settings.libraryPath)
+    }
+  )
+
+  ipcMain.handle(
     IPC.PURGE_MODS,
     async (): Promise<IpcResult<PurgeModsResult>> => {
       const settings = loadSettings()
@@ -683,6 +985,14 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
           writeMetadata(modDir, meta)
         }
       }
+
+      if (allMods.some((mod) => mod.kind === 'mod' && mod.enabled)) {
+        const redeployResult = await redeployEnabledMods(settings.gamePath, settings.libraryPath)
+        if (!redeployResult.ok) {
+          return { ok: false, error: redeployResult.error }
+        }
+      }
+
       return { ok: true }
     }
   )
@@ -712,6 +1022,122 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
 
       writeMetadata(nextDir, updated)
       return { ok: true, data: updated }
+    }
+  )
+
+  ipcMain.handle(
+    IPC.MOD_TREE_CREATE_ENTRY,
+    async (_event, request: ModTreeCreateEntryRequest): Promise<IpcResult<ModMetadata>> => {
+      const settings = loadSettings()
+      try {
+        return await createModTreeEntry(request, settings.libraryPath, settings.gamePath)
+      } catch (error) {
+        pushGeneralLog(getMainWindow?.() ?? null, {
+          level: 'error',
+          source: 'mods',
+          message: 'Create mod tree entry failed',
+          details: error instanceof Error ? { request, error: error.message } : { request, error: String(error) },
+        })
+        return { ok: false, error: error instanceof Error ? error.message : 'Could not create entry' }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    IPC.MOD_TREE_RENAME_ENTRY,
+    async (_event, request: ModTreeRenameEntryRequest): Promise<IpcResult<ModMetadata>> => {
+      const settings = loadSettings()
+      try {
+        return await renameModTreeEntry(request, settings.libraryPath, settings.gamePath)
+      } catch (error) {
+        pushGeneralLog(getMainWindow?.() ?? null, {
+          level: 'error',
+          source: 'mods',
+          message: 'Rename mod tree entry failed',
+          details: error instanceof Error ? { request, error: error.message } : { request, error: String(error) },
+        })
+        return { ok: false, error: error instanceof Error ? error.message : 'Could not rename entry' }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    IPC.MOD_TREE_DELETE_ENTRY,
+    async (_event, request: ModTreeDeleteEntryRequest): Promise<IpcResult<ModMetadata>> => {
+      const settings = loadSettings()
+      try {
+        return await deleteModTreeEntry(request, settings.libraryPath, settings.gamePath)
+      } catch (error) {
+        pushGeneralLog(getMainWindow?.() ?? null, {
+          level: 'error',
+          source: 'mods',
+          message: 'Delete mod tree entry failed',
+          details: error instanceof Error ? { request, error: error.message } : { request, error: String(error) },
+        })
+        return { ok: false, error: error instanceof Error ? error.message : 'Could not delete entry' }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    IPC.CALCULATE_MOD_CONFLICTS,
+    async (): Promise<IpcResult<{ summaries: ModConflictSummary[]; conflicts: ConflictInfo[] }>> => {
+      try {
+        const settings = loadSettings()
+        const mods = await scanMods(settings.libraryPath)
+
+        const pathOwners = new Map<string, Array<{ modId: string; name: string; order: number }>>()
+
+        for (const mod of mods.filter((m) => m.kind === 'mod')) {
+          for (const rel of getTrackedDeploymentPaths(mod)) {
+            const normalized = normalizeRelativePath(rel)
+            if (!normalized) continue
+            const owners = pathOwners.get(normalized) ?? []
+            if (!owners.find((o) => o.modId === mod.uuid)) {
+              owners.push({ modId: mod.uuid, name: mod.name, order: mod.order })
+            }
+            pathOwners.set(normalized, owners)
+          }
+        }
+
+        const conflicts: ConflictInfo[] = []
+        const summaryMap = new Map<string, { overwrites: number; overwrittenBy: number }>()
+        for (const m of mods) summaryMap.set(m.uuid, { overwrites: 0, overwrittenBy: 0 })
+
+        for (const [resourcePath, owners] of pathOwners.entries()) {
+          if (owners.length <= 1) continue
+          const uniqueOwners = Array.from(new Map(owners.map((o) => [o.modId, o])).values())
+          if (uniqueOwners.length <= 1) continue
+          const sorted = [...uniqueOwners].sort((a, b) => a.order - b.order)
+          const winner = sorted[sorted.length - 1]
+
+          for (const owner of uniqueOwners) {
+            if (owner.modId === winner.modId) continue
+
+            conflicts.push({
+              kind: 'overwrite',
+              resourcePath: resourcePath.split(path.sep).join('/'),
+              existingModId: owner.modId,
+              existingModName: owner.name,
+              incomingModId: winner.modId,
+              incomingModName: winner.name,
+              existingOrder: owner.order,
+              incomingOrder: winner.order,
+              incomingWins: winner.order > owner.order,
+            })
+
+            const sWinner = summaryMap.get(winner.modId)
+            if (sWinner) sWinner.overwrites += 1
+            const sOwner = summaryMap.get(owner.modId)
+            if (sOwner) sOwner.overwrittenBy += 1
+          }
+        }
+
+        const summaries: ModConflictSummary[] = Array.from(summaryMap.entries()).map(([modId, v]) => ({ modId, overwrites: v.overwrites, overwrittenBy: v.overwrittenBy }))
+        return { ok: true, data: { summaries, conflicts } }
+      } catch (err: unknown) {
+        return { ok: false, error: String(err) }
+      }
     }
   )
 

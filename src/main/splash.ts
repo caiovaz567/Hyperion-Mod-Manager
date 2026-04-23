@@ -1,5 +1,252 @@
-import { BrowserWindow, app } from 'electron'
-import path from 'path'
+import { BrowserWindow } from 'electron'
+
+function buildSplashHtml(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#050505" />
+    <title>Hyperion</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg: #050505;
+        --text: #e5e2e1;
+        --text-muted: rgba(229,226,225,0.28);
+        --accent: #fcee09;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text);
+        font-family: "Segoe UI Variable Display", "Segoe UI", "Arial Narrow", sans-serif;
+        -webkit-app-region: drag;
+        user-select: none;
+        position: relative;
+      }
+
+      .window-surface {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 42%, rgba(252,238,9,0.08), transparent 22%),
+          radial-gradient(circle at 50% 58%, rgba(255,255,255,0.025), transparent 30%),
+          #050505;
+        box-shadow:
+          0 18px 44px rgba(0,0,0,0.42),
+          inset 0 0 0 1px rgba(255,255,255,0.055);
+      }
+
+      .window-surface::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.012), transparent 24%),
+          linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.018) 50%, transparent 100%);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
+      .shell {
+        position: relative;
+        width: 420px;
+        min-height: 230px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+      }
+
+      .mark-frame {
+        position: relative;
+        width: 108px;
+        height: 108px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .mark-frame::before,
+      .mark-frame::after {
+        content: "";
+        position: absolute;
+        inset: 18px;
+        border: 1px solid rgba(255,255,255,0.055);
+        border-radius: 16px;
+        transform: rotate(45deg);
+      }
+
+      .mark-frame::after {
+        inset: 6px;
+        border-color: rgba(252,238,9,0.09);
+        animation: frame-breathe 2.2s ease-in-out infinite;
+      }
+
+      .mark-glow {
+        position: absolute;
+        width: 92px;
+        height: 92px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.08) 42%, transparent 72%);
+        filter: blur(10px);
+        animation: pulse-glow 2.1s ease-in-out infinite;
+      }
+
+      .logo-mark {
+        width: 52px;
+        height: 52px;
+        display: block;
+        position: relative;
+        z-index: 1;
+        filter: drop-shadow(0 0 12px rgba(252,238,9,0.18));
+        animation: fade-in 0.38s ease forwards, float-mark 1.7s ease-in-out infinite;
+        opacity: 0;
+      }
+
+      .brand-lockup {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .title {
+        position: relative;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        color: var(--text);
+        line-height: 1;
+        text-transform: uppercase;
+        text-shadow:
+          0 0 0 rgba(252,238,9,0),
+          0 0 18px rgba(252,238,9,0.06);
+        animation: fade-in 0.45s 0.16s ease forwards, title-glow 2s ease-in-out infinite;
+        opacity: 0;
+      }
+
+      .title::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -12px;
+        width: 164px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(252,238,9,0.85), transparent);
+        transform: translateX(-50%);
+        opacity: 0.9;
+      }
+
+      .status {
+        margin-top: 6px;
+        font-size: 10px;
+        letter-spacing: 0.34em;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        animation: fade-in 0.45s 0.22s ease forwards;
+        opacity: 0;
+      }
+
+      .progress-track {
+        width: 260px;
+        height: 3px;
+        margin-top: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255,255,255,0.055);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+        position: relative;
+      }
+
+      .progress-bar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 38%;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(252,238,9,0.55), #fcee09 48%, rgba(255,255,255,0.95));
+        box-shadow: 0 0 12px rgba(252,238,9,0.24);
+        animation: indeterminate 1.2s linear infinite;
+        will-change: transform;
+      }
+
+      @keyframes fade-in {
+        to { opacity: 1; }
+      }
+
+      @keyframes float-mark {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-6px) scale(1.03); }
+      }
+
+      @keyframes pulse-glow {
+        0%, 100% { opacity: 0.62; transform: scale(0.96); }
+        50% { opacity: 1; transform: scale(1.06); }
+      }
+
+      @keyframes frame-breathe {
+        0%, 100% { opacity: 0.5; transform: rotate(45deg) scale(0.985); }
+        50% { opacity: 0.92; transform: rotate(45deg) scale(1.02); }
+      }
+
+      @keyframes title-glow {
+        0%, 100% {
+          color: rgba(239, 233, 180, 0.96);
+          text-shadow:
+            0 0 10px rgba(252,238,9,0.18),
+            0 0 24px rgba(252,238,9,0.1);
+        }
+        50% {
+          color: #fffde8;
+          text-shadow:
+            0 0 12px rgba(252,238,9,0.28),
+            0 0 28px rgba(252,238,9,0.24),
+            0 0 54px rgba(252,238,9,0.12);
+        }
+      }
+
+      @keyframes indeterminate {
+        0% { transform: translateX(-140%); }
+        100% { transform: translateX(360%); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="window-surface" aria-hidden="true"></div>
+    <div class="shell">
+      <div class="mark-frame">
+        <div class="mark-glow"></div>
+        <svg class="logo-mark" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="6" y="6" width="32" height="32" rx="4" fill="#FCEE09"></rect>
+          <rect x="16" y="16" width="12" height="12" rx="2" fill="#050505"></rect>
+        </svg>
+      </div>
+      <div class="brand-lockup">
+        <span class="title">Hyperion</span>
+        <span class="status" id="status">Booting Core</span>
+        <div class="progress-track">
+          <div class="progress-bar"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`
+}
 
 export function createSplashWindow(): BrowserWindow {
   const splash = new BrowserWindow({
@@ -7,24 +254,104 @@ export function createSplashWindow(): BrowserWindow {
     height: 300,
     show: false,
     frame: false,
-    transparent: false,
+    transparent: true,
     resizable: false,
     center: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    backgroundColor: '#0a0a0f',
+    backgroundColor: '#00000000',
+    paintWhenInitiallyHidden: true,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      nodeIntegration: false,
+    },
   })
 
-  const splashHtml = app.isPackaged
-    ? path.join(process.resourcesPath, 'resources', 'splash.html')
-    : path.join(process.cwd(), 'src/main/resources/splash.html')
+  const splashHtml = buildSplashHtml()
+  const splashUrl = `data:text/html;charset=UTF-8,${encodeURIComponent(splashHtml)}`
 
-  splash.loadFile(splashHtml)
-  splash.once('ready-to-show', () => splash.show())
+  let revealed = false
+  let fadeInterval: NodeJS.Timeout | null = null
+
+  const animateSplashOpacity = (targetOpacity: number, durationMs: number) => new Promise<void>((resolve) => {
+    if (splash.isDestroyed()) {
+      resolve()
+      return
+    }
+
+    if (fadeInterval) {
+      clearInterval(fadeInterval)
+      fadeInterval = null
+    }
+
+    const startOpacity = splash.getOpacity()
+    const startedAt = Date.now()
+    const tickMs = 16
+
+    const applyOpacity = () => {
+      if (splash.isDestroyed()) {
+        if (fadeInterval) {
+          clearInterval(fadeInterval)
+          fadeInterval = null
+        }
+        resolve()
+        return
+      }
+
+      const elapsed = Date.now() - startedAt
+      const progress = Math.min(1, elapsed / durationMs)
+      const easedProgress = 1 - Math.pow(1 - progress, 3)
+      const nextOpacity = startOpacity + ((targetOpacity - startOpacity) * easedProgress)
+      splash.setOpacity(nextOpacity)
+
+      if (progress >= 1) {
+        if (fadeInterval) {
+          clearInterval(fadeInterval)
+          fadeInterval = null
+        }
+        resolve()
+      }
+    }
+
+    applyOpacity()
+    fadeInterval = setInterval(applyOpacity, tickMs)
+  })
+
+  const revealSplash = async () => {
+    if (revealed || splash.isDestroyed()) return
+    revealed = true
+
+    splash.setOpacity(0)
+    splash.showInactive()
+    splash.moveTop()
+
+    try {
+      await splash.webContents.executeJavaScript(`
+        new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve(true))
+          })
+        })
+      `)
+    } catch {
+      // Ignore; we'll still reveal the splash below.
+    }
+
+    if (splash.isDestroyed()) return
+    await animateSplashOpacity(1, 180)
+    splash.moveTop()
+  }
+
+  splash.loadURL(splashUrl)
+  splash.webContents.once('did-finish-load', () => {
+    void revealSplash()
+  })
+  splash.once('closed', () => {
+    if (fadeInterval) {
+      clearInterval(fadeInterval)
+      fadeInterval = null
+    }
+  })
 
   return splash
 }

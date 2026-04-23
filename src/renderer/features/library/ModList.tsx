@@ -14,6 +14,7 @@ import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
 import { DELETE_PROGRESS_APPEARANCE, getTransientDeleteProgress } from '../../utils/deleteProgressAppearance'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
+import { getModConflictRelations, hasConflictRelations } from './conflictUtils'
 
 type ContextMenuState =
   | {
@@ -31,6 +32,7 @@ type ContextMenuState =
 
 interface DetailOverlayState {
   modId: string
+  initialTab?: 'files' | 'conflicts'
   initialEditName?: boolean
 }
 
@@ -129,6 +131,9 @@ export const ModList: React.FC = () => {
     installProgress,
     installStatus,
     installCurrentFile,
+    conflicts,
+    setConflictHighlight,
+    clearConflictHighlight,
   } = useAppStore((state) => ({
     filter: state.filter,
     setFilter: state.setFilter,
@@ -160,6 +165,9 @@ export const ModList: React.FC = () => {
     installProgress: state.installProgress,
     installStatus: state.installStatus,
     installCurrentFile: state.installCurrentFile,
+    conflicts: state.conflicts,
+    setConflictHighlight: state.setConflictHighlight,
+    clearConflictHighlight: state.clearConflictHighlight,
   }), shallow)
 
   const hasRequiredPaths = Boolean(settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid)
@@ -228,6 +236,28 @@ export const ModList: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
+
+  useEffect(() => {
+    if (selectedIds.length !== 1) {
+      clearConflictHighlight()
+      return
+    }
+
+    const focusId = selectedIds[0]
+    const focusMod = mods.find((mod) => mod.uuid === focusId)
+    if (!focusMod || focusMod.kind !== 'mod') {
+      clearConflictHighlight()
+      return
+    }
+
+    const relations = getModConflictRelations(conflicts, focusId)
+    if (!hasConflictRelations(relations)) {
+      clearConflictHighlight()
+      return
+    }
+
+    setConflictHighlight(focusId, relations.wins, relations.losses)
+  }, [clearConflictHighlight, conflicts, mods, selectedIds, setConflictHighlight])
 
   useEffect(() => {
     const deletingIds = Object.keys(deletingRows)
@@ -692,7 +722,7 @@ export const ModList: React.FC = () => {
     }
 
     if (installResult.data.status === 'conflict') {
-      addToast('File conflicts detected during install', 'warning')
+      return
     }
   }, [installMod, finalizeInstalledMod, addToast, hasRequiredPaths, setActiveView])
 
@@ -1505,7 +1535,7 @@ export const ModList: React.FC = () => {
   }
 
   const browseLikeButtonClass = 'flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] px-4 text-[10px] brand-font font-bold uppercase tracking-widest transition-colors'
-  const darkBrowseLikeButtonClass = `${browseLikeButtonClass} border-[#fcee09]/50 bg-[#0a0a0a] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]`
+  const darkBrowseLikeButtonClass = `${browseLikeButtonClass} group border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-[#fcee09] [&_.material-symbols-outlined]:transition-colors hover:[&_.material-symbols-outlined]:!text-[#050505]`
   const activeBrowseLikeButtonClass = `${browseLikeButtonClass} border-[#fcee09] bg-[#fcee09] text-[#050505]`
   const destructiveButtonClass = `${browseLikeButtonClass} border-[#5b1818] bg-[#160707] text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1]`
   const disabledBrowseLikeButtonClass = `${browseLikeButtonClass} cursor-not-allowed border-[#303030] bg-[#131313] text-[#666666] shadow-none`
@@ -1760,7 +1790,7 @@ export const ModList: React.FC = () => {
             side="bottom"
             variant="help"
           >
-            <h1 className="brand-font text-xl text-white font-bold tracking-widest uppercase">
+            <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
               Managed Mods
             </h1>
           </Tooltip>
@@ -1783,7 +1813,10 @@ export const ModList: React.FC = () => {
             </Tooltip>
           )}
         </div>
-        <p className="ui-support-mono mt-1 flex items-center gap-2">
+        <p
+          className="mt-1 flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]"
+          style={{ fontFamily: '"DM Sans", sans-serif' }}
+        >
           TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -2027,7 +2060,7 @@ export const ModList: React.FC = () => {
                     onContextMenu={handleRowContextMenu}
                     onRename={handleStartRename}
                     onDelete={(targetMod) => setPendingDeleteMod(targetMod)}
-                    onOpenDetails={(targetMod) => setDetailOverlay({ modId: targetMod.uuid })}
+                    onOpenDetails={(targetMod, initialTab) => setDetailOverlay({ modId: targetMod.uuid, initialTab })}
                     isRenaming={renamingModId === mod.uuid}
                     renameValue={renameValue}
                     onRenameChange={setRenameValue}
@@ -2058,6 +2091,7 @@ export const ModList: React.FC = () => {
       {detailOverlay && (
         <DetailPanel
           modId={detailOverlay.modId}
+          initialTab={detailOverlay.initialTab}
           initialEditName={detailOverlay.initialEditName}
           onClose={() => setDetailOverlay(null)}
           onDeleteRequest={(mod) => {

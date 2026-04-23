@@ -58,7 +58,7 @@ export const DuplicateInstallDialog: React.FC = () => {
           addToast(`${result.data.mod.name} installed & activated`, 'success')
         }
       } else if (result.data.status === 'conflict') {
-        addToast('File conflicts detected during install', 'warning')
+        return
       }
     } finally {
       setSubmitting(false)

@@ -17,7 +17,7 @@ import { pushGeneralLog, safeSendToWindow } from '../logStore'
 import { loadSettings } from '../settings'
 import { detectModType } from './archiveParser'
 import { resolveHashes } from './hashResolver'
-import { disableMod, findModDir, scanMods } from './modManager'
+import { disableMod, findModDir, getTrackedDeploymentPaths, normalizeRelativePath, scanMods } from './modManager'
 import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
 import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
 
@@ -520,14 +520,26 @@ async function installMod(
     const folderName = duplicateAction === 'replace' && duplicateMod?.folderName
       ? duplicateMod.folderName
       : uniqueFolderName(settings.libraryPath, sanitizeFolderName(modName))
+    const modUuid = (duplicateAction === 'replace' && duplicateMod?.uuid) ? duplicateMod.uuid : uuidv4()
     modDir = path.join(settings.libraryPath, folderName)
     const enabledMods = existingMods.filter(
       (m) => m.enabled && m.kind === 'mod' && (duplicateAction !== 'replace' || m.uuid !== duplicateMod?.uuid)
     )
 
-    const conflicts = await checkConflicts(extractRoot, modName, enabledMods, settings)
+    const previewMeta = buildPartialMeta(
+      modUuid,
+      modName,
+      modType,
+      extractRoot,
+      installOrder,
+      folderName,
+      filePath,
+      isDir ? 'directory' : 'archive'
+    )
 
-    if (conflicts.length > 0) {
+    const conflicts = await checkConflicts(extractRoot, previewMeta, enabledMods)
+
+    if (conflicts.length > 0 && !request.allowOverwriteConflicts) {
       // Clean up temp, return conflicts for user resolution
       fs.rmSync(tempDir, { recursive: true, force: true })
       sendProgress(win, 'Conflicts detected', 100)
@@ -545,16 +557,7 @@ async function installMod(
         ok: true,
         data: {
           status: 'conflict',
-          mod: buildPartialMeta(
-            duplicateAction === 'replace' ? (duplicateMod?.uuid ?? uuidv4()) : uuidv4(),
-            modName,
-            modType,
-            extractRoot,
-            installOrder,
-            folderName,
-            filePath,
-            isDir ? 'directory' : 'archive'
-          ),
+          mod: previewMeta,
           conflicts,
         },
       }
@@ -575,7 +578,7 @@ async function installMod(
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
 
     const meta: ModMetadata = {
-      uuid: (duplicateAction === 'replace' && duplicateMod?.uuid) ? duplicateMod.uuid : uuidv4(),
+      uuid: modUuid,
       name: modName,
       type: modType,
       kind: 'mod',
@@ -666,23 +669,52 @@ function buildPartialMeta(
 
 async function checkConflicts(
   extractRoot: string,
-  incomingName: string,
-  enabledMods: ModMetadata[],
-  settings: ReturnType<typeof loadSettings>
+  incomingMod: ModMetadata,
+  enabledMods: ModMetadata[]
 ): Promise<ConflictInfo[]> {
-  const incomingHashes = await resolveHashes(extractRoot)
   const conflicts: ConflictInfo[] = []
+  const incomingDeployPaths = Array.from(
+    new Set(getTrackedDeploymentPaths(incomingMod).map((value) => normalizeRelativePath(value)).filter(Boolean))
+  )
+
+  for (const mod of enabledMods) {
+    const existingDeployPaths = new Set(
+      getTrackedDeploymentPaths(mod).map((value) => normalizeRelativePath(value)).filter(Boolean)
+    )
+
+    for (const deployPath of incomingDeployPaths) {
+      if (!existingDeployPaths.has(deployPath)) continue
+
+      conflicts.push({
+        kind: 'overwrite',
+        resourcePath: deployPath.split(path.sep).join('/'),
+        existingModId: mod.uuid,
+        existingModName: mod.name,
+        incomingModName: incomingMod.name,
+        incomingModId: incomingMod.uuid,
+        existingOrder: mod.order,
+        incomingOrder: incomingMod.order,
+        incomingWins: incomingMod.order > mod.order,
+      })
+    }
+  }
+
+  const incomingHashes = await resolveHashes(extractRoot)
 
   for (const mod of enabledMods) {
     if (!mod.hashes) continue
     for (const h of incomingHashes) {
       if (mod.hashes.includes(h)) {
         conflicts.push({
+          kind: 'archive-resource',
           hash: h,
           resourcePath: h, // Will be resolved by hashResolver if DB is available
           existingModId: mod.uuid,
           existingModName: mod.name,
-          incomingModName: incomingName
+          incomingModName: incomingMod.name,
+            incomingModId: incomingMod.uuid,
+          existingOrder: mod.order,
+          incomingOrder: incomingMod.order,
         })
       }
     }
