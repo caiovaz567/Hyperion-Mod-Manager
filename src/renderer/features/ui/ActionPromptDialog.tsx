@@ -40,8 +40,18 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
   maxWidthClassName,
 }) => {
   return (
-    <div data-action-prompt="true" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-3 backdrop-blur-sm sm:px-4">
-      <div className={`relative w-full ${maxWidthClassName ?? 'max-w-md'} border-[0.5px] border-[#222] bg-[#050505] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] sm:p-8 max-h-[min(92vh,760px)] overflow-y-auto hyperion-scrollbar`}>
+    <div
+      data-action-prompt="true"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-3 backdrop-blur-sm sm:px-4"
+      onClick={(event) => {
+        event.stopPropagation()
+        onCancel()
+      }}
+    >
+      <div
+        className={`relative w-full ${maxWidthClassName ?? 'max-w-md'} border-[0.5px] border-[#222] bg-[#050505] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] sm:p-8 max-h-[min(92vh,760px)] overflow-y-auto hyperion-scrollbar`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div
           className="absolute top-0 left-0 w-full h-[2px]"
           style={{ background: accentColor, boxShadow: `0 0 10px ${accentGlow}` }}

@@ -315,9 +315,8 @@ export const SettingsPage: React.FC = () => {
     <div className="stable-scroll-gutter h-full overflow-y-scroll pb-10 animate-settings-in sm:pb-16">
       <div className="mx-auto max-w-[980px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         <header className="mb-6">
-          <div className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#b2b2b2]">Settings</div>
-          <h1 className="mt-3 brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
-            Configuration
+          <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
+            Settings
           </h1>
           <p className="mt-3 max-w-[680px] text-[15px] leading-7 text-[#c0c0c0]">
             Set up core paths, Nexus access, and Hyperion updates without leaving the workspace.

@@ -6,6 +6,7 @@ export interface DialogState {
   settings: boolean
   about: boolean
   appLogs: boolean
+  conflictInspector: boolean
 }
 
 export interface UISlice {
@@ -15,6 +16,12 @@ export interface UISlice {
   activeView: 'library' | 'downloads' | 'settings'
   viewHistory: Array<'library' | 'downloads' | 'settings'>
   recentLibraryBadges: Record<string, 'installed' | 'updated' | 'downgraded'>
+  conflictHighlight: {
+    active: boolean
+    focusModId?: string | null
+    wins: string[]
+    losses: string[]
+  }
 
   setStatus: (message: string) => void
   addToast: (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -25,6 +32,8 @@ export interface UISlice {
   goBack: () => void
   setRecentLibraryBadge: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
   clearRecentLibraryBadge: (modId: string) => void
+  setConflictHighlight: (focusModId: string, wins: string[], losses: string[]) => void
+  clearConflictHighlight: () => void
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
@@ -34,10 +43,12 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
     settings: false,
     about: false,
     appLogs: false,
+    conflictInspector: false,
   },
   activeView: 'library',
   viewHistory: [],
   recentLibraryBadges: {},
+  conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] },
 
   setStatus: (message) => set({ statusMessage: message }),
 
@@ -66,7 +77,8 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
 
   closeDialog: (name) =>
     set((state) => ({
-      dialogs: { ...state.dialogs, [name]: false }
+      dialogs: { ...state.dialogs, [name]: false },
+      ...(name === 'conflictInspector' ? { conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] } } : {})
     })),
 
   setActiveView: (activeView) => set((state) => {
@@ -111,4 +123,10 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
       delete next[modId]
       return { recentLibraryBadges: next }
     })
+,
+
+  setConflictHighlight: (focusModId, wins, losses) =>
+    set(() => ({ conflictHighlight: { active: true, focusModId, wins, losses } })),
+
+  clearConflictHighlight: () => set(() => ({ conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] } })),
 })

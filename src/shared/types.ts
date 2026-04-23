@@ -29,13 +29,21 @@ export interface ModMetadata {
   sourceModifiedAt?: string
   fileSize?: number
   files: string[]
+  emptyDirs?: string[]
   hashes?: string[]
+  notes?: string
   folderName?: string
   sourcePath?: string
   sourceType?: 'archive' | 'directory'
   nexusModId?: number
   nexusFileId?: number
+  previewImagePath?: string
+  galleryImagePaths?: string[]
   deployedPaths?: string[]
+  conflictSummary?: {
+    overwrites: number
+    overwrittenBy: number
+  }
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -169,11 +177,22 @@ export interface InstallProgress {
 }
 
 export interface ConflictInfo {
-  hash: string
+  kind: 'overwrite' | 'archive-resource'
   resourcePath: string
   existingModId: string
   existingModName: string
   incomingModName: string
+  incomingModId?: string
+  existingOrder?: number
+  incomingOrder?: number
+  incomingWins?: boolean
+  hash?: string
+}
+
+export interface ModConflictSummary {
+  modId: string
+  overwrites: number
+  overwrittenBy: number
 }
 
 export interface DuplicateModInfo {
@@ -181,6 +200,24 @@ export interface DuplicateModInfo {
   existingModName: string
   incomingModName: string
   sourcePath: string
+}
+
+export interface ModTreeCreateEntryRequest {
+  modId: string
+  parentRelativePath?: string
+  name: string
+  kind: 'file' | 'folder'
+}
+
+export interface ModTreeRenameEntryRequest {
+  modId: string
+  relativePath: string
+  nextName: string
+}
+
+export interface ModTreeDeleteEntryRequest {
+  modId: string
+  relativePath: string
 }
 
 export type InstallDuplicateAction = 'prompt' | 'replace' | 'copy'
@@ -194,6 +231,7 @@ export interface InstallModRequest {
   sourceFileName?: string
   sourceVersion?: string
   skipVersionMismatchPrompt?: boolean
+  allowOverwriteConflicts?: boolean
 }
 
 export interface InstallModResponse {
@@ -257,13 +295,18 @@ export const IPC = {
 
   // Mods
   SCAN_MODS: 'mods:scan',
+  CALCULATE_MOD_CONFLICTS: 'mods:calculateConflicts',
   ENABLE_MOD: 'mods:enable',
   DISABLE_MOD: 'mods:disable',
+  RESTORE_ENABLED_MODS: 'mods:restoreEnabled',
   PURGE_MODS: 'mods:purge',
   DELETE_MOD: 'mods:delete',
   CREATE_SEPARATOR: 'mods:createSeparator',
   REORDER_MODS: 'mods:reorder',
   UPDATE_MOD_METADATA: 'mods:updateMetadata',
+  MOD_TREE_CREATE_ENTRY: 'mods:treeCreateEntry',
+  MOD_TREE_RENAME_ENTRY: 'mods:treeRenameEntry',
+  MOD_TREE_DELETE_ENTRY: 'mods:treeDeleteEntry',
 
   // Install
   INSTALL_MOD: 'install:mod',

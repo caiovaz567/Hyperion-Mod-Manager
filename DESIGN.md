@@ -126,7 +126,14 @@ Alignment rules:
 
 - Main working surface for installed mods
 - Dense table/list layout with active state clarity over ornament
-- Detail panel appears when a mod is selected
+- Mod details opens as a centered modal overlay over the library instead of navigating to a separate screen
+- MUST: the mod details modal stays visually centered, uses a lower-height squared silhouette, and all controls/panels/badges/inputs inside it use rectangular corners with no pill or soft-card rounding
+- MUST: the mod details modal is tabbed; `Files` is the primary inspection tab and `Details` holds secondary metadata, notes, conflicts, source context, and operational actions
+- MUST: file inspection inside mod details uses a dense squared tree view of game-relative deployment targets; do not reduce this surface to a flat filename dump when indexed paths are available
+- MUST: the `Files` tree starts collapsed by default, and expanding folders must never resize or recenter the modal; the modal frame stays fixed to the current app window and uses internal scroll regions instead
+- MUST: file-tree operations live in a right-click context menu instead of a crowded toolbar; folder expansion supports double click, and exact-location reveal lives in that same context surface
+- MUST: create/rename prompts launched from the mod-details file tree reuse the same compact squared input-modal language as separator creation, with an empty focused input for new file/folder actions
+- The mod details modal may scale wider than before to prioritize the `Files` workspace, but it must remain centered and sized from the current app window rather than from tree depth/content
 - Visual emphasis goes to name, status, type, actions, and activation state
 - Mod search belongs to the library surface itself, not the global header, so filtering stays contextual to `Managed Mods`
 - The mod search field should share the same dark squared chrome, border language, and vertical rhythm as adjacent library action buttons instead of reading like a different widget family
@@ -161,6 +168,8 @@ Alignment rules:
 - Right-clicking a separator should offer a single toggle that expands or collapses every separator in the library, using the current collapsed state to decide the label
 - Reinstalling as copy should insert the new mod immediately after the source mod's current `#` position; if that insertion point is right before the next separator, the separator must shift down so the copy stays in the same context as the source
 - Normal mod installations should always place the new mod at the end of the library list
+- For deploy-path conflicts between enabled mods, Hyperion follows Mod Organizer style priority: the mod with the higher `#` order (lower in the library) wins on shared game-target paths
+- Changing enable state or reordering enabled mods must immediately rebuild the active deployment stack so the on-disk game state always reflects current library priority
 
 ### Downloads
 
@@ -189,6 +198,7 @@ Alignment rules:
 - If the same Nexus archive is already downloading, reuse that same duplicate-download confirmation dialog instead of blocking the request; make it clear that one transfer is already in progress and preview the next duplicate name
 - Repeated `Download Again` requests for the same Nexus file should serialize behind the first request and still end in the shared duplicate-download confirmation flow; do not fall back to a warning snackbar/toast just because the first request is still spinning up
 - If multiple Nexus versions of the same mod are downloaded, allow every archive to finish downloading and defer the decision to install time with a clear version-comparison prompt
+- Loose-file overlaps should not be framed as a hard install error; use an overwrite preview that explains which shared game paths the incoming mod will win or lose based on its current library position
 - Archive installs must preserve real game-root folders such as `engine`, `r6`, `bin`, `archive`, and `red4ext`; never flatten those directories away during extraction, because their contents must deploy back into the game root with those prefixes intact
 - The version-comparison prompt should use the cyber blue accent treatment and fit common desktop heights without introducing an internal scrollbar
 - Downgrade states such as `Older Archive` should escalate with the error red token instead of blending into neutral or blue status chrome
@@ -253,6 +263,8 @@ Alignment rules:
 ## 5. Components
 
 ### Buttons
+
+- MUST: operational UI surfaces default to squared rectangular corners; rounded pills, soft capsules, and curved card chrome are not allowed unless a shipped screen explicitly requires them and the exception is documented
 
 Primary:
 - Yellow background

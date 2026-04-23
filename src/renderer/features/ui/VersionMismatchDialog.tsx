@@ -49,6 +49,15 @@ function formatVersionLabel(version?: string): string {
   return version ? `v${version}` : 'Unknown'
 }
 
+function formatMatchIdentity(value?: string): string | null {
+  if (!value) return null
+  return value
+    .split(' - ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(' / ')
+}
+
 export const VersionMismatchDialog: React.FC = () => {
   const {
     versionMismatchPrompt,
@@ -202,6 +211,11 @@ export const VersionMismatchDialog: React.FC = () => {
               <div className="mt-2 text-sm font-medium tracking-[0.01em] text-[var(--text-primary)]">
                 {versionMismatchPrompt.existingModName}
               </div>
+              {versionMismatchPrompt.existingSourceFileName ? (
+                <div className="mt-2 break-words text-xs leading-relaxed text-[var(--text-secondary)]">
+                  Source archive: {versionMismatchPrompt.existingSourceFileName}
+                </div>
+              ) : null}
             </div>
 
             <div className="min-w-0 border-t-[0.5px] border-[var(--border-default)] pt-3 sm:border-l-[0.5px] sm:border-t-0 sm:pl-4 sm:pt-0 sm:border-l-[var(--border-default)]">
@@ -217,6 +231,11 @@ export const VersionMismatchDialog: React.FC = () => {
               <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-[var(--text-primary)]">
                 {versionMismatchPrompt.sourceFileName ?? 'Archive currently selected in Downloads'}
               </div>
+              {formatMatchIdentity(versionMismatchPrompt.matchedSourceIdentity) ? (
+                <div className="mt-2 break-words text-xs leading-relaxed text-[var(--text-secondary)]">
+                  Matched by file line: {formatMatchIdentity(versionMismatchPrompt.matchedSourceIdentity)}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
