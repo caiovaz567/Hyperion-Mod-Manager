@@ -347,27 +347,55 @@ export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
     .map((relFile) => getDeployRelativePath(mod, relFile))
 }
 
+function resolveScannedModDir(libraryPath: string, mod: ModMetadata): { mod: ModMetadata; dir: string } | null {
+  const directDir = path.join(libraryPath, getModFolderKey(mod))
+  const directMeta = readMetadata(directDir)
+  if (directMeta?.uuid === mod.uuid) {
+    return { mod: directMeta, dir: directDir }
+  }
+
+  return findModDir(libraryPath, mod.uuid)
+}
+
 async function redeployEnabledMods(
   gamePath: string,
-  libraryPath: string
+  libraryPath: string,
+  sourceMods?: ModMetadata[]
 ): Promise<IpcResult<ModMetadata[]>> {
   if (!gamePath) return { ok: false, error: 'Game path not set' }
 
-  const mods = await scanMods(libraryPath)
+  const mods = sourceMods ?? await scanMods(libraryPath)
   const enabledMods = mods.filter((mod) => mod.kind === 'mod' && mod.enabled)
 
   try {
     await prepareBaseGameDir(gamePath)
 
-    for (const mod of enabledMods) {
+    const removalPaths = new Set<string>()
+    for (const mod of mods) {
+      if (mod.kind !== 'mod') continue
+
+      const trackedPaths = mod.enabled
+        ? getTrackedDeploymentPaths(mod)
+        : Array.isArray(mod.deployedPaths)
+          ? mod.deployedPaths
+          : []
+
+      if (trackedPaths.length === 0) continue
+
       await removeLegacyFolderLink(gamePath, mod)
-      for (const deployedRelativePath of getTrackedDeploymentPaths(mod)) {
-        removeDeployedFile(path.join(gamePath, deployedRelativePath), gamePath)
+      for (const deployedRelativePath of trackedPaths) {
+        const normalized = normalizeRelativePath(deployedRelativePath)
+        if (normalized) removalPaths.add(normalized)
       }
     }
 
+    for (const deployedRelativePath of removalPaths) {
+      const target = resolveDeploymentTarget(gamePath, deployedRelativePath)
+      if (target) removeDeployedFile(target, gamePath)
+    }
+
     for (const mod of enabledMods) {
-      const resolvedMod = findModDir(libraryPath, mod.uuid)
+      const resolvedMod = resolveScannedModDir(libraryPath, mod)
       const metadata = resolvedMod?.mod ?? mod
       const modFolderKey = getModFolderKey(metadata)
       const modDir = resolvedMod?.dir ?? path.join(libraryPath, modFolderKey)
@@ -399,7 +427,7 @@ async function redeployEnabledMods(
         continue
       }
 
-      const resolvedMod = findModDir(libraryPath, mod.uuid)
+      const resolvedMod = resolveScannedModDir(libraryPath, mod)
       if (!resolvedMod) continue
       resolvedMod.mod.deployedPaths = []
       writeMetadata(resolvedMod.dir, resolvedMod.mod)
@@ -823,7 +851,6 @@ export async function disableMod(
   if (!resolvedMod) return { ok: false, error: 'Mod directory not found' }
 
   resolvedMod.mod.enabled = false
-  resolvedMod.mod.deployedPaths = []
   writeMetadata(resolvedMod.dir, resolvedMod.mod)
 
   const redeployResult = await redeployEnabledMods(gamePath, libraryPath)
@@ -868,6 +895,104 @@ export async function purgeMods(
   }
 
   return { ok: failed === 0, data: { purged, failed }, error: failed > 0 ? `${failed} mod(s) could not be purged` : undefined }
+}
+
+async function setModsEnabledInBatch(
+  modIds: string[],
+  enabled: boolean,
+  gamePath: string,
+  libraryPath: string,
+  mainWindow: BrowserWindow | null
+): Promise<IpcResult<{ processed: string[]; failed: string[] }>> {
+  const requestedIds = Array.from(new Set(modIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)))
+  const processed: string[] = []
+  const failed: string[] = []
+
+  if (requestedIds.length === 0) {
+    return { ok: true, data: { processed, failed } }
+  }
+
+  if (!gamePath) {
+    return { ok: false, data: { processed, failed: requestedIds }, error: 'Game path not set' }
+  }
+
+  if (!libraryPath) {
+    return { ok: false, data: { processed, failed: requestedIds }, error: 'Library path not set' }
+  }
+
+  const all = await scanMods(libraryPath)
+  const modsById = new Map(all.map((mod) => [mod.uuid, mod]))
+  const changedMods = new Map<string, ModMetadata>()
+  const enabledAt = new Date().toISOString()
+  const actionLabel = enabled ? 'Enable' : 'Disable'
+
+  for (const id of requestedIds) {
+    const mod = modsById.get(id)
+    if (!mod || mod.kind !== 'mod') {
+      failed.push(id)
+      continue
+    }
+
+    try {
+      const resolvedMod = resolveScannedModDir(libraryPath, mod)
+      if (!resolvedMod) {
+        failed.push(id)
+        continue
+      }
+
+      const nextMod = { ...resolvedMod.mod, enabled }
+      if (enabled && !nextMod.enabledAt) {
+        nextMod.enabledAt = enabledAt
+      }
+
+      writeMetadata(resolvedMod.dir, nextMod)
+      changedMods.set(id, nextMod)
+      processed.push(id)
+    } catch (error) {
+      failed.push(id)
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'mods',
+        message: `${actionLabel} mod failed: ${mod.name}`,
+        details: {
+          modId: mod.uuid,
+          modName: mod.name,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+    }
+  }
+
+  if (processed.length === 0) {
+    return {
+      ok: failed.length === 0,
+      data: { processed, failed },
+      error: failed.length > 0 ? `${failed.length} mod(s) failed` : undefined,
+    }
+  }
+
+  const nextMods = all.map((mod) => changedMods.get(mod.uuid) ?? mod)
+  const redeployResult = await redeployEnabledMods(gamePath, libraryPath, nextMods)
+  if (!redeployResult.ok) {
+    const allFailed = Array.from(new Set([...failed, ...processed]))
+    pushGeneralLog(mainWindow, {
+      level: 'error',
+      source: 'mods',
+      message: `${actionLabel} mods failed during redeploy`,
+      details: { modIds: processed, error: redeployResult.error },
+    })
+    return {
+      ok: false,
+      data: { processed: [], failed: allFailed },
+      error: redeployResult.error ?? `${allFailed.length} mod(s) failed`,
+    }
+  }
+
+  return {
+    ok: failed.length === 0,
+    data: { processed, failed },
+    error: failed.length > 0 ? `${failed.length} mod(s) failed` : undefined,
+  }
 }
 
 // ─── Handler Registration ─────────────────────────────────────────────────────
@@ -923,6 +1048,22 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         })
       }
       return result
+    }
+  )
+
+  ipcMain.handle(
+    IPC.ENABLE_MODS,
+    async (_event, modIds: string[]): Promise<IpcResult<{ processed: string[]; failed: string[] }>> => {
+      const settings = loadSettings()
+      return setModsEnabledInBatch(modIds, true, settings.gamePath, settings.libraryPath, getMainWindow?.() ?? null)
+    }
+  )
+
+  ipcMain.handle(
+    IPC.DISABLE_MODS,
+    async (_event, modIds: string[]): Promise<IpcResult<{ processed: string[]; failed: string[] }>> => {
+      const settings = loadSettings()
+      return setModsEnabledInBatch(modIds, false, settings.gamePath, settings.libraryPath, getMainWindow?.() ?? null)
     }
   )
 
