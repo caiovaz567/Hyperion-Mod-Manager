@@ -20,6 +20,8 @@ export interface LibrarySlice {
   restoreEnabledMods: (modsToRestore?: ModMetadata[]) => Promise<IpcResult[]>
   enableMod: (id: string) => Promise<IpcResult>
   disableMod: (id: string) => Promise<IpcResult>
+  enableMods: (ids: string[]) => Promise<IpcResult<{ processed: string[]; failed: string[] }>>
+  disableMods: (ids: string[]) => Promise<IpcResult<{ processed: string[]; failed: string[] }>>
   purgeMods: () => Promise<IpcResult<PurgeModsResult>>
   deleteMod: (id: string) => Promise<IpcResult>
   createSeparator: (name?: string) => Promise<ModMetadata | null>
@@ -195,6 +197,19 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     return result
   },
 
+  enableMods: async (ids) => {
+    const result = await IpcService.invoke<IpcResult<{ processed: string[]; failed: string[] }>>(IPC.ENABLE_MODS, ids)
+    if (result.ok || result.data) {
+      const processed = result.data?.processed ?? ids.filter(Boolean)
+      const processedSet = new Set(processed)
+      set((state) => ({
+        mods: state.mods.map((m) => (processedSet.has(m.uuid) ? { ...m, enabled: true } : m))
+      }))
+      void scheduleConflictRefresh(set)
+    }
+    return result
+  },
+
   disableMod: async (id) => {
     const result = await IpcService.invoke<IpcResult>(IPC.DISABLE_MOD, id)
     if (result.ok) {
@@ -202,6 +217,19 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         mods: state.mods.map((m) =>
           m.uuid === id ? { ...m, enabled: false } : m
         )
+      }))
+      void scheduleConflictRefresh(set)
+    }
+    return result
+  },
+
+  disableMods: async (ids) => {
+    const result = await IpcService.invoke<IpcResult<{ processed: string[]; failed: string[] }>>(IPC.DISABLE_MODS, ids)
+    if (result.ok || result.data) {
+      const processed = result.data?.processed ?? ids.filter(Boolean)
+      const processedSet = new Set(processed)
+      set((state) => ({
+        mods: state.mods.map((m) => (processedSet.has(m.uuid) ? { ...m, enabled: false } : m))
       }))
       void scheduleConflictRefresh(set)
     }

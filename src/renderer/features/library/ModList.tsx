@@ -546,8 +546,10 @@ export const ModList: React.FC = () => {
     allMods.forEach((mod, i) => map.set(mod.uuid, i + 1))
     return map
   }, [allMods])
-  const visibleModIds = displayedMods.filter((mod) => mod.kind === 'mod').map((mod) => mod.uuid)
-  const visibleEnabledCount = displayedMods.filter((mod) => mod.kind === 'mod' && mod.enabled).length
+  // Use the filtered mods list (search/status/type) for bulk toggle
+  // so separator collapse does not affect the "all mods" switch state.
+  const visibleModIds = filteredModsByStatus.map((mod) => mod.uuid)
+  const visibleEnabledCount = filteredModsByStatus.filter((mod) => mod.enabled).length
   const allVisibleEnabled = visibleModIds.length > 0 && visibleEnabledCount === visibleModIds.length
   const showCustomOrderBadge = sortKey === null && allSeparators.length > 0
   const showTopLevelHeaderDrop = showCustomOrderBadge && draggedModIds.length > 0
@@ -1322,24 +1324,39 @@ export const ModList: React.FC = () => {
       return
     }
 
-    let failed = 0
-
-    for (const modId of actionableIds) {
-      const result = target === 'enable' ? await enableMod(modId) : await disableMod(modId)
-      if (!result.ok) failed += 1
+    const prevEnabled = new Map<string, boolean>()
+    for (const id of actionableIds) {
+      const m = allMods.find((mm) => mm.uuid === id)
+      if (m) prevEnabled.set(id, Boolean(m.enabled))
     }
 
-    const changed = actionableIds.length - failed
+    // Optimistic UI update
+    const actionableSet = new Set(actionableIds)
+    useAppStore.setState((state) => ({
+      mods: state.mods.map((m) => (actionableSet.has(m.uuid) ? { ...m, enabled: target === 'enable' } : m))
+    }))
+
+    // Call batch operation in main process via slice
+    const batchResult = target === 'enable'
+      ? await useAppStore.getState().enableMods(actionableIds)
+      : await useAppStore.getState().disableMods(actionableIds)
+
+    const failed = batchResult?.data?.failed ?? []
+    if (failed.length > 0) {
+      const failedSet = new Set(failed)
+      useAppStore.setState((state) => ({
+        mods: state.mods.map((m) => (failedSet.has(m.uuid) ? { ...m, enabled: prevEnabled.get(m.uuid) ?? m.enabled } : m))
+      }))
+    }
+
+    const changed = actionableIds.length - failed.length
     if (changed > 0) {
-      addToast(
-        `${changed} mod${changed === 1 ? '' : 's'} ${target === 'enable' ? 'enabled' : 'disabled'}`,
-        'success'
-      )
+      addToast(`${changed} mod${changed === 1 ? '' : 's'} ${target === 'enable' ? 'enabled' : 'disabled'}`, 'success')
     }
-    if (failed > 0) {
-      addToast(`${failed} mod${failed === 1 ? '' : 's'} failed to ${target}`, 'warning')
+    if (failed.length > 0) {
+      addToast(`${failed.length} mod${failed.length === 1 ? '' : 's'} failed to ${target}`, 'warning')
     }
-  }, [allMods, addToast, enableMod, disableMod])
+  }, [allMods, addToast])
 
   const handleDeleteAll = useCallback(async () => {
     const targets = [...orderedEntries]
@@ -1928,8 +1945,11 @@ export const ModList: React.FC = () => {
                     onClick={async () => {
                       if (isBulkToggling) return
                       setIsBulkToggling(true)
-                      await runBulkToggle(visibleModIds, allVisibleEnabled ? 'disable' : 'enable')
-                      setIsBulkToggling(false)
+                      try {
+                        await runBulkToggle(visibleModIds, allVisibleEnabled ? 'disable' : 'enable')
+                      } finally {
+                        setIsBulkToggling(false)
+                      }
                     }}
                     disabled={bulkToggleDisabled || isBulkToggling}
                     className={`relative h-4 w-8 rounded-full border-[0.5px] transition-all duration-200 ${

@@ -45,7 +45,7 @@ const readDownloadsSearchQuery = (): string => {
 
 const readDownloadsSortPreference = (): { key: DownloadSortKey | null; direction: DownloadSortDirection } => {
   try {
-    const raw = localStorage.getItem(DOWNLOADS_SORT_STORAGE_KEY)
+    const raw = localStorage.getItem(DOWNLOADS_SORT_STORAGE_KEY) ?? ''
     if (!raw) return { key: null, direction: 'asc' }
     const parsed = JSON.parse(raw) as { key?: DownloadSortKey | null; direction?: DownloadSortDirection }
     const key = parsed.key ?? null
@@ -1230,6 +1230,7 @@ export const DownloadsPane: React.FC = () => {
                       key={row.key}
                       data-download-row="true"
                       onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
+                      onDoubleClick={(e) => { e.stopPropagation(); void handleInstall(entry) }}
                       className={`grid h-14 gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
                       style={{ gridTemplateColumns: downloadsGridTemplate }}
                     >
