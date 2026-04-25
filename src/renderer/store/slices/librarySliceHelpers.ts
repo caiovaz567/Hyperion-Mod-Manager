@@ -53,6 +53,7 @@ export const hasConflictSensitiveMetadataUpdate = (updates: Partial<ModMetadata>
   'files' in updates ||
   'emptyDirs' in updates ||
   'hashes' in updates ||
+  'archiveResources' in updates ||
   'deployedPaths' in updates ||
   'kind' in updates
 

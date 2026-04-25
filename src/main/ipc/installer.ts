@@ -12,11 +12,18 @@ import type {
   InstallDuplicateAction,
   InstallModRequest,
   InstallModResponse,
+  ArchiveResourceEntry,
 } from '../../shared/types'
 import { pushGeneralLog, safeSendToWindow } from '../logStore'
 import { loadSettings } from '../settings'
 import { detectModType } from './archiveParser'
-import { resolveHashes } from './hashResolver'
+import {
+  getArchiveResourceDisplayPath,
+  getArchiveResourceIdentity,
+  getArchiveResourceKeys,
+  getStoredArchiveResources,
+  resolveArchiveResources,
+} from './hashResolver'
 import { disableMod, findModDir, getTrackedDeploymentPaths, normalizeRelativePath, scanMods } from './modManager'
 import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
 import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
@@ -25,6 +32,7 @@ type GetMainWindow = () => BrowserWindow | null
 
 const SUPPORTED_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
 const PRESERVED_ARCHIVE_ROOT_DIRS = new Set(['archive', 'archives', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
+const ARCHIVE_RESOURCE_INDEX_VERSION = 3
 
 interface ArchiveExtractor {
   binPath: string
@@ -573,8 +581,9 @@ async function installMod(
     copyDirSync(extractRoot, modDir)
     fs.rmSync(tempDir, { recursive: true, force: true })
 
-    // Generate hashes for .archive files
-    const hashes = await resolveHashes(modDir)
+    // Generate resource identities for .archive files.
+    const archiveResources = await resolveArchiveResources(modDir)
+    const hashes = archiveResources.map((resource) => resource.hash).filter((hash): hash is string => Boolean(hash))
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
 
     const meta: ModMetadata = {
@@ -589,6 +598,8 @@ async function installMod(
       fileSize: getPathSizeSafe(modDir),
       files: extractedFiles,
       hashes,
+      archiveResources,
+      archiveResourceIndexVersion: ARCHIVE_RESOURCE_INDEX_VERSION,
       folderName,
       sourcePath: filePath,
       sourceType: isDir ? 'directory' : 'archive',
@@ -667,6 +678,29 @@ function buildPartialMeta(
   }
 }
 
+function chooseArchiveResourceDisplay(
+  incomingResource: ArchiveResourceEntry,
+  existingResource: ArchiveResourceEntry
+): ArchiveResourceEntry {
+  return {
+    hash: incomingResource.hash ?? existingResource.hash,
+    resourcePath: incomingResource.resourcePath ?? existingResource.resourcePath,
+    archivePath: incomingResource.archivePath ?? existingResource.archivePath,
+  }
+}
+
+function buildArchiveResourceLookup(resources: ArchiveResourceEntry[]): Map<string, ArchiveResourceEntry> {
+  const lookup = new Map<string, ArchiveResourceEntry>()
+
+  for (const resource of resources) {
+    for (const key of getArchiveResourceKeys(resource)) {
+      if (!lookup.has(key)) lookup.set(key, resource)
+    }
+  }
+
+  return lookup
+}
+
 async function checkConflicts(
   extractRoot: string,
   incomingMod: ModMetadata,
@@ -699,24 +733,40 @@ async function checkConflicts(
     }
   }
 
-  const incomingHashes = await resolveHashes(extractRoot)
+  const incomingArchiveResources = await resolveArchiveResources(extractRoot)
 
   for (const mod of enabledMods) {
-    if (!mod.hashes) continue
-    for (const h of incomingHashes) {
-      if (mod.hashes.includes(h)) {
-        conflicts.push({
-          kind: 'archive-resource',
-          hash: h,
-          resourcePath: h, // Will be resolved by hashResolver if DB is available
-          existingModId: mod.uuid,
-          existingModName: mod.name,
-          incomingModName: incomingMod.name,
-            incomingModId: incomingMod.uuid,
-          existingOrder: mod.order,
-          incomingOrder: incomingMod.order,
-        })
-      }
+    const existingArchiveLookup = buildArchiveResourceLookup(getStoredArchiveResources(mod))
+    if (existingArchiveLookup.size === 0) continue
+
+    const seenArchiveConflicts = new Set<string>()
+    for (const incomingResource of incomingArchiveResources) {
+      const matchingKey = getArchiveResourceKeys(incomingResource).find((key) => existingArchiveLookup.has(key))
+      if (!matchingKey) continue
+
+      const existingResource = existingArchiveLookup.get(matchingKey)
+      if (!existingResource) continue
+
+      const displayResource = chooseArchiveResourceDisplay(incomingResource, existingResource)
+      const identity = getArchiveResourceIdentity(displayResource, matchingKey)
+      const conflictKey = `${mod.uuid}:${identity}`
+      if (seenArchiveConflicts.has(conflictKey)) continue
+      seenArchiveConflicts.add(conflictKey)
+
+      const incomingWins = incomingMod.order > mod.order
+
+      conflicts.push({
+        kind: 'archive-resource',
+        hash: displayResource.hash,
+        resourcePath: getArchiveResourceDisplayPath(displayResource),
+        existingModId: mod.uuid,
+        existingModName: mod.name,
+        incomingModName: incomingMod.name,
+        incomingModId: incomingMod.uuid,
+        existingOrder: mod.order,
+        incomingOrder: incomingMod.order,
+        incomingWins,
+      })
     }
   }
 

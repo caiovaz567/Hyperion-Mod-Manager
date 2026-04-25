@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 
 interface ActionPromptDialogProps {
   accentColor: string
@@ -39,7 +40,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
   detailContent,
   maxWidthClassName,
 }) => {
-  return (
+  return createPortal(
     <div
       data-action-prompt="true"
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-3 backdrop-blur-sm sm:px-4"
@@ -117,6 +118,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

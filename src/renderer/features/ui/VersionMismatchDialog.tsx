@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/useAppStore'
 
 type VersionRelation = 'upgrade' | 'downgrade' | 'different' | 'unknown'
@@ -160,7 +161,7 @@ export const VersionMismatchDialog: React.FC = () => {
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[210] flex items-center justify-center overflow-hidden bg-black/82 px-4 py-5 backdrop-blur-sm sm:px-5">
       <div className="relative mx-auto w-full max-w-[560px] overflow-hidden border-[0.5px] border-[var(--border-strong)] bg-[var(--bg-base)] px-5 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.82)] sm:px-6 sm:py-6">
         <div
@@ -395,7 +396,8 @@ export const VersionMismatchDialog: React.FC = () => {
           </button>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { ActionPromptDialog } from './ActionPromptDialog'
+import { getArchiveConflictHash, isUnresolvedArchiveConflict } from '../../utils/archiveConflictDisplay'
 
 export const ConflictInspectorDialog: React.FC = () => {
   const { dialogs, closeDialog, selectedModId, mods, conflicts } = useAppStore((state) => ({
@@ -50,6 +51,9 @@ export const ConflictInspectorDialog: React.FC = () => {
         <div className="max-h-[360px] overflow-y-auto hyperion-scrollbar">
           {wins.concat(losses).map((conflict, index) => {
             const isWin = conflict.incomingModId === mod.uuid || (conflict.incomingModName === mod.name && conflict.incomingOrder === mod.order)
+            const archiveHash = getArchiveConflictHash(conflict)
+            const showArchiveHash = Boolean(archiveHash && archiveHash !== conflict.resourcePath)
+            const unresolvedArchiveConflict = isUnresolvedArchiveConflict(conflict)
             const tone = conflict.kind === 'archive-resource'
               ? 'border-[#4f2020] bg-[#120808] text-[#f3b8b8]'
               : isWin
@@ -71,7 +75,14 @@ export const ConflictInspectorDialog: React.FC = () => {
                     {label}
                   </span>
                 </div>
-                <div className="min-w-0 break-all text-sm text-[#f1eeea]">{conflict.resourcePath}</div>
+                <div className="min-w-0 text-sm text-[#f1eeea]">
+                  <div className="break-all">{conflict.resourcePath}</div>
+                  {showArchiveHash || unresolvedArchiveConflict ? (
+                    <div className="mt-1 break-all text-xs text-[#8d8d8d]">
+                      {unresolvedArchiveConflict ? 'Unresolved archive hash' : 'Archive hash'}: {archiveHash}
+                    </div>
+                  ) : null}
+                </div>
                 <div className="min-w-0 text-sm text-[#c9c5c2]">
                   <div className="truncate text-[#f1eeea]">{isWin ? conflict.existingModName : conflict.incomingModName}</div>
                   {typeof conflict.existingOrder === 'number' ? (

@@ -238,11 +238,10 @@ export const ModRow: React.FC<ModRowProps> = ({
   const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0 }
   const hasConflictSummary = conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0
   const conflictTooltipContent = [
-    'Conflict details',
-    conflictSummary.overwrites > 0 ? `This mod wins ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}.` : null,
-    conflictSummary.overwrittenBy > 0 ? `Other mods win ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}.` : null,
-    'Click to open the Conflicts tab.',
-  ].filter(Boolean).join('\n')
+    conflictSummary.overwrites > 0 ? `Wins ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}` : null,
+    conflictSummary.overwrittenBy > 0 ? `Loses ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}` : null,
+    'Click to inspect conflicts.',
+  ].filter(Boolean).join(' · ')
   const isConflictFocused = conflictHighlight.active && conflictHighlight.focusModId === mod.uuid
   const isWinHighlighted = conflictHighlight.active && conflictHighlight.wins.includes(mod.uuid)
   const isLossHighlighted = conflictHighlight.active && conflictHighlight.losses.includes(mod.uuid)
@@ -465,18 +464,20 @@ export const ModRow: React.FC<ModRowProps> = ({
                       event.stopPropagation()
                       onOpenDetails(mod, 'conflicts')
                     }}
-                    className="inline-flex shrink-0 items-center gap-1"
+                    className="inline-flex shrink-0 items-center justify-center"
                   >
-                    {conflictSummary.overwrites > 0 ? (
-                      <span className="min-w-[36px] border-[0.5px] border-[#1f5133] bg-[rgba(52,211,153,0.1)] px-2.5 py-[3px] text-center text-[10px] font-mono font-bold text-[#34d399]">
-                        +{conflictSummary.overwrites}
-                      </span>
-                    ) : null}
-                    {conflictSummary.overwrittenBy > 0 ? (
-                      <span className="min-w-[36px] border-[0.5px] border-[#5a2020] bg-[rgba(248,113,113,0.1)] px-2.5 py-[3px] text-center text-[10px] font-mono font-bold text-[#f87171]">
-                        −{conflictSummary.overwrittenBy}
-                      </span>
-                    ) : null}
+                    <span
+                      className="material-symbols-outlined text-[16px]"
+                      style={{
+                        color: conflictSummary.overwrittenBy > 0 && conflictSummary.overwrites > 0
+                          ? '#fcee09'
+                          : conflictSummary.overwrittenBy > 0
+                            ? '#f87171'
+                            : '#34d399',
+                      }}
+                    >
+                      warning
+                    </span>
                   </button>
                 </Tooltip>
               ) : null}

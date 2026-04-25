@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 interface SeparatorNameDialogProps {
   title: string
@@ -66,7 +67,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
     }
   }, [onCancel, onSubmit, selectOnOpen])
 
-  return (
+  return createPortal(
     <div
       data-action-prompt="true"
       className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
@@ -127,6 +128,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

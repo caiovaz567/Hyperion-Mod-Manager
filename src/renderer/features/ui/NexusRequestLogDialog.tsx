@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   IPC,
   type AppGeneralLogEntry,
@@ -607,7 +608,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
     )
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
       <div className="relative flex h-[88vh] w-[min(94vw,1760px)] max-w-none flex-col overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_22px_60px_rgba(0,0,0,0.82)]">
         <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09] shadow-[0_0_14px_rgba(252,238,9,0.38)]" />
@@ -767,6 +768,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

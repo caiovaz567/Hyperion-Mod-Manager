@@ -9,6 +9,14 @@ export const recomputeConflictStateFromExistingConflicts = (
   mods: ModMetadata[],
   existingConflicts: ConflictInfo[]
 ): ConflictStateSnapshot => {
+  type ResourceOwner = { modId: string; name: string }
+  type ResourceGroup = {
+    kind: ConflictInfo['kind']
+    resourcePath: string
+    hash?: string
+    owners: Map<string, ResourceOwner>
+  }
+
   const modMap = new Map(
     mods
       .filter((mod) => mod.kind === 'mod')
@@ -20,31 +28,38 @@ export const recomputeConflictStateFromExistingConflicts = (
     summaryMap.set(mod.uuid, { overwrites: 0, overwrittenBy: 0 })
   }
 
-  const resourceOwners = new Map<string, Map<string, { modId: string; name: string }>>()
+  const resourceGroups = new Map<string, ResourceGroup>()
 
   for (const conflict of existingConflicts) {
-    if (conflict.kind !== 'overwrite') continue
+    const resourceKey = conflict.kind === 'archive-resource'
+      ? `archive:${conflict.hash ?? conflict.resourcePath}`
+      : `overwrite:${conflict.resourcePath}`
+    const resourceGroup = resourceGroups.get(resourceKey) ?? {
+      kind: conflict.kind,
+      resourcePath: conflict.resourcePath,
+      hash: conflict.hash,
+      owners: new Map<string, ResourceOwner>(),
+    }
 
-    const owners = resourceOwners.get(conflict.resourcePath) ?? new Map<string, { modId: string; name: string }>()
-    owners.set(conflict.existingModId, {
+    resourceGroup.owners.set(conflict.existingModId, {
       modId: conflict.existingModId,
       name: modMap.get(conflict.existingModId)?.name ?? conflict.existingModName,
     })
 
     if (conflict.incomingModId) {
-      owners.set(conflict.incomingModId, {
+      resourceGroup.owners.set(conflict.incomingModId, {
         modId: conflict.incomingModId,
         name: modMap.get(conflict.incomingModId)?.name ?? conflict.incomingModName,
       })
     }
 
-    resourceOwners.set(conflict.resourcePath, owners)
+    resourceGroups.set(resourceKey, resourceGroup)
   }
 
   const recomputedConflicts: ConflictInfo[] = []
 
-  for (const [resourcePath, owners] of resourceOwners.entries()) {
-    const orderedOwners = Array.from(owners.values())
+  for (const resourceGroup of resourceGroups.values()) {
+    const orderedOwners = Array.from(resourceGroup.owners.values())
       .map((owner) => {
         const mod = modMap.get(owner.modId)
         if (!mod) return null
@@ -65,8 +80,9 @@ export const recomputeConflictStateFromExistingConflicts = (
       if (owner.modId === winner.modId) continue
 
       recomputedConflicts.push({
-        kind: 'overwrite',
-        resourcePath,
+        kind: resourceGroup.kind,
+        resourcePath: resourceGroup.resourcePath,
+        hash: resourceGroup.hash,
         existingModId: owner.modId,
         existingModName: owner.name,
         incomingModId: winner.modId,

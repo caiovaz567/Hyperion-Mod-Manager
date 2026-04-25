@@ -59,7 +59,6 @@ export const App: React.FC = () => {
     updateSettings,
     detectGamePath,
     scanMods,
-    restoreEnabledMods,
     refreshLocalFiles,
     checkForUpdates,
     setupUpdateListeners,
@@ -82,7 +81,6 @@ export const App: React.FC = () => {
     updateSettings: state.updateSettings,
     detectGamePath: state.detectGamePath,
     scanMods: state.scanMods,
-    restoreEnabledMods: state.restoreEnabledMods,
     refreshLocalFiles: state.refreshLocalFiles,
     checkForUpdates: state.checkForUpdates,
     setupUpdateListeners: state.setupUpdateListeners,
@@ -118,7 +116,6 @@ export const App: React.FC = () => {
 
       updateBootStatus('Loading settings...')
       let currentSettings = await loadSettings()
-      let { gamePathValid: hasValidGamePath, libraryPathValid: hasValidLibraryPath } = useAppStore.getState()
 
       if (!currentSettings.gamePath?.trim()) {
         updateBootStatus('Detecting game path...')
@@ -126,7 +123,6 @@ export const App: React.FC = () => {
         if (detectedGame.ok && detectedGame.data) {
           await updateSettings({ gamePath: detectedGame.data })
           currentSettings = { ...currentSettings, gamePath: detectedGame.data }
-          ;({ gamePathValid: hasValidGamePath, libraryPathValid: hasValidLibraryPath } = useAppStore.getState())
           addToast('Game path auto-detected', 'success', 2200)
         }
       }
@@ -143,21 +139,10 @@ export const App: React.FC = () => {
       cleanup = releaseListeners
 
       updateBootStatus('Scanning mod library...')
-      const scannedMods = await scanMods()
+      await scanMods({ refreshConflicts: false })
 
-      if (hasValidGamePath && hasValidLibraryPath) {
-        updateBootStatus('Restoring enabled mods...')
-        await restoreEnabledMods(scannedMods).catch(() => undefined)
-      }
-
-      if (currentSettings.downloadPath?.trim()) {
-        updateBootStatus('Scanning downloads...')
-        await refreshLocalFiles().catch(() => undefined)
-      }
-
-      if (!import.meta.env.DEV && currentSettings.autoUpdate) {
-        void checkForUpdates().catch(() => undefined)
-      }
+      updateBootStatus('Checking mod conflicts...')
+      await useAppStore.getState().refreshConflicts({ immediate: true })
 
       const elapsed = Date.now() - bootStartedAt
       const remaining = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed)
@@ -176,6 +161,18 @@ export const App: React.FC = () => {
       await waitForFirstPaint()
       if (disposed) return
       IpcService.send(IPC.APP_READY)
+
+      window.setTimeout(() => {
+        if (disposed) return
+
+        if (currentSettings.downloadPath?.trim()) {
+          void refreshLocalFiles().catch(() => undefined)
+        }
+
+        if (!import.meta.env.DEV && currentSettings.autoUpdate) {
+          void checkForUpdates().catch(() => undefined)
+        }
+      }, 2500)
     }
 
     boot().catch((error) => {

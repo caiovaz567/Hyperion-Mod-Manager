@@ -79,7 +79,7 @@ export function useLibraryInstallActions({
       IPC.OPEN_FILE_DIALOG,
       {
         title: 'Select Mod Archive',
-        filters: [{ name: 'Mod Archives', extensions: ['zip'] }],
+        filters: [{ name: 'Mod Archives', extensions: ['zip', 'rar', '7z'] }],
         properties: ['openFile'],
       }
     )

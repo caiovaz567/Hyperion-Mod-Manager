@@ -305,6 +305,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     setExpandedTreeIds(new Set(defaultExpandedTreeIds))
   }, [defaultExpandedTreeIds, mod?.uuid])
 
+  // Auto-collapse sections that have no conflicts when switching mods
+  useEffect(() => {
+    setWinConflictsCollapsed(winConflicts.length === 0)
+    setLossConflictsCollapsed(lossConflicts.length === 0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modId])
+
   useEffect(() => {
     if (selectedNodeId && visibleNodeIds.has(selectedNodeId)) return
     setSelectedNodeId(null)
@@ -363,9 +370,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       ? 'min(1040px, calc(100vh - 12px))'
       : 'min(980px, calc(100vh - 24px))',
     width: fullscreenLikeViewport
-      ? 'min(980px, calc(100vw - 220px))'
-      : 'min(1040px, calc(100vw - 156px))',
-    maxWidth: fullscreenLikeViewport ? '980px' : '1040px',
+      ? 'min(1240px, calc(100vw - 60px))'
+      : 'min(1480px, calc(100vw - 24px))',
+    maxWidth: fullscreenLikeViewport ? '1240px' : '1480px',
   }
   const contextMenuNode = findFileTreeNode(fileTree, treeContextMenu?.nodeId ?? null)
   const contextMenuExistingRelativePath = getExistingNodeRelativePath(contextMenuNode)
@@ -514,9 +521,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     addToast(successMessage, 'success', 1800)
   }
 
-  return (
+  return createPortal(
     <div
-      className={`fixed inset-0 z-[160] flex items-center justify-center bg-[rgba(0,0,0,0.78)] px-6 backdrop-blur-[3px] fade-in ${
+      className={`fixed inset-0 z-[160] flex items-center justify-center bg-[rgba(0,0,0,0.86)] px-6 backdrop-blur-[3px] fade-in ${
         fullscreenLikeViewport ? 'py-1.5' : 'py-3'
       }`}
       onClick={onClose}
@@ -649,17 +656,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           ) : (
             <div className="mt-5 min-h-0 flex flex-1 flex-col gap-5">
                 <ConflictSection
-                  conflicts={winConflicts}
-                  emptyMessage="This mod is not currently overwriting files from other mods."
-                  mod={mod}
-                  tone="win"
-                  title={`This Mod Wins (+${conflictSummary.overwrites})`}
-                  collapsed={winConflictsCollapsed}
-                  onToggleCollapsed={() => setWinConflictsCollapsed((current) => !current)}
-                  className={winConflictsCollapsed ? 'flex-none' : 'flex-1'}
-                />
-
-                <ConflictSection
                   conflicts={lossConflicts}
                   emptyMessage="No other mod is currently overwriting files from this mod."
                   mod={mod}
@@ -668,6 +664,17 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   collapsed={lossConflictsCollapsed}
                   onToggleCollapsed={() => setLossConflictsCollapsed((current) => !current)}
                   className={lossConflictsCollapsed ? 'flex-none' : 'flex-1'}
+                />
+
+                <ConflictSection
+                  conflicts={winConflicts}
+                  emptyMessage="This mod is not currently overwriting files from other mods."
+                  mod={mod}
+                  tone="win"
+                  title={`This Mod Wins (+${conflictSummary.overwrites})`}
+                  collapsed={winConflictsCollapsed}
+                  onToggleCollapsed={() => setWinConflictsCollapsed((current) => !current)}
+                  className={winConflictsCollapsed ? 'flex-none' : 'flex-1'}
                 />
             </div>
           )}
@@ -825,6 +832,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           submitting={treeActionSubmitting}
         />
       ) : null}
-    </div>
+    </div>,
+    document.body
   )
 }

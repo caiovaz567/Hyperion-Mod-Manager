@@ -1,6 +1,7 @@
 import React from 'react'
 import type { ConflictInfo, ModMetadata } from '@shared/types'
 import type { FileTreeNode } from './DetailPanelTypes'
+import { getArchiveConflictHash, isUnresolvedArchiveConflict } from '../../utils/archiveConflictDisplay'
 
 export const detailTitleClass = 'text-[1.12rem] font-bold leading-[1.08] tracking-[0.01em] text-[#f4f1ee] sm:text-[1.18rem]'
 export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] border-[#fcee09]/50 bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-[#fcee09] [&_.material-symbols-outlined]:transition-colors hover:[&_.material-symbols-outlined]:!text-[#050505]'
@@ -73,16 +74,17 @@ export const ConflictSection: React.FC<{
         {conflicts.map((conflict, index) => {
           const otherModName = tone === 'win' ? conflict.existingModName : conflict.incomingModName
           const otherOrder = tone === 'win' ? conflict.existingOrder : conflict.incomingOrder
-          const toneChipClass = conflict.kind === 'archive-resource'
-            ? 'border-[#5a2020] bg-[#120808] text-[#f3b8b8]'
-            : tone === 'win'
-              ? 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
-              : 'border-[#5a2020] bg-[#140909] text-[#f87171]'
+          const archiveHash = getArchiveConflictHash(conflict)
+          const showArchiveHash = Boolean(archiveHash && archiveHash !== conflict.resourcePath)
+          const unresolvedArchiveConflict = isUnresolvedArchiveConflict(conflict)
+          const toneChipClass = tone === 'win'
+            ? 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
+            : 'border-[#5a2020] bg-[#140909] text-[#f87171]'
 
           return (
             <div
               key={`${conflict.kind}:${conflict.resourcePath}:${conflict.existingModId}:${conflict.incomingModId ?? index}`}
-              className="grid gap-4 border-b border-[#161616] px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_220px]"
+              className="grid gap-4 border-b border-[#161616] px-5 py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_260px]"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -96,13 +98,18 @@ export const ConflictSection: React.FC<{
                 <div className="mt-3 break-all font-mono text-[13px] text-[#f1eeea]">
                   {conflict.resourcePath}
                 </div>
+                {showArchiveHash || unresolvedArchiveConflict ? (
+                  <div className="mt-2 break-all text-xs text-[#8d8d8d]">
+                    {unresolvedArchiveConflict ? 'Unresolved archive hash' : 'Archive hash'}: {archiveHash}
+                  </div>
+                ) : null}
               </div>
 
               <div className="min-w-0 border-t border-[#1a1a1a] pt-3 md:border-l md:border-[#1a1a1a] md:border-t-0 md:pl-4 md:pt-0">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8f8f]">
                   Other Mod
                 </div>
-                <div className="mt-2 truncate text-sm text-[#f1eeea]">
+                <div className="mt-2 text-sm text-[#f1eeea] break-words">
                   {otherModName}
                 </div>
                 {typeof otherOrder === 'number' ? (

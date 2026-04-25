@@ -13,10 +13,19 @@ import type {
   ModTreeCreateEntryRequest,
   ModTreeRenameEntryRequest,
   ModTreeDeleteEntryRequest,
+  ArchiveResourceEntry,
 } from '../../shared/types'
 import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
 import { detectModType } from './archiveParser'
+import {
+  getArchiveResourceDisplayPath,
+  getArchiveResourceIdentity,
+  getArchiveResourceKeys,
+  getStoredArchiveResources,
+  hydrateArchiveResourcePaths,
+  resolveArchiveResources,
+} from './hashResolver'
 import {
   listFilesRecursive,
   getPathSizeSafe,
@@ -151,6 +160,7 @@ function prepareBaseGameDir(baseGameDir: string): Promise<void> {
 
 const GAME_ROOT_DIRS = new Set(['archive', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
 const ARCHIVE_EXTENSIONS = new Set(['.archive', '.xl'])
+const ARCHIVE_RESOURCE_INDEX_VERSION = 3
 
 function findSequenceIndex(parts: string[], sequence: string[]): number {
   const lowerParts = parts.map((part) => part.toLowerCase())
@@ -347,6 +357,118 @@ export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
   return mod.files
     .filter((relFile) => relFile !== '_metadata.json')
     .map((relFile) => getDeployRelativePath(mod, relFile))
+}
+
+function hasArchivePayload(files: string[]): boolean {
+  return files.some((file) => path.extname(file).toLowerCase() === '.archive')
+}
+
+function archiveResourcesEqual(left: ArchiveResourceEntry[], right: ArchiveResourceEntry[]): boolean {
+  if (left.length !== right.length) return false
+
+  const normalize = (resources: ArchiveResourceEntry[]) =>
+    resources
+      .map((resource) => JSON.stringify({
+        hash: resource.hash ?? '',
+        resourcePath: resource.resourcePath ?? '',
+        archivePath: resource.archivePath ?? '',
+      }))
+      .sort()
+
+  const normalizedLeft = normalize(left)
+  const normalizedRight = normalize(right)
+  return normalizedLeft.every((value, index) => value === normalizedRight[index])
+}
+
+async function refreshArchiveResourceMetadata(
+  modDir: string,
+  meta: ModMetadata,
+  options: { deep?: boolean } = {}
+): Promise<boolean> {
+  if (meta.kind !== 'mod') return false
+
+  const files = Array.isArray(meta.files) ? meta.files : []
+  const containsArchivePayload = hasArchivePayload(files)
+  if (!containsArchivePayload) {
+    let changed = false
+    if (meta.archiveResources !== undefined) {
+      delete meta.archiveResources
+      changed = true
+    }
+    if (meta.hashes !== undefined) {
+      delete meta.hashes
+      changed = true
+    }
+    if (meta.archiveResourceIndexVersion !== undefined) {
+      delete meta.archiveResourceIndexVersion
+      changed = true
+    }
+    return changed
+  }
+
+  const storedResources = getStoredArchiveResources(meta)
+  if (!options.deep) {
+    return false
+  }
+
+  // Already indexed at current version — skip loading the hash DB and running external scripts.
+  if (
+    Array.isArray(meta.archiveResources) &&
+    meta.archiveResourceIndexVersion === ARCHIVE_RESOURCE_INDEX_VERSION &&
+    storedResources.length > 0
+  ) {
+    return false
+  }
+
+  const parsedResources = await resolveArchiveResources(modDir)
+  const nextResources = parsedResources.length > 0
+    ? parsedResources
+    : await hydrateArchiveResourcePaths(storedResources)
+  const nextHashes = nextResources.map((resource) => resource.hash).filter((hash): hash is string => Boolean(hash))
+  const currentHashes = Array.isArray(meta.hashes) ? meta.hashes : []
+
+  let changed = false
+  if (!Array.isArray(meta.archiveResources) || !archiveResourcesEqual(storedResources, nextResources)) {
+    meta.archiveResources = nextResources
+    changed = true
+  }
+
+  if (meta.archiveResourceIndexVersion !== ARCHIVE_RESOURCE_INDEX_VERSION) {
+    meta.archiveResourceIndexVersion = ARCHIVE_RESOURCE_INDEX_VERSION
+    changed = true
+  }
+
+  if (currentHashes.length !== nextHashes.length || currentHashes.some((hash, index) => hash !== nextHashes[index])) {
+    meta.hashes = nextHashes
+    changed = true
+  }
+
+  return changed
+}
+
+function chooseArchiveResourceDisplay(resources: ArchiveResourceEntry[]): ArchiveResourceEntry {
+  const withPath = resources.find((resource) => resource.resourcePath)
+  const withHash = resources.find((resource) => resource.hash)
+
+  return {
+    hash: withPath?.hash ?? withHash?.hash,
+    resourcePath: withPath?.resourcePath,
+    archivePath: withPath?.archivePath ?? withHash?.archivePath,
+  }
+}
+
+function addArchiveOwner(
+  ownersByKey: Map<string, Array<{ modId: string; name: string; order: number; resource: ArchiveResourceEntry }>>,
+  mod: ModMetadata,
+  resource: ArchiveResourceEntry
+): void {
+  for (const key of getArchiveResourceKeys(resource)) {
+    const owners = ownersByKey.get(key) ?? []
+    if (!owners.some((owner) => owner.modId === mod.uuid && getArchiveResourceIdentity(owner.resource, key) === getArchiveResourceIdentity(resource, key))) {
+      owners.push({ modId: mod.uuid, name: mod.name, order: mod.order, resource })
+    }
+    ownersByKey.set(key, owners)
+  }
 }
 
 function resolveScannedModDir(libraryPath: string, mod: ModMetadata): { mod: ModMetadata; dir: string } | null {
@@ -553,7 +675,7 @@ async function refreshModAfterTreeMutation(
   libraryPath: string,
   gamePath: string
 ): Promise<IpcResult<ModMetadata>> {
-  let scannedMods = await scanMods(libraryPath)
+  let scannedMods = await scanMods(libraryPath, { refreshFileMetadata: true })
   let updatedMod = scannedMods.find((entry) => entry.uuid === modId)
   if (!updatedMod) return { ok: false, error: 'Mod not found after file operation' }
 
@@ -563,7 +685,7 @@ async function refreshModAfterTreeMutation(
       return { ok: false, error: syncResult.error ?? 'Could not resync modified mod' }
     }
 
-    scannedMods = await scanMods(libraryPath)
+    scannedMods = await scanMods(libraryPath, { refreshFileMetadata: true })
     updatedMod = scannedMods.find((entry) => entry.uuid === modId)
     if (!updatedMod) return { ok: false, error: 'Mod not found after resync' }
   }
@@ -708,7 +830,10 @@ export function findModDir(libraryPath: string, uuid: string): { mod: ModMetadat
   return null
 }
 
-export async function scanMods(libraryPath: string): Promise<ModMetadata[]> {
+export async function scanMods(
+  libraryPath: string,
+  options: { refreshArchiveResources?: boolean; refreshFileMetadata?: boolean } = {}
+): Promise<ModMetadata[]> {
   if (!fs.existsSync(libraryPath)) return []
 
   const entries = fs.readdirSync(libraryPath, { withFileTypes: true })
@@ -736,7 +861,10 @@ export async function scanMods(libraryPath: string): Promise<ModMetadata[]> {
         }
 
         if (meta.kind === 'mod') {
-          const normalizedFiles = Array.isArray(meta.files) ? meta.files : listFilesRecursive(modDir)
+          const shouldRefreshFileMetadata = Boolean(options.refreshFileMetadata)
+          const normalizedFiles = shouldRefreshFileMetadata || !Array.isArray(meta.files)
+            ? listFilesRecursive(modDir)
+            : meta.files
           if (!Array.isArray(meta.files) || meta.files.length !== normalizedFiles.length || meta.files.some((file, index) => file !== normalizedFiles[index])) {
             meta.files = normalizedFiles
             shouldWrite = true
@@ -789,21 +917,29 @@ export async function scanMods(libraryPath: string): Promise<ModMetadata[]> {
             shouldWrite = true
           }
 
-          const detectedType = detectModType(modDir)
-          if (detectedType !== 'unknown' && meta.type !== detectedType) {
-            meta.type = detectedType
-            shouldWrite = true
+          if (shouldRefreshFileMetadata || !meta.type || meta.type === 'unknown') {
+            const detectedType = detectModType(modDir)
+            if (detectedType !== 'unknown' && meta.type !== detectedType) {
+              meta.type = detectedType
+              shouldWrite = true
+            }
           }
 
-          const computedFileSize = getPathSizeSafe(modDir)
-          if (meta.fileSize !== computedFileSize) {
-            meta.fileSize = computedFileSize
-            shouldWrite = true
+          if (shouldRefreshFileMetadata || typeof meta.fileSize !== 'number') {
+            const computedFileSize = getPathSizeSafe(modDir)
+            if (meta.fileSize !== computedFileSize) {
+              meta.fileSize = computedFileSize
+              shouldWrite = true
+            }
           }
 
           const sourceModifiedAt = getSourceModifiedAt(meta.sourcePath)
           if (sourceModifiedAt && meta.sourceModifiedAt !== sourceModifiedAt) {
             meta.sourceModifiedAt = sourceModifiedAt
+            shouldWrite = true
+          }
+
+          if (await refreshArchiveResourceMetadata(modDir, meta, { deep: options.refreshArchiveResources })) {
             shouldWrite = true
           }
         }
@@ -1227,9 +1363,10 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
     async (): Promise<IpcResult<{ summaries: ModConflictSummary[]; conflicts: ConflictInfo[] }>> => {
       try {
         const settings = loadSettings()
-        const mods = await scanMods(settings.libraryPath)
+        const mods = await scanMods(settings.libraryPath, { refreshArchiveResources: true })
 
         const pathOwners = new Map<string, Array<{ modId: string; name: string; order: number }>>()
+        const archiveOwners = new Map<string, Array<{ modId: string; name: string; order: number; resource: ArchiveResourceEntry }>>()
 
         for (const mod of mods.filter((m) => m.kind === 'mod')) {
           for (const rel of getTrackedDeploymentPaths(mod)) {
@@ -1240,6 +1377,10 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
               owners.push({ modId: mod.uuid, name: mod.name, order: mod.order })
             }
             pathOwners.set(normalized, owners)
+          }
+
+          for (const resource of getStoredArchiveResources(mod)) {
+            addArchiveOwner(archiveOwners, mod, resource)
           }
         }
 
@@ -1260,6 +1401,45 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
             conflicts.push({
               kind: 'overwrite',
               resourcePath: resourcePath.split(path.sep).join('/'),
+              existingModId: owner.modId,
+              existingModName: owner.name,
+              incomingModId: winner.modId,
+              incomingModName: winner.name,
+              existingOrder: owner.order,
+              incomingOrder: winner.order,
+              incomingWins: winner.order > owner.order,
+            })
+
+            const sWinner = summaryMap.get(winner.modId)
+            if (sWinner) sWinner.overwrites += 1
+            const sOwner = summaryMap.get(owner.modId)
+            if (sOwner) sOwner.overwrittenBy += 1
+          }
+        }
+
+        const seenArchiveConflicts = new Set<string>()
+        for (const [resourceKey, owners] of archiveOwners.entries()) {
+          if (owners.length <= 1) continue
+
+          const uniqueOwners = Array.from(new Map(owners.map((owner) => [owner.modId, owner])).values())
+          if (uniqueOwners.length <= 1) continue
+
+          const sorted = [...uniqueOwners].sort((a, b) => a.order - b.order)
+          const winner = sorted[sorted.length - 1]
+          const displayResource = chooseArchiveResourceDisplay(uniqueOwners.map((owner) => owner.resource))
+          const conflictIdentity = getArchiveResourceIdentity(displayResource, resourceKey)
+
+          for (const owner of uniqueOwners) {
+            if (owner.modId === winner.modId) continue
+
+            const dedupeKey = `${owner.modId}:${winner.modId}:${conflictIdentity}`
+            if (seenArchiveConflicts.has(dedupeKey)) continue
+            seenArchiveConflicts.add(dedupeKey)
+
+            conflicts.push({
+              kind: 'archive-resource',
+              hash: displayResource.hash,
+              resourcePath: getArchiveResourceDisplayPath(displayResource),
               existingModId: owner.modId,
               existingModName: owner.name,
               incomingModId: winner.modId,

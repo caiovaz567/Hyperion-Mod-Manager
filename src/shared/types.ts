@@ -31,6 +31,8 @@ export interface ModMetadata {
   files: string[]
   emptyDirs?: string[]
   hashes?: string[]
+  archiveResources?: ArchiveResourceEntry[]
+  archiveResourceIndexVersion?: number
   notes?: string
   folderName?: string
   sourcePath?: string
@@ -44,6 +46,12 @@ export interface ModMetadata {
     overwrites: number
     overwrittenBy: number
   }
+}
+
+export interface ArchiveResourceEntry {
+  hash?: string
+  resourcePath?: string
+  archivePath?: string
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────

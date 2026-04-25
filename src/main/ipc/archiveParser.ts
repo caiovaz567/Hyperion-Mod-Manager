@@ -2,7 +2,11 @@ import fs from 'fs'
 import path from 'path'
 import type { ModType } from '../../shared/types'
 
-const RED4_MAGIC = 0x52454434
+const RDAR_MAGIC = 0x52414452
+const RED4_MAGIC = 0x34444552
+const ARCHIVE_HEADER_SIZE = 44
+const FILE_LIST_HEADER_SIZE = 28
+const FILE_RECORD_SIZE = 56
 
 interface ArchiveFileEntry {
   hash: bigint
@@ -53,38 +57,42 @@ export function parseRed4Archive(
   let fd: number | null = null
   try {
     fd = fs.openSync(archivePath, 'r')
+    const archiveSize = fs.fstatSync(fd).size
 
-    // Read main header (40 bytes minimum)
-    const header = Buffer.alloc(40)
-    fs.readSync(fd, header, 0, 40, 0)
+    if (archiveSize < ARCHIVE_HEADER_SIZE + FILE_LIST_HEADER_SIZE) return null
+
+    const header = Buffer.alloc(ARCHIVE_HEADER_SIZE)
+    fs.readSync(fd, header, 0, ARCHIVE_HEADER_SIZE, 0)
 
     const magic = header.readUInt32LE(0)
-    if (magic !== RED4_MAGIC) return null
+    if (magic !== RDAR_MAGIC && magic !== RED4_MAGIC) return null
 
-    // IndexPosition is at offset 8, stored as int64 LE
-    const indexPos = Number(header.readBigInt64LE(8))
-    if (indexPos <= 0 || indexPos > 1_000_000_000) return null
+    const indexPos = Number(header.readBigUInt64LE(8))
+    const indexSize = header.readUInt32LE(16)
+    if (
+      indexPos <= 0 ||
+      indexSize < FILE_LIST_HEADER_SIZE ||
+      indexPos + indexSize > archiveSize
+    ) {
+      return null
+    }
 
-    // Read index header (20 bytes): fileTableOffset(4) + fileTableSize(4) + crc(8) + fileCount(4)
-    const indexHeader = Buffer.alloc(20)
-    fs.readSync(fd, indexHeader, 0, 20, indexPos)
+    const indexHeader = Buffer.alloc(FILE_LIST_HEADER_SIZE)
+    fs.readSync(fd, indexHeader, 0, FILE_LIST_HEADER_SIZE, indexPos)
 
     const fileCount = indexHeader.readUInt32LE(16)
-    if (fileCount === 0 || fileCount > 200_000) return null
+    if (fileCount === 0 || fileCount > 500_000) return null
 
-    // Each file entry is 40 bytes
-    // Offset 0-3: nameHash low (uint32)
-    // Offset 4-7: nameHash high (uint32) — together form the 64-bit FNV hash
-    const entrySize = 40
-    const entriesBuf = Buffer.alloc(fileCount * entrySize)
-    fs.readSync(fd, entriesBuf, 0, fileCount * entrySize, indexPos + 20)
+    const recordsSize = fileCount * FILE_RECORD_SIZE
+    if (FILE_LIST_HEADER_SIZE + recordsSize > indexSize) return null
+
+    const entriesBuf = Buffer.alloc(recordsSize)
+    fs.readSync(fd, entriesBuf, 0, recordsSize, indexPos + FILE_LIST_HEADER_SIZE)
 
     const entries: ArchiveFileEntry[] = []
     for (let i = 0; i < fileCount; i++) {
-      const off = i * entrySize
-      const low = BigInt(entriesBuf.readUInt32LE(off))
-      const high = BigInt(entriesBuf.readUInt32LE(off + 4))
-      const hash = (high << 32n) | low
+      const off = i * FILE_RECORD_SIZE
+      const hash = entriesBuf.readBigUInt64LE(off)
       entries.push({ hash })
     }
 

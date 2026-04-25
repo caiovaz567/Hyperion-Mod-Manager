@@ -29,7 +29,7 @@ export interface LibrarySlice {
   libraryDeleteAllRequestedAt: number | null
 
   // Actions
-  scanMods: () => Promise<ModMetadata[]>
+  scanMods: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean }) => Promise<ModMetadata[]>
   restoreEnabledMods: (modsToRestore?: ModMetadata[]) => Promise<IpcResult<ModMetadata[]>[]>
   enableMod: (id: string) => Promise<IpcResult>
   disableMod: (id: string) => Promise<IpcResult>
@@ -66,11 +66,13 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   libraryStatusFilter: 'all',
   libraryDeleteAllRequestedAt: null,
 
-  scanMods: async () => {
+  scanMods: async (options) => {
     const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS)
     if (result.ok && result.data) {
       set({ mods: result.data })
-      await scheduleConflictRefresh(set, true)
+      if (options?.refreshConflicts !== false) {
+        void scheduleConflictRefresh(set, options?.immediateConflicts ?? true)
+      }
 
       return result.data
     }
