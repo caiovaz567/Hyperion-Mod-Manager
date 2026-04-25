@@ -8,6 +8,8 @@ import type {
   ModMetadata,
   IpcResult,
   PurgeModsResult,
+  ConflictInfo,
+  ModConflictSummary,
   ModTreeCreateEntryRequest,
   ModTreeRenameEntryRequest,
   ModTreeDeleteEntryRequest,

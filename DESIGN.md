@@ -177,7 +177,7 @@ Alignment rules:
 - Header includes a contextual search field plus refresh and open-folder actions
 - The Downloads search field should reuse the same squared chrome, yellow border rhythm, and hover/focus treatment as the Managed Mods search instead of introducing a second search style
 - Downloads toolbar buttons should reuse the same bordered action language as Managed Mods so both screens read as one product system
-- Downloads should behave like a real sortable table: `Archive Name`, `Status`, `Version`, `Size`, and `Downloaded At` must support the same `asc -> desc -> default` sort cycle used in Managed Mods
+- Downloads should behave like a real sortable table: `Archive Name`, `Status`, `Version`, `Size`, and `Downloaded` must support the same `asc -> desc -> default` sort cycle used in Managed Mods
 - Downloads should remember the user's last search and sort state between visits/restarts instead of resetting to the default table every time
 - `Status` in Downloads is an operational column (`Downloading`, `Paused`, `Installed`, `Downloaded`, `Error`, etc.); temporary attention markers such as `NEW` remain badges on the archive name rather than becoming status values
 - Because the table now has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` inside the `Actions` column

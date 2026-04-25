@@ -3,32 +3,31 @@ import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
-import type { ActiveDownload, DownloadEntry, IpcResult, ModMetadata } from '@shared/types'
+import type { DownloadEntry, IpcResult, ModMetadata } from '@shared/types'
 import { IPC } from '@shared/types'
+import {
+  DOWNLOADS_GRID_TEMPLATE,
+  DOWNLOADS_GRID_TEMPLATE_FULLSCREEN,
+  DOWNLOADS_GRID_TEMPLATE_WIDE,
+  DownloadsTableHeader,
+} from './DownloadsTableHeader'
+import type { DownloadSortDirection, DownloadSortKey } from './DownloadsTableHeader'
+import {
+  DownloadsRow,
+  getDownloadRowSize,
+  getDownloadRowTimestamp,
+} from './DownloadsRows'
+import type { DownloadListRow } from './DownloadsRows'
+import { DownloadsToolbar } from './DownloadsToolbar'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
-import { Tooltip } from '../ui/Tooltip'
-import { formatWindowsDateTime } from '../../utils/dateFormat'
-import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
-import { DELETE_PROGRESS_APPEARANCE, getTransientDeleteProgress } from '../../utils/deleteProgressAppearance'
+import { HyperionPanel } from '../ui/HyperionPrimitives'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 
-const DOWNLOADS_GRID_TEMPLATE =
-  'minmax(580px, 4.3fr) minmax(118px, 0.74fr) minmax(112px, 0.58fr) minmax(108px, 0.52fr) minmax(140px, 0.70fr) minmax(72px, 0.28fr)'
-const DOWNLOADS_GRID_TEMPLATE_WIDE =
-  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(160px, 0.85fr) minmax(72px, 0.28fr)'
-const DOWNLOADS_GRID_TEMPLATE_FULLSCREEN =
-  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(120px, 0.60fr) minmax(64px, 0.22fr)'
 const DOWNLOAD_ROW_HEIGHT = 56
 const DOWNLOAD_VIRTUALIZATION_THRESHOLD = 120
 const DOWNLOADS_SEARCH_STORAGE_KEY = 'hyperion:downloadsSearch'
 const DOWNLOADS_SORT_STORAGE_KEY = 'hyperion:downloadsSort'
 
-type DownloadListRow =
-  | { kind: 'active'; key: string; orderTs: number; active: ActiveDownload }
-  | { kind: 'local'; key: string; orderTs: number; entry: DownloadEntry }
-
-type DownloadSortKey = 'name' | 'status' | 'version' | 'size' | 'downloadedAt'
-type DownloadSortDirection = 'asc' | 'desc'
 type DownloadRowStatus = 'downloading' | 'paused' | 'queued' | 'error' | 'installed' | 'downloaded'
 
 type DownloadContextMenuState =
@@ -61,41 +60,6 @@ const readDownloadsSortPreference = (): { key: DownloadSortKey | null; direction
 
 const compareNaturalStrings = (left: string, right: string): number =>
   left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' })
-
-const getDownloadRowTimestamp = (row: DownloadListRow): string =>
-  row.kind === 'active'
-    ? row.active.startedAt
-    : row.entry.downloadedAt ?? row.entry.modifiedAt
-
-const getDownloadRowSize = (row: DownloadListRow): number =>
-  row.kind === 'active'
-    ? Math.max(row.active.totalBytes, row.active.downloadedBytes)
-    : row.entry.size
-
-const formatSpeed = (bps: number): string => {
-  if (bps <= 0) return '—'
-  if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`
-  return `${(bps / 1024 / 1024).toFixed(1)} MB/s`
-}
-
-const formatSize = (bytes: number): string => {
-  if (bytes <= 0) return '—'
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
-}
-
-const formatETA = (downloaded: number, total: number, speed: number): string => {
-  if (speed <= 0 || total <= 0 || downloaded >= total) return '—'
-  const seconds = Math.round((total - downloaded) / speed)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  const s = seconds % 60
-  if (minutes < 60) return `${minutes}m ${String(s).padStart(2, '0')}s`
-  const hours = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return `${hours}h ${String(m).padStart(2, '0')}m`
-}
 
 const copySuffixPattern = /\sCopy(?:\s\d+)?$/i
 const isCopyVariant = (name: string): boolean => copySuffixPattern.test(name.trim())
@@ -638,11 +602,6 @@ export const DownloadsPane: React.FC = () => {
     ? DOWNLOADS_GRID_TEMPLATE_WIDE
     : DOWNLOADS_GRID_TEMPLATE
 
-  const getSortAriaSort = useCallback((key: DownloadSortKey): 'none' | 'ascending' | 'descending' => {
-    if (sortKey !== key) return 'none'
-    return sortDirection === 'asc' ? 'ascending' : 'descending'
-  }, [sortDirection, sortKey])
-
   const handleSort = useCallback((nextKey: DownloadSortKey) => {
     if (sortKey === nextKey) {
       if (sortDirection === 'asc') {
@@ -658,9 +617,6 @@ export const DownloadsPane: React.FC = () => {
     setSortDirection('asc')
   }, [sortDirection, sortKey])
 
-  const browseLikeButtonClass = 'flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] px-4 text-[10px] brand-font font-bold uppercase tracking-widest transition-colors'
-  const darkBrowseLikeButtonClass = `${browseLikeButtonClass} group border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-[#fcee09] [&_.material-symbols-outlined]:transition-colors hover:[&_.material-symbols-outlined]:!text-[#050505]`
-  const destructiveToolbarButtonClass = `${browseLikeButtonClass} w-10 border-[#5b1818] bg-[#160707] px-0 text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1] disabled:cursor-not-allowed disabled:border-[#3a1010] disabled:bg-[#0d0404] disabled:text-[#7c4a4a]`
   const downloadMenuButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase'
   const downloadMenuSubtleButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#9d9d9d] hover:bg-[#111] hover:text-white transition-colors gap-3 tracking-wider font-semibold uppercase'
   const downloadMenuBlueButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#c6f4ff] hover:bg-[#08141a] hover:text-[#4fd8ff] transition-colors gap-3 tracking-wider font-semibold uppercase'
@@ -670,253 +626,33 @@ export const DownloadsPane: React.FC = () => {
   const contextMenuLocalEntry = contextMenuRow?.kind === 'local' ? contextMenuRow.entry : null
   const contextMenuRowPath = contextMenuRow ? getDownloadRowPath(contextMenuRow) : null
   const contextMenuInstalledMod = contextMenuLocalEntry ? installedBySourcePath.get(contextMenuLocalEntry.path.toLowerCase()) : null
-  const deleteAppearance = DELETE_PROGRESS_APPEARANCE
-
-  const renderDeletingDownloadRow = (entry: DownloadEntry) => {
-    const deletingState = deletingDownloads[entry.path]
-    const deleteProgress = getTransientDeleteProgress(deletingState?.startedAt ?? deleteProgressTick, deleteProgressTick)
-
-    return (
-      <div
-        key={`deleting:${entry.path}`}
-        data-download-row="true"
-        className="relative h-14 overflow-hidden border-b-[0.5px]"
-        style={{
-          background: deleteAppearance.rowTint,
-          borderColor: deleteAppearance.softBorder,
-        }}
-      >
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 transition-all duration-500"
-          style={{
-            width: `${Math.max(0, Math.min(deleteProgress, 100))}%`,
-            background: deleteAppearance.fill,
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 w-[2px] transition-all duration-500"
-          style={{
-            left: `calc(${Math.max(0, Math.min(deleteProgress, 99.6))}% - 1px)`,
-            background: deleteAppearance.accent,
-            boxShadow: `0 0 10px ${deleteAppearance.accent}aa`,
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 w-[3px]"
-          style={{
-            background: deleteAppearance.accent,
-            boxShadow: `0 0 8px ${deleteAppearance.accent}55`,
-          }}
-        />
-        <div
-          className="relative z-10 grid h-14 gap-4 pl-5 pr-5 py-[5px]"
-          style={{ gridTemplateColumns: downloadsGridTemplate }}
-        >
-          <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="font-medium tracking-tight truncate text-[#ffe1e1]">
-                {entry.name}
-              </span>
-              <span
-                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
-                style={{
-                  color: deleteAppearance.accent,
-                  borderColor: `${deleteAppearance.accent}55`,
-                  background: `${deleteAppearance.accent}12`,
-                }}
-              >
-                {deleteAppearance.label}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <span
-              className="shrink-0 rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
-              style={{
-                color: deleteAppearance.accent,
-                borderColor: `${deleteAppearance.accent}55`,
-                background: `${deleteAppearance.accent}12`,
-              }}
-            >
-              {deleteAppearance.label}
-            </span>
-          </div>
-
-          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
-            {entry.version ?? '—'}
-          </div>
-
-          <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#d8d8d8]">
-            {formatSize(entry.size)}
-          </div>
-
-          <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
-            <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
-            <span className="truncate text-[#ffb4ab]">
-              {deleteProgress > 0 ? `${deleteProgress}% · ${deleteAppearance.summary}` : deleteAppearance.summary}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
-              style={{
-                borderColor: `${deleteAppearance.accent}44`,
-                color: deleteAppearance.accent,
-              }}
-            >
-              <span className="material-symbols-outlined animate-spin text-[16px]">delete</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="h-full animate-settings-in">
       <div className="flex flex-col h-full overflow-hidden">
 
-        {/* Fixed header */}
-        <div className="shrink-0 px-6 pt-6 pb-3 w-full">
-          <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
-            Downloads
-          </h1>
-          <p
-            className="mt-1 flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]"
-            style={{ fontFamily: '"DM Sans", sans-serif' }}
-          >
-            LOCAL: {localFiles.length}
-            {activeDownloads.length > 0 && <>&nbsp;|&nbsp; ACTIVE: {activeDownloads.length}</>}
-            {searchQuery.trim() && <>&nbsp;|&nbsp; SHOWN: {totalRows}</>}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <div className="group relative min-w-[300px] flex-1 max-w-[460px]">
-              <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6a6a6a] text-[18px] transition-colors group-hover:text-[#e8e8e8] group-focus-within:text-[#fcee09]">
-                search
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search downloads..."
-                className="h-10 w-full rounded-sm border-[0.5px] border-[#fcee09]/50 bg-[#0a0a0a] py-1.5 pl-10 pr-4 text-sm text-[#e5e2e1] placeholder-[#6f6f6f] transition-all hover:border-[#fcee09]/70 hover:text-[#e8e8e8] focus:border-[#fcee09]/65 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.08)]"
-              />
-            </div>
-            <button
-              onClick={() => void doRefresh()}
-              className={darkBrowseLikeButtonClass}
-            >
-              <span className="material-symbols-outlined text-[16px]">refresh</span>
-              Refresh
-            </button>
-            <button
-              onClick={openDownloadsFolder}
-              className={darkBrowseLikeButtonClass}
-            >
-              <span className="material-symbols-outlined text-[16px]">folder_open</span>
-              Open Folder
-            </button>
-            <Tooltip content="Delete every file in the downloads folder">
-              <button
-                onClick={() => setDeleteAllOpen(true)}
-                disabled={localFiles.length === 0}
-                className={destructiveToolbarButtonClass}
-              >
-                <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-              </button>
-            </Tooltip>
-          </div>
-        </div>
+        <DownloadsToolbar
+          searchQuery={searchQuery}
+          localFileCount={localFiles.length}
+          activeDownloadCount={activeDownloads.length}
+          totalRows={totalRows}
+          onSearchQueryChange={setSearchQuery}
+          onRefresh={doRefresh}
+          onOpenFolder={openDownloadsFolder}
+          onDeleteAll={() => setDeleteAllOpen(true)}
+        />
 
         {/* Unified table */}
         <div className="flex-1 overflow-hidden px-6 pb-6 w-full">
-          <div className="h-full bg-[#050505] rounded-sm border-[0.5px] border-[#1a1a1a] overflow-hidden shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
+          <HyperionPanel className="h-full overflow-hidden">
             <div ref={downloadsScrollRef} className="hyperion-scrollbar h-full overflow-y-auto">
 
-              {/* Sticky column headers */}
-              <div
-                className="sticky top-0 z-10 grid gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
-                style={{ gridTemplateColumns: downloadsGridTemplate }}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleSort('name')}
-                  aria-sort={getSortAriaSort('name')}
-                  aria-label={`Sort by archive name${sortKey === 'name' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-8 items-center text-left"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>Archive Name</span>
-                    <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'name' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">
-                      {sortKey === 'name' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSort('status')}
-                  aria-sort={getSortAriaSort('status')}
-                  aria-label={`Sort by status${sortKey === 'status' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-8 items-center text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'status' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>Status</span>
-                    <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'status' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">
-                      {sortKey === 'status' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSort('version')}
-                  aria-sort={getSortAriaSort('version')}
-                  aria-label={`Sort by version${sortKey === 'version' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-8 items-center text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'version' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>Version</span>
-                    <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'version' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">
-                      {sortKey === 'version' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSort('size')}
-                  aria-sort={getSortAriaSort('size')}
-                  aria-label={`Sort by size${sortKey === 'size' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-8 items-center pl-4 text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'size' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>Size</span>
-                    <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'size' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">
-                      {sortKey === 'size' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSort('downloadedAt')}
-                  aria-sort={getSortAriaSort('downloadedAt')}
-                  aria-label={`Sort by downloaded date${sortKey === 'downloadedAt' ? `, currently ${sortDirection === 'asc' ? 'ascending' : 'descending'}` : ''}`}
-                  className="flex h-8 items-center text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm uppercase tracking-widest brand-font font-bold ${sortKey === 'downloadedAt' ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'}`}>Downloaded At</span>
-                    <span className={`material-symbols-outlined text-[8px] leading-none ${sortKey === 'downloadedAt' ? 'text-[#fcee09]' : 'text-[#727272]'}`} aria-hidden="true">
-                      {sortKey === 'downloadedAt' ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                    </span>
-                  </div>
-                </button>
-                <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-                  Actions
-                </div>
-              </div>
+              <DownloadsTableHeader
+                gridTemplate={downloadsGridTemplate}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
 
               {/* Rows */}
               <div className="relative" onContextMenu={handleDownloadsBlankContextMenu}>
@@ -954,386 +690,38 @@ export const DownloadsPane: React.FC = () => {
                     }}
                   >
                     {visibleRows.map((row, visibleIndex) => {
-                    if (row.kind === 'active') {
-                      const dl = row.active
-                    const pct = dl.totalBytes > 0 ? Math.round((dl.downloadedBytes / dl.totalBytes) * 100) : 0
-                    const isDone = dl.status === 'done'
-                    const isError = dl.status === 'error'
-                    const isPaused = dl.status === 'paused'
-                    const accent = isDone ? '#34d399' : isError ? '#f87171' : isPaused ? '#60a5fa' : '#fcee09'
-                    const rowBorder = isError ? '#3a1313' : isPaused ? '#19304f' : '#1e1a00'
-                    const rowTint = isError
-                      ? 'rgba(248,113,113,0.04)'
-                      : isPaused
-                        ? 'rgba(96,165,250,0.05)'
-                        : 'rgba(252,238,9,0.035)'
-                    const eta = isDone || isError || isPaused ? null : formatETA(dl.downloadedBytes, dl.totalBytes, dl.speedBps)
-                    const progressSummary = isError
-                      ? dl.error ?? 'Download failed'
-                      : isDone
-                        ? 'Ready to install'
-                        : isPaused
-                          ? `Paused at ${pct}%`
-                        : `${pct}% complete`
-                    const transferSummary = isError
-                      ? 'Transfer interrupted'
-                      : isDone
-                        ? `${formatSize(dl.totalBytes)} downloaded`
-                        : `${formatSize(dl.downloadedBytes)} / ${formatSize(dl.totalBytes)}`
-                    const speedSummary = isError
-                      ? 'Try again'
-                      : isDone
-                        ? 'Waiting for scan'
-                        : isPaused
-                          ? 'Resume to continue'
-                        : `${formatSpeed(dl.speedBps)}${eta ? ` · ETA ${eta}` : ''}`
+                      const entry = row.kind === 'local' ? row.entry : null
+                      const deletingState = entry ? deletingDownloads[entry.path] : undefined
 
-                    return (
-                      <div
-                        key={row.key}
-                        data-download-row="true"
-                        onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
-                        className="relative h-14 overflow-hidden border-b-[0.5px] border-[#1e1a00]"
-                        style={{ background: rowTint, borderColor: rowBorder }}
-                      >
-                        <div
-                          aria-hidden="true"
-                          className="absolute inset-y-0 left-0 transition-all duration-500"
-                          style={{
-                            width: `${Math.max(0, Math.min(pct, 100))}%`,
-                            background: isError
-                              ? 'linear-gradient(90deg, rgba(248,113,113,0.18) 0%, rgba(248,113,113,0.08) 100%)'
-                              : isPaused
-                                ? 'linear-gradient(90deg, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.07) 100%)'
-                              : 'linear-gradient(90deg, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.09) 100%)',
-                          }}
+                      return (
+                        <DownloadsRow
+                          key={row.key}
+                          row={row}
+                          rowIndex={virtualizedDownloads.startIndex + visibleIndex}
+                          gridTemplate={downloadsGridTemplate}
+                          installedMod={entry ? installedBySourcePath.get(entry.path.toLowerCase()) : null}
+                          isNew={entry ? newFilesSet.has(entry.path.toLowerCase()) : false}
+                          isInstalling={Boolean(entry && installing && installSourcePath === entry.path)}
+                          isDeleting={Boolean(deletingState)}
+                          installProgress={installProgress}
+                          installStatus={installStatus}
+                          installCurrentFile={installCurrentFile}
+                          deleteStartedAt={deletingState?.startedAt}
+                          deleteProgressTick={deleteProgressTick}
+                          onContextMenu={handleDownloadRowContextMenu}
+                          onInstall={handleInstall}
+                          onDeleteRequest={(downloadEntry) => setPendingDeleteDownload(downloadEntry)}
+                          onPauseDownload={pauseDownload}
+                          onResumeDownload={resumeDownload}
+                          onCancelDownload={cancelDownload}
                         />
-                        {!isError && !isDone && !isPaused && (
-                          <div
-                            aria-hidden="true"
-                            className="absolute inset-y-0 w-[2px] transition-all duration-500"
-                            style={{
-                              left: `calc(${Math.min(pct, 99.6)}% - 1px)`,
-                              background: accent,
-                              boxShadow: `0 0 10px ${accent}aa`,
-                            }}
-                          />
-                        )}
-                        <div
-                          className="absolute inset-y-0 left-0 w-[3px]"
-                          style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
-                        />
-
-                        <div
-                          className="relative z-10 grid h-14 gap-4 pl-5 pr-5 py-[5px]"
-                          style={{ gridTemplateColumns: downloadsGridTemplate }}
-                        >
-                          <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
-                                {dl.fileName}
-                              </span>
-                            </div>
-                            <span
-                              className="text-sm font-mono tracking-tight"
-                              style={{ color: isError ? '#fca5a5' : isPaused ? '#93c5fd' : accent }}
-                            >
-                              {transferSummary}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-col justify-center gap-1 overflow-hidden">
-                            <span
-                              className="w-fit rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
-                              style={{ color: accent, borderColor: `${accent}55`, background: `${accent}12` }}
-                            >
-                              {isError ? 'Error' : isDone ? 'Downloaded' : isPaused ? 'Paused' : 'Downloading'}
-                            </span>
-                            <span className={`truncate text-sm font-mono tracking-tight ${isPaused ? 'text-[#93a8c8]' : 'text-[#9a9a9a]'}`}>
-                              {progressSummary}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a]">
-                            {dl.version ?? '—'}
-                          </div>
-
-                          <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#d8d8d8]">
-                            {formatSize(Math.max(dl.totalBytes, dl.downloadedBytes))}
-                          </div>
-
-                          <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
-                            <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(dl.startedAt)}</span>
-                            <span className={`truncate ${isPaused ? 'text-[#93a8c8]' : 'text-[#9a9a9a]'}`}>{speedSummary}</span>
-                          </div>
-
-                          <div className="flex items-center justify-end gap-2">
-                            {!isDone && !isError && (
-                              <>
-                                {isPaused ? (
-                                  <Tooltip content="Resume download">
-                                    <button
-                                      onClick={() => void resumeDownload(dl.id)}
-                                      className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#1d3d63] bg-[#07111d]/95 text-[#60a5fa] hover:border-[#60a5fa]/70 hover:bg-[#0b1724] transition-all"
-                                    >
-                                      <span className="material-symbols-outlined text-[16px]">play_arrow</span>
-                                    </button>
-                                  </Tooltip>
-                                ) : (
-                                  <Tooltip content="Pause download">
-                                    <button
-                                      onClick={() => void pauseDownload(dl.id)}
-                                      className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a]/90 text-[#c9c9c9] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
-                                    >
-                                      <span className="material-symbols-outlined text-[16px]">pause</span>
-                                    </button>
-                                  </Tooltip>
-                                )}
-                                <Tooltip content="Cancel download">
-                                  <button
-                                    onClick={() => void cancelDownload(dl.id)}
-                                    className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a]/90 text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
-                                  >
-                                    <span className="material-symbols-outlined text-[16px]">close</span>
-                                  </button>
-                                </Tooltip>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                    }
-
-                  const entry = row.entry
-                  const index = virtualizedDownloads.startIndex + visibleIndex
-                  const isInstalling = installing && installSourcePath === entry.path
-                  const isDeleting = Boolean(deletingDownloads[entry.path])
-                  const installAppearance = isInstalling
-                    ? getInstallProgressAppearance(installStatus)
-                    : null
-                  const installedMod = installedBySourcePath.get(entry.path.toLowerCase())
-                  const isNew = newFilesSet.has(entry.path.toLowerCase())
-                  const rowBg = index % 2 === 0
-                    ? 'bg-[#050505] hover:bg-[#141414]'
-                    : 'bg-[#0a0a0a] hover:bg-[#161616]'
-
-                  if (isInstalling && installAppearance) {
-                    const progressSummary = `${installStatus || installAppearance.label} ${installProgress > 0 ? `${installProgress}%` : ''}`.trim()
-                    const progressDetail = installCurrentFile || installAppearance.detailFallback
-
-                    return (
-                      <div
-                        key={row.key}
-                        data-download-row="true"
-                        onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
-                        className="relative h-14 overflow-hidden border-b-[0.5px]"
-                        style={{
-                          background: installAppearance.rowTint,
-                          borderColor: installAppearance.softBorder,
-                        }}
-                      >
-                        <div
-                          aria-hidden="true"
-                          className="absolute inset-y-0 left-0 transition-all duration-500"
-                          style={{
-                            width: `${Math.max(0, Math.min(installProgress, 100))}%`,
-                            background: installAppearance.fill,
-                          }}
-                        />
-                        <div
-                          aria-hidden="true"
-                          className="absolute inset-y-0 w-[2px] transition-all duration-500"
-                          style={{
-                            left: `calc(${Math.max(0, Math.min(installProgress, 99.6))}% - 1px)`,
-                            background: installAppearance.accent,
-                            boxShadow: `0 0 10px ${installAppearance.accent}aa`,
-                          }}
-                        />
-                        <div
-                          aria-hidden="true"
-                          className="absolute inset-y-0 left-0 w-[3px]"
-                          style={{
-                            background: installAppearance.accent,
-                            boxShadow: `0 0 8px ${installAppearance.accent}55`,
-                          }}
-                        />
-                        <div
-                          className="relative z-10 grid h-14 gap-4 pl-5 pr-5 py-[5px]"
-                          style={{ gridTemplateColumns: downloadsGridTemplate }}
-                        >
-                          <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
-                                {entry.name}
-                              </span>
-                            </div>
-                            <span
-                              className="truncate text-sm font-mono tracking-tight"
-                              style={{ color: installAppearance.accent }}
-                            >
-                              {progressDetail}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-col justify-center gap-1 overflow-hidden">
-                            <span
-                              className="w-fit rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
-                              style={{
-                                color: installAppearance.accent,
-                                borderColor: `${installAppearance.accent}55`,
-                                background: `${installAppearance.accent}12`,
-                              }}
-                            >
-                              {installAppearance.label}
-                            </span>
-                            <span className="truncate text-sm font-mono tracking-tight text-[#d8d8d8]">
-                              {progressSummary}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
-                            {entry.version ?? '—'}
-                          </div>
-
-                          <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#d8d8d8]">
-                            {formatSize(entry.size)}
-                          </div>
-
-                          <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
-                            <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
-                            <span className="truncate text-[#9a9a9a]">{installAppearance.summary}</span>
-                          </div>
-
-                          <div className="flex items-center justify-end gap-2">
-                            <div
-                              className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
-                              style={{
-                                borderColor: `${installAppearance.accent}44`,
-                                color: installAppearance.accent,
-                              }}
-                            >
-                              <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }
-
-                  if (isDeleting) {
-                    return renderDeletingDownloadRow(entry)
-                  }
-
-                  return (
-                    <div
-                      key={row.key}
-                      data-download-row="true"
-                      onContextMenu={(event) => handleDownloadRowContextMenu(event, row)}
-                      onDoubleClick={(e) => { e.stopPropagation(); void handleInstall(entry) }}
-                      className={`grid h-14 gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
-                      style={{ gridTemplateColumns: downloadsGridTemplate }}
-                    >
-                      {/* Hover gradient overlay */}
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                        style={{
-                          background: isNew
-                            ? 'linear-gradient(90deg, rgba(252,238,9,0.07) 0%, rgba(252,238,9,0.025) 20%, transparent 60%)'
-                            : 'linear-gradient(90deg, rgba(252,238,9,0.05) 0%, rgba(252,238,9,0.02) 18%, transparent 60%)',
-                        }}
-                      />
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-y-0 left-0 w-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                        style={{ background: isNew ? '#fcee09' : 'rgba(252,238,9,0.55)' }}
-                      />
-                      {/* Persistent left bar for NEW files */}
-                      {isNew && (
-                        <div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute inset-y-0 left-0 w-[2px]"
-                          style={{ background: 'rgba(252,238,9,0.4)' }}
-                        />
-                      )}
-
-                      {/* Col 1: name + NEW badge */}
-                      <div className="flex items-center overflow-hidden">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
-                            {entry.name}
-                          </span>
-                          {isNew && (
-                            <span className="shrink-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest bg-[#fcee09] text-[#050505] rounded-sm">
-                              NEW
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Col 2: status */}
-                      <div className="flex items-center">
-                        <span
-                          className={`shrink-0 rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest ${
-                            installedMod
-                              ? 'border-[#7a7a7a]/70 bg-[#101010] text-[#f0f0f0]'
-                              : 'border-[#fcee09]/35 bg-[#0a0a0a] text-[#bdbdbd]'
-                          }`}
-                        >
-                          {installedMod ? 'Installed' : 'Downloaded'}
-                        </span>
-                      </div>
-
-                      {/* Col 3: version */}
-                      <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#c4c4c4] transition-colors">
-                        {entry.version ?? '—'}
-                      </div>
-
-                      {/* Col 4: size */}
-                      <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#c4c4c4] transition-colors">
-                        {formatSize(entry.size)}
-                      </div>
-
-                      {/* Col 5: downloaded date */}
-                      <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
-                        {formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}
-                      </div>
-
-                      {/* Col 6: install + delete */}
-                      <div className="flex items-center justify-end gap-2">
-                        <Tooltip content={installedMod ? 'Reinstall archive' : 'Install archive'}>
-                          <button
-                            onClick={() => void handleInstall(entry)}
-                            disabled={isInstalling}
-                            className={`flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] transition-all disabled:opacity-50 ${
-                              installedMod
-                                ? 'border-[#7a7a7a] bg-[#0a0a0a] text-[#f0f0f0] hover:border-[#fcee09] hover:text-[#fcee09]'
-                                : 'border-[#fcee09]/40 bg-[#0a0a0a] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
-                            } disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]`}
-                          >
-                            <span className="material-symbols-outlined text-[18px]">
-                              {installedMod ? 'restart_alt' : 'deployed_code'}
-                            </span>
-                          </button>
-                        </Tooltip>
-                        <Tooltip content="Delete download">
-                          <button
-                            onClick={() => setPendingDeleteDownload(entry)}
-                            className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  )
-                })}
+                      )
+                    })}
                 </div>
               )}
               </div>
             </div>
-          </div>
+          </HyperionPanel>
         </div>
       </div>
 

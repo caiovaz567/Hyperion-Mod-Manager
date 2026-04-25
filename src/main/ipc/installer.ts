@@ -506,7 +506,7 @@ async function installMod(
       const removalResult = await removeExistingMod(duplicateMod, settings)
       if (!removalResult.ok) {
         fs.rmSync(tempDir, { recursive: true, force: true })
-        return removalResult
+        return { ok: false, error: removalResult.error }
       }
     }
 
