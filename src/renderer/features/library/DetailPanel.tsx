@@ -301,6 +301,33 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     [conflicts, mod]
   )
 
+  // Sub-tab state for conflicts: regular file conflicts vs archive-resource (.archive) conflicts
+  const [conflictSubTab, setConflictSubTab] = useState<'files' | 'archives'>('files')
+
+  const winFileConflicts = useMemo(
+    () => winConflicts.filter((c) => c.kind !== 'archive-resource' || String(c.resourcePath).toLowerCase().endsWith('.archive')),
+    [winConflicts]
+  )
+  const winArchiveConflicts = useMemo(
+    () => winConflicts.filter((c) => c.kind === 'archive-resource'),
+    [winConflicts]
+  )
+  const lossFileConflicts = useMemo(
+    () => lossConflicts.filter((c) => c.kind !== 'archive-resource' || String(c.resourcePath).toLowerCase().endsWith('.archive')),
+    [lossConflicts]
+  )
+  const lossArchiveConflicts = useMemo(
+    () => lossConflicts.filter((c) => c.kind === 'archive-resource'),
+    [lossConflicts]
+  )
+
+  const totalFileConflicts = winFileConflicts.length + lossFileConflicts.length
+  const totalArchiveConflicts = winArchiveConflicts.length + lossArchiveConflicts.length
+
+  // Keep both subtabs visible; user prefers renaming rather than hiding.
+
+  const modsById = useMemo(() => new Map(mods.map((m) => [m.uuid, m])), [mods])
+
   useEffect(() => {
     setExpandedTreeIds(new Set(defaultExpandedTreeIds))
   }, [defaultExpandedTreeIds, mod?.uuid])
@@ -371,8 +398,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       : 'min(980px, calc(100vh - 24px))',
     width: fullscreenLikeViewport
       ? 'min(1240px, calc(100vw - 60px))'
-      : 'min(1480px, calc(100vw - 24px))',
-    maxWidth: fullscreenLikeViewport ? '1240px' : '1480px',
+      : 'min(1480px, calc(100vw - 48px))',
+    maxWidth: fullscreenLikeViewport ? '1240px' : 'calc(100vw - 48px)',
   }
   const contextMenuNode = findFileTreeNode(fileTree, treeContextMenu?.nodeId ?? null)
   const contextMenuExistingRelativePath = getExistingNodeRelativePath(contextMenuNode)
@@ -655,27 +682,47 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </div>
           ) : (
             <div className="mt-5 min-h-0 flex flex-1 flex-col gap-5">
+              <div className="flex items-center gap-3">
+                <TabButton
+                  active={conflictSubTab === 'files'}
+                  label={`Paths (${totalFileConflicts})`}
+                  onClick={() => setConflictSubTab('files')}
+                />
+
+                <TabButton
+                  active={conflictSubTab === 'archives'}
+                  label={`.archive (${totalArchiveConflicts})`}
+                  onClick={() => setConflictSubTab('archives')}
+                />
+              </div>
+
+              <div className="mt-3 min-h-0 flex flex-1 flex-col gap-5">
                 <ConflictSection
-                  conflicts={lossConflicts}
+                  conflicts={conflictSubTab === 'files' ? lossFileConflicts : lossArchiveConflicts}
                   emptyMessage="No other mod is currently overwriting files from this mod."
                   mod={mod}
                   tone="loss"
-                  title={`Other Mods Win (-${conflictSummary.overwrittenBy})`}
+                  title={`Other Mods Win (-${conflictSubTab === 'files' ? lossFileConflicts.length : lossArchiveConflicts.length})`}
                   collapsed={lossConflictsCollapsed}
                   onToggleCollapsed={() => setLossConflictsCollapsed((current) => !current)}
                   className={lossConflictsCollapsed ? 'flex-none' : 'flex-1'}
+                  showArchiveDetails={conflictSubTab === 'archives'}
+                  modsById={modsById}
                 />
 
                 <ConflictSection
-                  conflicts={winConflicts}
+                  conflicts={conflictSubTab === 'files' ? winFileConflicts : winArchiveConflicts}
                   emptyMessage="This mod is not currently overwriting files from other mods."
                   mod={mod}
                   tone="win"
-                  title={`This Mod Wins (+${conflictSummary.overwrites})`}
+                  title={`This Mod Wins (+${conflictSubTab === 'files' ? winFileConflicts.length : winArchiveConflicts.length})`}
                   collapsed={winConflictsCollapsed}
                   onToggleCollapsed={() => setWinConflictsCollapsed((current) => !current)}
                   className={winConflictsCollapsed ? 'flex-none' : 'flex-1'}
+                  showArchiveDetails={conflictSubTab === 'archives'}
+                  modsById={modsById}
                 />
+              </div>
             </div>
           )}
         </div>

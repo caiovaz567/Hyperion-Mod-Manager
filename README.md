@@ -15,7 +15,8 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
 ## Features
 
 - Manage your full mod library with enable/disable control per mod or in bulk
-- Install mods from `.zip` archives and reinstall from the original source at any time
+- Install mods from `.zip`, `.rar`, and `.7z` archives and reinstall from the original source at any time
+- Conflict detection: flags file-path overwrites and archive-resource conflicts (internal RED4 hash collisions across `.archive` files), with per-mod win/loss breakdown
 - Browse your downloads folder and inspect archives before installing
 - Load order tracking with drag-to-reorder support
 - Launch Cyberpunk 2077 directly from the app

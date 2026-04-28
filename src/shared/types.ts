@@ -176,6 +176,78 @@ export interface DownloadEntry {
   version?: string
 }
 
+// ─── FOMOD ────────────────────────────────────────────────────────────────────
+
+export interface FomodFileEntry {
+  source: string
+  destination: string
+  type: 'file' | 'folder'
+}
+
+export type FomodGroupType =
+  | 'SelectExactlyOne'
+  | 'SelectAtMostOne'
+  | 'SelectAll'
+  | 'SelectAny'
+  | 'SelectAllAndMore'
+
+export type FomodPluginType =
+  | 'Optional'
+  | 'Required'
+  | 'Recommended'
+  | 'NotUsable'
+  | 'CouldBeUsable'
+
+export interface FomodPlugin {
+  name: string
+  description: string
+  image?: string
+  files: FomodFileEntry[]
+  conditionFlags?: Array<{ name: string; value: string }>
+  typeDescriptor?: FomodPluginType
+}
+
+export interface FomodGroup {
+  name: string
+  type: FomodGroupType
+  plugins: FomodPlugin[]
+}
+
+export interface FomodStep {
+  name: string
+  groups: FomodGroup[]
+  visibleConditions?: Array<{ flag: string; value: string }>
+}
+
+export interface FomodConditionalInstall {
+  dependencies: Array<{ flag: string; value: string }>
+  files: FomodFileEntry[]
+}
+
+export interface FomodModuleConfig {
+  moduleName: string
+  moduleImage?: string
+  steps: FomodStep[]
+  requiredFiles: FomodFileEntry[]
+  conditionalInstalls: FomodConditionalInstall[]
+}
+
+export interface FomodInstallRequest {
+  tempDir: string
+  extractRoot: string
+  originalFilePath: string
+  installEntries: FomodFileEntry[]
+  needsExtraction?: boolean
+  duplicateAction?: InstallDuplicateAction
+  targetModId?: string
+  nexusModId?: number
+  nexusFileId?: number
+  sourceFileName?: string
+  sourceVersion?: string
+  skipVersionMismatchPrompt?: boolean
+  allowOverwriteConflicts?: boolean
+}
+
 // ─── Install ──────────────────────────────────────────────────────────────────
 
 export interface InstallProgress {
@@ -243,10 +315,11 @@ export interface InstallModRequest {
 }
 
 export interface InstallModResponse {
-  status: 'installed' | 'duplicate' | 'conflict' | 'version-mismatch'
+  status: 'installed' | 'duplicate' | 'conflict' | 'version-mismatch' | 'fomod'
   mod?: ModMetadata
   conflicts?: ConflictInfo[]
   duplicate?: DuplicateModInfo
+  fomod?: { xml: string; tempDir: string; extractRoot: string; needsExtraction?: boolean }
 }
 
 export interface InstallResult {
@@ -322,6 +395,9 @@ export const IPC = {
   INSTALL_MOD: 'install:mod',
   REINSTALL_MOD: 'install:reinstall',
   INSTALL_PROGRESS: 'install:progress',
+  FOMOD_INSTALL: 'install:fomod',
+  FOMOD_CANCEL: 'install:fomodCancel',
+  FOMOD_READ_IMAGE: 'fomod:readImage',
   LIST_DOWNLOADS: 'downloads:list',
   DELETE_DOWNLOAD: 'downloads:delete',
   DELETE_ALL_DOWNLOADS: 'downloads:deleteAll',
