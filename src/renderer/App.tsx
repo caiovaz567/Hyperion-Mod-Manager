@@ -10,6 +10,7 @@ import { DuplicateDownloadDialog } from './features/ui/DuplicateDownloadDialog'
 import { DuplicateInstallDialog } from './features/ui/DuplicateInstallDialog'
 import { VersionMismatchDialog } from './features/ui/VersionMismatchDialog'
 import { ConflictInspectorDialog } from './features/ui/ConflictInspectorDialog'
+import { FomodInstallerDialog } from './features/ui/FomodInstallerDialog'
 import { WelcomeScreen } from './features/ui/WelcomeScreen'
 import { ModList } from './features/library/ModList'
 import { DownloadsPane } from './features/downloads/DownloadsPane'
@@ -69,6 +70,7 @@ export const App: React.FC = () => {
     addToast,
     gamePathValid,
     libraryPathValid,
+    detecting,
     installing,
     installProgress,
     installStatus,
@@ -91,6 +93,7 @@ export const App: React.FC = () => {
     addToast: state.addToast,
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
+    detecting: state.detecting,
     installing: state.installing,
     installProgress: state.installProgress,
     installStatus: state.installStatus,
@@ -234,10 +237,55 @@ export const App: React.FC = () => {
         </div>
         <DuplicateDownloadDialog />
         <DuplicateInstallDialog />
+        <FomodInstallerDialog />
         <VersionMismatchDialog />
         <ConflictInspectorDialog />
         {dialogs.appLogs && (
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
+        )}
+        {detecting && !installing && (
+          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/86 px-4 backdrop-blur-sm">
+            <div
+              className="relative w-full max-w-[520px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-6 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
+              style={{ borderColor: '#fcee0944' }}
+            >
+              <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09]" style={{ boxShadow: '0 0 12px #fcee0944' }} />
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]"
+                  style={{ borderColor: '#fcee0933', color: '#fcee09' }}>
+                  <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="brand-font text-[1rem] font-bold uppercase tracking-[0.12em] text-[#fcee09]">
+                    Preparing Installer
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-[#d3d3d3]">
+                    Hyperion is analyzing the archive and detecting the installation format.
+                  </p>
+                  <div className="mt-4 rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
+                    <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">
+                      Analyzing
+                    </div>
+                    <div className="mt-2 truncate text-sm font-medium text-[#f2f2f2]">
+                      {installCurrentFile
+                        ? installCurrentFile.replace(/\\/g, '/').split('/').pop()
+                        : installOverlayName}
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#111]">
+                      <div
+                        className="h-full bg-[#fcee09] transition-all duration-500"
+                        style={{ width: `${clampedInstallProgress}%`, boxShadow: '0 0 12px #fcee0933' }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-mono">
+                      <span className="text-[#fcee09]">{installStatus || 'Detecting...'}</span>
+                      <span className="text-[#d8d8d8]">{Math.round(clampedInstallProgress)}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         {installing && (
           <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/86 px-4 backdrop-blur-sm">

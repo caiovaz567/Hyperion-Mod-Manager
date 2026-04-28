@@ -1,0 +1,11 @@
+feat(installer): Add FOMOD installer and archive-resource conflict support
+
+- Add FOMOD installer UI and parser (src/renderer/features/ui/FomodInstallerDialog.tsx, src/renderer/utils/fomodParser.ts) with image preview/lightbox and selection flow.
+- Implement main-process FOMOD handling and helpers in src/main/ipc/installer.ts (early detection, selective extraction, encoding-aware XML reader, extraction helpers, installFromFomod, IPC handlers).
+- Add FOMOD-related types and IPC constants in src/shared/types.ts.
+- Integrate FOMOD flow into renderer store (createDownloadsSlice.ts): fomodPrompt state, fomodInstall action, and prompt lifecycle handling.
+- Improve conflict UI and detail panel to show archive-resource conflicts and archive pair details (DetailPanel, DetailPanelParts, ConflictInspectorDialog, OverwriteConflictDialog).
+- Add local image read IPC (IPC.FOMOD_READ_IMAGE) and renderer image loader for FOMOD preview images.
+- Add script to generate hashes.csv.gz (scripts/generate-hashes.ps1).
+- Bump package version to 0.14.0; update README and CSP to allow local image scheme.
+

@@ -4,8 +4,6 @@ import {
   ipcMain,
   dialog,
   shell,
-  protocol,
-  net,
   screen
 } from 'electron'
 import fs from 'fs'
@@ -520,6 +518,23 @@ function registerGlobalHandlers(): void {
       return { ok: false, error: errMsg }
     }
     return { ok: true }
+  })
+
+  // Read a local image file and return it as a base64 data URL so the renderer
+  // can display FOMOD preview images without any protocol-scheme restrictions.
+  ipcMain.handle(IPC.FOMOD_READ_IMAGE, (_event, filePath: string): string => {
+    if (!filePath || typeof filePath !== 'string') return ''
+    try {
+      const data = fs.readFileSync(filePath)
+      const ext = path.extname(filePath).toLowerCase()
+      const mime = (
+        { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp' } as Record<string, string>
+      )[ext] ?? 'image/png'
+      return `data:${mime};base64,${data.toString('base64')}`
+    } catch {
+      return ''
+    }
   })
 
   ipcMain.handle(IPC.GET_APP_VERSION, () => app.getVersion())

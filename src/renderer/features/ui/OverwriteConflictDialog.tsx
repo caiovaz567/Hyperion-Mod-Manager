@@ -109,7 +109,6 @@ export const OverwriteConflictDialog: React.FC = () => {
           {previewRows.map((conflict, index) => {
             const archiveHash = getArchiveConflictHash(conflict)
             const showArchiveHash = Boolean(archiveHash && archiveHash !== conflict.resourcePath)
-            const unresolvedArchiveConflict = isUnresolvedArchiveConflict(conflict)
             const tone = conflict.kind === 'archive-resource'
               ? 'border-[#4f2020] bg-[#120808] text-[#f3b8b8]'
               : conflict.incomingWins
@@ -133,9 +132,9 @@ export const OverwriteConflictDialog: React.FC = () => {
                 </div>
                 <div className="min-w-0 text-sm text-[#f1eeea]">
                   <div className="break-all">{conflict.resourcePath}</div>
-                  {showArchiveHash || unresolvedArchiveConflict ? (
+                  {showArchiveHash ? (
                     <div className="mt-1 break-all text-xs text-[#8d8d8d]">
-                      {unresolvedArchiveConflict ? 'Unresolved archive hash' : 'Archive hash'}: {archiveHash}
+                      Archive resource: {archiveHash}
                     </div>
                   ) : null}
                 </div>

@@ -5,7 +5,7 @@ import type {
   ConflictInfo,
   DownloadEntry,
   DuplicateNxmDownloadInfo,
-  DuplicateModInfo,
+  FomodInstallRequest,
   InstallModRequest,
   InstallModResponse,
   InstallProgress,
@@ -225,9 +225,20 @@ export interface OverwriteConflictPromptInfo {
   mod: ModMetadata
   conflicts: ConflictInfo[]
   request: InstallModRequest
+  fomodRequest?: FomodInstallRequest
+}
+
+export interface FomodPromptInfo {
+  xml: string
+  tempDir: string
+  extractRoot: string
+  originalFilePath: string
+  request: Partial<InstallModRequest>
+  needsExtraction?: boolean
 }
 
 export interface DownloadsSlice {
+  detecting: boolean
   installing: boolean
   installProgress: number
   installStatus: string
@@ -241,6 +252,7 @@ export interface DownloadsSlice {
   duplicateDownloadPrompt: DuplicateDownloadPromptInfo | null
   versionMismatchPrompt: VersionMismatchPromptInfo | null
   overwriteConflictPrompt: OverwriteConflictPromptInfo | null
+  fomodPrompt: FomodPromptInfo | null
   activeDownloads: ActiveDownload[]
   localFiles: DownloadEntry[]
   newFiles: string[]
@@ -259,6 +271,9 @@ export interface DownloadsSlice {
   clearVersionMismatchPrompt: () => void
   confirmOverwriteConflicts: (proceed: boolean) => Promise<void>
   clearOverwriteConflictPrompt: () => void
+  fomodInstall: (fomodRequest: FomodInstallRequest) => Promise<IpcResult<InstallModResponse>>
+  dismissFomodPrompt: () => void
+  clearFomodPrompt: () => void
   clearInstall: () => void
   refreshLocalFiles: () => Promise<void>
   startNxmDownload: (payload: NxmLinkPayload, options?: { allowDuplicate?: boolean }) => Promise<void>
@@ -273,6 +288,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   set,
   get
 ) => ({
+  detecting: false,
   installing: false,
   installProgress: 0,
   installStatus: '',
@@ -286,6 +302,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   duplicateDownloadPrompt: null,
   versionMismatchPrompt: null,
   overwriteConflictPrompt: null,
+  fomodPrompt: null,
   newFiles: (() => {
     try { return JSON.parse(localStorage.getItem('hyperion:newFiles') ?? '[]') as string[] }
     catch { return [] }
@@ -338,9 +355,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     }
 
     set({
-      installing: true,
+      detecting: true,
       installProgress: 0,
-      installStatus: 'Starting...',
+      installStatus: 'Preparing installer...',
       installCurrentFile: '',
       installSourcePath: filePath,
       installTargetModId: request.targetModId ?? '',
@@ -362,7 +379,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
 
     unsubscribe()
     set({
-      installing: false,
+      detecting: false,
       installCurrentFile: '',
       installSourcePath: '',
       installTargetModId: '',
@@ -372,7 +389,18 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     if (result.ok && result.data) {
       const resultData = result.data
 
-      if (resultData.status === 'duplicate' && resultData.duplicate) {
+      if (resultData.status === 'fomod' && resultData.fomod) {
+        set({
+          fomodPrompt: {
+            xml: resultData.fomod.xml,
+            tempDir: resultData.fomod.tempDir,
+            extractRoot: resultData.fomod.extractRoot,
+            originalFilePath: filePath,
+            request,
+            needsExtraction: resultData.fomod.needsExtraction,
+          },
+        })
+      } else if (resultData.status === 'duplicate' && resultData.duplicate) {
         set({
           installPrompt: {
             mode: 'duplicate',
@@ -581,7 +609,18 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
 
     set({ overwriteConflictPrompt: null })
 
-    if (!proceed) return
+    if (!proceed) {
+      if (prompt.fomodRequest) {
+        IpcService.invoke(IPC.FOMOD_CANCEL, prompt.fomodRequest.tempDir).catch(() => {})
+      }
+      return
+    }
+
+    // FOMOD conflict retry — re-use the already-extracted tempDir
+    if (prompt.fomodRequest) {
+      await get().fomodInstall({ ...prompt.fomodRequest, allowOverwriteConflicts: true })
+      return
+    }
 
     const { filePath, ...request } = prompt.request
     const result = await get().installMod(filePath, {
@@ -611,6 +650,109 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       overwriteConflictPrompt: null,
     }),
 
+  fomodInstall: async (fomodRequest) => {
+    const state = get() as DownloadsSlice & {
+      addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+      scanMods?: () => Promise<unknown>
+      enableMod?: (modId: string) => Promise<IpcResult>
+      setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
+    }
+
+    set({
+      installing: true,
+      installProgress: 0,
+      installStatus: 'Installing FOMOD selection...',
+      installCurrentFile: '',
+      installSourcePath: fomodRequest.originalFilePath,
+      installTargetModId: fomodRequest.targetModId ?? '',
+      installPlacement: fomodRequest.duplicateAction === 'replace' ? 'replace'
+        : fomodRequest.duplicateAction === 'copy' && fomodRequest.targetModId ? 'insert-after'
+        : 'append',
+    })
+
+    const unsubscribe = IpcService.on(IPC.INSTALL_PROGRESS, (...args) => {
+      const progress = args[0] as InstallProgress
+      set({ installProgress: progress.percent, installStatus: progress.step, installCurrentFile: progress.currentFile ?? '' })
+    })
+
+    const result = await IpcService.invoke<IpcResult<InstallModResponse>>(IPC.FOMOD_INSTALL, fomodRequest)
+
+    unsubscribe()
+    set({
+      installing: false,
+      installCurrentFile: '',
+      installSourcePath: '',
+      installTargetModId: '',
+      installPlacement: 'append',
+    })
+
+    if (result.ok && result.data) {
+      const data = result.data
+
+      if (data.status === 'duplicate' && data.duplicate) {
+        set({
+          installPrompt: {
+            mode: 'duplicate',
+            existingModId: data.duplicate.existingModId,
+            existingModName: data.duplicate.existingModName,
+            incomingModName: data.duplicate.incomingModName,
+            sourcePath: data.duplicate.sourcePath,
+          },
+          pendingInstallRequest: {
+            filePath: fomodRequest.originalFilePath,
+            targetModId: data.duplicate.existingModId,
+            duplicateAction: 'prompt',
+          },
+        })
+      } else if (data.status === 'conflict' && data.mod && data.conflicts?.length) {
+        set({
+          overwriteConflictPrompt: {
+            mod: data.mod,
+            conflicts: data.conflicts,
+            request: { filePath: fomodRequest.originalFilePath },
+            fomodRequest: { ...fomodRequest, allowOverwriteConflicts: false },
+          },
+        })
+      } else if (data.status === 'installed' && data.mod) {
+        const filePath = fomodRequest.originalFilePath
+        set((s) => {
+          const nextNewFiles = removeNewFilePath(s.newFiles, filePath)
+          if (nextNewFiles.length !== s.newFiles.length) persistNewFiles(nextNewFiles)
+          return {
+            pendingMod: data.mod ?? null,
+            installPrompt: null,
+            pendingInstallRequest: null,
+            overwriteConflictPrompt: null,
+            fomodPrompt: null,
+            newFiles: nextNewFiles,
+          }
+        })
+        await state.scanMods?.()
+        const enableResult = await state.enableMod?.(data.mod.uuid)
+        if (enableResult && !enableResult.ok) {
+          state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+        } else {
+          state.addToast?.(`${data.mod.name} installed & activated`, 'success')
+        }
+        state.setRecentLibraryBadge?.(data.mod.uuid, 'installed')
+      } else if (!result.ok) {
+        state.addToast?.(result.error ?? 'FOMOD install failed', 'error')
+      }
+    }
+
+    return result
+  },
+
+  dismissFomodPrompt: () => set({ fomodPrompt: null }),
+
+  clearFomodPrompt: () => {
+    const prompt = get().fomodPrompt
+    set({ fomodPrompt: null })
+    if (prompt?.tempDir) {
+      IpcService.invoke(IPC.FOMOD_CANCEL, prompt.tempDir).catch(() => {})
+    }
+  },
+
   clearInstall: () =>
     set({
       installing: false,
@@ -626,6 +768,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       duplicateDownloadPrompt: null,
       versionMismatchPrompt: null,
       overwriteConflictPrompt: null,
+      fomodPrompt: null,
     }),
 
   refreshLocalFiles: async () => {

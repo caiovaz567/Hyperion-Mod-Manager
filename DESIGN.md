@@ -171,6 +171,48 @@ Alignment rules:
 - For deploy-path conflicts between enabled mods, Hyperion follows Mod Organizer style priority: the mod with the higher `#` order (lower in the library) wins on shared game-target paths
 - Changing enable state or reordering enabled mods must immediately rebuild the active deployment stack so the on-disk game state always reflects current library priority
 
+### Conflict Detection
+
+Two conflict kinds are tracked:
+- **overwrite** — two or more enabled mods deploy to the same game-relative file path; the higher-order mod wins
+- **archive-resource** — two or more `.archive` files contain an internal resource with the same FNV1a hash, meaning they likely override the same in-game asset regardless of file path
+
+Conflict indicators on mod rows:
+- A single `warning` Material Symbol icon replaces the old numeric `+N / −N` badges
+- Color encodes urgency: green = this mod only wins, red = this mod only loses, yellow = both win and lose
+- Tooltip format: `Wins N file(s) · Loses N file(s) · Click to inspect conflicts.`
+- Clicking the icon opens the mod detail modal directly on the Conflicts tab
+
+Conflict inspector inside the mod detail modal:
+- **Loss section** renders on top, **Win section** on bottom
+- Sections with zero entries auto-collapse when the modal opens; sections with entries default to expanded
+- Each conflict row shows: conflict kind badge (OVERWRITE / ARCHIVE), a dedicated resource-path card, and an adjacent other-mod card that stacks below on tighter widths and expands to a wider right column on larger screens
+- For `archive-resource` conflicts the row shows an archive hash hint line below the resource path when the hash differs from the path string, or marks the hash as `Unresolved` when the lookup produced no known path
+- In the `.archive` sub-tab, the other-mod card also includes an `Archive Pair` block so the user can see which `.archive` from this mod conflicts with which `.archive` from the other mod
+- Archive kind badges inherit the section's tone color (green in Win, red in Loss) instead of always being red
+- The modal itself is wider than the Files tab default: `min(1480px, calc(100vw - 48px))` so long mod names remain readable without forcing a viewport-level horizontal scrollbar inside the padded overlay
+
+Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
+- Both dialogs also show the archive hash hint line for `archive-resource` rows, using the same `Unresolved archive hash` / `Archive hash` label pattern
+- All conflict and action dialogs render via `createPortal(_, document.body)` to stay above the sidebar stacking context at all viewport sizes
+
+### FOMOD Installer
+
+- When a mod archive contains `fomod/ModuleConfig.xml`, the install flow pauses and opens the FOMOD Installer wizard instead of proceeding automatically. During the initial archive analysis phase (`detecting` state, before the wizard opens), a centered blocking overlay matching the install overlay style is shown with title "PREPARING INSTALLER", a description, progress bar, and current file — but without the "interface locked" warning since no write operations are happening yet.
+- Modal: `min(860px, calc(100vw - 32px))` wide, `calc(100vh - 48px)` max height; rendered via `createPortal(_, document.body)`.
+- Yellow `2px` accent bar across the top; a secondary progress bar in the same yellow (30% opacity) tracks step completion.
+- Header row: `install_desktop` icon + "FOMOD INSTALLER" label (yellow, 10px uppercase) + mod name + step counter (`Step N / N`, right-aligned, monospace).
+- Optional module image banner shown on the first step only when `<moduleImage>` is defined, using `object-contain` with full-slot scaling (no decorative background fill) and roughly `180-240px` visible height so landscape art stays readable.
+- Step name displayed as a 16px semibold heading below the banner.
+- Content area is scrollable; when the current step has plugin images, the dialog expands wider and a right-side **preview panel** (about `420px` wide) appears with a larger image slot that uses full-size `object-contain` rendering and no added background behind the art.
+- Groups render as labeled sections with a dark bordered card (`#080808` surface). Group label is 10px uppercase muted.
+- `SelectExactlyOne` / `SelectAtMostOne` → custom radio controls (yellow fill dot); `SelectAny` / `SelectAll` → custom checkboxes (yellow fill with check icon).
+- `Required` plugins are always checked and show a small "required" badge; `NotUsable` plugins are greyed out and cannot be toggled.
+- Footer: left = Cancel (secondary button with `border-[0.5px]` border, `text-sm` font, `rounded-sm`, muted text that brightens on hover — same language as Back); right = Back chevron button + Next / Install primary yellow button.
+- Install button is disabled until all `SelectExactlyOne` groups have exactly one selection.
+- On the last step, "Next" becomes "Install" with a `download` icon.
+- All corners are squared (`rounded-sm`). No pill shapes.
+
 ### Downloads
 
 - Separate screen sourced from configured downloads directory
