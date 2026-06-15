@@ -364,6 +364,21 @@ export const WelcomeScreen: React.FC = () => {
         className="absolute inset-x-0 top-0 h-12"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       />
+      <div
+        className="absolute right-4 top-4 z-20"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      >
+        <Tooltip content="Close">
+          <button
+            type="button"
+            aria-label="Close Hyperion"
+            onClick={() => IpcService.send('window:close')}
+            className="flex h-8 w-8 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[#111111] hover:text-[#f87171]"
+          >
+            <span className="material-symbols-outlined text-[18px] leading-none">close</span>
+          </button>
+        </Tooltip>
+      </div>
       <div className="mx-auto flex min-h-full w-full items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
 
         {/* ─────────────── Welcome ─────────────── */}
