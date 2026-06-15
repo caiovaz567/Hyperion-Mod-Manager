@@ -352,6 +352,11 @@ export const WelcomeScreen: React.FC = () => {
     : 'Select a valid mod library folder to continue'
 
   const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn, ghost: ghostBtn } = uiButton
+  const centeredEndIconButton = `${primaryBtn} !grid grid-cols-[1fr_auto_1fr] gap-x-3`
+  const centeredStartIconButton = `${ghostBtn} !grid grid-cols-[1fr_auto_1fr] gap-x-3`
+  const centeredButtonLabel = 'col-start-2'
+  const centeredEndIcon = 'material-symbols-outlined col-start-3 justify-self-start transition-transform duration-150 group-hover:translate-x-0.5'
+  const centeredStartIcon = 'material-symbols-outlined col-start-1 justify-self-end transition-transform duration-150 group-hover:-translate-x-0.5'
 
   return (
     <div className="relative h-full overflow-y-auto animate-settings-in bg-[#050505]">
@@ -408,11 +413,11 @@ export const WelcomeScreen: React.FC = () => {
 
               <button
                 onClick={beginSetup}
-                className={`fade-up mt-9 px-8 ${primaryBtn}`}
+                className={`fade-up mt-9 min-w-[184px] ${centeredEndIconButton}`}
                 style={{ animationDelay: '200ms' }}
               >
-                Get started
-                <span className="material-symbols-outlined transition-transform duration-150 group-hover:translate-x-0.5" style={{ fontSize: 18 }}>
+                <span className={centeredButtonLabel}>Get started</span>
+                <span className={centeredEndIcon} style={{ fontSize: 18 }}>
                   arrow_forward
                 </span>
               </button>
@@ -531,27 +536,31 @@ export const WelcomeScreen: React.FC = () => {
 
             {/* Footer nav */}
             <div className="mt-6 flex items-center justify-between">
-              <button onClick={goBack} className={ghostBtn}>
-                <span className="material-symbols-outlined transition-transform duration-150 group-hover:-translate-x-0.5" style={{ fontSize: 18 }}>arrow_back</span>
-                Back
+              <button onClick={goBack} className={`min-w-[108px] ${centeredStartIconButton}`}>
+                <span className={centeredStartIcon} style={{ fontSize: 18 }}>arrow_back</span>
+                <span className={centeredButtonLabel}>Back</span>
               </button>
 
               {!isLastStep ? (
                 stepReady ? (
-                  <button onClick={goNext} className={primaryBtn}>
-                    Continue
-                    <span className="material-symbols-outlined transition-transform duration-150 group-hover:translate-x-0.5" style={{ fontSize: 18 }}>arrow_forward</span>
+                  <button onClick={goNext} className={`min-w-[148px] ${centeredEndIconButton}`}>
+                    <span className={centeredButtonLabel}>Continue</span>
+                    <span className={centeredEndIcon} style={{ fontSize: 18 }}>arrow_forward</span>
                   </button>
                 ) : (
                   <Tooltip content={continueTooltip} side="top" wrapperClassName="inline-flex">
-                    <button disabled className={primaryBtn}>
-                      Continue
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+                    <button disabled className={`min-w-[148px] ${centeredEndIconButton}`}>
+                      <span className={centeredButtonLabel}>Continue</span>
+                      <span className="material-symbols-outlined col-start-3 justify-self-start" style={{ fontSize: 18 }}>arrow_forward</span>
                     </button>
                   </Tooltip>
                 )
               ) : (gamePathValid && libraryPathValid) ? (
-                <button onClick={() => void applyPaths()} disabled={isInitializing} className={primaryBtn}>
+                <button
+                  onClick={() => void applyPaths()}
+                  disabled={isInitializing}
+                  className={isInitializing ? primaryBtn : `min-w-[164px] ${centeredEndIconButton}`}
+                >
                   {isInitializing ? (
                     <>
                       <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
@@ -559,16 +568,16 @@ export const WelcomeScreen: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      Finish setup
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check</span>
+                      <span className={centeredButtonLabel}>Finish setup</span>
+                      <span className="material-symbols-outlined col-start-3 justify-self-start" style={{ fontSize: 18 }}>check</span>
                     </>
                   )}
                 </button>
               ) : (
                 <Tooltip content="Select a valid game folder and mod library to finish" side="top" wrapperClassName="inline-flex">
-                  <button disabled className={primaryBtn}>
-                    Finish setup
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check</span>
+                  <button disabled className={`min-w-[164px] ${centeredEndIconButton}`}>
+                    <span className={centeredButtonLabel}>Finish setup</span>
+                    <span className="material-symbols-outlined col-start-3 justify-self-start" style={{ fontSize: 18 }}>check</span>
                   </button>
                 </Tooltip>
               )}
