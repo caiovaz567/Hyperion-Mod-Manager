@@ -4,100 +4,25 @@ import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
+import { PathBox, SettingCard, StatusReadout, ValidationRow, uiButton } from './uiKit'
 
 type SettingsTab = 'paths' | 'nexus' | 'updates'
-
-interface SectionProps {
-  title: string
-  description?: string
-  accent?: 'yellow' | 'cyan'
-  children: React.ReactNode
-}
-
-interface CardProps {
-  title: string
-  description?: string
-  status?: {
-    label: string
-    tone: 'good' | 'warn' | 'neutral' | 'info' | 'error'
-  }
-  accent?: 'yellow' | 'cyan'
-  children: React.ReactNode
-}
-
-function statusToneClass(tone: 'good' | 'warn' | 'neutral' | 'info' | 'error'): string {
-  if (tone === 'good') return 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
-  if (tone === 'warn') return 'border-[#7e6d12] bg-[#0d0b00] text-[#fcee09]'
-  if (tone === 'info') return 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]'
-  if (tone === 'error') return 'border-[#5a2020] bg-[#180707] text-[#f87171]'
-  return 'border-[#2a2a2a] bg-[#111111] text-[#8a8a8a]'
-}
-
-function accentLineClass(accent: 'yellow' | 'cyan'): string {
-  return accent === 'cyan' ? 'bg-[#4fd8ff]' : 'bg-[#fcee09]'
-}
-
-function subscriptionToneClass(isPremium: boolean): string {
-  return isPremium
-    ? 'border-[#6a5714] bg-[#151003] text-[#f7d154]'
-    : 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]'
-}
+type FolderState = 'valid' | 'invalid' | 'empty'
 
 function getDownloadsStatus(downloadPath: string, defaultDownloadPath: string) {
   const trimmed = downloadPath.trim()
   if (!trimmed) {
     return {
-      label: 'Default',
-      tone: 'neutral' as const,
       path: defaultDownloadPath,
-      description: 'Hyperion uses the default downloads folder beside the managed library.',
+      description: 'Using the default folder next to your library.',
     }
   }
 
   return {
-    label: 'Configured',
-    tone: 'good' as const,
     path: trimmed,
-    description: 'Incoming archives are staged here before install.',
+    description: 'New mod archives are picked up from here.',
   }
 }
-
-const Section: React.FC<SectionProps> = ({ title, description, accent = 'yellow', children }) => (
-  <section className="border-[0.5px] border-[#171717] bg-[#070707] px-4 py-5 sm:px-5 sm:py-6">
-    <div className="mb-5">
-      <div className="flex items-center gap-3">
-        <span className={`h-[14px] w-[2px] ${accentLineClass(accent)}`} />
-        <h2 className="brand-font text-[1rem] font-bold uppercase tracking-[0.14em] text-white">{title}</h2>
-      </div>
-      {description ? <p className="mt-3 max-w-2xl text-[14px] leading-6 text-[#bebebe]">{description}</p> : null}
-    </div>
-    <div className="space-y-4">{children}</div>
-  </section>
-)
-
-const Card: React.FC<CardProps> = ({ title, description, status, accent = 'yellow', children }) => (
-  <div className="border-[0.5px] border-[#1b1b1b] bg-[#0a0a0a] px-5 py-5">
-    <div className="flex items-start gap-3">
-      <span className={`mt-1 h-[14px] w-[2px] shrink-0 ${accentLineClass(accent)}`} />
-      <div className="min-w-0 flex-1 text-left">
-        <div className="flex flex-wrap items-center gap-3">
-          <h3 className="brand-font text-[0.95rem] font-bold uppercase tracking-[0.12em] text-white">{title}</h3>
-          {status ? (
-            <span
-              className={`inline-flex h-6 items-center rounded-sm border-[0.5px] px-2.5 text-[11px] font-semibold uppercase leading-none tracking-[0.12em] ${statusToneClass(
-                status.tone,
-              )}`}
-            >
-              {status.label}
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </div>
-    {description ? <p className="mt-3 w-full text-left text-[14px] leading-[1.55] text-[#b8b8b8]">{description}</p> : null}
-    <div className="mt-4">{children}</div>
-  </div>
-)
 
 export const SettingsPage: React.FC = () => {
   const appVersion = useAppVersion()
@@ -200,7 +125,7 @@ export const SettingsPage: React.FC = () => {
           }
         }
 
-        addToast('Configuration autosaved', 'success', 1800)
+        addToast('Changes saved', 'success', 1800)
       } catch {
         addToast('Could not save configuration', 'error', 2600)
       }
@@ -257,14 +182,14 @@ export const SettingsPage: React.FC = () => {
     }
 
     setGamePath(result.data)
-    addToast('Game path auto-detected', 'success', 1800)
+    addToast('Game path detected', 'success', 1800)
   }
 
   const applyDefaultManagedPaths = () => {
     if (!defaultPaths) return
     setLibraryPath(defaultPaths.libraryPath)
     setDownloadPath(defaultPaths.downloadPath)
-    addToast('Default library and downloads paths loaded', 'info', 1800)
+    addToast('Suggested folders loaded', 'info', 1800)
   }
 
   const handleCheckForUpdates = async () => {
@@ -291,39 +216,67 @@ export const SettingsPage: React.FC = () => {
     }
   }
 
-  const primaryBtn =
-    'h-9 rounded-sm border-[0.5px] border-[#fcee09]/30 bg-[#0a0a0a] px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[#fcee09] transition-colors hover:bg-[#fcee09] hover:text-[#050505] brand-font disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]'
-  const secondaryBtn =
-    'h-9 rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a1a1a1] transition-colors hover:border-[#505050] hover:text-white brand-font disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#1f1f1f] disabled:hover:text-[#a1a1a1]'
-  const cyanBtn =
-    'h-9 rounded-sm border-[0.5px] border-[#4fd8ff]/30 bg-[#081118] px-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4fd8ff] transition-colors hover:border-[#4fd8ff] hover:bg-[#0c1a24] hover:text-white brand-font disabled:cursor-not-allowed disabled:opacity-40'
-  const fieldClass = 'min-h-9 flex items-center border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 text-[15px] font-medium leading-[1.1] text-[#e5e2e1]'
-  const supportTextClass = 'w-full text-left text-[14px] leading-[1.55] text-[#b6b6b6]'
-  const tabMeta: Array<{ id: SettingsTab; label: string }> = [
-    { id: 'paths', label: 'Paths' },
-    { id: 'nexus', label: 'Nexus' },
-    { id: 'updates', label: 'Updates' },
+  const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn } = uiButton
+
+  const tabMeta: Array<{ id: SettingsTab; label: string; icon: string }> = [
+    { id: 'paths', label: 'Paths', icon: 'folder_open' },
+    { id: 'nexus', label: 'Nexus', icon: 'cloud' },
+    { id: 'updates', label: 'Updates', icon: 'update' },
   ]
 
   const resolvedDefaultDownloadPath = defaultPaths?.downloadPath ?? ''
   const downloadsStatus = getDownloadsStatus(downloadPath, resolvedDefaultDownloadPath)
-  const premiumTone = nexusAccount.status === 'connected' && nexusAccount.data.isPremium ? 'warn' : 'info'
-  const premiumLabel =
-    nexusAccount.status === 'connected' ? (nexusAccount.data.isPremium ? 'Premium' : 'Free') : 'Idle'
+
+  const gameState: FolderState = gamePath.trim() ? (gamePathValid ? 'valid' : 'invalid') : 'empty'
+  const libraryState: FolderState = libraryPath.trim() ? (libraryPathValid ? 'valid' : 'invalid') : 'empty'
+
+  const nexusStatus = nexusAccount.status
+  const nexusReadout =
+    nexusStatus === 'connected'
+      ? { tone: 'good' as const, label: 'Connected' }
+      : nexusStatus === 'checking'
+      ? { tone: 'info' as const, label: 'Checking...' }
+      : nexusStatus === 'error'
+      ? { tone: 'error' as const, label: 'Invalid key' }
+      : { tone: 'neutral' as const, label: 'Not connected' }
+
+  const updateReadout = updateDownloaded
+    ? { tone: 'good' as const, label: 'Ready to install' }
+    : updateAvailable
+    ? { tone: 'warn' as const, label: 'Update available' }
+    : { tone: 'neutral' as const, label: `v${appVersion}` }
+
+  const updateVersion = updateInfo?.version ?? ''
+  const updateMessage = updateDownloaded
+    ? `Update ${updateVersion} is ready to install.`
+    : updateAvailable
+    ? `Update ${updateVersion} is available to download.`
+    : 'Current build is up to date.'
 
   return (
     <div className="stable-scroll-gutter h-full overflow-y-scroll pb-10 animate-settings-in sm:pb-16">
-      <div className="mx-auto max-w-[980px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        <header className="mb-6">
-          <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
-            Settings
-          </h1>
-          <p className="mt-3 max-w-[680px] text-[15px] leading-7 text-[#c0c0c0]">
-            Set up core paths, Nexus access, and Hyperion updates without leaving the workspace.
-          </p>
+      <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        <header className="mb-6 border-b-[0.5px] border-[#171717] pb-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 bg-[#fcee09]" />
+                <span className="ui-support-mono text-[11px] uppercase tracking-[0.16em] text-[#6f6f6f]">
+                  Control panel
+                </span>
+              </div>
+              <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
+                Settings
+              </h1>
+              <p className="mt-3 max-w-[680px] text-[15px] leading-7 text-[#c0c0c0]">
+                Configure paths, Nexus access, and Hyperion updates without leaving the manager.
+              </p>
+            </div>
+            <StatusReadout tone="neutral" label={`v${appVersion}`} />
+          </div>
         </header>
 
-        <div className="mb-6 inline-flex flex-wrap items-center gap-1 border-[0.5px] border-[#1a1a1a] bg-[#070707] p-1">
+        <div className="mb-5 inline-flex flex-wrap items-center gap-1 border-[0.5px] border-[#1a1a1a] bg-[#070707] p-1">
           {tabMeta.map((tab) => {
             const active = activeTab === tab.id
             return (
@@ -331,233 +284,287 @@ export const SettingsPage: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`min-w-[118px] rounded-sm px-4 py-2.5 text-center transition-colors ${
+                className={`inline-flex min-w-[124px] items-center justify-center gap-2 rounded-sm px-4 py-2.5 transition-colors ${
                   active
                     ? 'bg-[#120f03] text-[#fcee09]'
-                    : 'text-[#9c9c9c] hover:bg-[#0d0d0d] hover:text-[#d9d9d9]'
+                    : 'text-[#8f8f8f] hover:bg-[#0d0d0d] hover:text-[#d9d9d9]'
                 }`}
               >
-                <span className="brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em]">{tab.label}</span>
+                <span className="material-symbols-outlined text-[17px]" aria-hidden="true">
+                  {tab.icon}
+                </span>
+                <span className="brand-font text-[0.84rem] font-bold uppercase tracking-[0.12em]">{tab.label}</span>
               </button>
             )
           })}
         </div>
 
-        <div className="grid gap-4">
-          {activeTab === 'paths' && (
-            <Section
-              title="Paths"
-              description="Keep the three folder decisions together so the required targets are easy to scan and fix."
-              accent="yellow"
-            >
-              <Card
-                title="Game Path"
-                description="Cyberpunk 2077 installation root used for launch validation and deployment."
-                accent="yellow"
-                status={{ label: gamePathValid ? 'Valid Path' : 'Needs Fix', tone: gamePathValid ? 'good' : 'warn' }}
-              >
-                <div className="mb-2 flex flex-col items-start gap-2 lg:flex-row lg:items-stretch">
-                  <div className={`${fieldClass} min-w-0 flex-1 mb-0`}>
-                    <div className="break-all">{gamePath || <span className="text-[#6b6b6b]">Select Cyberpunk 2077 directory...</span>}</div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button onClick={() => void autoDetectGame()} disabled={detectingGame} className={secondaryBtn}>
-                      {detectingGame ? 'Detecting...' : 'Auto Detect'}
+        <div className="border-[0.5px] border-[#171717] bg-[#050505] p-3 sm:p-4">
+          <div key={activeTab} className="grid gap-3">
+            {activeTab === 'paths' && (
+              <>
+                <SettingCard
+                  icon="sports_esports"
+                  title="Game Path"
+                  description="Cyberpunk 2077 installation root used for launch validation and deployment."
+                  className="fade-up"
+                  style={{ animationDelay: '0ms' }}
+                >
+                  <PathBox value={gamePath} placeholder="No folder selected - detect or browse" emphasize={gameState !== 'valid'} />
+                  <ValidationRow
+                    state={gameState}
+                    validText="Cyberpunk 2077 found. Launch and deployment validation are ready."
+                    invalidText="We couldn't find Cyberpunk 2077 in this folder. Launch stays blocked until it's fixed."
+                  />
+                  <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                    <button onClick={() => void autoDetectGame()} disabled={detectingGame} className={`${secondaryBtn} w-full sm:w-auto`}>
+                      {detectingGame ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                          Detecting...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>search</span>
+                          Detect automatically
+                        </>
+                      )}
                     </button>
-                    <button onClick={() => void browseFolder('Select Cyberpunk 2077 folder', setGamePath)} className={primaryBtn}>
-                      Browse
+                    <button
+                      onClick={() => void browseFolder('Select Cyberpunk 2077 folder', setGamePath)}
+                      className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      Choose folder
                     </button>
                   </div>
-                </div>
-                <p className={supportTextClass}>
-                  {gamePathValid
-                    ? 'Launch and deployment validation are ready.'
-                    : 'Launch stays blocked until a valid Cyberpunk 2077 folder is configured.'}
-                </p>
-              </Card>
+                </SettingCard>
 
-              <Card
+              <SettingCard
+                icon="inventory_2"
                 title="Mod Library"
                 description="Managed archive repository for metadata, reinstalls, staged recovery, and deploy rebuilds."
-                accent="yellow"
-                status={{ label: libraryPathValid ? 'Valid Path' : 'Needs Fix', tone: libraryPathValid ? 'good' : 'warn' }}
+                className="fade-up"
+                style={{ animationDelay: '60ms' }}
               >
-                <div className="mb-2 flex flex-col items-start gap-2 lg:flex-row lg:items-stretch">
-                  <div className={`${fieldClass} min-w-0 flex-1 mb-0`}>
-                    <div className="break-all">{libraryPath || <span className="text-[#6b6b6b]">Select mod library directory...</span>}</div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button onClick={applyDefaultManagedPaths} disabled={!defaultPaths} className={secondaryBtn}>
-                      Use Default
-                    </button>
-                    <button onClick={() => void browseFolder('Select Mod Library folder', setLibraryPath)} className={primaryBtn}>
-                      Browse
-                    </button>
-                  </div>
+                <PathBox value={libraryPath} placeholder="No folder selected - use suggested or browse" emphasize={libraryState === 'invalid'} />
+                <ValidationRow
+                  state={libraryState}
+                  validText="Installs, rescans, and recovery can use this library."
+                  invalidText="This folder can't be used as a mod library. Installs stay blocked until it's fixed."
+                />
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                  <button onClick={applyDefaultManagedPaths} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                    Use suggested
+                  </button>
+                  <button
+                    onClick={() => void browseFolder('Select Mod Library folder', setLibraryPath)}
+                    className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    Choose folder
+                  </button>
                 </div>
-                <p className={supportTextClass}>
-                  {libraryPathValid
-                    ? 'Installs, rescans, and recovery can use this library.'
-                    : 'Installs stay blocked until a valid managed library is configured.'}
-                </p>
-              </Card>
+              </SettingCard>
 
-              <Card
+              <SettingCard
+                icon="download"
                 title="Downloads Intake"
                 description="Optional source folder for incoming archives before install."
-                accent="yellow"
-                status={{ label: downloadsStatus.label, tone: downloadsStatus.tone }}
+                className="fade-up"
+                style={{ animationDelay: '120ms' }}
               >
-                <div className="mb-2 flex flex-col items-start gap-2 lg:flex-row lg:items-stretch">
-                  <div className={`${fieldClass} min-w-0 flex-1 mb-0`}>
-                    <div className="break-all">{downloadsStatus.path || <span className="text-[#6b6b6b]">Waiting for library path...</span>}</div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button onClick={applyDefaultManagedPaths} disabled={!defaultPaths} className={secondaryBtn}>
-                      Use Default
-                    </button>
-                    <button onClick={() => void browseFolder('Select Downloads folder', setDownloadPath)} className={primaryBtn}>
-                      Browse
-                    </button>
-                  </div>
+                <PathBox value={downloadsStatus.path} placeholder="Waiting for a library path..." />
+                <ValidationRow state="info" infoText={downloadsStatus.description} />
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                  <button onClick={applyDefaultManagedPaths} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                    Use suggested
+                  </button>
+                  <button
+                    onClick={() => void browseFolder('Select Downloads folder', setDownloadPath)}
+                    className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    Choose folder
+                  </button>
                 </div>
-                <p className={supportTextClass}>{downloadsStatus.description}</p>
-              </Card>
-            </Section>
+              </SettingCard>
+            </>
           )}
 
           {activeTab === 'nexus' && (
-            <Section
-              title="Nexus"
-              description="Keep the account connection clear and make the download behavior obvious at a glance."
-              accent="yellow"
-            >
-              <Card
-                title="Connection"
-                description="Paste your personal Nexus API key. Hyperion saves it automatically and validates the account in the background."
-                accent="yellow"
-                status={{
-                  label:
-                    nexusAccount.status === 'connected'
-                      ? 'Connected'
-                      : nexusAccount.status === 'checking'
-                      ? 'Checking'
-                      : nexusAccount.status === 'error'
-                      ? 'Invalid Key'
-                      : 'Not Connected',
-                  tone:
-                    nexusAccount.status === 'connected'
-                      ? 'good'
-                      : nexusAccount.status === 'checking'
-                      ? 'info'
-                      : nexusAccount.status === 'error'
-                      ? 'error'
-                      : 'neutral',
-                }}
+            <>
+              <SettingCard
+                icon="vpn_key"
+                title="Nexus Connection"
+                description="Paste your personal Nexus API key. Hyperion saves it automatically and validates it in the background."
+                headerRight={
+                  <StatusReadout
+                    tone={nexusReadout.tone}
+                    label={nexusReadout.label}
+                    pulse={nexusStatus === 'checking'}
+                  />
+                }
+                className="fade-up"
+                style={{ animationDelay: '0ms' }}
               >
-                <div className="mb-2 flex flex-col items-start gap-2 lg:flex-row lg:items-stretch">
-                  <div className="min-h-9 flex min-w-0 flex-1 items-center border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a]">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
+                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] transition-colors focus-within:border-[#6a5a10]">
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}
                       onChange={(e) => setNexusApiKey(e.target.value)}
                       placeholder="Paste your Nexus API key here..."
-                      className="min-w-0 flex-1 bg-transparent px-4 text-[15px] font-medium leading-[1.1] text-[#e5e2e1] placeholder:text-[#595959] focus:outline-none"
+                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[13px] text-[#e5e2e1] placeholder:text-[#595959] focus:outline-none"
                       spellCheck={false}
                       autoComplete="off"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey((value) => !value)}
-                      className="flex h-full items-center px-3 text-[#6a6a6a] transition-colors hover:text-[#e5e2e1]"
+                      className="flex items-center self-stretch px-3 text-[#6a6a6a] transition-colors hover:text-[#e7e4e3]"
                       tabIndex={-1}
                     >
-                      <span className="material-symbols-outlined text-[18px]">{showApiKey ? 'visibility_off' : 'visibility'}</span>
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                        {showApiKey ? 'visibility_off' : 'visibility'}
+                      </span>
                     </button>
                   </div>
-                  <button type="button" onClick={() => setNexusApiKey('')} disabled={!nexusApiKey.trim()} className={secondaryBtn}>
-                    Clear Key
+                  <button
+                    type="button"
+                    onClick={() => setNexusApiKey('')}
+                    disabled={!nexusApiKey.trim()}
+                    className={`${secondaryBtn} w-full sm:w-auto`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>backspace</span>
+                    Clear key
                   </button>
                 </div>
-                {nexusAccount.status === 'error' && (
-                  <div className={`mt-4 rounded-sm border-[0.5px] px-4 py-3 text-[14px] leading-6 ${statusToneClass('error')}`}>
+                {nexusStatus === 'error' && (
+                  <div className="mt-4 rounded-sm border-[0.5px] border-[#5a2020] bg-[#180707] px-4 py-3 text-[14px] leading-6 text-[#f87171]">
                     {nexusAccount.error}
                   </div>
                 )}
-              </Card>
+              </SettingCard>
 
-              <div className="grid gap-4">
-                <Card
-                  title="Account"
-                  description="Show the linked Nexus identity and subscription tier."
-                  accent="yellow"
-                  status={{ label: premiumLabel, tone: premiumTone }}
-                >
-                  {nexusAccount.status === 'connected' ? (
-                    <div className="space-y-3">
-                      <div className="brand-font text-[1rem] font-bold uppercase tracking-[0.1em] text-white">{nexusAccount.data.name}</div>
-                      <div className="text-[14px] leading-6 text-[#c0c0c0]">{nexusAccount.data.email}</div>
-                      <div className="text-[14px] leading-6 text-[#9d9d9d]">User #{nexusAccount.data.userId}</div>
-                    </div>
-                  ) : (
-                    <p className={supportTextClass}>
-                      Add a valid API key to show account identity and unlock Nexus-aware flows.
-                    </p>
-                  )}
-                </Card>
-
-                <Card
-                  title="Download Flow"
-                  description="Keep the install flow predictable."
-                  accent="yellow"
-                >
-                  <div className={`${supportTextClass} space-y-3`}>
-                    <p>Nexus links always land in Downloads first.</p>
-                    <p>Hyperion only asks about replace, keep, or copy when you start installing the archive.</p>
+              <SettingCard
+                icon="account_circle"
+                title="Account"
+                description="Linked Nexus identity and subscription tier."
+                headerRight={
+                  nexusStatus === 'connected' ? (
+                    <StatusReadout
+                      tone={nexusAccount.data.isPremium ? 'warn' : 'info'}
+                      label={nexusAccount.data.isPremium ? 'Premium' : 'Free'}
+                    />
+                  ) : undefined
+                }
+                className="fade-up"
+                style={{ animationDelay: '60ms' }}
+              >
+                {nexusStatus === 'connected' ? (
+                  <div className="space-y-2">
+                    <div className="text-[15px] font-semibold text-white">{nexusAccount.data.name}</div>
+                    <div className="text-[13.5px] text-[#b8b8b8]">{nexusAccount.data.email}</div>
+                    <div className="text-[13px] text-[#8a8a8a]">User #{nexusAccount.data.userId}</div>
                   </div>
-                </Card>
-              </div>
-            </Section>
+                ) : (
+                  <ValidationRow
+                    state="info"
+                    infoText="Add a valid API key to show your account and unlock Nexus-aware flows."
+                  />
+                )}
+              </SettingCard>
+
+              <SettingCard
+                icon="downloading"
+                title="Download Flow"
+                description="Keep Nexus installs predictable."
+                className="fade-up"
+                style={{ animationDelay: '120ms' }}
+              >
+                <div className="space-y-3 text-[13.5px] leading-relaxed text-[#b8b8b8]">
+                  <div className="flex items-start gap-2.5">
+                    <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[#fcee09]" style={{ fontSize: 17 }}>subdirectory_arrow_right</span>
+                    <span>Nexus links always land in your Downloads folder first.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[#fcee09]" style={{ fontSize: 17 }}>rule</span>
+                    <span>Hyperion only asks about replace, keep, or copy when you start installing.</span>
+                  </div>
+                </div>
+              </SettingCard>
+            </>
           )}
 
           {activeTab === 'updates' && (
-            <Section title="Updates" description="Keep Hyperion itself current without turning this into a crowded utility page." accent="yellow">
-              <Card
-                title="Application Updates"
-                description="Check, download, and install new Hyperion builds."
-                accent="yellow"
-                status={{ label: `v${appVersion}`, tone: 'neutral' }}
-              >
-                <p className={`${supportTextClass} mb-4`}>
-                  {updateDownloaded
-                    ? `Update ${updateInfo?.version ?? ''} is ready to install.`
-                    : updateAvailable
-                    ? `Update ${updateInfo?.version ?? ''} is available.`
-                    : 'No downloaded update is waiting right now.'}
-                </p>
-                {updateError ? (
-                  <div className={`mb-4 rounded-sm border-[0.5px] px-4 py-3 text-[14px] leading-6 ${statusToneClass('error')}`}>
-                    {updateError}
-                  </div>
-                ) : null}
-                <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap">
-                  <button type="button" onClick={() => void handleCheckForUpdates()} disabled={updateActionLoading !== null || updateDownloading} className={secondaryBtn}>
-                    {updateActionLoading === 'check' ? 'Checking...' : 'Check For Updates'}
-                  </button>
-                  {!updateDownloaded && updateAvailable && (
-                    <button type="button" onClick={() => void handleDownloadUpdate()} disabled={updateActionLoading !== null || updateDownloading} className={primaryBtn}>
-                      {updateActionLoading === 'download' || updateDownloading ? 'Downloading...' : 'Download Update'}
-                    </button>
-                  )}
-                  {updateDownloaded && (
-                    <button type="button" onClick={installUpdate} className={cyanBtn}>
-                      Install Update
-                    </button>
-                  )}
+            <SettingCard
+              icon="update"
+              title="Application Updates"
+              description="Check for, download, and install new Hyperion builds."
+              headerRight={
+                <StatusReadout tone={updateReadout.tone} label={updateReadout.label} pulse={updateDownloading} />
+              }
+              className="fade-up"
+              style={{ animationDelay: '0ms' }}
+            >
+              <ValidationRow state={updateDownloaded || updateAvailable ? 'info' : 'valid'} validText={updateMessage} infoText={updateMessage} />
+              {updateError ? (
+                <div className="mt-4 rounded-sm border-[0.5px] border-[#5a2020] bg-[#180707] px-4 py-3 text-[14px] leading-6 text-[#f87171]">
+                  {updateError}
                 </div>
-              </Card>
-            </Section>
+              ) : null}
+              <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => void handleCheckForUpdates()}
+                  disabled={updateActionLoading !== null || updateDownloading}
+                  className={`${secondaryBtn} w-full sm:w-auto`}
+                >
+                  {updateActionLoading === 'check' ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+                      Check for updates
+                    </>
+                  )}
+                </button>
+                {!updateDownloaded && updateAvailable && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadUpdate()}
+                    disabled={updateActionLoading !== null || updateDownloading}
+                    className={`${accentOutlineBtn} w-full sm:w-auto`}
+                  >
+                    {updateActionLoading === 'download' || updateDownloading ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+                        Download update
+                      </>
+                    )}
+                  </button>
+                )}
+                {updateDownloaded && (
+                  <button type="button" onClick={installUpdate} className={`${primaryBtn} w-full sm:ml-auto sm:w-auto`}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>restart_alt</span>
+                    Install & restart
+                  </button>
+                )}
+              </div>
+            </SettingCard>
           )}
+          </div>
         </div>
       </div>
     </div>

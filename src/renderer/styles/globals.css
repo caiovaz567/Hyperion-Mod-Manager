@@ -109,9 +109,11 @@ select,
 }
 
 /* ── Utility classes ── */
-.fade-up       { animation: fade-up 0.2s ease-out both; }
-.fade-in       { animation: fade-in 0.2s ease-out both; }
-.slide-in-left { animation: slide-in-left 0.18s ease-out both; }
+.fade-up        { animation: fade-up 0.2s ease-out both; }
+.fade-in        { animation: fade-in 0.2s ease-out both; }
+.slide-in-left  { animation: slide-in-left 0.18s ease-out both; }
+.slide-in-right { animation: slide-in-right 0.22s ease-out both; }
+.scale-in       { animation: scale-in 0.18s ease-out both; }
 
 .ui-support-text {
   font-size: 0.875rem;

@@ -4,6 +4,7 @@ import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import { Tooltip } from './Tooltip'
 import { useAppVersion } from '../../hooks/useAppVersion'
+import { PathBox, ValidationRow, uiButton } from './uiKit'
 
 function getParentDirectory(targetPath: string): string {
   const normalizedPath = targetPath.trim().replace(/[\\/]+$/, '')
@@ -14,6 +15,120 @@ function getParentDirectory(targetPath: string): string {
 
   return normalizedPath.slice(0, separatorIndex)
 }
+
+interface SetupStepDef {
+  key: string
+  label: string
+  icon: string
+  heading: string
+  description: string
+  preview: string
+  optional?: boolean
+}
+
+const SETUP_STEPS: SetupStepDef[] = [
+  {
+    key: 'game',
+    label: 'Game',
+    icon: 'sports_esports',
+    heading: 'Where is Cyberpunk 2077 installed?',
+    description: 'Point Hyperion to your game folder. We use it to verify the install and deploy your mods safely.',
+    preview: 'Where Cyberpunk 2077 is installed',
+  },
+  {
+    key: 'library',
+    label: 'Mod library',
+    icon: 'folder_open',
+    heading: 'Where should your mods live?',
+    description: 'Every mod you add is kept here — organized, staged, and ready to enable whenever you want.',
+    preview: 'Where your managed mods are stored',
+  },
+  {
+    key: 'downloads',
+    label: 'Downloads',
+    icon: 'download',
+    heading: 'Where do new downloads land?',
+    description: "Hyperion picks up new mod archives from this folder. We've suggested one next to your library — change it anytime.",
+    preview: 'Where new mod archives are picked up',
+    optional: true,
+  },
+]
+
+const BrandMark: React.FC<{ size?: 'sm' | 'lg' }> = ({ size = 'sm' }) => {
+  const isLarge = size === 'lg'
+  return (
+    <div className="flex items-center gap-3 select-none">
+      <span
+        className={`relative flex items-center justify-center border border-[#5f5a08] bg-[#fcee09] ${
+          isLarge
+            ? 'h-12 w-12 rounded-[10px] shadow-[0_0_30px_rgba(252,238,9,0.22)]'
+            : 'h-7 w-7 rounded-[6px]'
+        }`}
+      >
+        <span className={`rounded-[3px] bg-[#050505] ${isLarge ? 'h-[18px] w-[18px]' : 'h-[10px] w-[10px]'}`} />
+      </span>
+      <span className={`brand-font font-black tracking-tighter text-white ${isLarge ? 'text-3xl' : 'text-base'}`}>
+        HYPERION
+      </span>
+    </div>
+  )
+}
+
+const StepProgress: React.FC<{
+  currentStep: number
+  onStepSelect: (index: number) => void
+}> = ({ currentStep, onStepSelect }) => (
+  <div className="flex items-center" role="list" aria-label="Setup steps">
+    {SETUP_STEPS.map((step, index) => {
+      const isActive = index === currentStep
+      const isCompleted = index < currentStep
+      const isClickable = isCompleted
+
+      return (
+        <React.Fragment key={step.key}>
+          <button
+            type="button"
+            onClick={() => isClickable && onStepSelect(index)}
+            disabled={!isClickable}
+            aria-current={isActive ? 'step' : undefined}
+            className={`group flex items-center gap-2.5 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+          >
+            <span
+              className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold transition-all duration-200 ${
+                isActive
+                  ? 'bg-[#fcee09] text-[#0a0a0a] shadow-[0_0_0_4px_rgba(252,238,9,0.12)]'
+                  : isCompleted
+                  ? 'bg-[#0e1a14] text-[#34d399] ring-1 ring-[#1f3d2e] group-hover:ring-[#34d399]/60'
+                  : 'bg-[#111111] text-[#5a5a5a] ring-1 ring-[#222222]'
+              }`}
+            >
+              {isCompleted ? (
+                <span className="material-symbols-outlined scale-in" style={{ fontSize: 15 }}>check</span>
+              ) : (
+                index + 1
+              )}
+            </span>
+            <span
+              className={`hidden text-[12.5px] font-medium transition-colors duration-200 sm:inline ${
+                isActive ? 'text-white' : isCompleted ? 'text-[#9a9a9a] group-hover:text-white' : 'text-[#5a5a5a]'
+              }`}
+            >
+              {step.label}
+            </span>
+          </button>
+          {index < SETUP_STEPS.length - 1 && (
+            <div className="mx-3 h-px flex-1 rounded-full bg-[#1c1c1c] sm:mx-4">
+              <div
+                className="h-full rounded-full bg-[#34d399]/45 transition-all duration-300 ease-out"
+                style={{ width: index < currentStep ? '100%' : '0%' }}
+              />
+            </div>
+          )}
+        </React.Fragment>
+      )
+    })}
+  </div>
+)
 
 export const WelcomeScreen: React.FC = () => {
   const appVersion = useAppVersion()
@@ -39,6 +154,10 @@ export const WelcomeScreen: React.FC = () => {
   const [gamePathValid, setGamePathValid] = useState(false)
   const [libraryPathValid, setLibraryPathValid] = useState(false)
   const [autoDetectAttempted, setAutoDetectAttempted] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [currentStep, setCurrentStep] = useState(0)
+  const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward')
+  const [isInitializing, setIsInitializing] = useState(false)
 
   const resolveDownloadPath = (nextLibraryPath: string): string => {
     const normalizedLibraryPath = nextLibraryPath.trim()
@@ -85,6 +204,28 @@ export const WelcomeScreen: React.FC = () => {
     setAutoDetectAttempted(true)
     void applyGameDefault(true)
   }, [autoDetectAttempted, gamePath])
+
+  const goToStep = (index: number) => {
+    const clamped = Math.max(0, Math.min(SETUP_STEPS.length - 1, index))
+    if (clamped === currentStep) return
+    setStepDirection(clamped > currentStep ? 'forward' : 'backward')
+    setCurrentStep(clamped)
+  }
+
+  const beginSetup = () => {
+    setStepDirection('forward')
+    setStarted(true)
+  }
+
+  const goNext = () => goToStep(currentStep + 1)
+  const goBack = () => {
+    if (currentStep === 0) {
+      setStepDirection('backward')
+      setStarted(false)
+      return
+    }
+    goToStep(currentStep - 1)
+  }
 
   const browseGame = async () => {
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(
@@ -140,67 +281,77 @@ export const WelcomeScreen: React.FC = () => {
       setGamePathValid(false)
     }
     if (!silent) {
-      addToast('Game path default loaded', 'success', 1800)
+      addToast('Game path detected', 'success', 1800)
     }
   }
 
   const applyLibraryDefault = () => {
     if (!defaultPaths) return
     setLibraryPath(defaultPaths.libraryPath)
-    addToast('Default managed library loaded', 'info', 1800)
+    addToast('Suggested mod library loaded', 'info', 1800)
   }
 
   const applyDownloadsDefault = () => {
     const nextDownloadPath = resolveDownloadPath(libraryPath || defaultPaths?.libraryPath || '')
     setDownloadPath(nextDownloadPath)
-    addToast('Default downloads path loaded', 'info', 1800)
+    addToast('Suggested downloads folder loaded', 'info', 1800)
   }
 
   const applyPaths = async () => {
     if (!gamePathValid || !libraryPathValid) {
-      addToast('Select a valid game folder and mod library before applying paths', 'warning', 2400)
+      addToast('Select a valid game folder and mod library before finishing', 'warning', 2400)
       return
     }
 
-    const libraryChanged = libraryPath !== (settings?.libraryPath ?? '')
-    const gameChanged = gamePath !== (settings?.gamePath ?? '')
-    const resolvedDownloadPath = downloadPath.trim() || resolveDownloadPath(libraryPath)
-    const downloadChanged = resolvedDownloadPath !== (settings?.downloadPath ?? '')
+    setIsInitializing(true)
+    try {
+      const libraryChanged = libraryPath !== (settings?.libraryPath ?? '')
+      const gameChanged = gamePath !== (settings?.gamePath ?? '')
+      const resolvedDownloadPath = downloadPath.trim() || resolveDownloadPath(libraryPath)
+      const downloadChanged = resolvedDownloadPath !== (settings?.downloadPath ?? '')
 
-    if ((libraryChanged || gameChanged) && settings?.gamePath?.trim() && settings?.libraryPath?.trim()) {
-      const purgeResult = await purgeMods()
-      if (purgeResult.data?.purged) {
-        addToast(`Purged ${purgeResult.data.purged} active mod(s) from the previous deployment`, 'info', 2600)
+      if ((libraryChanged || gameChanged) && settings?.gamePath?.trim() && settings?.libraryPath?.trim()) {
+        const purgeResult = await purgeMods()
+        if (purgeResult.data?.purged) {
+          addToast(`Purged ${purgeResult.data.purged} active mod(s) from the previous deployment`, 'info', 2600)
+        }
+        if (purgeResult.data?.failed) {
+          addToast(`Could not fully purge ${purgeResult.data.failed} mod(s) from the previous deployment`, 'warning', 3200)
+        }
       }
-      if (purgeResult.data?.failed) {
-        addToast(`Could not fully purge ${purgeResult.data.failed} mod(s) from the previous deployment`, 'warning', 3200)
-      }
-    }
 
-    await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath })
-    const scannedMods = await scanMods()
+      await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath })
+      const scannedMods = await scanMods()
 
-    if (gamePathValid && libraryPathValid) {
-      const restoreResults = await restoreEnabledMods(scannedMods)
-      const failedRestoreCount = restoreResults.filter((result) => !result.ok).length
-      if (failedRestoreCount > 0) {
-        addToast(`Loaded library, but ${failedRestoreCount} active mod(s) could not be restored`, 'warning', 3200)
+      if (gamePathValid && libraryPathValid) {
+        const restoreResults = await restoreEnabledMods(scannedMods)
+        const failedRestoreCount = restoreResults.filter((result) => !result.ok).length
+        if (failedRestoreCount > 0) {
+          addToast(`Loaded library, but ${failedRestoreCount} active mod(s) could not be restored`, 'warning', 3200)
+        }
+        addToast(downloadChanged ? 'Setup complete' : 'Setup complete', 'success', 1800)
+        setActiveView('library')
       }
-      addToast(downloadChanged ? 'Paths and defaults saved' : 'Required paths saved', 'success', 1800)
-      setActiveView('library')
+    } finally {
+      setIsInitializing(false)
     }
   }
 
-  const missingGame = !gamePath.trim() || !gamePathValid
-  const activeGameState = gamePath.trim() ? (gamePathValid ? 'Valid Path' : 'Target Invalid') : 'Target Required'
   const resolvedDefaultDownloadPath = resolveDownloadPath(libraryPath || defaultPaths?.libraryPath || '')
   const effectiveDownloadPath = downloadPath.trim() || resolvedDefaultDownloadPath
 
-  const browseBtn = 'px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#fcee09]/30 text-[#fcee09] rounded-sm text-[10px] brand-font font-bold uppercase tracking-widest hover:bg-[#fcee09] hover:text-[#050505] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]'
-  const accentBtn = 'px-4 py-2 bg-[#0a0a0a] border-[0.5px] border-[#1a1a1a] text-[#9a9a9a] rounded-sm text-[10px] brand-font font-semibold uppercase tracking-widest hover:text-white hover:border-[#7a7a7a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#9a9a9a] disabled:hover:border-[#1a1a1a]'
-  const statusBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2.5 text-[10px] font-mono uppercase leading-none tracking-[0.14em]'
-  const metaBadgeClass = 'relative top-[-1px] inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[10px] font-mono uppercase leading-none tracking-[0.14em]'
-  const sectionDotClass = 'relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[#fcee09]'
+  const step = SETUP_STEPS[currentStep]
+  const isLastStep = currentStep === SETUP_STEPS.length - 1
+
+  const gameState: 'valid' | 'invalid' | 'empty' = gamePath.trim() ? (gamePathValid ? 'valid' : 'invalid') : 'empty'
+  const libraryState: 'valid' | 'invalid' | 'empty' = libraryPath.trim() ? (libraryPathValid ? 'valid' : 'invalid') : 'empty'
+
+  const stepReady = currentStep === 0 ? gamePathValid : currentStep === 1 ? libraryPathValid : true
+  const continueTooltip = currentStep === 0
+    ? 'Select a valid Cyberpunk 2077 folder to continue'
+    : 'Select a valid mod library folder to continue'
+
+  const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn, ghost: ghostBtn } = uiButton
 
   return (
     <div className="relative h-full overflow-y-auto animate-settings-in bg-[#050505]">
@@ -208,123 +359,223 @@ export const WelcomeScreen: React.FC = () => {
         className="absolute inset-x-0 top-0 h-12"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       />
-      <div className="mx-auto flex min-h-full w-full items-center justify-center px-3 py-6 sm:px-5 sm:py-8 lg:px-8 xl:px-10">
-        <div className="w-full max-w-[clamp(720px,44vw,980px)]">
+      <div className="mx-auto flex min-h-full w-full items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
 
-        {/* Page header */}
-        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="brand-font text-lg font-bold tracking-[0.18em] uppercase text-white sm:text-xl">Workspace Setup</h1>
-            <p className="ui-support-mono mt-2 uppercase tracking-[0.15em]">
-              Configure required paths to initialize Hyperion
-            </p>
-            <div className="ui-support-mono mt-2 text-[10px] uppercase tracking-[0.16em] text-[#5f5f5f]">
-              Hyperion {appVersion}
+        {/* ─────────────── Welcome ─────────────── */}
+        {!started && (
+          <div className="w-full max-w-[560px]">
+            <div className="flex flex-col items-center text-center">
+              <div className="fade-up mb-8" style={{ animationDelay: '0ms' }}>
+                <BrandMark size="lg" />
+              </div>
+
+              <h1
+                className="fade-up brand-font text-[28px] font-bold leading-tight text-white sm:text-[34px]"
+                style={{ animationDelay: '50ms' }}
+              >
+                Let's set up your workspace
+              </h1>
+              <p
+                className="fade-up mt-3 max-w-md text-[15px] leading-relaxed text-[#9a9a9a]"
+                style={{ animationDelay: '100ms' }}
+              >
+                A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods
+                live — it takes less than a minute.
+              </p>
+
+              <div className="fade-up mt-9 grid w-full gap-2.5 text-left" style={{ animationDelay: '150ms' }}>
+                {SETUP_STEPS.map((s, index) => (
+                  <div
+                    key={s.key}
+                    className="flex items-center gap-3.5 rounded-md border border-[#181818] bg-[#0a0a0a] px-4 py-3.5"
+                  >
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#141414] text-[12px] font-semibold text-[#6a6a6a]">
+                      {index + 1}
+                    </div>
+                    <span className="material-symbols-outlined flex-shrink-0 text-[#fcee09]" style={{ fontSize: 20 }}>
+                      {s.icon}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] font-semibold text-white">{s.label}</div>
+                      <div className="truncate text-[12.5px] text-[#8a8a8a]">{s.preview}</div>
+                    </div>
+                    {s.optional && (
+                      <span className="ml-auto flex-shrink-0 text-[11px] font-medium text-[#6a6a6a]">Optional</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={beginSetup}
+                className={`fade-up mt-9 px-8 ${primaryBtn}`}
+                style={{ animationDelay: '200ms' }}
+              >
+                Get started
+                <span className="material-symbols-outlined transition-transform duration-150 group-hover:translate-x-0.5" style={{ fontSize: 18 }}>
+                  arrow_forward
+                </span>
+              </button>
+
+              <div className="fade-up mt-7 text-[11.5px] text-[#5a5a5a]" style={{ animationDelay: '250ms' }}>
+                Hyperion {appVersion}
+              </div>
             </div>
           </div>
-          <div className="relative w-fit shrink-0 overflow-hidden rounded-sm border-[0.5px] border-[#6a5b10] bg-[linear-gradient(180deg,#171303,#100d02)] px-3 py-2 text-[9px] font-mono uppercase tracking-[0.16em] text-[#f1df88] shadow-[inset_0_1px_0_rgba(252,238,9,0.08)]">
-            <span className="absolute inset-0 animate-[firstrun-glow_2.4s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent,rgba(252,238,9,0.08),transparent)]" />
-            <span className="relative">First Run</span>
-          </div>
-        </div>
+        )}
 
-        {/* Paths card */}
-        <div className="border-[0.5px] border-[#1a1a1a] bg-[#070707] shadow-[0_6px_18px_rgba(0,0,0,0.24)]">
-
-          {/* Game Path */}
-          <div className="border-b-[0.5px] border-[#1a1a1a] px-4 py-4 sm:px-5 sm:py-5">
-            <div className="mb-2 flex min-h-[20px] flex-wrap items-center gap-2">
-              <div className={sectionDotClass} />
-              <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Game Path</span>
-              <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
-              <span className={`ml-auto ${statusBadgeClass} ${
-                missingGame ? 'border-[#7e6d12] bg-[#0d0b00] text-[#fcee09]' : 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
-              }`}>
-                {activeGameState}
+        {/* ─────────────── Setup steps ─────────────── */}
+        {started && (
+          <div className="w-full max-w-[600px]">
+            {/* Header row */}
+            <div className="fade-up mb-7 flex items-center justify-between">
+              <BrandMark />
+              <span className="text-[12.5px] font-medium text-[#6a6a6a]">
+                Step {currentStep + 1} of {SETUP_STEPS.length}
               </span>
             </div>
-            <p className="ui-support-mono mb-3">
-              Cyberpunk 2077 installation root — used for executable validation and mod deployment.
-            </p>
-            <div className={`allow-text-selection border-[0.5px] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0 ${
-              missingGame ? 'border-[#6a5a10]' : 'border-[#1a1a1a]'
-            }`}>
-              <div className="break-all">{gamePath || <span className="text-[#6b6b6b]">Select Cyberpunk 2077 directory...</span>}</div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button onClick={() => void applyGameDefault()} disabled={detectingGame} className={`${accentBtn} w-full sm:w-auto`}>
-                {detectingGame ? 'Detecting...' : 'Auto Detect'}
-              </button>
-              <button onClick={browseGame} className={`${browseBtn} w-full sm:ml-auto sm:w-auto`}>Browse</button>
-            </div>
-          </div>
 
-          {/* Mod Library */}
-          <div className="border-b-[0.5px] border-[#1a1a1a] px-4 py-4 sm:px-5 sm:py-5">
-            <div className="mb-2 flex min-h-[20px] flex-wrap items-center gap-2">
-              <div className={sectionDotClass} />
-              <span className="text-sm uppercase tracking-widest text-white brand-font font-bold">Mod Library</span>
-              <span className={`${metaBadgeClass} border-[#1e3a5f] bg-[#071524] text-[#60a5fa]`}>Required</span>
+            {/* Progress */}
+            <div className="fade-up mb-7">
+              <StepProgress currentStep={currentStep} onStepSelect={goToStep} />
             </div>
-            <p className="ui-support-mono mb-3">
-              Managed archive repository for mod metadata, staging, and deployment recovery.
-            </p>
-            <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
-              <div className="break-all">{libraryPath || <span className="text-[#6b6b6b]">Select mod library directory...</span>}</div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button onClick={applyLibraryDefault} disabled={!defaultPaths} className={`${accentBtn} w-full sm:w-auto`}>Use Default</button>
-              <button onClick={browseLibrary} className={`${browseBtn} w-full sm:ml-auto sm:w-auto`}>Browse</button>
-            </div>
-          </div>
 
-          {/* Downloads */}
-          <div className="px-4 py-4 sm:px-5 sm:py-5">
-            <div className="mb-2 flex min-h-[20px] flex-wrap items-center gap-2">
-              <div className="relative top-[-1px] h-1.5 w-1.5 flex-shrink-0 bg-[rgba(252,238,9,0.35)]" />
-              <span className="text-sm uppercase tracking-widest text-[#d0d0d0] brand-font font-bold">Downloads Intake</span>
-              <span className={`${metaBadgeClass} border-[#343434] bg-[#121212] text-[#878787]`}>Optional</span>
-            </div>
-            <p className="ui-support-mono mb-3">
-              Source folder for incoming archives. Defaults to a sibling folder beside the library.
-            </p>
-            <div className="allow-text-selection border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 font-mono text-sm text-[#e5e2e1] mb-3 min-w-0">
-              <div className="break-all">{effectiveDownloadPath || <span className="text-[#6b6b6b]">Waiting for path definition...</span>}</div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button onClick={applyDownloadsDefault} className={`${accentBtn} w-full sm:w-auto`}>Use Default</button>
-              <button onClick={browseDownloads} className={`${browseBtn} w-full sm:ml-auto sm:w-auto`}>Browse</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-5 flex flex-col gap-4 border-t-[0.5px] border-[#1a1a1a] pt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <p className="ui-support-mono">
-            Hyperion initializes only after both required paths validate.
-          </p>
-          <Tooltip
-            content={
-              !gamePathValid && !libraryPathValid
-                ? 'Set a valid Game Path and Mod Library'
-                : !gamePathValid
-                ? 'Set a valid Game Path'
-                : 'Set a valid Mod Library'
-            }
-            side="top"
-            wrapperClassName="inline-flex"
-          >
-            <button
-              onClick={applyPaths}
-              disabled={!gamePathValid || !libraryPathValid}
-              className="w-full shrink-0 rounded-sm bg-[#fcee09] px-6 py-3 text-[10px] brand-font font-bold uppercase tracking-widest text-[#050505] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:opacity-40 disabled:hover:bg-[#1c1b07] sm:w-auto"
+            {/* Step card */}
+            <div
+              key={currentStep}
+              className={`rounded-lg border border-[#191919] bg-[#080808] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.3)] sm:p-7 ${
+                stepDirection === 'forward' ? 'slide-in-right' : 'slide-in-left'
+              }`}
             >
-              Initialize Workspace
-            </button>
-          </Tooltip>
-        </div>
+              <div className="mb-4 flex items-center gap-3.5">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border border-[#2a2607] bg-[#0d0b00]">
+                  <span className="material-symbols-outlined text-[#fcee09]" style={{ fontSize: 22 }}>{step.icon}</span>
+                </div>
+                <h2 className="brand-font text-[18px] font-bold leading-snug text-white sm:text-[19px]">
+                  {step.heading}
+                </h2>
+              </div>
 
-        </div>
+              <p className="mb-5 text-[14px] leading-relaxed text-[#9a9a9a]">{step.description}</p>
+
+              <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">Selected folder</div>
+
+              {currentStep === 0 && (
+                <>
+                  <PathBox value={gamePath} placeholder="No folder selected — detect or browse below" emphasize={gameState !== 'valid'} />
+                  <ValidationRow
+                    state={gameState}
+                    validText="Cyberpunk 2077 found — you're good to go."
+                    invalidText="We couldn't find Cyberpunk 2077 in this folder."
+                  />
+                  <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                    <button onClick={() => void applyGameDefault()} disabled={detectingGame} className={`${secondaryBtn} w-full sm:w-auto`}>
+                      {detectingGame ? (
+                        <>
+                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                          Detecting…
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
+                          Detect automatically
+                        </>
+                      )}
+                    </button>
+                    <button onClick={browseGame} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      Choose folder
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {currentStep === 1 && (
+                <>
+                  <PathBox value={libraryPath} placeholder="No folder selected — use the suggestion or browse" emphasize={libraryState === 'invalid'} />
+                  <ValidationRow
+                    state={libraryState}
+                    validText="This folder is ready to use."
+                    invalidText="This folder can't be used as a mod library."
+                  />
+                  <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                    <button onClick={applyLibraryDefault} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                      Use suggested
+                    </button>
+                    <button onClick={browseLibrary} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      Choose folder
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {currentStep === 2 && (
+                <>
+                  <PathBox value={effectiveDownloadPath} placeholder="No folder selected yet" />
+                  <ValidationRow state="info" infoText="New mod downloads will be saved here." />
+                  <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                    <button onClick={applyDownloadsDefault} className={`${secondaryBtn} w-full sm:w-auto`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                      Use suggested
+                    </button>
+                    <button onClick={browseDownloads} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      Choose folder
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer nav */}
+            <div className="mt-6 flex items-center justify-between">
+              <button onClick={goBack} className={ghostBtn}>
+                <span className="material-symbols-outlined transition-transform duration-150 group-hover:-translate-x-0.5" style={{ fontSize: 18 }}>arrow_back</span>
+                Back
+              </button>
+
+              {!isLastStep ? (
+                stepReady ? (
+                  <button onClick={goNext} className={primaryBtn}>
+                    Continue
+                    <span className="material-symbols-outlined transition-transform duration-150 group-hover:translate-x-0.5" style={{ fontSize: 18 }}>arrow_forward</span>
+                  </button>
+                ) : (
+                  <Tooltip content={continueTooltip} side="top" wrapperClassName="inline-flex">
+                    <button disabled className={primaryBtn}>
+                      Continue
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_forward</span>
+                    </button>
+                  </Tooltip>
+                )
+              ) : (gamePathValid && libraryPathValid) ? (
+                <button onClick={() => void applyPaths()} disabled={isInitializing} className={primaryBtn}>
+                  {isInitializing ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                      Setting things up…
+                    </>
+                  ) : (
+                    <>
+                      Finish setup
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <Tooltip content="Select a valid game folder and mod library to finish" side="top" wrapperClassName="inline-flex">
+                  <button disabled className={primaryBtn}>
+                    Finish setup
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>check</span>
+                  </button>
+                </Tooltip>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )

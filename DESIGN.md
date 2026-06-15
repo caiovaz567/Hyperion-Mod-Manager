@@ -116,11 +116,23 @@ Alignment rules:
 
 - Shown when required paths are missing or invalid
 - Header and sidebar stay hidden until setup is complete, then the full shell appears
-- Onboarding is a dedicated first-run workspace focused on game path, managed library path, and optional downloads intake path
-- Game path carries explicit validation emphasis because it gates launch and deployment safety checks
-- Clear primary CTA and minimal distractions
-- Show the current Hyperion version here as a subdued detail so first-run/setup states still expose build context even before the main shell appears
-- On large displays, the full setup surface should remain centered in the viewport and scale to a moderately wider layout instead of staying as a narrow top-anchored column
+- Onboarding has two phases: a **welcome screen** first, then a **3-step setup wizard** (`Game` -> `Mod library` -> `Downloads`), each step focused on a single path
+- The whole surface is centered in the viewport on a narrow-to-moderate column (welcome ~560px, steps ~600px); it never anchors as a tall top-left column
+- Voice is plain and human: sentence-case headings phrased as questions ("Where is Cyberpunk 2077 installed?"), friendly one-line descriptions, and no dense uppercase micro-labels or technical jargon. Avoid the badge-heavy "dashboard" look (no `REQUIRED`/`OPTIONAL`/`TARGET INVALID` chips, no `FIRST RUN` ribbon, no mono `01/02/03` boxes)
+- Show the current Hyperion version as a subdued detail so first-run/setup states still expose build context before the main shell appears
+
+Welcome screen:
+- Centered: the Hyperion brand mark (the shared yellow rounded square + dark inner square + `HYPERION` wordmark, reused from the header), a large sentence-case headline ("Let's set up your workspace"), and a short reassuring subtitle that the setup is quick and one-time
+- A preview list of the three things to configure — each row is a numbered circle, an accent icon, the label, and a plain one-line description; the Downloads row carries a quiet `Optional` tag
+- A single primary `Get started` CTA advances into the wizard; elements stagger in with `.fade-up` (small `animationDelay` increments)
+
+Setup wizard:
+- Top: the small brand mark plus a `Step X of N` counter, then a step progress rail of **rounded numbered circles** connected by a fill bar — active circle is filled yellow with a soft ring, completed circles show a check on a green ring (and the connector fills green), future circles stay dim. Clicking a completed circle navigates back to it
+- Each step is one rounded card: an accent icon tile, the question heading, a plain description, a `Selected folder` path box, an inline validation row, and two folder actions (`Detect automatically`/`Use suggested` as a neutral button + `Choose folder` as the accent-outline button)
+- Validation is communicated inline, not via badges: green `check_circle` + positive copy when valid, yellow `error` + plain explanation when invalid, a muted `radio_button_unchecked` when empty, and a neutral `info` line on the optional Downloads step
+- Step transitions use `.slide-in-right` when advancing and `.slide-in-left` when going back, keyed by step index so the animation replays every change; the valid-state validation row replays a `.scale-in` pop
+- Footer holds a ghost `Back` button (returns to the welcome screen from step 1) plus either `Continue` (non-final steps, gated on that step's path validating, with a tooltip explaining why it's disabled) or `Finish setup` (final step, with a loading-spinner state while applying)
+- All buttons share a hover lift (`-translate-y-px`) plus glow/border feedback and a press scale-down (`active:scale-[0.98]`) for tactile feedback; controls use soft `rounded-md`/`rounded-lg` corners rather than the squared industrial chrome used elsewhere, to keep onboarding approachable
 
 ### Library
 
@@ -256,20 +268,21 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Should feel operational and clear, not decorative
 - Settings should be organized into three explicit sections only: `Paths`, `Nexus`, and `Updates`
 - Do not keep a generic `Workspace` section or placeholder future-module scaffold in the primary UX
-- The hero area should summarize current readiness at a glance: Game Path, Mod Library, Downloads, and Nexus state
-- Core directories section should mirror the Welcome screen visual system: unified dark card, path blocks in monospace, compact status badges, and the same primary/secondary button treatment
-- Settings navigation should feel like an integrated extension panel: section tabs connected to the content surface rather than floating above it
-- Settings should use a calmer, narrower reading width than Library/Downloads; avoid stretching form decisions across the full desktop when the content is fundamentally linear
-- Tabs in Settings should read as a compact segmented strip, not as giant stacked menu blocks
-- Settings section guides and accent lines should stay on the product yellow; do not switch section-guide color by tab context
+- Settings must keep Hyperion's operational chrome: squared small-radius panels, 0.5px borders, dark surfaces, uppercase `brand-font` section names, and yellow as signal rather than decoration
+- `src/renderer/features/ui/uiKit.tsx` may provide shared helpers for Settings and Welcome, but Settings should not inherit a soft onboarding or SaaS-style card language from first-run flows
+- Cards use the compact `SettingCard` pattern: squared dark surface, thin yellow top rail, small icon tile, uppercase heading, and one readable line of support copy
+- State is shown two ways: an inline `ValidationRow` under the relevant control for the human, consequence-aware message, and an optional squared `StatusReadout` in the card header for at-a-glance status
+- Validation copy must be consequence-aware (e.g. `Cyberpunk 2077 found. Launch and deployment validation are ready.` / invalid copy that names what stays blocked) while the surrounding chrome stays compact and operational
+- Header status readouts must communicate only the concrete state value: `CONNECTED`, `PREMIUM`, `READY TO INSTALL`, or `v0.14.0`; avoid split prefix/value badges such as `NEXUS / CONNECTED` and avoid decorative side bars inside the badge
+- Path values render in the shared monospace `PathBox`; buttons use the shared kit set with Hyperion button proportions, squared chrome, and no hover lift or press-scale theatrics
+- Tabs read as a compact segmented strip with icon + uppercase label per tab; the active tab is a restrained dark/yellow segment, not a solid pill
+- Settings should use a calmer reading width (~960px) than Library/Downloads; avoid stretching linear form decisions across the full desktop
 - Inside each section, prefer a small number of large decision cards over many nested bordered boxes competing for attention
-- In Settings, controls and follow-up actions should stay left-aligned within their card instead of jumping to the far right edge
-- Avoid vague top-level status labels such as `Ready`; if status chrome is present, it should communicate a concrete state like `Valid Path`, `Configured`, `Connected`, or a version number
-- Tiny overtracked labels in Settings should be avoided; section eyebrow text and helper labels must keep readable contrast and a stronger 13px+ presence
-- Avoid nested scrolling inside Settings content when the main app surface already handles vertical scroll
+- Card content and follow-up actions stay within the card; the leading action sits left, the folder/primary action may sit at the row end on wide layouts
+- Cards enter with a light staggered `fade-up`; rely on the main app surface for vertical scroll (no nested scroll regions inside Settings content)
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
-- `Paths` should remain the primary section and emphasize consequence-aware states such as launch blocked or installs blocked when required targets are invalid
-- Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold treatment, while `Free` uses the cool info-blue treatment
+- `Paths` is the primary section and must surface consequence (launch blocked / installs blocked) in the invalid validation copy when required targets are missing
+- Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold readout tone, while `Free` uses the cool info-blue readout tone
 - The sidebar should always expose a compact Nexus identity marker (avatar or initials) even when the rail is collapsed; expanding the rail may reveal the full name and subscription label
 - Sidebar avatars/identity markers should use the same squared border language as other Hyperion controls and buttons; avoid soft pill or circular treatments that break the shell rhythm
 - In the expanded sidebar account block, stack the content clearly as `name -> subscription badge -> connection state` so the subscription tag does not drift between labels
@@ -307,6 +320,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 ### Buttons
 
 - MUST: operational UI surfaces default to squared rectangular corners; rounded pills, soft capsules, and curved card chrome are not allowed unless a shipped screen explicitly requires them and the exception is documented
+- Any shared `uiKit` controls used inside Settings must follow the squared Hyperion chrome; onboarding may be softer only where the first-run flow explicitly needs it.
 
 Primary:
 - Yellow background
