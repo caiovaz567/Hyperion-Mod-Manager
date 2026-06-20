@@ -1,7 +1,0 @@
-{
-  "css.validate": false,
-  "scss.validate": false,
-  "less.validate": false,
-  "css.customData": [],
-  "js/ts.tsserver.experimental.enableProjectDiagnostics": false
-}
