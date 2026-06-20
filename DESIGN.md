@@ -190,23 +190,32 @@ Two conflict kinds are tracked:
 - **archive-resource** — two or more `.archive` files contain an internal resource with the same FNV1a hash, meaning they likely override the same in-game asset regardless of file path
 
 Conflict indicators on mod rows:
-- A single `warning` Material Symbol icon replaces the old numeric `+N / −N` badges
+- A single `warning` Material Symbol icon replaces the old numeric `+N / -N` badges
 - Color encodes urgency: green = this mod only wins, red = this mod only loses, yellow = both win and lose
-- Tooltip format: `Wins N file(s) · Loses N file(s) · Click to inspect conflicts.`
+- Tooltip format: `Wins N file(s) - Loses N file(s) - Click to inspect conflicts.`
 - Clicking the icon opens the mod detail modal directly on the Conflicts tab
 
 Conflict inspector inside the mod detail modal:
 - **Loss section** renders on top, **Win section** on bottom
 - Sections with zero entries auto-collapse when the modal opens; sections with entries default to expanded
-- Each conflict row shows: conflict kind badge (OVERWRITE / ARCHIVE), a dedicated resource-path card, and an adjacent other-mod card that stacks below on tighter widths and expands to a wider right column on larger screens
-- For `archive-resource` conflicts the row shows an archive hash hint line below the resource path when the hash differs from the path string, or marks the hash as `Unresolved` when the lookup produced no known path
-- In the `.archive` sub-tab, the other-mod card also includes an `Archive Pair` block so the user can see which `.archive` from this mod conflicts with which `.archive` from the other mod
-- Archive kind badges inherit the section's tone color (green in Win, red in Loss) instead of always being red
+- The outcome lives in the section header and count chip; individual rows should avoid repeating long explanatory labels such as "this mod wins this resource"
+- Each conflict row is a compact two-column comparison: resource/path first, then the other mod and load-order position
+- For `archive-resource` conflicts, keep archive details inline below the path: hash, this archive, and the other archive in a compact "This / Other" pair. Do not render a second nested Archive Pair card.
+- Section tone colors carry the meaning (green in Win, red in Loss); row chips should be small and restrained rather than competing with the path text
 - The modal itself is wider than the Files tab default: `min(1480px, calc(100vw - 48px))` so long mod names remain readable without forcing a viewport-level horizontal scrollbar inside the padded overlay
 
 Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Both dialogs also show the archive hash hint line for `archive-resource` rows, using the same `Unresolved archive hash` / `Archive hash` label pattern
 - All conflict and action dialogs render via `createPortal(_, document.body)` to stay above the sidebar stacking context at all viewport sizes
+
+### Mod Updates (Nexus)
+
+- Installed mods that originated from Nexus are checked for newer versions during startup, beginning while the splash screen is still visible. The startup check uses a full per-mod pass so all installed Nexus mods get a reliable status without the user pressing `Check Updates`, but it only gets a short grace window on the splash; slow Nexus responses continue non-blocking after the Library opens.
+- Later automatic library refreshes (install/reinstall/delete) may use the cheaper `updated.json?period=1m` path to avoid repeatedly hitting `files.json` for every mod. Manual checks also use the full per-mod pass so older available updates are not missed. "Newer" prefers file id + upload timestamp, then falls back to numeric version comparison when Nexus metadata is incomplete or ambiguous.
+- Nexus request logs should summarize large `files.json` responses (count + small sample) instead of rendering the full file list; the app may still need the complete response internally for manual update checks.
+- When a newer version is available, the mod row renders its installed version in red (`#f87171`) in the Version column with an inline cyber-blue `upgrade` button beside it. Tooltip format: `Installed: X - Latest: Y - New version on Nexus. Click to update.`
+- Clicking the upgrade button is adaptive to the Nexus account: Premium resolves the download directly, stays on the Library view, then replaces and re-enables the mod in place when the archive finishes. Free opens the mod's Nexus files page so the user triggers the `nxm://` flow.
+- A manual `Check Updates` control in the Library toolbar (cyan, with spinner + `Updates (N)` count) forces an immediate full re-check and toasts the result; the background checks stay silent.
 
 ### FOMOD Installer
 
@@ -239,7 +248,9 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Summary strip shows configured path, file count, and zip-ready count
 - Download rows prioritize file name, format, modified date, install/reinstall action, and delete action
 - Download ordering should remain stable across navigation and library changes; Nexus archives should keep the chronology of when the user initiated each download request, not the order in which transfers happen to finish or related mods get installed/removed
-- Nexus downloads must remain in Downloads with a persistent `NEW` badge until a successful install clears that state; finishing a download must not auto-install the mod
+- Nexus downloads should enter Downloads with a `NEW` badge; clicking the archive row itself acknowledges it and clears the marker, and successful install/reinstall also clears it.
+- The sidebar Downloads item shows active transfer attention while downloads are running, then falls back to a compact `NEW` marker only while unacknowledged downloads remain.
+- Library-initiated mod updates are the exception: their download is treated as update work, shown as active download attention in the sidebar, and should auto-install/replace the source mod without navigating to Downloads or leaving a persistent `NEW` download marker.
 - When Nexus metadata is available, Downloads should surface the resolved file version so multiple staged versions are distinguishable before install
 - Install/extract progress launched from Downloads should reuse the same active-row language as live downloads instead of falling back to a tiny button-only state
 - Archive extraction is its own phase and should use a distinct cool accent from the default download/install yellow, while later install/finalization can return to the product accent

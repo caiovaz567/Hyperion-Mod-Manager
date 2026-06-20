@@ -79,6 +79,9 @@ export const ModList: React.FC = () => {
     conflicts,
     setConflictHighlight,
     clearConflictHighlight,
+    checkModUpdates,
+    checkingModUpdates,
+    modUpdates,
   } = useAppStore((state) => ({
     filter: state.filter,
     setFilter: state.setFilter,
@@ -113,7 +116,12 @@ export const ModList: React.FC = () => {
     conflicts: state.conflicts,
     setConflictHighlight: state.setConflictHighlight,
     clearConflictHighlight: state.clearConflictHighlight,
+    checkModUpdates: state.checkModUpdates,
+    checkingModUpdates: state.checkingModUpdates,
+    modUpdates: state.modUpdates,
   }), shallow)
+
+  const updateCount = Object.values(modUpdates).filter((status) => status.state === 'update-available').length
 
   const {
     handleInstallFile,
@@ -486,6 +494,9 @@ export const ModList: React.FC = () => {
         onCreateSeparator={() => void handleCreateSeparator()}
         onDeleteAll={() => requestLibraryDeleteAll()}
         onInstallMod={handleInstallClick}
+        onCheckUpdates={() => void checkModUpdates({ force: true, notify: true, full: true })}
+        checkingUpdates={checkingModUpdates}
+        updateCount={updateCount}
       />
 
         {/* Table — has its own scroll, toolbar stays fixed above */}

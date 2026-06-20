@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
-import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo } from '../../../shared/types'
+import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo, ModUpdateStatus, ModUpdateCheckResult, ModUpdateCheckInput, NxmLinkPayload, NexusValidateResult } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
 import { recomputeConflictStateFromExistingConflicts } from '../../utils/modConflictState'
 import { applyConflictState, scheduleConflictRefresh } from './libraryConflictRefresh'
@@ -27,9 +27,12 @@ export interface LibrarySlice {
   selectedModId: string | null
   libraryStatusFilter: LibraryStatusFilter
   libraryDeleteAllRequestedAt: number | null
+  modUpdates: Record<string, ModUpdateStatus>
+  modUpdatesCheckedAt: string | null
+  checkingModUpdates: boolean
 
   // Actions
-  scanMods: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean }) => Promise<ModMetadata[]>
+  scanMods: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<ModMetadata[]>
   restoreEnabledMods: (modsToRestore?: ModMetadata[]) => Promise<IpcResult<ModMetadata[]>[]>
   enableMod: (id: string) => Promise<IpcResult>
   disableMod: (id: string) => Promise<IpcResult>
@@ -41,6 +44,8 @@ export interface LibrarySlice {
   reorderMods: (orderedIds: string[]) => Promise<void>
   updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
   refreshConflicts: (options?: { immediate?: boolean }) => Promise<void>
+  checkModUpdates: (options?: { force?: boolean; notify?: boolean; full?: boolean }) => Promise<void>
+  updateMod: (uuid: string) => Promise<void>
   setFilter: (filter: string) => void
   setTypeFilter: (type: string) => void
   setLibraryStatusFilter: (filter: LibraryStatusFilter) => void
@@ -65,11 +70,25 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   selectedModId: null,
   libraryStatusFilter: 'all',
   libraryDeleteAllRequestedAt: null,
+  modUpdates: {},
+  modUpdatesCheckedAt: null,
+  checkingModUpdates: false,
 
   scanMods: async (options) => {
     const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS)
     if (result.ok && result.data) {
-      set({ mods: result.data })
+      const currentModIds = new Set(result.data.map((mod) => mod.uuid))
+      set((state) => ({
+        mods: result.data,
+        modUpdates: Object.fromEntries(
+          Object.entries(state.modUpdates).filter(([uuid]) => currentModIds.has(uuid))
+        ),
+      }))
+      // Refresh Nexus update status whenever the library changes (install/reinstall/delete).
+      // Background scans stay lightweight; the toolbar button performs a full check.
+      if (options?.refreshModUpdates !== false) {
+        void get().checkModUpdates({ force: true })
+      }
       if (options?.refreshConflicts !== false) {
         void scheduleConflictRefresh(set, options?.immediateConflicts ?? true)
       }
@@ -211,6 +230,143 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
   refreshConflicts: async (options) => {
     await scheduleConflictRefresh(set, options?.immediate ?? false)
+  },
+  checkModUpdates: async (options) => {
+    if (get().checkingModUpdates) return
+    const force = options?.force === true
+    const full = options?.full === true
+    const announce = options?.notify === true
+    const notify = (message: string, severity: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+      const ext = get() as LibrarySlice & {
+        addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+      }
+      ext.addToast?.(message, severity, 3200)
+    }
+    const inputs: ModUpdateCheckInput[] = get().mods
+      .filter((mod) => mod.kind === 'mod' && typeof mod.nexusModId === 'number')
+      .map((mod) => ({
+        uuid: mod.uuid,
+        nexusModId: mod.nexusModId as number,
+        nexusFileId: mod.nexusFileId,
+        version: mod.version,
+        installedAt: mod.installedAt,
+      }))
+    if (inputs.length === 0) {
+      set({ modUpdates: {}, modUpdatesCheckedAt: new Date().toISOString() })
+      if (announce) notify('No Nexus-sourced mods to check.', 'info')
+      return
+    }
+    set({ checkingModUpdates: true })
+    try {
+      const result = await IpcService.invoke<IpcResult<ModUpdateCheckResult>>(
+        IPC.NEXUS_CHECK_MOD_UPDATES,
+        { mods: inputs, force, full }
+      )
+      if (result.ok && result.data) {
+        const previousUpdates = get().modUpdates
+        const map: Record<string, ModUpdateStatus> = {}
+        for (const status of result.data.statuses) {
+          const previous = previousUpdates[status.uuid]
+          map[status.uuid] = !full && previous?.state === 'update-available' && status.state === 'up-to-date'
+            ? previous
+            : status
+        }
+        set({ modUpdates: map, modUpdatesCheckedAt: result.data.checkedAt })
+        if (announce) {
+          if (result.data.skippedReason === 'no-api-key') {
+            notify('Add a Nexus API key in Settings to check for updates.', 'warning')
+          } else {
+            const count = result.data.statuses.filter((status) => status.state === 'update-available').length
+            notify(
+              count > 0
+                ? `${count} mod update${count === 1 ? '' : 's'} available.`
+                : 'All Nexus mods are up to date.',
+              count > 0 ? 'info' : 'success'
+            )
+          }
+        }
+      } else if (announce) {
+        notify(result.error || 'Could not check for mod updates.', 'error')
+      }
+    } finally {
+      set({ checkingModUpdates: false })
+    }
+  },
+  updateMod: async (uuid) => {
+    const status = get().modUpdates[uuid]
+    const mod = get().mods.find((item) => item.uuid === uuid)
+    if (!mod || mod.nexusModId == null || !status || status.state !== 'update-available') return
+    const nexusModId = mod.nexusModId
+
+    const ext = get() as LibrarySlice & {
+      settings?: { nexusApiKey?: string } | null
+      addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+      startNxmDownload?: (
+        payload: NxmLinkPayload,
+        options?: {
+          allowDuplicate?: boolean
+          navigateToDownloads?: boolean
+          intent?: {
+            kind: 'mod-update'
+            targetModId: string
+            targetModName: string
+            currentVersion?: string
+            latestVersion?: string
+          }
+        }
+      ) => Promise<void>
+      queueNxmUpdateIntent?: (
+        modId: number,
+        fileId: number,
+        intent: {
+          kind: 'mod-update'
+          targetModId: string
+          targetModName: string
+          currentVersion?: string
+          latestVersion?: string
+        }
+      ) => void
+    }
+    const apiKey = ext.settings?.nexusApiKey
+
+    let isPremium = false
+    if (apiKey) {
+      const validate = await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY, apiKey)
+      isPremium = !!(validate.ok && validate.data?.isPremium)
+    }
+
+    const updateIntent = {
+      kind: 'mod-update' as const,
+      targetModId: mod.uuid,
+      targetModName: mod.name,
+      currentVersion: status.currentVersion ?? mod.version,
+      latestVersion: status.latestVersion,
+    }
+
+    if (isPremium && status.latestFileId && ext.startNxmDownload) {
+      // Premium can resolve a download link straight from mod+file ids, so reuse the
+      // normal Nexus pipeline (duplicate handling, Downloads UI, version-aware install).
+      await ext.startNxmDownload({
+        modId: nexusModId,
+        fileId: status.latestFileId,
+        key: '',
+        expires: 0,
+        userId: 0,
+        raw: '',
+      }, {
+        navigateToDownloads: false,
+        intent: updateIntent,
+      })
+    } else {
+      // Free accounts can't mint a download link from the API; bounce to the Nexus
+      // files page so the user triggers the nxm:// flow the app already handles.
+      if (status.latestFileId) {
+        ext.queueNxmUpdateIntent?.(nexusModId, status.latestFileId, updateIntent)
+      }
+      const url = `${status.modPageUrl ?? `https://www.nexusmods.com/cyberpunk2077/mods/${nexusModId}`}?tab=files`
+      await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
+      ext.addToast?.('Opened on Nexus — use "Mod Manager Download" to update this mod.', 'info', 3600)
+    }
   },
   setFilter: (filter) => set({ filter }),
   setTypeFilter: (typeFilter) => set({ typeFilter }),

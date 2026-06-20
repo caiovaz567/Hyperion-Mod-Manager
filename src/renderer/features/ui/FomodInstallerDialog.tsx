@@ -227,12 +227,11 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
 // ─── Main Dialog ──────────────────────────────────────────────────────────────
 
 export const FomodInstallerDialog: React.FC = () => {
-  const { fomodPrompt, fomodInstall, dismissFomodPrompt, clearFomodPrompt, setActiveView } = useAppStore((s) => ({
+  const { fomodPrompt, fomodInstall, dismissFomodPrompt, clearFomodPrompt } = useAppStore((s) => ({
     fomodPrompt: s.fomodPrompt,
     fomodInstall: s.fomodInstall,
     dismissFomodPrompt: s.dismissFomodPrompt,
     clearFomodPrompt: s.clearFomodPrompt,
-    setActiveView: (s as unknown as { setActiveView?: (v: string) => void }).setActiveView,
   }), shallow)
 
   const config = useMemo(() => {
@@ -332,12 +331,11 @@ export const FomodInstallerDialog: React.FC = () => {
       needsExtraction: fomodPrompt.needsExtraction,
       ...(fomodPrompt.request as object),
     }
-    setActiveView?.('downloads')
     dismissFomodPrompt()
     fomodInstall(request).catch((err) => {
       console.error('FomodInstallerDialog: fomodInstall failed', err)
     })
-  }, [config, selections, fomodInstall, dismissFomodPrompt, setActiveView, fomodPrompt])
+  }, [config, selections, fomodInstall, dismissFomodPrompt, fomodPrompt])
 
   // Recomputes whenever selections change — gates which steps are navigable
   const visibleSteps = useMemo(

@@ -40,6 +40,7 @@ export const DuplicateInstallDialog: React.FC = () => {
 
     try {
       const result = await installMod(sourcePath, {
+        ...pendingInstallRequest,
         duplicateAction,
         targetModId,
       })

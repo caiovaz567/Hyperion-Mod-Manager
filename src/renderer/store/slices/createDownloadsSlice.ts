@@ -141,6 +141,17 @@ function removeNewFilePath(entries: string[], filePath: string): string[] {
   return entries.filter((entryPath) => entryPath.trim().toLowerCase() !== normalizedPath)
 }
 
+function upsertLocalDownloadEntry(entries: DownloadEntry[], entry: DownloadEntry): DownloadEntry[] {
+  const normalizedPath = entry.path.trim().toLowerCase()
+  const next = entries.filter((item) => item.path.trim().toLowerCase() !== normalizedPath)
+  return [entry, ...next]
+}
+
+function getArchiveExtension(fileName: string): string {
+  const match = /\.[^.\\/]+$/.exec(fileName)
+  return match?.[0]?.toLowerCase() ?? ''
+}
+
 function isCopyVariant(name: string): boolean {
   return copySuffixPattern.test(name.trim())
 }
@@ -196,6 +207,54 @@ function shouldPromptForVersionDecision(existingVersion?: string, incomingVersio
   return existingVersion !== incomingVersion
 }
 
+type DownloadsStoreBridge = DownloadsSlice & {
+  addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+  scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
+  enableMod?: (modId: string) => Promise<IpcResult>
+  setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
+  checkModUpdates?: (options?: { force?: boolean; notify?: boolean; full?: boolean }) => Promise<void>
+}
+
+async function installCompletedModUpdate(
+  get: () => DownloadsSlice,
+  filePath: string,
+  payload: Pick<NxmLinkPayload, 'modId' | 'fileId'>,
+  details: {
+    fileName?: string
+    version?: string
+    intent: NonNullable<ActiveDownload['intent']>
+  },
+): Promise<void> {
+  const state = get() as DownloadsStoreBridge
+  const intent = details.intent
+  const result = await state.installMod(filePath, {
+    duplicateAction: 'replace',
+    targetModId: intent.targetModId,
+    nexusModId: payload.modId,
+    nexusFileId: payload.fileId,
+    sourceFileName: details.fileName,
+    sourceVersion: details.version ?? intent.latestVersion,
+    skipVersionMismatchPrompt: true,
+  })
+
+  if (!result.ok || !result.data) {
+    state.addToast?.(result.error ?? `Could not update ${intent.targetModName}`, 'error')
+    return
+  }
+
+  if (result.data.status === 'installed' && result.data.mod) {
+    await state.scanMods?.({ refreshModUpdates: false })
+    const enableResult = await state.enableMod?.(result.data.mod.uuid)
+    if (enableResult && !enableResult.ok) {
+      state.addToast?.(`Updated but couldn't activate: ${enableResult.error}`, 'warning')
+    } else {
+      state.addToast?.(`${result.data.mod.name} updated & activated`, 'success')
+    }
+    state.setRecentLibraryBadge?.(result.data.mod.uuid, 'updated')
+    void state.checkModUpdates?.({ force: true, full: true })
+  }
+}
+
 export interface InstallPromptInfo {
   mode: 'duplicate' | 'reinstall'
   existingModId: string
@@ -206,6 +265,7 @@ export interface InstallPromptInfo {
 
 export interface DuplicateDownloadPromptInfo extends DuplicateNxmDownloadInfo {
   payload: NxmLinkPayload
+  options?: StartNxmDownloadOptions
 }
 
 export interface VersionMismatchPromptInfo {
@@ -237,6 +297,12 @@ export interface FomodPromptInfo {
   needsExtraction?: boolean
 }
 
+export interface StartNxmDownloadOptions {
+  allowDuplicate?: boolean
+  navigateToDownloads?: boolean
+  intent?: ActiveDownload['intent']
+}
+
 export interface DownloadsSlice {
   detecting: boolean
   installing: boolean
@@ -256,6 +322,7 @@ export interface DownloadsSlice {
   activeDownloads: ActiveDownload[]
   localFiles: DownloadEntry[]
   newFiles: string[]
+  pendingNxmUpdateIntents: Record<string, NonNullable<ActiveDownload['intent']>>
   downloadsLoadedPath: string
 
   installMod: (
@@ -276,7 +343,12 @@ export interface DownloadsSlice {
   clearFomodPrompt: () => void
   clearInstall: () => void
   refreshLocalFiles: () => Promise<void>
-  startNxmDownload: (payload: NxmLinkPayload, options?: { allowDuplicate?: boolean }) => Promise<void>
+  startNxmDownload: (payload: NxmLinkPayload, options?: StartNxmDownloadOptions) => Promise<void>
+  queueNxmUpdateIntent: (
+    modId: number,
+    fileId: number,
+    intent: NonNullable<ActiveDownload['intent']>
+  ) => void
   pauseDownload: (id: string) => Promise<void>
   resumeDownload: (id: string) => Promise<void>
   cancelDownload: (id: string) => Promise<void>
@@ -308,6 +380,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     catch { return [] }
   })(),
   downloadsLoadedPath: '',
+  pendingNxmUpdateIntents: {},
   activeDownloads: [],
   localFiles: [],
 
@@ -537,7 +610,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     if (!prompt) return
 
     set({ duplicateDownloadPrompt: null })
-    await get().startNxmDownload(prompt.payload, { allowDuplicate: true })
+    await get().startNxmDownload(prompt.payload, { ...prompt.options, allowDuplicate: true })
   },
 
   clearDuplicateDownloadPrompt: () =>
@@ -714,6 +787,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           },
         })
       } else if (data.status === 'installed' && data.mod) {
+        const badge = fomodRequest.duplicateAction === 'replace' ? 'updated' : 'installed'
         const filePath = fomodRequest.originalFilePath
         set((s) => {
           const nextNewFiles = removeNewFilePath(s.newFiles, filePath)
@@ -732,9 +806,14 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         if (enableResult && !enableResult.ok) {
           state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
         } else {
-          state.addToast?.(`${data.mod.name} installed & activated`, 'success')
+          state.addToast?.(
+            badge === 'updated'
+              ? `${data.mod.name} updated & activated`
+              : `${data.mod.name} installed & activated`,
+            'success'
+          )
         }
-        state.setRecentLibraryBadge?.(data.mod.uuid, 'installed')
+        state.setRecentLibraryBadge?.(data.mod.uuid, badge)
       } else if (!result.ok) {
         state.addToast?.(result.error ?? 'FOMOD install failed', 'error')
       }
@@ -793,7 +872,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       setActiveView?: (view: 'library' | 'downloads' | 'settings') => void
     }
 
-    uiState.setActiveView?.('downloads')
+    if (options.navigateToDownloads !== false) {
+      uiState.setActiveView?.('downloads')
+    }
 
     const previousStart = pendingDownloadStarts.get(key) ?? Promise.resolve()
     let currentStart: Promise<void>
@@ -815,10 +896,29 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         }
 
         if (result.data.status === 'duplicate' && result.data.duplicate) {
+          if (
+            options.intent?.kind === 'mod-update' &&
+            !result.data.duplicate.existingIsDownloading &&
+            result.data.duplicate.existingFilePath
+          ) {
+            await installCompletedModUpdate(
+              get,
+              result.data.duplicate.existingFilePath,
+              payload,
+              {
+                fileName: result.data.duplicate.existingFileName,
+                version: options.intent.latestVersion,
+                intent: options.intent,
+              }
+            )
+            return
+          }
+
           set({
             duplicateDownloadPrompt: {
               ...result.data.duplicate,
               payload,
+              options,
             },
           })
           return
@@ -846,6 +946,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
               status: 'downloading' as const,
               savedPath: result.data?.savedPath,
               version: result.data?.version,
+              intent: options.intent,
             },
           ],
         }))
@@ -858,6 +959,16 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
 
     pendingDownloadStarts.set(key, currentStart)
     await currentStart
+  },
+
+  queueNxmUpdateIntent: (modId, fileId, intent) => {
+    const key = `${modId}:${fileId}`
+    set((state) => ({
+      pendingNxmUpdateIntents: {
+        ...state.pendingNxmUpdateIntents,
+        [key]: intent,
+      },
+    }))
   },
 
   pauseDownload: async (id) => {
@@ -934,7 +1045,16 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         state.addToast?.('Could not read Nexus download link', 'warning', 3200)
         return
       }
-      get().startNxmDownload(payload).catch(() => undefined)
+      const key = `${payload.modId}:${payload.fileId}`
+      const intent = get().pendingNxmUpdateIntents[key]
+      if (intent) {
+        set((state) => {
+          const next = { ...state.pendingNxmUpdateIntents }
+          delete next[key]
+          return { pendingNxmUpdateIntents: next }
+        })
+      }
+      get().startNxmDownload(payload, intent ? { navigateToDownloads: false, intent } : undefined).catch(() => undefined)
     })
 
     const unsubProgress = IpcService.on(IPC.NXM_DOWNLOAD_PROGRESS, (...args) => {
@@ -957,15 +1077,55 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     })
 
     const unsubComplete = IpcService.on(IPC.NXM_DOWNLOAD_COMPLETE, (...args) => {
-      const { id, savedPath } = args[0] as { id: string; savedPath: string }
-      // Remove the active row immediately and refresh local files so the file
-      // appears with the NEW badge without a double-row overlap period.
+      const { id, savedPath, fileName, version } = args[0] as {
+        id: string
+        savedPath: string
+        fileName?: string
+        version?: string
+      }
+      const completedDownload = get().activeDownloads.find((download) => download.id === id)
+      // Swap the active row into a local row immediately so completion does not
+      // kick the whole Downloads view through a folder refresh.
       set((state) => {
-        const next = [...new Set([...state.newFiles, savedPath])]
-        persistNewFiles(next)
-        return { activeDownloads: state.activeDownloads.filter((d) => d.id !== id), newFiles: next }
+        const isInlineUpdate = completedDownload?.intent?.kind === 'mod-update'
+        const next = isInlineUpdate ? state.newFiles : [...new Set([...state.newFiles, savedPath])]
+        const entryName = fileName ?? completedDownload?.fileName ?? savedPath.replace(/\\/g, '/').split('/').pop() ?? savedPath
+        const completedEntry: DownloadEntry | null = !isInlineUpdate && completedDownload
+          ? {
+              path: savedPath,
+              name: entryName,
+              size: Math.max(completedDownload.totalBytes, completedDownload.downloadedBytes),
+              modifiedAt: new Date().toISOString(),
+              downloadedAt: new Date().toISOString(),
+              extension: getArchiveExtension(entryName),
+              nxmModId: completedDownload.nxmModId,
+              nxmFileId: completedDownload.nxmFileId,
+              version: version ?? completedDownload.version,
+            }
+          : null
+        if (!isInlineUpdate) {
+          persistNewFiles(next)
+        }
+        return {
+          activeDownloads: state.activeDownloads.filter((d) => d.id !== id),
+          localFiles: completedEntry ? upsertLocalDownloadEntry(state.localFiles, completedEntry) : state.localFiles,
+          newFiles: next,
+        }
       })
-      get().refreshLocalFiles().catch(() => undefined)
+      if (completedDownload?.intent?.kind === 'mod-update') {
+        void installCompletedModUpdate(get, savedPath, {
+          modId: completedDownload.nxmModId,
+          fileId: completedDownload.nxmFileId,
+          key: '',
+          expires: 0,
+          userId: 0,
+          raw: '',
+        }, {
+          fileName: fileName ?? completedDownload.fileName,
+          version: version ?? completedDownload.version ?? completedDownload.intent.latestVersion,
+          intent: completedDownload.intent,
+        })
+      }
     })
 
     const unsubError = IpcService.on(IPC.NXM_DOWNLOAD_ERROR, (...args) => {

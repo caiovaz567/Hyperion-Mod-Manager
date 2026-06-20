@@ -20,6 +20,7 @@ import { getInstallProgressAppearance } from './utils/installProgressAppearance'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
+const STARTUP_MOD_UPDATE_CHECK_GRACE_MS = 1500
 
 async function waitForFirstPaint(): Promise<void> {
   await new Promise<void>((resolve) => {
@@ -142,10 +143,20 @@ export const App: React.FC = () => {
       cleanup = releaseListeners
 
       updateBootStatus('Scanning mod library...')
-      await scanMods({ refreshConflicts: false })
+      await scanMods({ refreshConflicts: false, refreshModUpdates: false })
+
+      updateBootStatus('Checking Nexus mod updates...')
+      const startupModUpdateCheck = useAppStore.getState()
+        .checkModUpdates({ force: true, full: true })
+        .catch(() => undefined)
 
       updateBootStatus('Checking mod conflicts...')
       await useAppStore.getState().refreshConflicts({ immediate: true })
+
+      await Promise.race([
+        startupModUpdateCheck,
+        new Promise((resolve) => window.setTimeout(resolve, STARTUP_MOD_UPDATE_CHECK_GRACE_MS)),
+      ])
 
       const elapsed = Date.now() - bootStartedAt
       const remaining = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed)

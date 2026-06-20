@@ -99,12 +99,30 @@ export const ModRow: React.FC<ModRowProps> = ({
   onSeparatorDragLeave,
   onSeparatorDrop,
 }) => {
-  const { enableMod, disableMod, addToast, recentBadge, conflictHighlight } = useAppStore((state) => ({
+  const {
+    enableMod,
+    disableMod,
+    addToast,
+    recentBadge,
+    conflictHighlight,
+    modUpdate,
+    updateMod,
+    activeDownloads,
+    detecting,
+    installing,
+    installTargetModId,
+  } = useAppStore((state) => ({
     enableMod: state.enableMod,
     disableMod: state.disableMod,
     addToast: state.addToast,
     recentBadge: state.recentLibraryBadges[mod.uuid],
     conflictHighlight: state.conflictHighlight,
+    modUpdate: state.modUpdates[mod.uuid],
+    updateMod: state.updateMod,
+    activeDownloads: state.activeDownloads,
+    detecting: state.detecting,
+    installing: state.installing,
+    installTargetModId: state.installTargetModId,
   }), shallow)
 
   if (mod.kind === 'separator') {
@@ -237,6 +255,15 @@ export const ModRow: React.FC<ModRowProps> = ({
   const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
   const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0 }
   const hasConflictSummary = conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0
+  const hasModUpdate = modUpdate?.state === 'update-available'
+  const updatingThisMod =
+    activeDownloads.some((download) => download.intent?.kind === 'mod-update' && download.intent.targetModId === mod.uuid) ||
+    ((detecting || installing) && installTargetModId === mod.uuid)
+  const modUpdateTooltip = [
+    modUpdate?.currentVersion ? `Installed: ${modUpdate.currentVersion}` : null,
+    modUpdate?.latestVersion ? `Latest: ${modUpdate.latestVersion}` : null,
+    updatingThisMod ? 'Updating in the library.' : 'New version on Nexus. Click to update.',
+  ].filter(Boolean).join(' · ')
   const conflictTooltipContent = [
     conflictSummary.overwrites > 0 ? `Wins ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}` : null,
     conflictSummary.overwrittenBy > 0 ? `Loses ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}` : null,
@@ -485,8 +512,28 @@ export const ModRow: React.FC<ModRowProps> = ({
           )}
         </div>
 
-        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
-          {mod.version ?? '—'}
+        <div className="flex items-center gap-1.5 text-sm font-mono tracking-tight">
+          <span className={`truncate transition-colors ${hasModUpdate ? 'text-[#f87171]' : secondaryTextClass}`}>
+            {mod.version ?? '—'}
+          </span>
+          {hasModUpdate ? (
+            <Tooltip content={modUpdateTooltip} side="bottom" variant="help">
+              <button
+                type="button"
+                disabled={updatingThisMod}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (updatingThisMod) return
+                  void updateMod(mod.uuid)
+                }}
+                className="inline-flex shrink-0 items-center justify-center text-[#4fd8ff] transition-colors hover:text-[#c6f4ff] disabled:cursor-wait disabled:text-[#8fb8c4]"
+              >
+                <span className={`material-symbols-outlined text-[16px] ${updatingThisMod ? 'animate-spin' : ''}`}>
+                  {updatingThisMod ? 'progress_activity' : 'upgrade'}
+                </span>
+              </button>
+            </Tooltip>
+          ) : null}
         </div>
 
         <div className="flex items-center">

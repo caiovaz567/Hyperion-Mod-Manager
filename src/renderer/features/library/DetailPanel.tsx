@@ -702,7 +702,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   emptyMessage="No other mod is currently overwriting files from this mod."
                   mod={mod}
                   tone="loss"
-                  title={`Other Mods Win (-${conflictSubTab === 'files' ? lossFileConflicts.length : lossArchiveConflicts.length})`}
+                  title="Other Mods Win"
                   collapsed={lossConflictsCollapsed}
                   onToggleCollapsed={() => setLossConflictsCollapsed((current) => !current)}
                   className={lossConflictsCollapsed ? 'flex-none' : 'flex-1'}
@@ -715,7 +715,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   emptyMessage="This mod is not currently overwriting files from other mods."
                   mod={mod}
                   tone="win"
-                  title={`This Mod Wins (+${conflictSubTab === 'files' ? winFileConflicts.length : winArchiveConflicts.length})`}
+                  title="This Mod Wins"
                   collapsed={winConflictsCollapsed}
                   onToggleCollapsed={() => setWinConflictsCollapsed((current) => !current)}
                   className={winConflictsCollapsed ? 'flex-none' : 'flex-1'}

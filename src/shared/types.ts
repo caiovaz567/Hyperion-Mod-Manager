@@ -81,6 +81,13 @@ export interface ActiveDownload {
   error?: string
   savedPath?: string
   version?: string
+  intent?: {
+    kind: 'mod-update'
+    targetModId: string
+    targetModName: string
+    currentVersion?: string
+    latestVersion?: string
+  }
 }
 
 export interface NxmLinkPayload {
@@ -366,6 +373,42 @@ export interface Toast {
   duration?: number
 }
 
+// ─── Mod update check (Nexus) ──────────────────────────────────────────────────
+
+export type ModUpdateState = 'up-to-date' | 'update-available' | 'unknown'
+
+export interface ModUpdateCheckInput {
+  uuid: string
+  nexusModId: number
+  nexusFileId?: number
+  version?: string
+  installedAt?: string
+}
+
+export interface ModUpdateCheckRequest {
+  mods: ModUpdateCheckInput[]
+  force?: boolean
+  full?: boolean
+}
+
+export interface ModUpdateStatus {
+  uuid: string
+  nexusModId: number
+  state: ModUpdateState
+  currentVersion?: string
+  latestVersion?: string
+  latestFileId?: number
+  latestFileName?: string
+  updatedAt?: string
+  modPageUrl?: string
+}
+
+export interface ModUpdateCheckResult {
+  statuses: ModUpdateStatus[]
+  checkedAt: string
+  skippedReason?: 'no-api-key' | 'throttled'
+}
+
 // ─── IPC Channels ────────────────────────────────────────────────────────────
 
 export const IPC = {
@@ -427,6 +470,7 @@ export const IPC = {
   NXM_DOWNLOAD_PAUSE:    'nxm:downloadPause',
   NXM_DOWNLOAD_RESUME:   'nxm:downloadResume',
   NEXUS_VALIDATE_KEY:    'nexus:validateKey',
+  NEXUS_CHECK_MOD_UPDATES: 'nexus:checkModUpdates',
   NEXUS_API_LOG_LIST:    'nexus:apiLogList',
   NEXUS_API_LOG_CLEAR:   'nexus:apiLogClear',
   NEXUS_API_LOG_UPDATED: 'nexus:apiLogUpdated',

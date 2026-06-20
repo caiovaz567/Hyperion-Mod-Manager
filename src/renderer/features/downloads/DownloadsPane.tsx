@@ -711,6 +711,7 @@ export const DownloadsPane: React.FC = () => {
                           onContextMenu={handleDownloadRowContextMenu}
                           onInstall={handleInstall}
                           onDeleteRequest={(downloadEntry) => setPendingDeleteDownload(downloadEntry)}
+                          onMarkOld={(downloadEntry) => markFileAsOld(downloadEntry.path)}
                           onPauseDownload={pauseDownload}
                           onResumeDownload={resumeDownload}
                           onCancelDownload={cancelDownload}

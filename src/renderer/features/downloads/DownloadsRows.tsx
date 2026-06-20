@@ -62,6 +62,7 @@ interface DownloadsRowProps {
   onContextMenu: (event: React.MouseEvent, row: DownloadListRow) => void
   onInstall: (entry: DownloadEntry) => void | Promise<void>
   onDeleteRequest: (entry: DownloadEntry) => void
+  onMarkOld: (entry: DownloadEntry) => void
   onPauseDownload: (id: string) => void | Promise<void>
   onResumeDownload: (id: string) => void | Promise<void>
   onCancelDownload: (id: string) => void | Promise<void>
@@ -471,6 +472,7 @@ const LocalDownloadRow: React.FC<{
   onContextMenu: DownloadsRowProps['onContextMenu']
   onInstall: DownloadsRowProps['onInstall']
   onDeleteRequest: DownloadsRowProps['onDeleteRequest']
+  onMarkOld: DownloadsRowProps['onMarkOld']
 }> = ({
   row,
   entry,
@@ -482,6 +484,7 @@ const LocalDownloadRow: React.FC<{
   onContextMenu,
   onInstall,
   onDeleteRequest,
+  onMarkOld,
 }) => {
   const rowBg = rowIndex % 2 === 0
     ? 'bg-[#050505] hover:bg-[#141414]'
@@ -491,6 +494,9 @@ const LocalDownloadRow: React.FC<{
     <div
       data-download-row="true"
       onContextMenu={(event) => onContextMenu(event, row)}
+      onClick={() => {
+        if (isNew) onMarkOld(entry)
+      }}
       onDoubleClick={(event) => {
         event.stopPropagation()
         void onInstall(entry)
@@ -560,7 +566,10 @@ const LocalDownloadRow: React.FC<{
       <div className="flex items-center justify-end gap-2">
         <Tooltip content={installedMod ? 'Reinstall archive' : 'Install archive'}>
           <button
-            onClick={() => void onInstall(entry)}
+            onClick={(event) => {
+              event.stopPropagation()
+              void onInstall(entry)
+            }}
             disabled={isInstalling}
             className={`flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] transition-all disabled:opacity-50 ${
               installedMod
@@ -575,7 +584,10 @@ const LocalDownloadRow: React.FC<{
         </Tooltip>
         <Tooltip content="Delete download">
           <button
-            onClick={() => onDeleteRequest(entry)}
+            onClick={(event) => {
+              event.stopPropagation()
+              onDeleteRequest(entry)
+            }}
             className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
           >
             <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -602,6 +614,7 @@ export const DownloadsRow: React.FC<DownloadsRowProps> = ({
   onContextMenu,
   onInstall,
   onDeleteRequest,
+  onMarkOld,
   onPauseDownload,
   onResumeDownload,
   onCancelDownload,
@@ -657,6 +670,7 @@ export const DownloadsRow: React.FC<DownloadsRowProps> = ({
       onContextMenu={onContextMenu}
       onInstall={onInstall}
       onDeleteRequest={onDeleteRequest}
+      onMarkOld={onMarkOld}
     />
   )
 }

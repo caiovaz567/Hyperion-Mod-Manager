@@ -11,6 +11,8 @@ interface NavItem {
   action?: () => void
   active?: boolean
   disabled?: boolean
+  badge?: string
+  badgeTone?: 'active' | 'new'
 }
 
 function getAccountInitials(name?: string) {
@@ -24,18 +26,35 @@ function getAccountInitials(name?: string) {
 }
 
 export const Sidebar: React.FC = () => {
-  const { activeView, setActiveView, addToast, settings, gamePathValid } = useAppStore((state) => ({
+  const { activeView, setActiveView, addToast, settings, gamePathValid, activeDownloads, newFiles } = useAppStore((state) => ({
     activeView: state.activeView,
     setActiveView: state.setActiveView,
     addToast: state.addToast,
     settings: state.settings,
     gamePathValid: state.gamePathValid,
+    activeDownloads: state.activeDownloads,
+    newFiles: state.newFiles,
   }), shallow)
   const nexusAccount = useNexusAccount(settings?.nexusApiKey, 250)
+  const activeDownloadCount = activeDownloads.filter((download) =>
+    download.status === 'downloading' || download.status === 'paused' || download.status === 'queued'
+  ).length
+  const downloadsBadge = activeDownloadCount > 0
+    ? String(activeDownloadCount)
+    : newFiles.length > 0
+      ? 'NEW'
+      : undefined
 
   const navItems: NavItem[] = [
     { icon: 'inventory_2', label: 'Mod Library', action: () => setActiveView('library'), active: activeView === 'library' },
-    { icon: 'download',    label: 'Downloads', action: () => setActiveView('downloads'), active: activeView === 'downloads' },
+    {
+      icon: 'download',
+      label: 'Downloads',
+      action: () => setActiveView('downloads'),
+      active: activeView === 'downloads',
+      badge: downloadsBadge,
+      badgeTone: activeDownloadCount > 0 ? 'active' : 'new',
+    },
   ]
 
   const settingsItem: NavItem = {
@@ -142,6 +161,17 @@ export const Sidebar: React.FC = () => {
             <span className={`material-symbols-outlined flex h-6 w-6 shrink-0 items-center justify-center ${item.active ? 'drop-shadow-[0_0_4px_rgba(252,238,9,0.3)]' : ''}`}>
               {item.icon}
             </span>
+            {item.badge ? (
+              <span
+                className={`absolute left-[38px] top-[7px] inline-flex min-w-[20px] items-center justify-center rounded-sm border-[0.5px] px-1 py-[1px] text-[8px] font-bold leading-none tracking-[0.08em] transition-opacity duration-150 ${
+                  item.badgeTone === 'active'
+                    ? 'border-[#fcee09]/45 bg-[#171400] text-[#fcee09] shadow-[0_0_10px_rgba(252,238,9,0.16)]'
+                    : 'border-[#4fd8ff]/35 bg-[#061117] text-[#9feaff]'
+                }`}
+              >
+                {item.badge}
+              </span>
+            ) : null}
             <span className={labelClass(item.active, item.disabled)}>
               {item.label}
             </span>

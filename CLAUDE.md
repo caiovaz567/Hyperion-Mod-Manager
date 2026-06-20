@@ -46,6 +46,15 @@
 - `hashes.csv.gz` is ~29 MB compressed and bundled in the installer resources; it is static per game version and does not contain CDPR game assets — only FNV1a hashes of internal resource paths.
 - The base game release archives do NOT contain LXRS path tables — `resolve-lxrs.ps1` only works on **mod archives** created with WolvenKit (which injects LXRS sections when packing). The bundled `hashes.csv.gz` was sourced from WolvenKit's community hash database and covers ~1.7 million entries including full EP1/Phantom Liberty coverage. Missing hashes degrade gracefully — conflicts are still detected, only the display name shows as `Unresolved`.
 
+## Nexus Downloads And Mod Updates
+- Nexus download/update IPC lives in `src/main/ipc/nexusDownloader.ts`; renderer orchestration lives mostly in `createDownloadsSlice.ts` and `createLibrarySlice.ts`.
+- Startup and manual `Check Updates` must use a full per-mod Nexus file pass (`full: true`) so every installed Nexus mod gets a reliable status and older available updates are not missed. Startup begins this check during the splash screen but only waits briefly before opening the Library; slow Nexus responses continue non-blocking. Later automatic library refreshes may keep the cheaper `updated.json?period=1m` path.
+- Update detection should prefer Nexus file id + upload timestamp, then fall back to numeric version comparison when metadata is incomplete or ambiguous. Example: ArchiveXL `1.26.2` should detect Nexus `1.26.8`.
+- Large Nexus `files.json` responses are allowed internally for full manual checks, but request logs should summarize them (count + small sample) instead of storing/rendering the full payload.
+- Library-initiated mod updates should stay on the Library view, download through the existing NXM pipeline, replace the source mod automatically, and re-enable it after install. Do not navigate to Downloads for this flow.
+- Normal Nexus downloads still belong in Downloads and use `NEW` markers. Clicking the archive row acknowledges `NEW`; install/reinstall also clears it. Inline mod updates should not leave a persistent `NEW` marker.
+- Free Nexus accounts cannot mint direct download links from the API. For updates, open the Nexus files page and queue the update intent so the next matching `nxm://` link installs inline.
+
 ## Core Commands
 - Dev: npm run dev
 - Build app bundles: npm run build

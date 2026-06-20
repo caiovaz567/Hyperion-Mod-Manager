@@ -14,6 +14,9 @@ interface LibraryToolbarProps {
   onCreateSeparator: () => void
   onDeleteAll: () => void
   onInstallMod: () => void
+  onCheckUpdates: () => void
+  checkingUpdates: boolean
+  updateCount: number
 }
 
 const statusFilterOptions: LibraryStatusFilter[] = ['all', 'enabled', 'disabled']
@@ -35,6 +38,9 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   onCreateSeparator,
   onDeleteAll,
   onInstallMod,
+  onCheckUpdates,
+  checkingUpdates,
+  updateCount,
 }) => {
   const [statusFilterOpen, setStatusFilterOpen] = useState(false)
   const statusFilterRef = useRef<HTMLDivElement>(null)
@@ -137,6 +143,19 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           <HyperionButton onClick={onCreateSeparator} variant="toolbar" className="px-5">
             Add Separator
           </HyperionButton>
+
+          <Tooltip content="Check installed Nexus mods for newer versions" side="bottom" variant="help">
+            <HyperionButton
+              onClick={onCheckUpdates}
+              variant="cyan"
+              icon={checkingUpdates ? 'progress_activity' : 'sync'}
+              iconClassName={checkingUpdates ? 'animate-spin' : undefined}
+              disabled={checkingUpdates}
+              className="px-5"
+            >
+              {checkingUpdates ? 'Checking…' : updateCount > 0 ? `Updates (${updateCount})` : 'Check Updates'}
+            </HyperionButton>
+          </Tooltip>
         </div>
 
         <div className="ml-auto flex items-center gap-2">

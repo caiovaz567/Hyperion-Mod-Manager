@@ -12,6 +12,10 @@ import type {
   NxmDownloadStartResponse,
   NxmLinkPayload,
   NexusValidateResult,
+  ModUpdateCheckRequest,
+  ModUpdateCheckResult,
+  ModUpdateStatus,
+  ModUpdateState,
 } from '../../shared/types'
 import { parseNxmUrl } from '../../shared/nxm'
 import { pushGeneralLog, pushRequestLog, safeSendToWindow } from '../logStore'
@@ -122,6 +126,46 @@ function sanitizePayload(payload: Record<string, unknown> | undefined): Record<s
   return Object.fromEntries(sanitizedEntries)
 }
 
+function summarizeNexusFileEntryForLog(file: NexusFileEntry): Record<string, unknown> {
+  return {
+    file_id: file.file_id,
+    name: file.name,
+    version: file.version ?? file.mod_version,
+    category_name: file.category_name,
+    is_primary: file.is_primary,
+    uploaded_timestamp: file.uploaded_timestamp,
+  }
+}
+
+function summarizeNexusResponseForLog(endpoint: string, data: unknown): unknown {
+  if (
+    endpoint.includes('/files.json') &&
+    data &&
+    typeof data === 'object' &&
+    Array.isArray((data as NexusFilesResponse).files)
+  ) {
+    const files = (data as NexusFilesResponse).files ?? []
+    return {
+      files: {
+        count: files.length,
+        sample: files.slice(0, 8).map(summarizeNexusFileEntryForLog),
+        omitted: Math.max(0, files.length - 8),
+      },
+    }
+  }
+
+  if (endpoint.includes('/updated.json') && Array.isArray(data)) {
+    const entries = data as NexusUpdatedMod[]
+    return {
+      count: entries.length,
+      sample: entries.slice(0, 12),
+      omitted: Math.max(0, entries.length - 12),
+    }
+  }
+
+  return data
+}
+
 // ─── Nexus API Client ─────────────────────────────────────────────────────────
 
 async function nexusGet<T>(
@@ -183,7 +227,7 @@ async function nexusGet<T>(
         url: loggedUrl,
         requestContext,
         requestBody: null,
-        responseBody: data,
+        responseBody: summarizeNexusResponseForLog(endpoint, data),
         status: 'success',
         statusCode: response.status,
         durationMs,
@@ -293,6 +337,29 @@ function normalizeVersionString(value?: string): string | undefined {
   const trimmed = value.trim()
   if (!trimmed) return undefined
   return trimmed.replace(/^v/i, '')
+}
+
+function getVersionNumberParts(value?: string): number[] | null {
+  const normalized = normalizeVersionString(value)
+  if (!normalized) return null
+  const matches = normalized.match(/\d+/g)
+  if (!matches?.length) return null
+  return matches.map((part) => Number.parseInt(part, 10))
+}
+
+function compareNumericVersions(left?: string, right?: string): number | null {
+  const leftParts = getVersionNumberParts(left)
+  const rightParts = getVersionNumberParts(right)
+  if (!leftParts || !rightParts) return null
+  const length = Math.max(leftParts.length, rightParts.length)
+
+  for (let index = 0; index < length; index += 1) {
+    const leftPart = leftParts[index] ?? 0
+    const rightPart = rightParts[index] ?? 0
+    if (leftPart !== rightPart) return leftPart > rightPart ? 1 : -1
+  }
+
+  return 0
 }
 
 function normalizeRequestedAt(value?: string): string {
@@ -642,9 +709,213 @@ function beginDownload(
   })()
 }
 
+// ─── Mod update check ──────────────────────────────────────────────────────────
+
+interface NexusUpdatedMod {
+  mod_id: number
+  latest_file_update: number
+  latest_mod_activity: number
+}
+
+interface NexusFileEntry {
+  file_id: number
+  name?: string
+  version?: string
+  mod_version?: string
+  category_name?: string | null
+  is_primary?: boolean
+  uploaded_timestamp?: number
+}
+
+interface NexusFilesResponse {
+  files?: NexusFileEntry[]
+}
+
+const MOD_UPDATE_CHECK_THROTTLE_MS = 5 * 60 * 1000
+const MOD_UPDATE_DEEP_CHECK_CONCURRENCY = 4
+let lastModUpdateCheckAt = 0
+let lastModUpdateStatuses: ModUpdateStatus[] = []
+
+function nexusModPageUrl(modId: number): string {
+  return `https://www.nexusmods.com/${GAME_DOMAIN}/mods/${modId}`
+}
+
+// MAIN files are the canonical release; never treat OLD_VERSION/ARCHIVED as "latest".
+function pickLatestPrimaryFile(files: NexusFileEntry[]): NexusFileEntry | null {
+  const usable = files.filter((file) => {
+    const category = (file.category_name || '').toUpperCase()
+    return category !== 'OLD_VERSION' && category !== 'ARCHIVED'
+  })
+  const pool = usable.length ? usable : files
+  if (!pool.length) return null
+  const main = pool.filter((file) => (file.category_name || '').toUpperCase() === 'MAIN')
+  const candidates = main.length ? main : pool
+  return candidates.reduce((best, file) =>
+    (file.uploaded_timestamp ?? 0) > (best.uploaded_timestamp ?? 0) ? file : best,
+  )
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let nextIndex = 0
+  const workerCount = Math.min(Math.max(1, concurrency), items.length)
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex
+      nextIndex += 1
+      results[currentIndex] = await mapper(items[currentIndex])
+    }
+  }))
+
+  return results
+}
+
+export async function checkModUpdates(
+  request: ModUpdateCheckRequest,
+  mainWindow: BrowserWindow | null,
+): Promise<IpcResult<ModUpdateCheckResult>> {
+  const checkedAt = new Date().toISOString()
+  const settings = loadSettings()
+  const apiKey = settings.nexusApiKey
+  const mods = (request.mods || []).filter(
+    (mod) => typeof mod.nexusModId === 'number' && mod.nexusModId > 0,
+  )
+
+  if (!apiKey) {
+    return { ok: true, data: { statuses: [], checkedAt, skippedReason: 'no-api-key' } }
+  }
+  if (mods.length === 0) {
+    return { ok: true, data: { statuses: [], checkedAt } }
+  }
+  if (
+    !request.force &&
+    !request.full &&
+    lastModUpdateStatuses.length > 0 &&
+    Date.now() - lastModUpdateCheckAt < MOD_UPDATE_CHECK_THROTTLE_MS
+  ) {
+    return { ok: true, data: { statuses: lastModUpdateStatuses, checkedAt, skippedReason: 'throttled' } }
+  }
+
+  const createUpToDateStatus = (mod: ModUpdateCheckRequest['mods'][number]): ModUpdateStatus => ({
+    uuid: mod.uuid,
+    nexusModId: mod.nexusModId,
+    state: 'up-to-date',
+    currentVersion: mod.version,
+    modPageUrl: nexusModPageUrl(mod.nexusModId),
+  })
+
+  const deepCheckMod = async (mod: ModUpdateCheckRequest['mods'][number]): Promise<ModUpdateStatus> => {
+    const filesResult = await nexusGet<NexusFilesResponse>(
+      `/games/${GAME_DOMAIN}/mods/${mod.nexusModId}/files.json`,
+      apiKey,
+      mainWindow,
+      { modId: mod.nexusModId },
+    )
+    if (!filesResult.ok || !filesResult.data?.files) {
+      return {
+        uuid: mod.uuid,
+        nexusModId: mod.nexusModId,
+        state: 'unknown',
+        currentVersion: mod.version,
+        modPageUrl: nexusModPageUrl(mod.nexusModId),
+      }
+    }
+
+    const files = filesResult.data.files
+    const latest = pickLatestPrimaryFile(files)
+    const installedFile = mod.nexusFileId
+      ? files.find((file) => file.file_id === mod.nexusFileId)
+      : undefined
+    const latestVersion = latest?.version || latest?.mod_version
+    const currentVersion = installedFile?.version || installedFile?.mod_version || mod.version
+    const updatedAtIso = latest?.uploaded_timestamp
+      ? new Date(latest.uploaded_timestamp * 1000).toISOString()
+      : undefined
+
+    let state: ModUpdateState
+    if (!latest) {
+      state = 'unknown'
+    } else {
+      const latestDiffersFromInstalledFile = mod.nexusFileId
+        ? latest.file_id !== mod.nexusFileId
+        : true
+      const timestampShowsNewer = Boolean(
+        latestDiffersFromInstalledFile &&
+        installedFile?.uploaded_timestamp &&
+        (latest.uploaded_timestamp ?? 0) > installedFile.uploaded_timestamp,
+      )
+      const versionCompare = compareNumericVersions(latestVersion, currentVersion)
+      const versionShowsNewer = versionCompare != null && versionCompare > 0
+
+      if (mod.nexusFileId && latest.file_id === mod.nexusFileId) {
+        state = 'up-to-date'
+      } else if (timestampShowsNewer || versionShowsNewer) {
+        state = 'update-available'
+      } else if (!mod.nexusFileId || !installedFile) {
+        state = 'unknown'
+      } else {
+        state = 'up-to-date'
+      }
+    }
+
+    return {
+      uuid: mod.uuid,
+      nexusModId: mod.nexusModId,
+      state,
+      currentVersion,
+      latestVersion,
+      latestFileId: state === 'update-available' ? latest?.file_id : undefined,
+      latestFileName: state === 'update-available' ? latest?.name : undefined,
+      updatedAt: updatedAtIso,
+      modPageUrl: nexusModPageUrl(mod.nexusModId),
+    }
+  }
+
+  let statuses: ModUpdateStatus[]
+  if (request.full) {
+    statuses = await mapWithConcurrency(mods, MOD_UPDATE_DEEP_CHECK_CONCURRENCY, deepCheckMod)
+  } else {
+    // One bulk call lists every mod updated in the last month, so background checks
+    // only deep-check the handful that actually changed. Manual checks pass
+    // request.full to inspect every Nexus-sourced mod.
+    const updated = await nexusGet<NexusUpdatedMod[]>(
+      `/games/${GAME_DOMAIN}/mods/updated.json?period=1m`,
+      apiKey,
+      mainWindow,
+      { period: '1m' },
+    )
+    if (!updated.ok || !Array.isArray(updated.data)) {
+      return { ok: false, error: updated.error || 'Failed to fetch Nexus mod updates' }
+    }
+    const recentlyUpdated = new Set<number>()
+    for (const entry of updated.data) {
+      recentlyUpdated.add(entry.mod_id)
+    }
+
+    statuses = await mapWithConcurrency(mods, MOD_UPDATE_DEEP_CHECK_CONCURRENCY, async (mod) => (
+      recentlyUpdated.has(mod.nexusModId)
+        ? deepCheckMod(mod)
+        : createUpToDateStatus(mod)
+    ))
+  }
+
+  lastModUpdateCheckAt = Date.now()
+  lastModUpdateStatuses = statuses
+  return { ok: true, data: { statuses, checkedAt } }
+}
+
 export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.NEXUS_VALIDATE_KEY, async (_event, apiKey: string) => {
     return validateNexusApiKey(apiKey, getMainWindow())
+  })
+
+  ipcMain.handle(IPC.NEXUS_CHECK_MOD_UPDATES, async (_event, request: ModUpdateCheckRequest) => {
+    return checkModUpdates(request, getMainWindow())
   })
 
   ipcMain.handle(IPC.NXM_DOWNLOAD_START, async (_event, request: NxmDownloadStartRequest) => {
