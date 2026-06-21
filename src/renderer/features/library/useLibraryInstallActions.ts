@@ -11,6 +11,7 @@ interface UseLibraryInstallActionsOptions {
   settings?: AppSettings | null
   gamePathValid: boolean
   libraryPathValid: boolean
+  gameRunning: boolean
   installMod: (filePath: string) => Promise<IpcResult<InstallModResponse>>
   enableMod: (id: string) => Promise<IpcResult>
   scanMods: () => Promise<ModMetadata[]>
@@ -22,6 +23,7 @@ export function useLibraryInstallActions({
   settings,
   gamePathValid,
   libraryPathValid,
+  gameRunning,
   installMod,
   enableMod,
   scanMods,
@@ -57,6 +59,10 @@ export function useLibraryInstallActions({
   }, [addToast, enableMod, scanMods])
 
   const handleInstallFile = useCallback(async (filePath: string) => {
+    if (gameRunning) {
+      addToast('Close Cyberpunk 2077 before installing mods', 'warning')
+      return
+    }
     if (!hasRequiredPaths) {
       addToast('Set Game Path and Mod Library before installing mods', 'warning')
       setActiveView('settings')
@@ -75,6 +81,10 @@ export function useLibraryInstallActions({
   }, [addToast, finalizeInstalledMod, hasRequiredPaths, installMod, setActiveView])
 
   const handleInstallClick = useCallback(async () => {
+    if (gameRunning) {
+      addToast('Close Cyberpunk 2077 before installing mods', 'warning')
+      return
+    }
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(
       IPC.OPEN_FILE_DIALOG,
       {
@@ -86,7 +96,7 @@ export function useLibraryInstallActions({
 
     if (result.canceled || !result.filePaths.length) return
     await handleInstallFile(result.filePaths[0])
-  }, [handleInstallFile])
+  }, [addToast, gameRunning, handleInstallFile])
 
   return {
     handleInstallFile,
