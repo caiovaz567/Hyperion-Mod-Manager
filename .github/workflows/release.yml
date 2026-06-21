@@ -60,11 +60,6 @@ jobs:
           git push origin $tag
 
       - name: Build installer
-        if: steps.tag_check.outputs.exists == 'true'
-        run: npm run dist
-
-      - name: Build installer for new tag
-        if: steps.tag_check.outputs.exists == 'false'
         run: npm run dist
 
       - name: Publish GitHub release assets
