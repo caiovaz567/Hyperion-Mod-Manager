@@ -59,6 +59,24 @@ jobs:
           git tag $tag
           git push origin $tag
 
+      - name: Extract changelog for this version
+        id: changelog
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $content = Get-Content CHANGELOG.md -Raw -Encoding utf8
+          $pattern = "(?s)## \[$([regex]::Escape($version))\].*?(?=\n---|\n## \[|$)"
+          $match = [regex]::Match($content, $pattern)
+          if ($match.Success) {
+            $notes = $match.Value.Trim()
+          } else {
+            $notes = "See CHANGELOG.md for details."
+          }
+          $delimiter = "CHANGELOG_EOF"
+          "notes<<$delimiter" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          $notes | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Build installer
         run: npm run dist
 
@@ -67,7 +85,7 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.notes }}
           fail_on_unmatched_files: true
           files: |
             dist/Hyperion-${{ steps.version.outputs.version }}.exe
