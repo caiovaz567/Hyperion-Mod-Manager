@@ -99,10 +99,19 @@ Sidebar behavior:
 - Launch Game is icon-only while collapsed and reveals text on sidebar hover
 - Launch Game motion must remain stable: no backward jitter before moving forward
 
+Launch Game states:
+- **Ready**: primary yellow button (`bg-[#fcee09] text-[#050505]`), `play_arrow` icon, label `LAUNCH GAME`
+- **Disabled** (path not set): muted dark button, `cursor-not-allowed`
+- **In Game**: secondary success-tinted button (`bg-[#0c1410] border-[0.5px] border-[#34D399]/30 text-[#34D399]`), `sports_esports` icon, label `IN GAME`, `cursor-default` (not clickable)
+- When In Game, a second **Close Game** destructive button appears below, same `py-3` height, `power_settings_new` icon, label `CLOSE GAME`, uses error-red tone (`text-[#f87272]`, dark bg, `/20` → `/40` border on hover)
+- Game running state is polled every 5 seconds via `IPC.GAME_RUNNING` (`tasklist`); `IPC.KILL_GAME` (`taskkill /F`) handles force close
+- Mod installation is blocked while the game is running (toast: `Close Cyberpunk 2077 before installing mods`)
+
 Alignment rules:
 - Nav icons, Settings icon, and Launch Game icon must share a consistent visual axis
 - Launch Game must remain centered while collapsed
 - Expanded content should reveal to the right of the icon without shifting the icon backward first
+- Both Launch Game and Close Game buttons must share identical height (`py-3`) so they read as a consistent pair
 
 ## 4. Screen Design
 

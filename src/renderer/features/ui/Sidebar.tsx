@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
@@ -26,7 +26,7 @@ function getAccountInitials(name?: string) {
 }
 
 export const Sidebar: React.FC = () => {
-  const { activeView, setActiveView, addToast, settings, gamePathValid, activeDownloads, newFiles } = useAppStore((state) => ({
+  const { activeView, setActiveView, addToast, settings, gamePathValid, activeDownloads, newFiles, gameRunning, checkGameRunning, killGame } = useAppStore((state) => ({
     activeView: state.activeView,
     setActiveView: state.setActiveView,
     addToast: state.addToast,
@@ -34,8 +34,23 @@ export const Sidebar: React.FC = () => {
     gamePathValid: state.gamePathValid,
     activeDownloads: state.activeDownloads,
     newFiles: state.newFiles,
+    gameRunning: state.gameRunning,
+    checkGameRunning: state.checkGameRunning,
+    killGame: state.killGame,
   }), shallow)
   const nexusAccount = useNexusAccount(settings?.nexusApiKey, 250)
+
+  useEffect(() => {
+    checkGameRunning()
+    const id = setInterval(checkGameRunning, 5000)
+    return () => clearInterval(id)
+  }, [checkGameRunning])
+
+  const handleKillGame = async () => {
+    const ok = await killGame()
+    if (!ok) addToast('Could not close game', 'error')
+  }
+
   const activeDownloadCount = activeDownloads.filter((download) =>
     download.status === 'downloading' || download.status === 'paused' || download.status === 'queued'
   ).length
@@ -86,6 +101,8 @@ export const Sidebar: React.FC = () => {
       addToast(result.error ?? 'Could not launch game', 'error')
     }
   }
+
+  const isLaunchDisabled = !settings?.gamePath || !gamePathValid
 
   const subscriptionToneClass =
     nexusAccount.status === 'connected'
@@ -191,25 +208,44 @@ export const Sidebar: React.FC = () => {
           </span>
         </button>
       </div>
-      <div className="px-4 mt-4 w-full">
+      <div className="px-4 mt-4 w-full flex flex-col gap-2">
         <button
-          onClick={handleLaunchGame}
-          disabled={!settings?.gamePath || !gamePathValid}
-          className={`w-full overflow-hidden rounded-sm px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 ${
-            !settings?.gamePath || !gamePathValid
-              ? 'bg-[#262626] text-[#8a8a8a] cursor-not-allowed'
-              : 'bg-[#fcee09] text-[#050505] hover:bg-white shadow-[0_0_20px_rgba(252,238,9,0.15)]'
+          onClick={gameRunning ? undefined : handleLaunchGame}
+          disabled={isLaunchDisabled && !gameRunning}
+          className={`w-full overflow-hidden rounded-sm px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap transition-[background-color,color,border-color,box-shadow] duration-150 ${
+            gameRunning
+              ? 'bg-[#0c1410] border-[0.5px] border-[#34D399]/30 text-[#34D399] cursor-default'
+              : isLaunchDisabled
+                ? 'bg-[#262626] text-[#8a8a8a] cursor-not-allowed'
+                : 'bg-[#fcee09] text-[#050505] hover:bg-white shadow-[0_0_20px_rgba(252,238,9,0.15)]'
           }`}
         >
           <span className="flex items-center justify-center">
-            <span className="material-symbols-outlined shrink-0 text-[18px]">play_arrow</span>
+            <span className="material-symbols-outlined shrink-0 text-[18px]">
+              {gameRunning ? 'sports_esports' : 'play_arrow'}
+            </span>
             <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
               <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
-                LAUNCH GAME
+                {gameRunning ? 'IN GAME' : 'LAUNCH GAME'}
               </span>
             </span>
           </span>
         </button>
+        {gameRunning && (
+          <button
+            onClick={handleKillGame}
+            className="w-full overflow-hidden rounded-sm px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap border-[0.5px] border-[#f87272]/20 bg-[#0d0808] text-[#f87272] hover:bg-[#150a0a] hover:border-[#f87272]/40 transition-[background-color,border-color] duration-150"
+          >
+            <span className="flex items-center justify-center">
+              <span className="material-symbols-outlined shrink-0 text-[18px]">power_settings_new</span>
+              <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
+                <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
+                  CLOSE GAME
+                </span>
+              </span>
+            </span>
+          </button>
+        )}
       </div>
     </nav>
   )

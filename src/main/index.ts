@@ -8,6 +8,7 @@ import {
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { spawn, exec } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings } from './settings'
 import { createSplashWindow } from './splash'
 import { initializeUpdates } from './updater'
@@ -506,18 +507,49 @@ function registerGlobalHandlers(): void {
   ipcMain.handle(IPC.LAUNCH_GAME, async () => {
     const settings = loadSettings()
     if (!settings.gamePath) return { ok: false, error: 'Game path not configured' }
+
     const launchTarget = resolveGameExecutable(settings.gamePath)
-    const errMsg = await shell.openPath(launchTarget)
-    if (errMsg) {
+
+    if (!fs.existsSync(launchTarget)) {
+      return { ok: false, error: `Executable not found: ${launchTarget}` }
+    }
+
+    try {
+      // Spawn detached so the process outlives Hyperion and Steam can detect it.
+      const child = spawn(launchTarget, [], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: path.dirname(launchTarget),
+      })
+      child.unref()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
       pushGeneralLog(mainWindow, {
         level: 'error',
         source: 'launcher',
         message: 'Game launch failed',
-        details: { launchTarget, error: errMsg },
+        details: { launchTarget, error: message },
       })
-      return { ok: false, error: errMsg }
+      return { ok: false, error: message }
     }
+
     return { ok: true }
+  })
+
+  ipcMain.handle(IPC.GAME_RUNNING, (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      exec('tasklist /FI "IMAGENAME eq Cyberpunk2077.exe" /NH /FO CSV', (err, stdout) => {
+        resolve(!err && stdout.includes('"Cyberpunk2077.exe"'))
+      })
+    })
+  })
+
+  ipcMain.handle(IPC.KILL_GAME, (): Promise<{ ok: boolean }> => {
+    return new Promise((resolve) => {
+      exec('taskkill /F /IM Cyberpunk2077.exe /T', (err) => {
+        resolve({ ok: !err })
+      })
+    })
   })
 
   // Read a local image file and return it as a base64 data URL so the renderer

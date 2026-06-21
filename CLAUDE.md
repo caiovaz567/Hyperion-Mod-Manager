@@ -6,7 +6,7 @@
 - Keep the app feeling sharp, restrained, and production-oriented. Avoid novelty UI that fights readability.
 
 ## Source Of Truth
-- Use DESIGN.md as the canonical visual and interaction reference before changing UI.
+@DESIGN.md
 - If the code and DESIGN.md disagree, update the code and then update DESIGN.md in the same task.
 - For larger visual explorations, use Google Stitch first to prototype screen direction, then implement the chosen direction in code.
 
@@ -100,6 +100,9 @@
 - For release/version changes, verify package.json and produced artifact naming stay aligned.
 
 ## Suggested Reading For Future AI Sessions
-- Read DESIGN.md before touching renderer UI.
 - Read package.json before changing release behavior.
 - Read src/main/updater.ts and .github/workflows/release.yml before changing auto-update logic.
+
+## Changelog
+- Update the `[Unreleased]` section in CHANGELOG.md for every meaningful change before pushing.
+- When cutting a release, move `[Unreleased]` entries under the new version heading and add the date.

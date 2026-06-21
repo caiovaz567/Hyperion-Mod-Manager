@@ -9,6 +9,7 @@ export interface SettingsSlice {
   defaultPaths: PathDefaults | null
   gamePathValid: boolean
   libraryPathValid: boolean
+  gameRunning: boolean
   loadSettings: () => Promise<AppSettings>
   loadDefaultPaths: () => Promise<PathDefaults>
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>
@@ -17,6 +18,8 @@ export interface SettingsSlice {
   checkLibraryPath: (libraryPath?: string) => Promise<boolean>
   validateGamePath: (gamePath?: string) => Promise<boolean>
   validateLibraryPath: (libraryPath?: string) => Promise<boolean>
+  checkGameRunning: () => Promise<boolean>
+  killGame: () => Promise<boolean>
 }
 
 export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSlice> = (
@@ -27,6 +30,7 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
   defaultPaths: null,
   gamePathValid: false,
   libraryPathValid: false,
+  gameRunning: false,
 
   loadSettings: async () => {
     const data = await IpcService.invoke<AppSettings>(IPC.GET_SETTINGS)
@@ -88,5 +92,17 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
     const isValid = Boolean(result.ok && result.data)
     set({ libraryPathValid: isValid })
     return isValid
+  },
+
+  checkGameRunning: async () => {
+    const running = await IpcService.invoke<boolean>(IPC.GAME_RUNNING)
+    set({ gameRunning: running })
+    return running
+  },
+
+  killGame: async () => {
+    const result = await IpcService.invoke<{ ok: boolean }>(IPC.KILL_GAME)
+    if (result.ok) set({ gameRunning: false })
+    return result.ok
   },
 })

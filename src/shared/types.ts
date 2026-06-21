@@ -450,6 +450,8 @@ export const IPC = {
   VALIDATE_GAME_PATH: 'game:validatePath',
   VALIDATE_LIBRARY_PATH: 'library:validatePath',
   LAUNCH_GAME: 'game:launch',
+  GAME_RUNNING: 'game:running',
+  KILL_GAME: 'game:kill',
 
   // Updates
   CHECK_UPDATE: 'update:check',
