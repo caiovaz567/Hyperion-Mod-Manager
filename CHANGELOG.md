@@ -10,6 +10,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.18.0] - 2026-06-22
+
+### Added
+- Version mismatch prompt now offers an **Add to Library** option in every case, installing the selected archive as a separate copy so both versions can coexist
+- Close (X) button on the version mismatch dialog for a clean dismissal without changing anything
+
+### Changed
+- Steam launch now spawns the exe directly while injecting `SteamAppId`/`SteamGameId` env vars and writing `steam_appid.txt` next to the executable, so Steam tracks the session (overlay, playtime, achievements) like Vortex does
+- Launch Game button shows a **LAUNCHING...** spinner state until the game process is detected
+- Version mismatch dialog redesigned to be more compact and intuitive: a single `installed → selected` version row, uniform options across upgrade/downgrade, and the recommended action as the dominant card with the secondary action in the footer
+
+### Fixed
+- Mod update detection is now scoped to the installed file's own Nexus `file_updates` lineage (with same-name fallback), so an installed OPTIONAL file is no longer falsely flagged as updatable to an unrelated MAIN file on the same mod page
+- Conflict warning icon no longer appears on disabled mods, since a disabled mod deploys nothing and cannot participate in conflicts
+
+---
+
 ## [0.17.0] - 2026-06-20
 
 ### Added

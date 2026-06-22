@@ -145,11 +145,17 @@ function summarizeNexusResponseForLog(endpoint: string, data: unknown): unknown 
     Array.isArray((data as NexusFilesResponse).files)
   ) {
     const files = (data as NexusFilesResponse).files ?? []
+    const fileUpdates = (data as NexusFilesResponse).file_updates ?? []
     return {
       files: {
         count: files.length,
         sample: files.slice(0, 8).map(summarizeNexusFileEntryForLog),
         omitted: Math.max(0, files.length - 8),
+      },
+      file_updates: {
+        count: fileUpdates.length,
+        sample: fileUpdates.slice(0, 8),
+        omitted: Math.max(0, fileUpdates.length - 8),
       },
     }
   }
@@ -727,8 +733,17 @@ interface NexusFileEntry {
   uploaded_timestamp?: number
 }
 
+interface NexusFileUpdate {
+  old_file_id: number
+  new_file_id: number
+  old_file_name?: string
+  new_file_name?: string
+  uploaded_timestamp?: number
+}
+
 interface NexusFilesResponse {
   files?: NexusFileEntry[]
+  file_updates?: NexusFileUpdate[]
 }
 
 const MOD_UPDATE_CHECK_THROTTLE_MS = 5 * 60 * 1000
@@ -750,6 +765,50 @@ function pickLatestPrimaryFile(files: NexusFileEntry[]): NexusFileEntry | null {
   if (!pool.length) return null
   const main = pool.filter((file) => (file.category_name || '').toUpperCase() === 'MAIN')
   const candidates = main.length ? main : pool
+  return candidates.reduce((best, file) =>
+    (file.uploaded_timestamp ?? 0) > (best.uploaded_timestamp ?? 0) ? file : best,
+  )
+}
+
+const SUPERSEDED_CATEGORIES = new Set(['OLD_VERSION', 'ARCHIVED', 'DELETED'])
+
+function isSupersededCategory(file: NexusFileEntry | null | undefined): boolean {
+  return SUPERSEDED_CATEGORIES.has((file?.category_name || '').toUpperCase())
+}
+
+// Follow the authoritative file_updates chain (old_file_id -> new_file_id) to the
+// newest successor of the installed file. This keeps update detection scoped to the
+// exact file the user installed instead of comparing an OPTIONAL file against the
+// page's latest MAIN release.
+function findLatestFileIdInLineage(fileUpdates: NexusFileUpdate[], startFileId: number): number {
+  let currentId = startFileId
+  const visited = new Set<number>([currentId])
+  for (;;) {
+    const next = fileUpdates.find((update) => update.old_file_id === currentId)
+    if (!next || visited.has(next.new_file_id)) break
+    currentId = next.new_file_id
+    visited.add(currentId)
+  }
+  return currentId
+}
+
+function normalizeFileName(name?: string): string {
+  return (name || '').trim().toLowerCase()
+}
+
+// Fallback when file_updates has no link for the installed file (author uploaded a new
+// version without chaining it): find the newest non-superseded file that shares the same
+// display name lineage. Matching by name avoids flagging an unrelated file on the page.
+function pickLatestSameNameFile(
+  files: NexusFileEntry[],
+  installedFile: NexusFileEntry,
+): NexusFileEntry | null {
+  const targetName = normalizeFileName(installedFile.name)
+  if (!targetName) return null
+  const candidates = files.filter(
+    (file) => normalizeFileName(file.name) === targetName && !isSupersededCategory(file),
+  )
+  if (!candidates.length) return null
   return candidates.reduce((best, file) =>
     (file.uploaded_timestamp ?? 0) > (best.uploaded_timestamp ?? 0) ? file : best,
   )
@@ -827,51 +886,81 @@ export async function checkModUpdates(
     }
 
     const files = filesResult.data.files
-    const latest = pickLatestPrimaryFile(files)
+    const fileUpdates = filesResult.data.file_updates ?? []
     const installedFile = mod.nexusFileId
       ? files.find((file) => file.file_id === mod.nexusFileId)
       : undefined
-    const latestVersion = latest?.version || latest?.mod_version
+
+    let state: ModUpdateState
+    let latest: NexusFileEntry | null = null
+
+    if (mod.nexusFileId) {
+      // Authoritative: trace the installed file's own update lineage. Only a genuine
+      // successor of THIS file counts — never the page's latest MAIN release.
+      const latestFileId = findLatestFileIdInLineage(fileUpdates, mod.nexusFileId)
+      const lineageSuccessor =
+        latestFileId !== mod.nexusFileId
+          ? files.find((file) => file.file_id === latestFileId) ?? null
+          : null
+
+      if (lineageSuccessor && !isSupersededCategory(lineageSuccessor)) {
+        latest = lineageSuccessor
+        state = 'update-available'
+      } else if (installedFile) {
+        // No chain link: catch updates the author uploaded without chaining by matching
+        // the same file name and a newer upload/version.
+        const sameNameLatest = pickLatestSameNameFile(files, installedFile)
+        const isNewer = Boolean(
+          sameNameLatest &&
+          sameNameLatest.file_id !== mod.nexusFileId &&
+          (((sameNameLatest.uploaded_timestamp ?? 0) > (installedFile.uploaded_timestamp ?? 0)) ||
+            (compareNumericVersions(
+              sameNameLatest.version || sameNameLatest.mod_version,
+              installedFile.version || installedFile.mod_version,
+            ) ?? 0) > 0),
+        )
+        if (isNewer && sameNameLatest) {
+          latest = sameNameLatest
+          state = 'update-available'
+        } else {
+          state = 'up-to-date'
+        }
+      } else {
+        // Installed file id is gone from the page and not in any chain — can't be sure.
+        state = 'unknown'
+      }
+    } else {
+      // Legacy fallback: mod has no recorded Nexus file id, so compare against the
+      // latest MAIN file by version/timestamp. Less precise but the best we can do.
+      latest = pickLatestPrimaryFile(files)
+      const versionCompare = compareNumericVersions(
+        latest?.version || latest?.mod_version,
+        mod.version,
+      )
+      if (!latest) {
+        state = 'unknown'
+      } else if (versionCompare != null && versionCompare > 0) {
+        state = 'update-available'
+      } else {
+        state = 'unknown'
+      }
+    }
+
     const currentVersion = installedFile?.version || installedFile?.mod_version || mod.version
+    const latestVersion = latest?.version || latest?.mod_version
     const updatedAtIso = latest?.uploaded_timestamp
       ? new Date(latest.uploaded_timestamp * 1000).toISOString()
       : undefined
-
-    let state: ModUpdateState
-    if (!latest) {
-      state = 'unknown'
-    } else {
-      const latestDiffersFromInstalledFile = mod.nexusFileId
-        ? latest.file_id !== mod.nexusFileId
-        : true
-      const timestampShowsNewer = Boolean(
-        latestDiffersFromInstalledFile &&
-        installedFile?.uploaded_timestamp &&
-        (latest.uploaded_timestamp ?? 0) > installedFile.uploaded_timestamp,
-      )
-      const versionCompare = compareNumericVersions(latestVersion, currentVersion)
-      const versionShowsNewer = versionCompare != null && versionCompare > 0
-
-      if (mod.nexusFileId && latest.file_id === mod.nexusFileId) {
-        state = 'up-to-date'
-      } else if (timestampShowsNewer || versionShowsNewer) {
-        state = 'update-available'
-      } else if (!mod.nexusFileId || !installedFile) {
-        state = 'unknown'
-      } else {
-        state = 'up-to-date'
-      }
-    }
 
     return {
       uuid: mod.uuid,
       nexusModId: mod.nexusModId,
       state,
       currentVersion,
-      latestVersion,
+      latestVersion: state === 'update-available' ? latestVersion : undefined,
       latestFileId: state === 'update-available' ? latest?.file_id : undefined,
       latestFileName: state === 'update-available' ? latest?.name : undefined,
-      updatedAt: updatedAtIso,
+      updatedAt: state === 'update-available' ? updatedAtIso : undefined,
       modPageUrl: nexusModPageUrl(mod.nexusModId),
     }
   }

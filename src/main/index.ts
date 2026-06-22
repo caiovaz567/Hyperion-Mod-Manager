@@ -509,17 +509,39 @@ function registerGlobalHandlers(): void {
     if (!settings.gamePath) return { ok: false, error: 'Game path not configured' }
 
     const launchTarget = resolveGameExecutable(settings.gamePath)
-
     if (!fs.existsSync(launchTarget)) {
       return { ok: false, error: `Executable not found: ${launchTarget}` }
     }
 
+    const launchDir = path.dirname(launchTarget)
+
+    // For Steam installs, make the game's embedded Steamworks SDK register with the
+    // running Steam client (overlay, playtime, achievements) even though we launch the
+    // exe directly. Two complementary mechanisms — this is how Vortex/MO2 stay tracked:
+    //   1. steam_appid.txt next to the exe — the documented requirement when SteamAPI_Init
+    //      runs outside the Steam client.
+    //   2. SteamAppId / SteamGameId env vars — what Steam itself sets when launching a game.
+    // Cyberpunk 2077 Steam App ID: 1091500
+    const STEAM_APP_ID = '1091500'
+    const normalizedGamePath = path.normalize(settings.gamePath).toLowerCase()
+    const isSteamInstall = normalizedGamePath.includes('steamapps')
+    let childEnv = process.env
+
+    if (isSteamInstall) {
+      childEnv = { ...process.env, SteamAppId: STEAM_APP_ID, SteamGameId: STEAM_APP_ID }
+      try {
+        fs.writeFileSync(path.join(launchDir, 'steam_appid.txt'), STEAM_APP_ID, 'utf8')
+      } catch {
+        // Non-fatal: the env vars alone may still register the game with Steam.
+      }
+    }
+
     try {
-      // Spawn detached so the process outlives Hyperion and Steam can detect it.
       const child = spawn(launchTarget, [], {
         detached: true,
         stdio: 'ignore',
-        cwd: path.dirname(launchTarget),
+        cwd: launchDir,
+        env: childEnv,
       })
       child.unref()
     } catch (err: unknown) {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
@@ -91,6 +91,16 @@ export const Sidebar: React.FC = () => {
     active ? 'text-[#fcee09]' : disabled ? 'text-[#8a8a8a]' : ''
   }`
 
+  const [launching, setLaunching] = useState(false)
+  const launchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (gameRunning && launching) {
+      setLaunching(false)
+      if (launchTimeoutRef.current) clearTimeout(launchTimeoutRef.current)
+    }
+  }, [gameRunning, launching])
+
   const handleLaunchGame = async () => {
     if (!settings?.gamePath || !gamePathValid) {
       addToast('Game path not configured — check Settings', 'warning')
@@ -99,7 +109,12 @@ export const Sidebar: React.FC = () => {
     const result = await IpcService.invoke<{ ok: boolean; error?: string }>(IPC.LAUNCH_GAME)
     if (!result.ok) {
       addToast(result.error ?? 'Could not launch game', 'error')
+      return
     }
+    setLaunching(true)
+    launchTimeoutRef.current = setTimeout(() => {
+      setLaunching(false)
+    }, 30000)
   }
 
   const isLaunchDisabled = !settings?.gamePath || !gamePathValid
@@ -210,23 +225,32 @@ export const Sidebar: React.FC = () => {
       </div>
       <div className="px-4 mt-4 w-full flex flex-col gap-2">
         <button
-          onClick={gameRunning ? undefined : handleLaunchGame}
-          disabled={isLaunchDisabled && !gameRunning}
+          onClick={gameRunning || launching ? undefined : handleLaunchGame}
+          disabled={isLaunchDisabled && !gameRunning && !launching}
           className={`w-full overflow-hidden rounded-sm px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap transition-[background-color,color,border-color,box-shadow] duration-150 ${
             gameRunning
               ? 'bg-[#0c1410] border-[0.5px] border-[#34D399]/30 text-[#34D399] cursor-default'
-              : isLaunchDisabled
-                ? 'bg-[#262626] text-[#8a8a8a] cursor-not-allowed'
-                : 'bg-[#fcee09] text-[#050505] hover:bg-white shadow-[0_0_20px_rgba(252,238,9,0.15)]'
+              : launching
+                ? 'bg-[#1a1600] border-[0.5px] border-[#fcee09]/30 text-[#fcee09]/60 cursor-default'
+                : isLaunchDisabled
+                  ? 'bg-[#262626] text-[#8a8a8a] cursor-not-allowed'
+                  : 'bg-[#fcee09] text-[#050505] hover:bg-white shadow-[0_0_20px_rgba(252,238,9,0.15)]'
           }`}
         >
           <span className="flex items-center justify-center">
-            <span className="material-symbols-outlined shrink-0 text-[18px]">
-              {gameRunning ? 'sports_esports' : 'play_arrow'}
-            </span>
+            {launching ? (
+              <svg className="shrink-0 animate-spin text-[#fcee09]/60" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            ) : (
+              <span className="material-symbols-outlined shrink-0 text-[18px]">
+                {gameRunning ? 'sports_esports' : 'play_arrow'}
+              </span>
+            )}
             <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
               <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
-                {gameRunning ? 'IN GAME' : 'LAUNCH GAME'}
+                {gameRunning ? 'IN GAME' : launching ? 'LAUNCHING...' : 'LAUNCH GAME'}
               </span>
             </span>
           </span>

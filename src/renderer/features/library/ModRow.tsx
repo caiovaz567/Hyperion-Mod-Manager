@@ -254,7 +254,9 @@ export const ModRow: React.FC<ModRowProps> = ({
   const label = TYPE_LABEL[mod.type] ?? 'UNKNOWN'
   const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
   const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0 }
-  const hasConflictSummary = conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0
+  // Conflicts only exist between enabled mods in the active deployment stack — a disabled
+  // mod deploys nothing, so its conflict icon would be misleading.
+  const hasConflictSummary = mod.enabled && (conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0)
   const hasModUpdate = modUpdate?.state === 'update-available'
   const updatingThisMod =
     activeDownloads.some((download) => download.intent?.kind === 'mod-update' && download.intent.targetModId === mod.uuid) ||
