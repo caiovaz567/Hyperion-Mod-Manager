@@ -35,30 +35,6 @@ jobs:
           $version = $package.version
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Check if release tag exists
-        id: tag_check
-        shell: pwsh
-        run: |
-          $version = '${{ steps.version.outputs.version }}'
-          $tag = "v$version"
-          git fetch --tags
-          if (git tag -l $tag) {
-            "exists=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          } else {
-            "exists=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          }
-
-      - name: Create release tag
-        if: steps.tag_check.outputs.exists == 'false'
-        shell: pwsh
-        run: |
-          $version = '${{ steps.version.outputs.version }}'
-          $tag = "v$version"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag $tag
-          git push origin $tag
-
       - name: Extract changelog for this version
         id: changelog
         shell: pwsh
