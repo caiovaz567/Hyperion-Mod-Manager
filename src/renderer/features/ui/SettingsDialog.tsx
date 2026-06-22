@@ -9,6 +9,46 @@ import { PathBox, SettingCard, StatusReadout, ValidationRow, uiButton } from './
 type SettingsTab = 'paths' | 'nexus' | 'updates'
 type FolderState = 'valid' | 'invalid' | 'empty'
 
+const NEXUS_FREE_FEATURES = [
+  { icon: 'open_in_browser', text: 'Mod updates open Nexus in the browser' },
+  { icon: 'link', text: 'Downloads via nxm:// link from the site' },
+  { icon: 'download', text: 'Archive lands in Downloads — install from there' },
+]
+
+const NEXUS_PREMIUM_FEATURES = [
+  { icon: 'bolt', text: 'Mod updates download directly, no browser' },
+  { icon: 'api', text: 'Direct CDN links resolved via Nexus API' },
+  { icon: 'sync', text: 'One-click inline install, stays in the Library' },
+]
+
+function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 text-[12.5px]">
+      {/* Free */}
+      <div className={`rounded-sm border-[0.5px] p-3 space-y-2.5 ${isPremium === false ? 'border-[#60A5FA]/40 bg-[#060e18]' : 'border-[rgba(255,255,255,0.07)] bg-[#080808]'}`}>
+        <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#555]'}`}>Free</div>
+        {NEXUS_FREE_FEATURES.map((f) => (
+          <div key={f.text} className="flex items-start gap-2">
+            <span className={`material-symbols-outlined text-[14px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#444]'}`}>{f.icon}</span>
+            <span className={isPremium === false ? 'text-[#c0c0c0]' : 'text-[#555]'}>{f.text}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Premium */}
+      <div className={`rounded-sm border-[0.5px] p-3 space-y-2.5 ${isPremium === true ? 'border-[#f7d154]/40 bg-[#14110a]' : 'border-[rgba(255,255,255,0.07)] bg-[#080808]'}`}>
+        <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#555]'}`}>Premium</div>
+        {NEXUS_PREMIUM_FEATURES.map((f) => (
+          <div key={f.text} className="flex items-start gap-2">
+            <span className={`material-symbols-outlined text-[14px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#444]'}`}>{f.icon}</span>
+            <span className={isPremium === true ? 'text-[#c0c0c0]' : 'text-[#555]'}>{f.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function getDownloadsStatus(downloadPath: string, defaultDownloadPath: string) {
   const trimmed = downloadPath.trim()
   if (!trimmed) {
@@ -465,16 +505,21 @@ export const SettingsPage: React.FC = () => {
                 style={{ animationDelay: '60ms' }}
               >
                 {nexusStatus === 'connected' ? (
-                  <div className="space-y-2">
-                    <div className="text-[15px] font-semibold text-white">{nexusAccount.data.name}</div>
-                    <div className="text-[13.5px] text-[#b8b8b8]">{nexusAccount.data.email}</div>
-                    <div className="text-[13px] text-[#8a8a8a]">User #{nexusAccount.data.userId}</div>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <div className="text-[15px] font-semibold text-white">{nexusAccount.data.name}</div>
+                      <div className="text-[13px] text-[#8a8a8a]">{nexusAccount.data.email} · User #{nexusAccount.data.userId}</div>
+                    </div>
+                    <NexusTierComparison isPremium={nexusAccount.data.isPremium} />
                   </div>
                 ) : (
-                  <ValidationRow
-                    state="info"
-                    infoText="Add a valid API key to show your account and unlock Nexus-aware flows."
-                  />
+                  <div className="space-y-3">
+                    <ValidationRow
+                      state="info"
+                      infoText="Add a valid API key to show your account and unlock Nexus-aware flows."
+                    />
+                    <NexusTierComparison isPremium={null} />
+                  </div>
                 )}
               </SettingCard>
 

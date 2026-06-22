@@ -10,6 +10,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.18.2] - 2026-06-22
+
+### Added
+- Settings > Nexus > Account now shows a side-by-side Free vs Premium comparison explaining how each tier behaves inside Hyperion (mod updates, download links, install flow)
+- Temporary DEV toggle in the Library toolbar to simulate Free account behavior for testing the nxm:// update flow
+
 ## [0.18.1] - 2026-06-22
 
 ### Changed
