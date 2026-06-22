@@ -379,6 +379,7 @@ Tooltips:
 ## 6. Updater UX
 
 - Update availability appears in the header as a single compact CTA
+- The self-update check is kicked off in the main process during the splash so the CTA is present the moment the window opens, rather than appearing a few seconds after the renderer finishes booting
 - One click on Install update starts download immediately; no separate popover or second confirmation step
 - Download progress is rendered inside the button itself
 - After download finishes, the app installs and relaunches automatically

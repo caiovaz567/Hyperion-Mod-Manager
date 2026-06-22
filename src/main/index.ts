@@ -11,7 +11,7 @@ import path from 'path'
 import { spawn, exec } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings } from './settings'
 import { createSplashWindow } from './splash'
-import { initializeUpdates } from './updater'
+import { initializeUpdates, checkForUpdatesOnStartup, flushCachedUpdateInfo } from './updater'
 import { registerModManagerHandlers } from './ipc/modManager'
 import { registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
@@ -723,8 +723,13 @@ app.whenReady().then(async () => {
     revealMainWindow()
   })
 
-  // Initialize auto-updater
+  // Initialize auto-updater and start the self-update check during the splash so the
+  // header update button is ready by the time the window opens, instead of a few
+  // seconds after the renderer boots.
   initializeUpdates(mainWindow)
+  if (app.isPackaged && settings.autoUpdate) {
+    void checkForUpdatesOnStartup()
+  }
 
   // Reveal the main window only when Electron has a first paint ready and
   // the renderer explicitly signals that the boot sequence is complete.
@@ -735,6 +740,9 @@ app.whenReady().then(async () => {
   ipcMain.once(IPC.APP_READY, () => {
     rendererReady = true
     flushPendingNxmUrls()
+    // Deliver any update result that resolved during the splash, now that the
+    // renderer's update listeners are guaranteed to be registered.
+    flushCachedUpdateInfo()
     revealMainWindow()
   })
 

@@ -62,7 +62,6 @@ export const App: React.FC = () => {
     detectGamePath,
     scanMods,
     refreshLocalFiles,
-    checkForUpdates,
     setupUpdateListeners,
     setupNxmListeners,
     activeView,
@@ -85,7 +84,6 @@ export const App: React.FC = () => {
     detectGamePath: state.detectGamePath,
     scanMods: state.scanMods,
     refreshLocalFiles: state.refreshLocalFiles,
-    checkForUpdates: state.checkForUpdates,
     setupUpdateListeners: state.setupUpdateListeners,
     setupNxmListeners: state.setupNxmListeners,
     activeView: state.activeView,
@@ -176,15 +174,14 @@ export const App: React.FC = () => {
       if (disposed) return
       IpcService.send(IPC.APP_READY)
 
+      // The Hyperion self-update check now runs in the main process during the splash
+      // (see initializeUpdates / checkForUpdatesOnStartup) so the header button is ready
+      // immediately; no renderer-side startup check is needed here.
       window.setTimeout(() => {
         if (disposed) return
 
         if (currentSettings.downloadPath?.trim()) {
           void refreshLocalFiles().catch(() => undefined)
-        }
-
-        if (!import.meta.env.DEV && currentSettings.autoUpdate) {
-          void checkForUpdates().catch(() => undefined)
         }
       }, 2500)
     }
