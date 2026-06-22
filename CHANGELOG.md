@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.18.1] - 2026-06-22
+
 ### Changed
 - The Hyperion self-update check now runs in the main process during the splash, so the header update button is ready the moment the window opens instead of a few seconds after the renderer boots
 
