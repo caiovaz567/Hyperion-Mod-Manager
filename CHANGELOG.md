@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.19.0] - 2026-06-23
+
 ### Changed
 - Mod deployment now uses NTFS file symlinks instead of file copies, enabling cross-drive mod libraries without duplicating data
 - Archive resource hashes moved from `_metadata.json` into a separate `_archive_resources.json` sidecar per mod, keeping metadata files lean; existing installations are migrated automatically on first scan
