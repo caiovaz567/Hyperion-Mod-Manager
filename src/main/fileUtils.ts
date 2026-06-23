@@ -2,34 +2,24 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 
-const linkAsync = promisify(fs.link)
 const symlinkAsync = promisify(fs.symlink)
 const unlinkAsync = promisify(fs.unlink)
 const rmdirAsync = promisify(fs.rmdir)
 const mkdirAsync = promisify(fs.mkdir)
 
 /**
- * Creates a hard link for a single file.
- * Hard links only work on the same volume.
+ * Creates a file symlink from src to dest, working across drives.
+ * On Windows, requires Developer Mode or elevated privileges (EPERM otherwise).
  */
-export async function createHardLink(src: string, dest: string): Promise<void> {
+export async function createSymlink(src: string, dest: string): Promise<void> {
   await ensureRealDirectory(path.dirname(dest))
-  if (fs.existsSync(dest)) {
+  try {
+    fs.lstatSync(dest)
     await unlinkAsync(dest)
+  } catch {
+    // dest does not exist
   }
-  await linkAsync(src, dest)
-}
-
-/**
- * Creates a directory junction (Windows) or symlink (macOS/Linux).
- */
-export async function createJunction(src: string, dest: string): Promise<void> {
-  await ensureRealDirectory(path.dirname(dest))
-  if (fs.existsSync(dest)) {
-    await safeRemoveLink(dest)
-  }
-  const type = process.platform === 'win32' ? 'junction' : 'dir'
-  await symlinkAsync(src, dest, type)
+  await symlinkAsync(src, dest, 'file')
 }
 
 export async function ensureRealDirectory(dirPath: string): Promise<void> {
@@ -48,7 +38,7 @@ export async function ensureRealDirectory(dirPath: string): Promise<void> {
 }
 
 /**
- * Removes a link (unlink for files, rmdir for junctions/symlink-dirs).
+ * Removes a symlink (unlink for files, rmdir for directory-type links from legacy junctions).
  */
 export async function safeRemoveLink(linkPath: string): Promise<void> {
   try {
@@ -64,26 +54,6 @@ export async function safeRemoveLink(linkPath: string): Promise<void> {
   }
 }
 
-/**
- * Recursively copies a directory.
- */
-export function copyDirSync(src: string, dest: string): void {
-  fs.mkdirSync(dest, { recursive: true })
-  const entries = fs.readdirSync(src, { withFileTypes: true })
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name)
-    const destPath = path.join(dest, entry.name)
-    const stat = fs.lstatSync(srcPath)
-    if (stat.isSymbolicLink()) {
-      continue
-    }
-    if (stat.isDirectory()) {
-      copyDirSync(srcPath, destPath)
-    } else {
-      fs.copyFileSync(srcPath, destPath)
-    }
-  }
-}
 
 export function getPathSizeSafe(targetPath: string): number {
   try {
@@ -144,7 +114,7 @@ export function removeDirSync(dir: string): void {
 }
 
 /**
- * Returns true if the given path is a junction or symlink.
+ * Returns true if the given path is a symlink.
  */
 export function isLink(p: string): boolean {
   try {
@@ -155,11 +125,3 @@ export function isLink(p: string): boolean {
   }
 }
 
-/**
- * Checks if path is on the same volume as a target path.
- */
-export function isSameVolume(a: string, b: string): boolean {
-  const rootA = path.parse(a).root.toLowerCase()
-  const rootB = path.parse(b).root.toLowerCase()
-  return rootA === rootB
-}

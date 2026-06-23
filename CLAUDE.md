@@ -21,8 +21,24 @@
 - Main window stays hidden until the renderer sends IPC.APP_READY.
 - Splash is handled by the main process. Do not add a second renderer splash.
 - Settings, mod scan, path validation, install/reinstall, and updater all flow through IPC.
-- Mod library scan must ignore symlinks/junctions.
+- Mod library scan must ignore symlinks (they are deployment artifacts, not source files).
 - Installed mod metadata stores sourcePath/sourceType so reinstalls can reuse the original source.
+
+## Deployment System (Symlinks)
+- Mod files are deployed to the game directory as **NTFS file symlinks** (not copies, not hardlinks, not junctions).
+- Symlinks work across drives, unlike hardlinks. The game reads them transparently.
+- `src/main/fileUtils.ts` exports `createSymlink(src, dest)` — the only deployment primitive. It uses `fs.symlink(..., 'file')` and handles dangling links via `lstatSync` (not `existsSync`).
+- Packaged app sets `requestedExecutionLevel: requireAdministrator` in `package.json` build config so Windows grants symlink privilege automatically. Dev mode requires VS Code / terminal opened as Administrator manually.
+- `redeployEnabledMods` in `src/main/ipc/modManager.ts` calls `createSymlink` per file. Disabling a mod removes its symlinks via `safeRemoveLink`.
+- Conflict detection only considers **enabled** mods — both in `modManager.ts` (main process) and `modConflictState.ts` (renderer). Disabled mod files are not in the game directory and must not appear in conflict lists.
+
+## Archive Resource Sidecar
+- For mods containing `.archive` files, resource hashes are stored in a separate `_archive_resources.json` sidecar alongside `_metadata.json` — not inside the metadata file itself.
+- Sidecar format: `{ "version": 3, "resources": [{ "hash", "resourcePath", "archivePath" }] }`.
+- `readArchiveSidecar` / `writeArchiveSidecar` in `modManager.ts` handle reads and writes. `ARCHIVE_RESOURCE_INDEX_VERSION` (currently 3) is exported so `installer.ts` can write sidecars on first install.
+- **Migration**: `readMetadata` auto-migrates existing `_metadata.json` files that still contain `archiveResources`/`hashes` fields — writes the sidecar, strips those fields from the JSON, no manual action needed.
+- `writeMetadata` always strips archive fields before writing so they never re-enter `_metadata.json`.
+- Non-archive mods that previously had a sidecar get it deleted during `refreshArchiveResourceMetadata`.
 
 ## FOMOD Installer
 
@@ -57,9 +73,8 @@
 
 ## Core Commands
 - Dev: npm run dev
-- Build app bundles: npm run build
-- Local installer build: npm run dist
-- Publishable installer build: npm run dist:publish
+- Local installer build: npm run build
+- Publishable installer build: npm run publish
 - Preview unpacked Windows output: npm run preview:win
 
 ## Release Rules

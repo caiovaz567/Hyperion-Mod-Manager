@@ -32,6 +32,7 @@ import {
   ensureRealDirectory,
   safeRemoveLink,
   isLink,
+  createSymlink,
 } from '../fileUtils'
 
 function normalizeModName(rawName: string): string {
@@ -158,9 +159,30 @@ function prepareBaseGameDir(baseGameDir: string): Promise<void> {
   return ensureRealDirectory(baseGameDir)
 }
 
+function readArchiveSidecar(modDir: string): { version: number; resources: ArchiveResourceEntry[] } | null {
+  try {
+    const sidecarPath = path.join(modDir, ARCHIVE_SIDECAR_FILE)
+    if (fs.existsSync(sidecarPath)) {
+      return JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'))
+    }
+  } catch {
+    // corrupt sidecar
+  }
+  return null
+}
+
+export function writeArchiveSidecar(modDir: string, resources: ArchiveResourceEntry[], version: number): void {
+  fs.writeFileSync(
+    path.join(modDir, ARCHIVE_SIDECAR_FILE),
+    JSON.stringify({ version, resources }, null, 2),
+    'utf-8'
+  )
+}
+
 const GAME_ROOT_DIRS = new Set(['archive', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
 const ARCHIVE_EXTENSIONS = new Set(['.archive', '.xl'])
-const ARCHIVE_RESOURCE_INDEX_VERSION = 3
+export const ARCHIVE_RESOURCE_INDEX_VERSION = 3
+const ARCHIVE_SIDECAR_FILE = '_archive_resources.json'
 
 function findSequenceIndex(parts: string[], sequence: string[]): number {
   const lowerParts = parts.map((part) => part.toLowerCase())
@@ -391,12 +413,13 @@ async function refreshArchiveResourceMetadata(
   const containsArchivePayload = hasArchivePayload(files)
   if (!containsArchivePayload) {
     let changed = false
-    if (meta.archiveResources !== undefined) {
-      delete meta.archiveResources
+    const sidecarPath = path.join(modDir, ARCHIVE_SIDECAR_FILE)
+    if (fs.existsSync(sidecarPath)) {
+      try { fs.unlinkSync(sidecarPath) } catch {}
       changed = true
     }
-    if (meta.hashes !== undefined) {
-      delete meta.hashes
+    if (meta.archiveResources !== undefined) {
+      delete meta.archiveResources
       changed = true
     }
     if (meta.archiveResourceIndexVersion !== undefined) {
@@ -424,22 +447,16 @@ async function refreshArchiveResourceMetadata(
   const nextResources = parsedResources.length > 0
     ? parsedResources
     : await hydrateArchiveResourcePaths(storedResources)
-  const nextHashes = nextResources.map((resource) => resource.hash).filter((hash): hash is string => Boolean(hash))
-  const currentHashes = Array.isArray(meta.hashes) ? meta.hashes : []
 
   let changed = false
   if (!Array.isArray(meta.archiveResources) || !archiveResourcesEqual(storedResources, nextResources)) {
     meta.archiveResources = nextResources
+    writeArchiveSidecar(modDir, nextResources, ARCHIVE_RESOURCE_INDEX_VERSION)
     changed = true
   }
 
   if (meta.archiveResourceIndexVersion !== ARCHIVE_RESOURCE_INDEX_VERSION) {
     meta.archiveResourceIndexVersion = ARCHIVE_RESOURCE_INDEX_VERSION
-    changed = true
-  }
-
-  if (currentHashes.length !== nextHashes.length || currentHashes.some((hash, index) => hash !== nextHashes[index])) {
-    meta.hashes = nextHashes
     changed = true
   }
 
@@ -537,8 +554,7 @@ async function redeployEnabledMods(
         const dest = resolveDeploymentTarget(gamePath, relativeDeployPath)
         if (!dest) continue
 
-        fs.mkdirSync(path.dirname(dest), { recursive: true })
-        fs.copyFileSync(src, dest)
+        await createSymlink(src, dest)
         deployedPaths.push(normalizeRelativePath(path.relative(gamePath, dest)))
       }
 
@@ -568,9 +584,36 @@ async function redeployEnabledMods(
 function readMetadata(modDir: string): ModMetadata | null {
   const metaPath = path.join(modDir, '_metadata.json')
   try {
-    if (fs.existsSync(metaPath)) {
-      return JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    if (!fs.existsSync(metaPath)) return null
+    const raw: ModMetadata = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+
+    // Migrate old format: move archive data to sidecar if not already there
+    let sidecar = readArchiveSidecar(modDir)
+    if (!sidecar && Array.isArray(raw.archiveResources) && raw.archiveResources.length > 0) {
+      writeArchiveSidecar(modDir, raw.archiveResources, raw.archiveResourceIndexVersion ?? ARCHIVE_RESOURCE_INDEX_VERSION)
+      sidecar = { version: raw.archiveResourceIndexVersion ?? ARCHIVE_RESOURCE_INDEX_VERSION, resources: raw.archiveResources }
     }
+
+    // Strip legacy fields from disk if still present
+    if (raw.hashes !== undefined || raw.archiveResources !== undefined || raw.archiveResourceIndexVersion !== undefined) {
+      const clean: ModMetadata = { ...raw }
+      delete clean.hashes
+      delete clean.archiveResources
+      delete clean.archiveResourceIndexVersion
+      fs.writeFileSync(metaPath, JSON.stringify(clean, null, 2), 'utf-8')
+    }
+
+    // Build in-memory meta: strip legacy fields, populate from sidecar
+    const meta: ModMetadata = { ...raw }
+    delete meta.hashes
+    delete meta.archiveResources
+    delete meta.archiveResourceIndexVersion
+    if (sidecar) {
+      meta.archiveResources = sidecar.resources
+      meta.archiveResourceIndexVersion = sidecar.version
+    }
+
+    return meta
   } catch {
     // corrupt metadata
   }
@@ -578,9 +621,13 @@ function readMetadata(modDir: string): ModMetadata | null {
 }
 
 function writeMetadata(modDir: string, meta: ModMetadata): void {
+  const clean: ModMetadata = { ...meta }
+  delete clean.hashes
+  delete clean.archiveResources
+  delete clean.archiveResourceIndexVersion
   fs.writeFileSync(
     path.join(modDir, '_metadata.json'),
-    JSON.stringify(meta, null, 2),
+    JSON.stringify(clean, null, 2),
     'utf-8'
   )
 }
@@ -1368,7 +1415,7 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         const pathOwners = new Map<string, Array<{ modId: string; name: string; order: number }>>()
         const archiveOwners = new Map<string, Array<{ modId: string; name: string; order: number; resource: ArchiveResourceEntry }>>()
 
-        for (const mod of mods.filter((m) => m.kind === 'mod')) {
+        for (const mod of mods.filter((m) => m.kind === 'mod' && m.enabled)) {
           for (const rel of getTrackedDeploymentPaths(mod)) {
             const normalized = normalizeRelativePath(rel)
             if (!normalized) continue

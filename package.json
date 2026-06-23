@@ -7,12 +7,11 @@
     "prepare": "node scripts/setup-git-hooks.mjs",
     "clean:dist": "node scripts/clean-dist.mjs",
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "npm run clean:dist && electron-vite build && electron-builder --win nsis --publish never",
     "preview": "electron-vite preview",
-    "package": "npm run clean:dist && npm run build && electron-builder",
-    "preview:win": "npm run clean:dist && npm run build && electron-builder --win dir --publish never",
-    "dist": "npm run clean:dist && npm run build && electron-builder --win nsis --publish never",
-    "dist:publish": "npm run clean:dist && npm run build && electron-builder --win nsis --publish always",
+    "package": "npm run clean:dist && electron-vite build && electron-builder",
+    "preview:win": "npm run clean:dist && electron-vite build && electron-builder --win dir --publish never",
+    "publish": "npm run clean:dist && electron-vite build && electron-builder --win nsis --publish always",
     "release:patch": "node scripts/prepare-release-tag.mjs patch",
     "release:minor": "node scripts/prepare-release-tag.mjs minor",
     "release:major": "node scripts/prepare-release-tag.mjs major"
@@ -88,7 +87,7 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "requestedExecutionLevel": "asInvoker",
+      "requestedExecutionLevel": "requireAdministrator",
       "target": [
         {
           "target": "nsis",

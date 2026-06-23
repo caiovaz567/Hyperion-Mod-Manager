@@ -19,7 +19,7 @@ export const recomputeConflictStateFromExistingConflicts = (
 
   const modMap = new Map(
     mods
-      .filter((mod) => mod.kind === 'mod')
+      .filter((mod) => mod.kind === 'mod' && mod.enabled)
       .map((mod) => [mod.uuid, mod] as const)
   )
 

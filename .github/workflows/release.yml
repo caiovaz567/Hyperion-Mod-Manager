@@ -54,7 +54,7 @@ jobs:
           $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Build installer
-        run: npm run dist
+        run: npm run build
 
       - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v3

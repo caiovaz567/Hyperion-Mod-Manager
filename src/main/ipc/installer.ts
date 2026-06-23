@@ -26,7 +26,7 @@ import {
   getStoredArchiveResources,
   resolveArchiveResources,
 } from './hashResolver'
-import { disableMod, findModDir, getTrackedDeploymentPaths, normalizeRelativePath, scanMods } from './modManager'
+import { disableMod, findModDir, getTrackedDeploymentPaths, normalizeRelativePath, scanMods, writeArchiveSidecar, ARCHIVE_RESOURCE_INDEX_VERSION } from './modManager'
 import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
 import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
 
@@ -34,7 +34,6 @@ type GetMainWindow = () => BrowserWindow | null
 
 const SUPPORTED_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
 const PRESERVED_ARCHIVE_ROOT_DIRS = new Set(['archive', 'archives', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
-const ARCHIVE_RESOURCE_INDEX_VERSION = 3
 
 interface ArchiveExtractor {
   binPath: string
@@ -865,7 +864,6 @@ async function installMod(
 
     // Generate resource identities for .archive files.
     const archiveResources = await resolveArchiveResources(modDir)
-    const hashes = archiveResources.map((resource) => resource.hash).filter((hash): hash is string => Boolean(hash))
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
 
     const meta: ModMetadata = {
@@ -879,15 +877,16 @@ async function installMod(
       sourceModifiedAt: getSourceModifiedAt(filePath),
       fileSize: getPathSizeSafe(modDir),
       files: extractedFiles,
-      hashes,
-      archiveResources,
-      archiveResourceIndexVersion: ARCHIVE_RESOURCE_INDEX_VERSION,
       folderName,
       sourcePath: filePath,
       sourceType: isDir ? 'directory' : 'archive',
       nexusModId: nexusRecord?.modId,
       nexusFileId: nexusRecord?.fileId,
       version: nexusRecord?.version ?? extractVersionFromName(rawName),
+    }
+
+    if (archiveResources.length > 0) {
+      writeArchiveSidecar(modDir, archiveResources, ARCHIVE_RESOURCE_INDEX_VERSION)
     }
 
     // Write metadata
@@ -1211,7 +1210,6 @@ async function installFromFomod(
 
     sendProgress(win, 'Indexing resources...', 92)
     const archiveResources = await resolveArchiveResources(modDir)
-    const hashes = archiveResources.map((r) => r.hash).filter((h): h is string => Boolean(h))
     const nexusRecord = findNexusDownloadRecordByPath(originalFilePath)
 
     const meta: ModMetadata = {
@@ -1225,15 +1223,16 @@ async function installFromFomod(
       sourceModifiedAt: getSourceModifiedAt(originalFilePath),
       fileSize: getPathSizeSafe(modDir),
       files: listFilesRecursive(modDir),
-      hashes,
-      archiveResources,
-      archiveResourceIndexVersion: ARCHIVE_RESOURCE_INDEX_VERSION,
       folderName,
       sourcePath: originalFilePath,
       sourceType: 'archive',
       nexusModId: nexusRecord?.modId,
       nexusFileId: nexusRecord?.fileId,
       version: nexusRecord?.version ?? extractVersionFromName(rawName),
+    }
+
+    if (archiveResources.length > 0) {
+      writeArchiveSidecar(modDir, archiveResources, ARCHIVE_RESOURCE_INDEX_VERSION)
     }
 
     fs.writeFileSync(path.join(modDir, '_metadata.json'), JSON.stringify(meta, null, 2), 'utf-8')

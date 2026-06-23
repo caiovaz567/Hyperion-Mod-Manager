@@ -8,6 +8,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Mod deployment now uses NTFS file symlinks instead of file copies, enabling cross-drive mod libraries without duplicating data
+- Archive resource hashes moved from `_metadata.json` into a separate `_archive_resources.json` sidecar per mod, keeping metadata files lean; existing installations are migrated automatically on first scan
+- Conflict detection now correctly excludes disabled mods — disabled mod files are not deployed and must not appear in conflict lists
+- Packaged app now requests Administrator elevation via UAC (`requestedExecutionLevel: requireAdministrator`) so symlink creation works without requiring Windows Developer Mode
+- `npm run build` now produces the local NSIS installer; `npm run publish` publishes to GitHub
+
+### Removed
+- Removed hardlink, junction, and file-copy deployment code from `fileUtils.ts`
+
 ---
 
 ## [0.18.2] - 2026-06-22
