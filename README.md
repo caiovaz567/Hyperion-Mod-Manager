@@ -58,7 +58,7 @@ Browse, search, and install from your downloads folder — with live extraction 
 ### Settings
 Set your game, mod library, downloads, Nexus integration, update preferences, and diagnostic paths from one place. Each core folder can live on a different drive, and Nexus account settings stay nearby.
 
-![Settings](https://github.com/user-attachments/assets/a83c9a8b-9630-4e17-8849-5ef5d2a9fabf)
+![Settings](https://github.com/user-attachments/assets/cc0d870b-43ed-4564-85d5-0cb9a85a691c)
 
 ### App Logs
 Inspect live diagnostic events from Hyperion. The **General** tab captures launcher, VFS, install, and runtime messages, while **Requests** shows Nexus API request details and payloads for troubleshooting.
