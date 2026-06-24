@@ -55,6 +55,8 @@ To use Nexus downloads and update checks, Hyperion needs your personal Nexus Mod
 3. Find **Personal API Key** and copy your personal API key.
 4. In Hyperion, open **Settings > Nexus** and paste it there.
 
+![Nexus Mods personal API key location](https://github.com/user-attachments/assets/f215cec2-111e-4aee-a638-518099b53338)
+
 ## Download
 
 Get the latest Windows installer from the [Releases](https://github.com/caiovaz567/Hyperion-Mod-Manager/releases/latest) page.
