@@ -701,7 +701,7 @@ export const DownloadsPane: React.FC = () => {
                           gridTemplate={downloadsGridTemplate}
                           installedMod={entry ? installedBySourcePath.get(entry.path.toLowerCase()) : null}
                           isNew={entry ? newFilesSet.has(entry.path.toLowerCase()) : false}
-                          isInstalling={Boolean(entry && installing && installSourcePath === entry.path)}
+                          isInstalling={false}
                           isDeleting={Boolean(deletingState)}
                           installProgress={installProgress}
                           installStatus={installStatus}

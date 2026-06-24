@@ -40,6 +40,7 @@ Accessibility:
 - Use $4.5:1$ for normal text and $3:1$ for large text
 - Helper/support copy must not drop below the Downloads timestamp baseline: `text-sm` / roughly 14px with the same readable gray value used by download dates (`#9A9A9A` or stronger)
 - This minimum applies especially to Settings, dialogs, logs, and explanatory copy; avoid 9-12px body text on dark surfaces unless the text is purely badge chrome
+- **Micro-label hard floor — MUST follow everywhere**: never use uppercase tracking labels below 11px for anything the user needs to read (section headers, group labels, field captions, status tags inside content areas). 11px is the absolute minimum for any label that carries meaning; below that is chrome-only territory (icon badges, decorative corner chips). Labels like `INFORMATION:`, `INSTALL OPTIONS`, `PREVIEW` inside dialogs must be ≥ 11px with AA contrast. When a label feels unreadable the fix is always larger text or higher contrast — never accept a tight space as a reason to shrink below the floor
 
 ### Typography
 

@@ -826,7 +826,7 @@ async function installMod(
       isDir ? 'directory' : 'archive'
     )
 
-    const conflicts = await checkConflicts(extractRoot, previewMeta, enabledMods)
+    const { conflicts, archiveResources } = await checkConflicts(extractRoot, previewMeta, enabledMods)
 
     if (conflicts.length > 0 && !request.allowOverwriteConflicts) {
       // Clean up temp, return conflicts for user resolution
@@ -858,12 +858,9 @@ async function installMod(
     fs.mkdirSync(modDir, { recursive: true })
     const extractedFiles = listFilesRecursive(extractRoot)
 
-    // Copy files from extractRoot to modDir
+    // Copy files from extractRoot to modDir (archive resources already resolved above)
     copyDirSync(extractRoot, modDir)
     fs.rmSync(tempDir, { recursive: true, force: true })
-
-    // Generate resource identities for .archive files.
-    const archiveResources = await resolveArchiveResources(modDir)
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
 
     const meta: ModMetadata = {
@@ -986,7 +983,7 @@ async function checkConflicts(
   extractRoot: string,
   incomingMod: ModMetadata,
   enabledMods: ModMetadata[]
-): Promise<ConflictInfo[]> {
+): Promise<{ conflicts: ConflictInfo[]; archiveResources: ArchiveResourceEntry[] }> {
   const conflicts: ConflictInfo[] = []
   const incomingDeployPaths = Array.from(
     new Set(getTrackedDeploymentPaths(incomingMod)
@@ -1018,14 +1015,14 @@ async function checkConflicts(
     }
   }
 
-  const incomingArchiveResources = await resolveArchiveResources(extractRoot)
+  const archiveResources = await resolveArchiveResources(extractRoot)
 
   for (const mod of enabledMods) {
     const existingArchiveLookup = buildArchiveResourceLookup(getStoredArchiveResources(mod))
     if (existingArchiveLookup.size === 0) continue
 
     const seenArchiveConflicts = new Set<string>()
-    for (const incomingResource of incomingArchiveResources) {
+    for (const incomingResource of archiveResources) {
       const matchingKey = getArchiveResourceKeys(incomingResource).find((key) => existingArchiveLookup.has(key))
       if (!matchingKey) continue
 
@@ -1055,7 +1052,7 @@ async function checkConflicts(
     }
   }
 
-  return conflicts
+  return { conflicts, archiveResources }
 }
 
 function copyDirSync(src: string, dest: string): void {
@@ -1197,7 +1194,7 @@ async function installFromFomod(
     )
 
     sendProgress(win, 'Checking for conflicts...', 70)
-    const conflicts = await checkConflicts(stagingDir, previewMeta, enabledMods)
+    const { conflicts, archiveResources } = await checkConflicts(stagingDir, previewMeta, enabledMods)
 
     if (conflicts.length > 0 && !request.allowOverwriteConflicts) {
       // Keep tempDir alive so the renderer can retry — only clean staging
@@ -1211,9 +1208,6 @@ async function installFromFomod(
     modDir = path.join(settings.libraryPath, folderName)
     copyDirSync(stagingDir, modDir)
     fs.rmSync(tempDir, { recursive: true, force: true })
-
-    sendProgress(win, 'Indexing resources...', 92)
-    const archiveResources = await resolveArchiveResources(modDir)
     const nexusRecord = findNexusDownloadRecordByPath(originalFilePath)
 
     const meta: ModMetadata = {

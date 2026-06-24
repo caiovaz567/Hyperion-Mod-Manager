@@ -8,6 +8,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Settings > Paths now has a Runtime Captures card to open or clear files written by mod tools (CET, RED4ext) during gameplay; removed from Library toolbar
+
+### Changed
+- Install overlay redesigned: unified into a single compact card (Analyzing/Extracting/Installing), no verbose description text, mod name in DM Sans instead of brand-font uppercase
+- Install overlay no longer appears on Downloads view while a download row is active — modal overlay handles progress exclusively and the row no longer shows its own install fill bar simultaneously
+- VFS launch progress dialog removed — Launch Game button spinner is the only indicator during VFS mount; errors surface as toasts; Close Game waits 1.5s after taskkill before running residue migration so file handles are released
+- `checkConflicts` now returns resolved archive resources alongside conflicts, eliminating the second `resolveArchiveResources` call during install (halves conflict-check time for large archives like ArchiveXL)
+- FOMOD installer micro-labels bumped to minimum 11–12px across all group headers, step counter, Preview label, and Required badge
+- Page titles (Managed Mods, Downloads, Settings) switched from brand-font (Syne) to Oxanium to distinguish them visually from the Hyperion wordmark
+- Nexus download filename now falls back to the `file_name` field from the Nexus files API when the CDN URL path has no archive extension (fixes UUID-named downloads with no installable format)
+- `npm run build` now builds the local NSIS installer; `npm run publish` publishes to GitHub; CI workflow updated accordingly
+
+### Removed
+- usvfs-bridge development test harnesses (`test/vfs-*.test.js`) removed from the repository
+- usvfs-bridge README phases table and open-risks dev notes replaced with clean production documentation
+
 ---
 
 ## [0.19.0] - 2026-06-23

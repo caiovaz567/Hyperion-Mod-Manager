@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
-import { IPC } from '@shared/types'
+import { IPC, type IpcResult, type VfsOverwriteInfo } from '@shared/types'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, SettingCard, StatusReadout, ValidationRow, uiButton } from './uiKit'
@@ -100,8 +100,34 @@ export const SettingsPage: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false)
   const [updateActionLoading, setUpdateActionLoading] = useState<null | 'check' | 'download'>(null)
   const nexusSaveTimerRef = useRef<number | null>(null)
+  const [runtimeCapturesInfo, setRuntimeCapturesInfo] = useState<VfsOverwriteInfo | null>(null)
+  const [clearingCaptures, setClearingCaptures] = useState(false)
 
   const nexusAccount = useNexusAccount(nexusApiKey)
+
+  const refreshRuntimeCaptures = useCallback(async () => {
+    const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.GET_VFS_OVERWRITE_INFO)
+    if (result.ok && result.data) setRuntimeCapturesInfo(result.data)
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'paths') void refreshRuntimeCaptures()
+  }, [activeTab, refreshRuntimeCaptures])
+
+  const handleOpenRuntimeCaptures = useCallback(async () => {
+    const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.OPEN_VFS_OVERWRITE)
+    if (result.ok && result.data) setRuntimeCapturesInfo(result.data)
+  }, [])
+
+  const handleClearRuntimeCaptures = useCallback(async () => {
+    setClearingCaptures(true)
+    try {
+      const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.CLEAR_VFS_OVERWRITE)
+      if (result.ok && result.data) setRuntimeCapturesInfo(result.data)
+    } finally {
+      setClearingCaptures(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!defaultPaths) {
@@ -305,7 +331,7 @@ export const SettingsPage: React.FC = () => {
                   Control panel
                 </span>
               </div>
-              <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
+              <h1 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
                 Settings
               </h1>
               <p className="mt-3 max-w-[680px] text-[15px] leading-7 text-[#c0c0c0]">
@@ -429,6 +455,44 @@ export const SettingsPage: React.FC = () => {
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
                     Choose folder
                   </button>
+                </div>
+              </SettingCard>
+
+              <SettingCard
+                icon="folder_special"
+                title="Runtime Captures"
+                description="Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions."
+                className="fade-up"
+                style={{ animationDelay: '160ms' }}
+              >
+                <ValidationRow
+                  state={runtimeCapturesInfo ? (runtimeCapturesInfo.fileCount > 0 ? 'info' : 'valid') : 'empty'}
+                  validText="No captured files — game folder is clean."
+                  infoText={runtimeCapturesInfo ? `${runtimeCapturesInfo.fileCount} file${runtimeCapturesInfo.fileCount === 1 ? '' : 's'} captured from previous sessions.` : ''}
+                  emptyText="Loading..."
+                />
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenRuntimeCaptures()}
+                    className={`${secondaryBtn} w-full sm:w-auto`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    Open folder
+                  </button>
+                  {runtimeCapturesInfo && runtimeCapturesInfo.fileCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => void handleClearRuntimeCaptures()}
+                      disabled={clearingCaptures}
+                      className={`${secondaryBtn} w-full sm:w-auto text-[#f87171] border-[#f87171]/30 hover:border-[#f87171]/60`}
+                    >
+                      <span className={`material-symbols-outlined ${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
+                        {clearingCaptures ? 'progress_activity' : 'delete_sweep'}
+                      </span>
+                      {clearingCaptures ? 'Clearing...' : 'Clear captures'}
+                    </button>
+                  )}
                 </div>
               </SettingCard>
             </>

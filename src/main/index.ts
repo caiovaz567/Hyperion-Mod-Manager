@@ -2310,8 +2310,13 @@ function registerGlobalHandlers(): void {
   ipcMain.handle(IPC.KILL_GAME, (): Promise<{ ok: boolean }> => {
     return new Promise((resolve) => {
       exec('taskkill /F /IM Cyberpunk2077.exe /T', (err) => {
-        unmountVfsIfMounted()
-        resolve({ ok: !err })
+        // Wait for the process to fully release file handles before running
+        // residue migration — taskkill completes before the OS fully tears
+        // down the process, so an immediate unmount races with locked files.
+        setTimeout(() => {
+          unmountVfsIfMounted()
+          resolve({ ok: !err })
+        }, 1500)
       })
     })
   })

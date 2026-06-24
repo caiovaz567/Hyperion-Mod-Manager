@@ -251,107 +251,55 @@ export const App: React.FC = () => {
         {dialogs.appLogs && (
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
         )}
-        {detecting && !installing && (
-          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/86 px-4 backdrop-blur-sm">
+        {(detecting || installing) && (
+          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
             <div
-              className="relative w-full max-w-[520px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-6 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
-              style={{ borderColor: '#fcee0944' }}
-            >
-              <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09]" style={{ boxShadow: '0 0 12px #fcee0944' }} />
-              <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]"
-                  style={{ borderColor: '#fcee0933', color: '#fcee09' }}>
-                  <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="brand-font text-[1rem] font-bold uppercase tracking-[0.12em] text-[#fcee09]">
-                    Preparing Installer
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-[#d3d3d3]">
-                    Hyperion is analyzing the archive and detecting the installation format.
-                  </p>
-                  <div className="mt-4 rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
-                    <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">
-                      Analyzing
-                    </div>
-                    <div className="mt-2 truncate text-sm font-medium text-[#f2f2f2]">
-                      {installCurrentFile
-                        ? installCurrentFile.replace(/\\/g, '/').split('/').pop()
-                        : installOverlayName}
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#111]">
-                      <div
-                        className="h-full bg-[#fcee09] transition-all duration-500"
-                        style={{ width: `${clampedInstallProgress}%`, boxShadow: '0 0 12px #fcee0933' }}
-                      />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-mono">
-                      <span className="text-[#fcee09]">{installStatus || 'Detecting...'}</span>
-                      <span className="text-[#d8d8d8]">{Math.round(clampedInstallProgress)}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {installing && (
-          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/86 px-4 backdrop-blur-sm">
-            <div
-              className="relative w-full max-w-[520px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-6 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
-              style={{ borderColor: `${installAppearance.accent}44` }}
+              className="relative w-full max-w-[540px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-8 py-7 shadow-[0_24px_60px_rgba(0,0,0,0.72)]"
+              style={{ borderColor: installing ? `${installAppearance.accent}28` : '#fcee0928' }}
             >
               <div
-                className="absolute left-0 top-0 h-[2px] w-full"
+                className="absolute left-0 top-0 h-[2px] w-full transition-colors duration-300"
                 style={{
-                  background: installAppearance.accent,
-                  boxShadow: `0 0 12px ${installAppearance.accent}44`,
+                  background: installing ? installAppearance.accent : '#fcee09',
+                  boxShadow: `0 0 14px ${installing ? installAppearance.accent : '#fcee09'}44`,
                 }}
               />
-              <div className="flex items-start gap-4">
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]"
-                  style={{ borderColor: `${installAppearance.accent}33`, color: installAppearance.accent }}
+
+              <div className="flex items-center gap-2.5 mb-5">
+                <span
+                  className="material-symbols-outlined animate-spin text-[16px] shrink-0"
+                  style={{ color: installing ? installAppearance.accent : '#fcee09' }}
                 >
-                  <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="brand-font text-[1rem] font-bold uppercase tracking-[0.12em]" style={{ color: installAppearance.accent }}>
-                    Installing Mod
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-[#d3d3d3]">
-                    Hyperion is extracting files, updating the library, and deploying the mod. Please wait until the installation finishes.
-                  </p>
-                  <div className="mt-4 rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
-                    <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">
-                      Processing now
-                    </div>
-                    <div className="mt-2 truncate text-sm font-medium text-[#f2f2f2]">
-                      {installOverlayName}
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#111]">
-                      <div
-                        className="h-full transition-all duration-500"
-                        style={{
-                          width: `${clampedInstallProgress}%`,
-                          background: installAppearance.fill,
-                          boxShadow: `0 0 12px ${installAppearance.accent}33`,
-                        }}
-                      />
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-mono">
-                      <span style={{ color: installAppearance.accent }}>
-                        {installStatus || installAppearance.summary}
-                      </span>
-                      <span className="text-[#d8d8d8]">
-                        {Math.round(clampedInstallProgress)}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-[11px] brand-font uppercase tracking-[0.16em] text-[#8a8a8a]">
-                    The interface is temporarily locked to keep this install stable.
-                  </div>
-                </div>
+                  progress_activity
+                </span>
+                <span
+                  className="brand-font text-[0.72rem] font-bold uppercase tracking-[0.2em] whitespace-nowrap"
+                  style={{ color: installing ? installAppearance.accent : '#fcee09' }}
+                >
+                  {installing ? (installAppearance.label || 'Installing') : 'Analyzing'}
+                </span>
+              </div>
+
+              <div className="truncate text-[1.05rem] font-semibold text-[#e8e8e8] mb-6" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                {installOverlayName}
+              </div>
+
+              <div className="h-[3px] overflow-hidden rounded-sm bg-[#141414]">
+                <div
+                  className="h-full transition-[width,background-color] duration-500"
+                  style={{
+                    width: `${clampedInstallProgress}%`,
+                    background: installing ? installAppearance.fill : '#fcee09',
+                    boxShadow: `0 0 10px ${installing ? installAppearance.accent : '#fcee09'}44`,
+                  }}
+                />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[11px] text-[#555]">
+                  {installStatus || (detecting ? 'Detecting format...' : '')}
+                </span>
+                <span className="text-[11px] font-mono text-[#444]">{Math.round(clampedInstallProgress)}%</span>
               </div>
             </div>
           </div>

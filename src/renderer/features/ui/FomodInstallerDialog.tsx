@@ -127,7 +127,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
       </div>
 
       {isRequired && (
-        <span className="shrink-0 text-[10px] font-bold tracking-widest uppercase text-[#fcee09]/70">required</span>
+        <span className="shrink-0 text-[11px] font-bold tracking-widest uppercase text-[#fcee09]/70">required</span>
       )}
     </label>
   )
@@ -155,9 +155,9 @@ const GroupSection: React.FC<GroupSectionProps> = ({
   return (
     <div className="mb-4">
       <div className="mb-1.5 flex items-center gap-2 px-1">
-        <span className="text-[10px] font-bold tracking-widest uppercase text-[#5a5a5a]">{group.name}</span>
+        <span className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a]">{group.name}</span>
         {isAll && (
-          <span className="text-[9px] font-bold tracking-widest uppercase text-[#444]">all selected</span>
+          <span className="text-[11px] font-bold tracking-widest uppercase text-[#555]">all selected</span>
         )}
       </div>
       <div className="overflow-hidden rounded-sm border border-[#1e1e1e] bg-[#080808]">
@@ -194,7 +194,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
 
   return (
     <div className="w-[420px] shrink-0 flex flex-col gap-3 border-l border-[#1a1a1a] pl-6 min-h-0 overflow-hidden">
-      <div className="text-[10px] font-bold tracking-widest uppercase text-[#5a5a5a] shrink-0">Preview</div>
+      <div className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a] shrink-0">Preview</div>
 
       <div className="flex-1 min-h-0 overflow-y-auto hyperion-scrollbar flex flex-col gap-3 pr-1">
         {imagePath ? (
@@ -432,12 +432,12 @@ export const FomodInstallerDialog: React.FC = () => {
           <div className="flex items-center gap-3 min-w-0">
             <span className="material-symbols-outlined text-xl text-[#fcee09]">install_desktop</span>
             <div className="min-w-0">
-              <div className="text-[10px] brand-font font-bold tracking-widest uppercase text-[#fcee09]">FOMOD Installer</div>
+              <div className="text-[12px] brand-font font-bold tracking-widest uppercase text-[#fcee09]">FOMOD Installer</div>
               <div className="text-sm font-semibold text-[#e0e0e0] truncate mt-0.5">{config.moduleName}</div>
             </div>
           </div>
           {hasSteps && (
-            <div className="shrink-0 font-mono text-xs text-[#7a7a7a]">Step {safePos + 1} / {totalSteps}</div>
+            <div className="shrink-0 font-mono text-[13px] text-[#8a8a8a]">Step {safePos + 1} / {totalSteps}</div>
           )}
         </div>
 

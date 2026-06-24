@@ -23,7 +23,7 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
   onDeleteAll,
 }) => (
   <div className="shrink-0 px-6 pt-6 pb-3 w-full">
-    <h1 className="brand-font text-[1.42rem] font-black uppercase tracking-[0.08em] text-white sm:text-[1.58rem]">
+    <h1 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
       Downloads
     </h1>
     <p

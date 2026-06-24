@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
-import type { GameLaunchProgress, IpcResult } from '@shared/types'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 
 interface NavItem {
@@ -27,117 +25,6 @@ function getAccountInitials(name?: string) {
     .join('')
 }
 
-const DEFAULT_LAUNCH_PROGRESS: GameLaunchProgress = {
-  step: 'Preparing VFS launch',
-  percent: 4,
-  detail: 'Starting Hyperion launch pipeline',
-  state: 'running',
-  cancellable: true,
-}
-
-const LaunchProgressDialog: React.FC<{
-  progress: GameLaunchProgress
-  cancelling: boolean
-  onCancel: () => void
-}> = ({ progress, cancelling, onCancel }) => {
-  const percent = Math.max(4, Math.min(Math.round(progress.percent || 0), 100))
-  const isDone = progress.state === 'done'
-  const isError = progress.state === 'error'
-  const isCancelled = progress.state === 'cancelled'
-  const canCancel = Boolean(progress.cancellable) && !cancelling && !isDone && !isError && !isCancelled
-  const accent = isError
-    ? '#ff5b6e'
-    : isCancelled
-      ? '#a3a3a3'
-      : isDone
-        ? '#34d399'
-        : '#fcee09'
-  const detail = progress.detail || progress.logPath || 'Preparing virtual file system'
-
-  const openLog = () => {
-    if (!progress.logPath) return
-    void IpcService.invoke(IPC.OPEN_PATH, progress.logPath)
-  }
-
-  return createPortal(
-    <div className="fixed inset-0 z-[270] flex items-center justify-center bg-black/76 px-4 backdrop-blur-sm">
-      <div
-        className="relative w-full max-w-[430px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-5 py-5 shadow-[0_24px_70px_rgba(0,0,0,0.72)]"
-        style={{ borderColor: `${accent}55` }}
-      >
-        <div
-          className="absolute left-0 top-0 h-[2px] w-full"
-          style={{ background: accent, boxShadow: `0 0 14px ${accent}55` }}
-        />
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]" style={{ color: accent }}>
-                {isDone ? 'check_circle' : isError ? 'error' : isCancelled ? 'block' : 'folder_managed'}
-              </span>
-              <div className="brand-font text-[1rem] font-bold uppercase tracking-[0.14em] text-white">
-                Preparing VFS
-              </div>
-              <span
-                className="rounded-sm border-[0.5px] px-2 py-0.5 ui-support-mono text-[10px] uppercase tracking-[0.14em]"
-                style={{ borderColor: `${accent}55`, color: accent, background: `${accent}12` }}
-              >
-                {progress.state ?? 'running'}
-              </span>
-            </div>
-            <div className="mt-2 text-sm text-[#d0d0d0]">
-              {progress.step}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={openLog}
-            disabled={!progress.logPath}
-            className="shrink-0 rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0d0d0d] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#bdbdbd] transition-colors hover:border-[#fcee09]/40 hover:text-[#fcee09] disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            Log
-          </button>
-        </div>
-
-        <div className="mt-5 rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0b0b0b] px-4 py-3">
-          <div className="truncate ui-support-mono text-[11px] uppercase tracking-[0.14em] text-[#8f8f8f]">
-            {detail}
-          </div>
-          <div className="mt-3 h-6 overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#151515]">
-            <div
-              className="h-full transition-[width,background-color] duration-300"
-              style={{ width: `${percent}%`, background: accent, boxShadow: `0 0 16px ${accent}44` }}
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-mono">
-            <span style={{ color: accent }}>
-              {progress.current !== undefined && progress.total !== undefined
-                ? `${progress.current}/${progress.total}`
-                : isDone
-                  ? 'Ready'
-                  : cancelling
-                    ? 'Cancelling'
-                    : 'Working'}
-            </span>
-            <span className="text-[#d8d8d8]">{percent}%</span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={!canCancel}
-            className="rounded-sm border-[0.5px] border-[#454545] bg-[#111] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[#e5e2e1] transition-colors hover:border-[#fcee09]/45 hover:text-[#fcee09] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {cancelling ? 'Cancelling...' : 'Cancel'}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  )
-}
 
 export const Sidebar: React.FC = () => {
   const { activeView, setActiveView, addToast, settings, gamePathValid, activeDownloads, newFiles, gameRunning, checkGameRunning, killGame } = useAppStore((state) => ({
@@ -206,10 +93,7 @@ export const Sidebar: React.FC = () => {
   }`
 
   const [launching, setLaunching] = useState(false)
-  const [launchProgress, setLaunchProgress] = useState<GameLaunchProgress | null>(null)
-  const [launchCancelling, setLaunchCancelling] = useState(false)
   const launchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const launchProgressHideRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (gameRunning && launching) {
@@ -218,72 +102,24 @@ export const Sidebar: React.FC = () => {
     }
   }, [gameRunning, launching])
 
-  useEffect(() => {
-    const unsubscribe = IpcService.on(IPC.LAUNCH_GAME_PROGRESS, (...args) => {
-      const progress = args[0] as GameLaunchProgress
-      if (launchProgressHideRef.current) {
-        clearTimeout(launchProgressHideRef.current)
-        launchProgressHideRef.current = null
-      }
-
-      setLaunchProgress(progress)
-      if (progress.state === 'running') setLaunchCancelling(false)
-      if (progress.state === 'done' || progress.state === 'cancelled') {
-        launchProgressHideRef.current = setTimeout(() => {
-          setLaunchProgress(null)
-          setLaunchCancelling(false)
-        }, progress.state === 'done' ? 700 : 1000)
-      }
-    })
-
-    return () => {
-      unsubscribe()
-      if (launchProgressHideRef.current) clearTimeout(launchProgressHideRef.current)
-    }
-  }, [])
-
-  const handleCancelLaunch = async () => {
-    if (!launchProgress?.cancellable || launchCancelling) return
-    setLaunchCancelling(true)
-    setLaunchProgress((current) => current
-      ? {
-        ...current,
-        step: 'Cancelling launch',
-        detail: 'Waiting for VFS preparation to stop',
-        cancellable: false,
-      }
-      : current)
-    await IpcService.invoke<IpcResult>(IPC.CANCEL_GAME_LAUNCH)
-  }
-
   const handleLaunchGame = async () => {
     if (!settings?.gamePath || !gamePathValid) {
       addToast('Game path not configured — check Settings', 'warning')
       return
     }
     if (launchTimeoutRef.current) clearTimeout(launchTimeoutRef.current)
-    if (launchProgressHideRef.current) clearTimeout(launchProgressHideRef.current)
     setLaunching(true)
-    setLaunchCancelling(false)
-    setLaunchProgress(DEFAULT_LAUNCH_PROGRESS)
 
     try {
       const result = await IpcService.invoke<{ ok: boolean; error?: string; cancelled?: boolean }>(IPC.LAUNCH_GAME)
-      if (!result.ok) {
+      if (!result.ok && !result.cancelled) {
         setLaunching(false)
-        if (!result.cancelled) {
-          addToast(result.error ?? 'Could not launch game', 'error')
-          setLaunchProgress(null)
-        }
+        addToast(result.error ?? 'Could not launch game', 'error')
         return
       }
-
-      launchTimeoutRef.current = setTimeout(() => {
-        setLaunching(false)
-      }, 30000)
+      launchTimeoutRef.current = setTimeout(() => setLaunching(false), 30000)
     } catch (error) {
       setLaunching(false)
-      setLaunchProgress(null)
       addToast(error instanceof Error ? error.message : 'Could not launch game', 'error')
     }
   }
@@ -442,13 +278,6 @@ export const Sidebar: React.FC = () => {
           </button>
         )}
       </div>
-      {launchProgress && (
-        <LaunchProgressDialog
-          progress={launchProgress}
-          cancelling={launchCancelling}
-          onCancel={() => void handleCancelLaunch()}
-        />
-      )}
     </nav>
   )
 }

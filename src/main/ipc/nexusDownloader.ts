@@ -319,23 +319,25 @@ export async function validateNexusApiKey(
   }
 }
 
-async function fetchFileVersion(
+async function fetchFileInfo(
   modId: number,
   fileId: number,
   apiKey: string,
   mainWindow: BrowserWindow | null,
-): Promise<string | undefined> {
-  const result = await nexusGet<{ version?: string; mod_version?: string }>(
+): Promise<{ version?: string; fileName?: string }> {
+  const result = await nexusGet<{ version?: string; mod_version?: string; file_name?: string }>(
     `/games/${GAME_DOMAIN}/mods/${modId}/files/${fileId}.json`,
     apiKey,
     mainWindow,
     { modId, fileId, gameDomain: GAME_DOMAIN },
   )
-  if (!result.ok || !result.data) return undefined
+  if (!result.ok || !result.data) return {}
   const raw = result.data.version ?? result.data.mod_version
-  if (typeof raw !== 'string') return undefined
-  const trimmed = raw.trim()
-  return trimmed.length > 0 ? trimmed : undefined
+  const version = typeof raw === 'string' && raw.trim() ? raw.trim() : undefined
+  const fileName = typeof result.data.file_name === 'string' && result.data.file_name.trim()
+    ? result.data.file_name.trim()
+    : undefined
+  return { version, fileName }
 }
 
 function normalizeVersionString(value?: string): string | undefined {
@@ -1141,17 +1143,33 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     } catch {
       rawName = ''
     }
-    const resolvedFileName = activeDownload?.fileName || existingDownload?.fileName || rawName || `mod-${payload.modId}-file-${payload.fileId}.zip`
+
+    const ARCHIVE_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
+    const hasValidExtension = ARCHIVE_EXTENSIONS.has(path.extname(rawName).toLowerCase())
+
+    const fileInfo = await fetchFileInfo(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
+      .catch(() => ({} as { version?: string; fileName?: string }))
+
+    const detectedVersion = normalizeVersionString(fileInfo.version)
+
+    // Prefer the Nexus API file_name when the CDN URL path has no archive extension
+    // (some CDNs use UUID-like paths that strip the filename).
+    const nameFromApi = fileInfo.fileName && ARCHIVE_EXTENSIONS.has(path.extname(fileInfo.fileName).toLowerCase())
+      ? fileInfo.fileName
+      : undefined
+
+    const resolvedFileName = activeDownload?.fileName
+      || existingDownload?.fileName
+      || (hasValidExtension ? rawName : undefined)
+      || nameFromApi
+      || `mod-${payload.modId}-file-${payload.fileId}.zip`
+
     const target = (existingDownload || activeDownload) && allowDuplicate
       ? resolveDuplicateDownloadTarget(downloadDir, resolvedFileName)
       : {
           fileName: resolvedFileName,
           destPath: path.join(downloadDir, resolvedFileName),
         }
-
-    const detectedVersion = await fetchFileVersion(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
-      .then((version) => normalizeVersionString(version))
-      .catch(() => undefined)
 
     inFlightDownloads.set(id, {
       abort: null,
