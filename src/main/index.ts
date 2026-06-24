@@ -370,6 +370,24 @@ function cleanVfsOverwriteVolatileFiles(overwritePath: string): VfsOverwriteClea
   return result
 }
 
+function buildVfsOverwriteReadLinks(gameRoot: string, overwritePath: string): VfsLink[] {
+  if (!fs.existsSync(overwritePath)) return []
+
+  const links: VfsLink[] = []
+  for (const filePath of collectFilesRecursive(overwritePath)) {
+    const relFile = normalizeRelativePath(path.relative(overwritePath, filePath))
+    if (!relFile || isVolatileOverwriteFile(relFile)) continue
+
+    links.push({
+      source: filePath,
+      dest: path.join(gameRoot, relFile),
+      dir: false,
+    })
+  }
+
+  return links
+}
+
 function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: string } {
   const overwritePath = ensureVfsOverwritePath()
   const resolvedOverwrite = path.resolve(overwritePath)
@@ -2016,8 +2034,22 @@ function registerGlobalHandlers(): void {
       // read-only. Persisted across launches so caches/configs survive.
       const overwriteDir = ensureVfsOverwritePath(settings.libraryPath)
       try {
+        const cleanResult = cleanVfsOverwriteVolatileFiles(overwriteDir)
+        if (cleanResult.removed > 0 || cleanResult.errors.length > 0) {
+          appendVfsLaunchLog('vfs overwrite pre-launch volatile cleanup result', cleanResult)
+        }
+
+        const overwriteReadLinks = buildVfsOverwriteReadLinks(gameRoot, overwriteDir)
         links = [...links, { source: overwriteDir, dest: gameRoot, dir: true, createTarget: true }]
-        appendVfsLaunchLog('vfs overwrite layer', { overwriteDir, dest: gameRoot })
+        if (overwriteReadLinks.length > 0) {
+          links = [...links, ...overwriteReadLinks]
+        }
+        appendVfsLaunchLog('vfs overwrite layer', {
+          overwriteDir,
+          dest: gameRoot,
+          readOverlayFiles: overwriteReadLinks.length,
+          sampleReadOverlayFiles: overwriteReadLinks.slice(0, 30),
+        })
       } catch (err: unknown) {
         appendVfsLaunchLog('vfs overwrite layer failed', {
           error: err instanceof Error ? err.message : String(err),

@@ -47,9 +47,13 @@ function run() {
 
   // CET-like mod providing bin/x64 content.
   const cetMod = path.join(root, 'lib', 'CET')
-  fs.mkdirSync(path.join(cetMod, 'bin', 'x64', 'plugins'), { recursive: true })
+  fs.mkdirSync(path.join(cetMod, 'bin', 'x64', 'plugins', 'cyber_engine_tweaks'), { recursive: true })
   fs.writeFileSync(path.join(cetMod, 'bin', 'x64', 'version.dll'), 'VERSIONDLL')
   fs.writeFileSync(path.join(cetMod, 'bin', 'x64', 'plugins', 'cet.asi'), 'CETASI')
+  fs.writeFileSync(
+    path.join(cetMod, 'bin', 'x64', 'plugins', 'cyber_engine_tweaks', 'bindings.json'),
+    'DEFAULT_BINDINGS',
+  )
 
   // RED4ext-like mod providing red4ext/ (virtual-only over the game).
   const r4Mod = path.join(root, 'lib', 'RED4ext')
@@ -58,12 +62,31 @@ function run() {
 
   const overwriteDir = path.join(root, 'overwrite')
   fs.mkdirSync(overwriteDir, { recursive: true })
+  const overwriteBindings = path.join(
+    overwriteDir,
+    'bin',
+    'x64',
+    'plugins',
+    'cyber_engine_tweaks',
+    'bindings.json',
+  )
+  fs.mkdirSync(path.dirname(overwriteBindings), { recursive: true })
+  fs.writeFileSync(overwriteBindings, 'USER_BINDINGS')
+  const virtualBindings = path.join(
+    gameRoot,
+    'bin',
+    'x64',
+    'plugins',
+    'cyber_engine_tweaks',
+    'bindings.json',
+  )
 
   // Same link order the app builds: mod dir mounts first, overwrite LAST.
   const links = [
     { source: path.join(cetMod, 'bin'), dest: path.join(gameRoot, 'bin'), dir: true },
     { source: path.join(r4Mod, 'red4ext'), dest: path.join(gameRoot, 'red4ext'), dir: true },
     { source: overwriteDir, dest: gameRoot, dir: true, createTarget: true },
+    { source: overwriteBindings, dest: virtualBindings, dir: false },
   ]
 
   result.mount = bridge.mountVfs({ instanceName: 'hyperion_overwrite', links })
@@ -117,6 +140,15 @@ function run() {
   })
   result.modContent = (readMod.stdout || '').trim()
 
+  // Persisted overwrite files must win reads over defaults provided by mods.
+  const readBindings = bridge.launchHookedProcess({
+    appPath: comspec,
+    commandLine: `"${comspec}" /c type "${virtualBindings}"`,
+    capture: true,
+    waitMs: 15000,
+  })
+  result.bindingsContent = (readBindings.stdout || '').trim()
+
   // Stability: a second mount/unmount cycle must not crash.
   bridge.unmountVfs()
   result.remount = bridge.mountVfs({ instanceName: 'hyperion_overwrite', links })
@@ -131,6 +163,7 @@ function run() {
     writeSucceeded: result.writeStdout.includes('OK_WRITE'),
     psWriteSucceeded: result.psStdout.includes('OK_PS'),
     modStillReadable: result.modContent === 'RED4EXTDLL',
+    overwriteReadOverlayWins: result.bindingsContent === 'USER_BINDINGS',
     // C) .NET create_directories path redirected to overwrite (RED4ext's real API)
     psLogInOverwrite: result.overwriteTree.includes('red4ext/logs2/red4ext.log'),
     noPsLogInGame: !result.gameRootTree.some((p) => p.startsWith('red4ext/')),
