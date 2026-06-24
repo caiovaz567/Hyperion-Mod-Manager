@@ -96,6 +96,7 @@ let gameExitTimer: NodeJS.Timeout | null = null
 let stagedBootstrapEntries: BootstrapStageEntry[] = []
 let stagedBootstrapOverrideDirs: string[] = []
 let stagedBootstrapTempDirs: BootstrapTempDir[] = []
+let activeVfsLaunchContext: ActiveVfsLaunchContext | null = null
 let vfsLaunchCancelRequested = false
 
 function unmountVfsIfMounted(): void {
@@ -111,6 +112,7 @@ function unmountVfsIfMounted(): void {
     }
   }
   vfsMounted = false
+  migrateActiveVfsResidueAfterRun()
   cleanupStagedBootstrapFiles()
 }
 
@@ -399,6 +401,12 @@ interface VfsResidueMigrationResult {
   removedDuplicates: number
   conflicts: number
   error?: string
+}
+
+interface ActiveVfsLaunchContext {
+  gameRoot: string
+  libraryPath: string
+  enabledMods: ModMetadata[]
 }
 
 function filesAreEqual(leftPath: string, rightPath: string): boolean {
@@ -762,6 +770,27 @@ function migrateVfsPhysicalResidue(
   return collectVfsResidueDirs(gameRoot, deployFiles)
     .map((relDir) => migratePhysicalResidueDir(gameRoot, overwriteRoot, relDir, deployFileMap))
     .filter((result) => result.status !== 'skipped')
+}
+
+function migrateActiveVfsResidueAfterRun(): void {
+  const context = activeVfsLaunchContext
+  activeVfsLaunchContext = null
+  if (!context?.libraryPath) return
+
+  try {
+    const residueMigration = migrateVfsPhysicalResidue(
+      context.gameRoot,
+      context.libraryPath,
+      context.enabledMods
+    )
+    appendVfsLaunchLog('vfs physical residue post-run migration result', {
+      migrated: residueMigration.filter((entry) => entry.status === 'migrated').length,
+      errors: residueMigration.filter((entry) => entry.status === 'error').length,
+      entries: residueMigration,
+    })
+  } catch (error) {
+    appendVfsLaunchLog('vfs physical residue post-run migration failed', error)
+  }
 }
 
 function getExpectedBootstrapModuleNames(entries: BootstrapStageEntry[]): string[] {
@@ -1930,6 +1959,9 @@ function registerGlobalHandlers(): void {
       }
 
       vfsMounted = true
+      activeVfsLaunchContext = settings.libraryPath
+        ? { gameRoot, libraryPath: settings.libraryPath, enabledMods }
+        : null
       const mountCancelled = cancelledLaunchResult(82)
       if (mountCancelled) return mountCancelled
 
