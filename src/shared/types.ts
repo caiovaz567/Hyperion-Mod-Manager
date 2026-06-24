@@ -351,6 +351,15 @@ export interface PurgeModsResult {
   failed: number
 }
 
+export interface VfsOverwriteInfo {
+  path: string
+  exists: boolean
+  fileCount: number
+  directoryCount: number
+  totalBytes: number
+  updatedAt?: string
+}
+
 // ─── IPC Result wrapper ───────────────────────────────────────────────────────
 
 export interface IpcResult<T = undefined> {
@@ -463,6 +472,9 @@ export const IPC = {
   LAUNCH_GAME: 'game:launch',
   LAUNCH_GAME_PROGRESS: 'game:launchProgress',
   CANCEL_GAME_LAUNCH: 'game:launchCancel',
+  GET_VFS_OVERWRITE_INFO: 'vfs:overwriteInfo',
+  OPEN_VFS_OVERWRITE: 'vfs:overwriteOpen',
+  CLEAR_VFS_OVERWRITE: 'vfs:overwriteClear',
   GAME_RUNNING: 'game:running',
   KILL_GAME: 'game:kill',
 

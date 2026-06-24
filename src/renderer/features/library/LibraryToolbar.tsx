@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import type { VfsOverwriteInfo } from '@shared/types'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { HyperionBadge, HyperionButton, HyperionIconButton, HyperionSearchField } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
@@ -15,8 +16,12 @@ interface LibraryToolbarProps {
   onDeleteAll: () => void
   onInstallMod: () => void
   onCheckUpdates: () => void
+  onOpenOverwrite: () => void
+  onClearOverwrite: () => void
   checkingUpdates: boolean
+  clearingOverwrite: boolean
   updateCount: number
+  overwriteInfo: VfsOverwriteInfo | null
 }
 
 const statusFilterOptions: LibraryStatusFilter[] = ['all', 'enabled', 'disabled']
@@ -25,6 +30,18 @@ function getStatusFilterLabel(filter: LibraryStatusFilter): string {
   if (filter === 'enabled') return 'Enabled'
   if (filter === 'disabled') return 'Disabled'
   return 'All'
+}
+
+function formatOverwriteSize(bytes: number): string {
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
 }
 
 export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
@@ -39,8 +56,12 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   onDeleteAll,
   onInstallMod,
   onCheckUpdates,
+  onOpenOverwrite,
+  onClearOverwrite,
   checkingUpdates,
+  clearingOverwrite,
   updateCount,
+  overwriteInfo,
 }) => {
   const [statusFilterOpen, setStatusFilterOpen] = useState(false)
   const statusFilterRef = useRef<HTMLDivElement>(null)
@@ -57,6 +78,11 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
     window.addEventListener('mousedown', close)
     return () => window.removeEventListener('mousedown', close)
   }, [statusFilterOpen])
+
+  const overwriteFileCount = overwriteInfo?.fileCount ?? 0
+  const overwriteSummary = overwriteInfo
+    ? `${overwriteFileCount} file${overwriteFileCount === 1 ? '' : 's'} / ${formatOverwriteSize(overwriteInfo.totalBytes)}`
+    : 'Runtime files redirected from VFS launches'
 
   return (
     <div className="shrink-0 px-8 pt-6 pb-3 w-full">
@@ -156,6 +182,33 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
               {checkingUpdates ? 'Checking…' : updateCount > 0 ? `Updates (${updateCount})` : 'Check Updates'}
             </HyperionButton>
           </Tooltip>
+
+          <Tooltip
+            content={`VFS Overwrite stores runtime-generated files outside the game folder.\n${overwriteSummary}`}
+            side="bottom"
+            variant="help"
+          >
+            <HyperionButton
+              onClick={onOpenOverwrite}
+              variant={overwriteFileCount > 0 ? 'cyan' : 'toolbar'}
+              icon="folder_open"
+              className="px-5"
+            >
+              {overwriteFileCount > 0 ? `Overwrite (${overwriteFileCount})` : 'Overwrite'}
+            </HyperionButton>
+          </Tooltip>
+
+          {overwriteFileCount > 0 && (
+            <HyperionIconButton
+              icon={clearingOverwrite ? 'progress_activity' : 'delete_sweep'}
+              label="Clear VFS overwrite"
+              tooltip="Clear runtime files from the VFS overwrite folder"
+              variant="danger"
+              iconClassName={clearingOverwrite ? 'animate-spin text-[20px]' : 'text-[20px]'}
+              disabled={clearingOverwrite}
+              onClick={onClearOverwrite}
+            />
+          )}
         </div>
 
         <div className="ml-auto flex items-center gap-2">

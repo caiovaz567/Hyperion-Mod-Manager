@@ -23,7 +23,7 @@ import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridg
 import { registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
 import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
-import { IPC, type GameLaunchProgress, type ModMetadata } from '../shared/types'
+import { IPC, type GameLaunchProgress, type ModMetadata, type VfsOverwriteInfo } from '../shared/types'
 import { parseNxmUrl } from '../shared/nxm'
 import { clearAppLogs, getAppLogsSnapshot, pushGeneralLog, safeSendToWindow } from './logStore'
 import { findNexusDownloadRecordByPath, removeNexusDownloadRecordByPath } from './nexusDownloadRegistry'
@@ -171,6 +171,84 @@ $mods | ConvertTo-Json -Compress -Depth 3
 
 function getVfsLaunchLogPath(): string {
   return path.join(app.getPath('userData'), 'logs', 'vfs-launch.log')
+}
+
+function getVfsOverwritePath(): string {
+  return path.join(app.getPath('userData'), 'vfs-overwrite')
+}
+
+function collectVfsOverwriteInfo(): VfsOverwriteInfo {
+  const overwritePath = getVfsOverwritePath()
+  const info: VfsOverwriteInfo = {
+    path: overwritePath,
+    exists: fs.existsSync(overwritePath),
+    fileCount: 0,
+    directoryCount: 0,
+    totalBytes: 0,
+  }
+
+  if (!info.exists) return info
+
+  const walk = (dir: string): void => {
+    let entries: fs.Dirent[] = []
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry.name)
+      try {
+        const stat = fs.statSync(entryPath)
+        if (!info.updatedAt || stat.mtime > new Date(info.updatedAt)) {
+          info.updatedAt = stat.mtime.toISOString()
+        }
+
+        if (entry.isDirectory()) {
+          info.directoryCount += 1
+          walk(entryPath)
+        } else if (entry.isFile()) {
+          info.fileCount += 1
+          info.totalBytes += stat.size
+        }
+      } catch {
+        // Best-effort UI metadata; unreadable files should not break the app.
+      }
+    }
+  }
+
+  walk(overwritePath)
+  return info
+}
+
+function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: string } {
+  const overwritePath = getVfsOverwritePath()
+  const resolvedOverwrite = path.resolve(overwritePath)
+  const resolvedUserData = path.resolve(app.getPath('userData'))
+
+  if (resolvedOverwrite === resolvedUserData || !resolvedOverwrite.startsWith(`${resolvedUserData}${path.sep}`)) {
+    return { ok: false, error: 'Overwrite path resolved outside Hyperion user data' }
+  }
+
+  try {
+    if (!fs.existsSync(overwritePath)) {
+      fs.mkdirSync(overwritePath, { recursive: true })
+      return { ok: true, data: collectVfsOverwriteInfo() }
+    }
+
+    for (const entry of fs.readdirSync(overwritePath)) {
+      fs.rmSync(path.join(overwritePath, entry), { recursive: true, force: true })
+    }
+    fs.mkdirSync(overwritePath, { recursive: true })
+    appendVfsLaunchLog('vfs overwrite cleared', { overwritePath })
+    return { ok: true, data: collectVfsOverwriteInfo() }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
 }
 
 function toLoggableDetails(details?: unknown): unknown {
@@ -1083,6 +1161,49 @@ function registerGlobalHandlers(): void {
     }
   })
 
+  ipcMain.handle(IPC.GET_VFS_OVERWRITE_INFO, () => {
+    try {
+      return { ok: true, data: collectVfsOverwriteInfo() }
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Could not read VFS overwrite folder',
+      }
+    }
+  })
+
+  ipcMain.handle(IPC.OPEN_VFS_OVERWRITE, async () => {
+    try {
+      const overwritePath = getVfsOverwritePath()
+      fs.mkdirSync(overwritePath, { recursive: true })
+      const errorMessage = await shell.openPath(overwritePath)
+      if (errorMessage) return { ok: false, error: errorMessage }
+      return { ok: true, data: collectVfsOverwriteInfo() }
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Could not open VFS overwrite folder',
+      }
+    }
+  })
+
+  ipcMain.handle(IPC.CLEAR_VFS_OVERWRITE, async () => {
+    if (vfsMounted || await isGameProcessRunning()) {
+      return { ok: false, error: 'Close Cyberpunk 2077 before clearing the VFS overwrite folder' }
+    }
+
+    const result = clearVfsOverwrite()
+    if (!result.ok) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'launcher',
+        message: 'VFS overwrite clear failed',
+        details: { error: result.error, overwritePath: getVfsOverwritePath() },
+      })
+    }
+    return result
+  })
+
   ipcMain.handle(IPC.CANCEL_GAME_LAUNCH, () => {
     vfsLaunchCancelRequested = true
     appendVfsLaunchLog('vfs launch cancellation requested')
@@ -1357,7 +1478,7 @@ function registerGlobalHandlers(): void {
       // r6/cache). Without it, anything that writes at runtime (RED4ext,
       // redscript) crashes; archive-only mods are unaffected because they are
       // read-only. Persisted across launches so caches/configs survive.
-      const overwriteDir = path.join(app.getPath('userData'), 'vfs-overwrite')
+      const overwriteDir = getVfsOverwritePath()
       try {
         fs.mkdirSync(overwriteDir, { recursive: true })
         links = [...links, { source: overwriteDir, dest: gameRoot, dir: true, createTarget: true }]

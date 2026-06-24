@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
-import type { ModMetadata } from '@shared/types'
+import { IPC, type IpcResult, type ModMetadata, type VfsOverwriteInfo } from '@shared/types'
+import { IpcService } from '../../services/IpcService'
 import { DetailPanel } from './DetailPanel'
 import { LibraryBulkSelectionBar } from './LibraryBulkSelectionBar'
 import { LibraryContextMenu } from './LibraryContextMenu'
@@ -42,6 +43,8 @@ export const ModList: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<LibraryPendingActionState | null>(null)
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null)
   const [collapsedSeparatorIds, setCollapsedSeparatorIds] = useState<string[]>([])
+  const [overwriteInfo, setOverwriteInfo] = useState<VfsOverwriteInfo | null>(null)
+  const [clearingOverwrite, setClearingOverwrite] = useState(false)
   const listScrollRef = useRef<HTMLDivElement>(null)
   const listRowsRef = useRef<HTMLDivElement>(null)
 
@@ -124,6 +127,48 @@ export const ModList: React.FC = () => {
   }), shallow)
 
   const updateCount = Object.values(modUpdates).filter((status) => status.state === 'update-available').length
+
+  const refreshOverwriteInfo = useCallback(async (): Promise<VfsOverwriteInfo | null> => {
+    const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.GET_VFS_OVERWRITE_INFO)
+    if (result.ok && result.data) {
+      setOverwriteInfo(result.data)
+      return result.data
+    }
+    return null
+  }, [])
+
+  useEffect(() => {
+    void refreshOverwriteInfo()
+  }, [refreshOverwriteInfo, gameRunning])
+
+  const handleOpenOverwrite = useCallback(async () => {
+    const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.OPEN_VFS_OVERWRITE)
+    if (result.ok && result.data) {
+      setOverwriteInfo(result.data)
+      return
+    }
+    addToast(result.error ?? 'Could not open VFS overwrite folder', 'error')
+  }, [addToast])
+
+  const handleClearOverwrite = useCallback(async () => {
+    if (gameRunning) {
+      addToast('Close Cyberpunk 2077 before clearing VFS overwrite', 'warning')
+      return
+    }
+
+    setClearingOverwrite(true)
+    try {
+      const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.CLEAR_VFS_OVERWRITE)
+      if (result.ok && result.data) {
+        setOverwriteInfo(result.data)
+        addToast('VFS overwrite cleared', 'success')
+        return
+      }
+      addToast(result.error ?? 'Could not clear VFS overwrite', 'error')
+    } finally {
+      setClearingOverwrite(false)
+    }
+  }, [addToast, gameRunning])
 
   const {
     handleInstallFile,
@@ -498,8 +543,12 @@ export const ModList: React.FC = () => {
         onDeleteAll={() => requestLibraryDeleteAll()}
         onInstallMod={handleInstallClick}
         onCheckUpdates={() => void checkModUpdates({ force: true, notify: true, full: true })}
+        onOpenOverwrite={() => void handleOpenOverwrite()}
+        onClearOverwrite={() => void handleClearOverwrite()}
         checkingUpdates={checkingModUpdates}
+        clearingOverwrite={clearingOverwrite}
         updateCount={updateCount}
+        overwriteInfo={overwriteInfo}
       />
 
         {/* Table — has its own scroll, toolbar stays fixed above */}
