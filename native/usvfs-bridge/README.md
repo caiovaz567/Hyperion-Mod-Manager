@@ -2,8 +2,6 @@
 
 Native Node.js addon that bridges Hyperion (Electron) to **usvfs** — the User-Space Virtual File System from Mod Organizer 2. Enabled mods are mapped over the game tree at launch time; mod files stay in the library and the game directory is never touched.
 
-Import-time DLL proxy loaders are the one exception: Windows resolves static DLL imports before usvfs file hooks are active, so Hyperion physically stages a small bootstrap set (`bin/x64` and `bin/x64/plugins` DLL/ASI/INI files) before the hooked game launch. All other mod payload stays virtual.
-
 > usvfs is GPL-3.0 and Hyperion is GPL-3.0, so bundling it is license-compatible.
 
 ## Prerequisites
@@ -48,6 +46,8 @@ unmountVfs()
 ```
 
 The controller (main process) must remain alive while the game runs. `unmountVfs` is called automatically on game exit, kill, or app quit.
+
+> **Bootstrap exception**: Windows resolves static DLL imports before usvfs file hooks are active. Hyperion physically stages a small set of files (`bin/x64` and `bin/x64/plugins` DLL/ASI/INI) before the hooked launch. All other mod payload stays virtual.
 
 ## Licensing
 
