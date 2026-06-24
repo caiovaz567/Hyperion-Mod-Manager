@@ -698,19 +698,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
               <div className="mt-3 min-h-0 flex flex-1 flex-col gap-5">
                 <ConflictSection
-                  conflicts={conflictSubTab === 'files' ? lossFileConflicts : lossArchiveConflicts}
-                  emptyMessage="No other mod is currently overwriting files from this mod."
-                  mod={mod}
-                  tone="loss"
-                  title="Other Mods Win"
-                  collapsed={lossConflictsCollapsed}
-                  onToggleCollapsed={() => setLossConflictsCollapsed((current) => !current)}
-                  className={lossConflictsCollapsed ? 'flex-none' : 'flex-1'}
-                  showArchiveDetails={conflictSubTab === 'archives'}
-                  modsById={modsById}
-                />
-
-                <ConflictSection
                   conflicts={conflictSubTab === 'files' ? winFileConflicts : winArchiveConflicts}
                   emptyMessage="This mod is not currently overwriting files from other mods."
                   mod={mod}
@@ -719,6 +706,19 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   collapsed={winConflictsCollapsed}
                   onToggleCollapsed={() => setWinConflictsCollapsed((current) => !current)}
                   className={winConflictsCollapsed ? 'flex-none' : 'flex-1'}
+                  showArchiveDetails={conflictSubTab === 'archives'}
+                  modsById={modsById}
+                />
+
+                <ConflictSection
+                  conflicts={conflictSubTab === 'files' ? lossFileConflicts : lossArchiveConflicts}
+                  emptyMessage="No other mod is currently overwriting files from this mod."
+                  mod={mod}
+                  tone="loss"
+                  title="Other Mods Win"
+                  collapsed={lossConflictsCollapsed}
+                  onToggleCollapsed={() => setLossConflictsCollapsed((current) => !current)}
+                  className={lossConflictsCollapsed ? 'flex-none' : 'flex-1'}
                   showArchiveDetails={conflictSubTab === 'archives'}
                   modsById={modsById}
                 />

@@ -205,14 +205,13 @@ Conflict indicators on mod rows:
 - Tooltip format: `Wins N file(s) - Loses N file(s) - Click to inspect conflicts.`
 - Clicking the icon opens the mod detail modal directly on the Conflicts tab
 
-Conflict inspector inside the mod detail modal:
-- **Loss section** renders on top, **Win section** on bottom
+Conflict inspector inside the mod detail modal (MO2-style):
+- The Conflicts tab uses two flat tables, kept deliberately simple like Mod Organizer 2: **This Mod Wins** on top, **Other Mods Win** on the bottom. Do not add a verdict/overview panel, per-opponent grouping headers, or win/loss ratio bars — those add complexity without helping the read
+- Each table is two columns: `File` (the resource path, monospace) and the other mod (`Overwritten mod` for wins / `Providing mod` for losses). The mod column is wide and wraps (`break-words`) so long mod names always show in full — never truncate mod names to `…`
+- Section header carries the meaning: a `visibility` (eye) icon + green for "This Mod Wins", a `visibility_off` icon + red for "Other Mods Win", plus a short plain subtitle and a count. The icon metaphor is "your file loads" vs "your file is hidden"
 - Sections with zero entries auto-collapse when the modal opens; sections with entries default to expanded
-- The outcome lives in the section header and count chip; individual rows should avoid repeating long explanatory labels such as "this mod wins this resource"
-- Each conflict row is a compact two-column comparison: resource/path first, then the other mod and load-order position
-- For `archive-resource` conflicts, keep archive details inline below the path: hash, this archive, and the other archive in a compact "This / Other" pair. Do not render a second nested Archive Pair card.
-- Section tone colors carry the meaning (green in Win, red in Loss); row chips should be small and restrained rather than competing with the path text
-- The modal itself is wider than the Files tab default: `min(1480px, calc(100vw - 48px))` so long mod names remain readable without forcing a viewport-level horizontal scrollbar inside the padded overlay
+- For `archive-resource` rows, show the FNV1a hash as a subdued second line under the path; do not render archive-pair cards or inline "overrides/overridden by" prose — the section + mod column already state who wins
+- Sub-tabs split `Paths` (loose-file conflicts) from `.archive` (archive-resource conflicts); both stay visible with counts
 
 Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Both dialogs also show the archive hash hint line for `archive-resource` rows, using the same `Unresolved archive hash` / `Archive hash` label pattern

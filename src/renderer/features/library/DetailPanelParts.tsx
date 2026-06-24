@@ -40,12 +40,28 @@ export const ConflictSection: React.FC<{
   className?: string
   showArchiveDetails?: boolean
   modsById?: Map<string, ModMetadata>
-}> = ({ conflicts, emptyMessage, mod, tone, title, collapsed, onToggleCollapsed, className, showArchiveDetails = true }) => {
+}> = ({ conflicts, emptyMessage, tone, title, collapsed, onToggleCollapsed, className }) => {
   const isWin = tone === 'win'
   const accent = isWin ? '#34d399' : '#f87171'
   const count = conflicts.length
   // The right-hand column names the mod on the other side of the conflict.
-  const otherColumnLabel = isWin ? 'Overwritten mod' : 'Providing mod'
+  const otherColumnLabel = 'Mod'
+
+  // Cluster rows by the opposing mod (in load-order priority), then by path,
+  // so every conflict against the same mod sits together.
+  const sortedConflicts = React.useMemo(() => {
+    const otherOf = (c: ConflictInfo) => ({
+      name: (isWin ? c.existingModName : c.incomingModName) || '',
+      order: (isWin ? c.existingOrder : c.incomingOrder) ?? Number.MAX_SAFE_INTEGER,
+    })
+    return [...conflicts].sort((a, b) => {
+      const oa = otherOf(a)
+      const ob = otherOf(b)
+      if (oa.order !== ob.order) return oa.order - ob.order
+      if (oa.name !== ob.name) return oa.name.localeCompare(ob.name)
+      return String(a.resourcePath).localeCompare(String(b.resourcePath), undefined, { numeric: true })
+    })
+  }, [conflicts, isWin])
 
   return (
     <section
@@ -67,12 +83,12 @@ export const ConflictSection: React.FC<{
         <span className="brand-font text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>
           {title}
         </span>
-        <span className="text-[12px] text-[#555]">
+        <span className="text-[13px] text-[#8f8b87]">
           {isWin ? 'This mod loads over these.' : 'These load over this mod.'}
         </span>
 
         <span
-          className="ml-auto shrink-0 brand-font text-[11px] font-bold px-2.5 py-1 rounded-sm border-[0.5px]"
+          className="ml-auto shrink-0 text-[13px] font-semibold tabular-nums px-2.5 py-1 rounded-sm border-[0.5px]"
           style={{ color: accent, borderColor: `${accent}30`, background: `${accent}10` }}
         >
           {count}
@@ -86,55 +102,55 @@ export const ConflictSection: React.FC<{
         </span>
       </button>
 
-      {/* Table */}
+      {/* Table — header lives inside the scroll container so column widths
+          (and therefore the header labels) stay aligned with the rows even
+          when the vertical scrollbar narrows the content area. */}
       {!collapsed && (count > 0 ? (
-        <div className="min-h-0 flex-1 flex flex-col bg-[#090909]">
-          {/* Column headers */}
-          <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)] border-b border-[#161616] bg-[#080808] px-5 py-2">
-            <span className="brand-font text-[10px] font-bold uppercase tracking-widest text-[#3c3c3c]">File</span>
-            <span className="brand-font text-[10px] font-bold uppercase tracking-widest text-[#3c3c3c]">{otherColumnLabel}</span>
+        <div className="hyperion-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#090909]">
+          {/* Sticky column headers */}
+          <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)] border-b border-[#161616] bg-[#080808]">
+            <span className="px-5 py-2.5 brand-font text-[11px] font-bold uppercase tracking-widest text-[#7a7672]">File</span>
+            <span className="border-l border-[#141414] px-5 py-2.5 brand-font text-[11px] font-bold uppercase tracking-widest text-[#7a7672]">{otherColumnLabel}</span>
           </div>
 
           {/* Rows */}
-          <div className="hyperion-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-            {conflicts.map((conflict, index) => {
+          {sortedConflicts.map((conflict, index) => {
               const otherModName = isWin ? conflict.existingModName : conflict.incomingModName
               const otherOrder = isWin ? conflict.existingOrder : conflict.incomingOrder
               const archiveHash = getArchiveConflictHash(conflict)
-              const showHash = Boolean(showArchiveDetails && archiveHash && archiveHash !== conflict.resourcePath)
               const unresolved = isUnresolvedArchiveConflict(conflict)
+              // Zebra striping helps the eye track a file across the gap to its mod.
+              const zebra = index % 2 === 1
 
               return (
                 <div
                   key={`${conflict.kind}:${conflict.resourcePath}:${conflict.existingModId}:${conflict.incomingModId ?? index}`}
-                  className="grid grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)] border-b border-[#111] last:border-b-0 transition-colors hover:bg-[#0d0d0d]"
+                  className={`grid grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)] border-b border-[#101010] last:border-b-0 transition-colors hover:!bg-[#13130c] ${
+                    zebra ? 'bg-[#0b0b0b]' : 'bg-transparent'
+                  }`}
                 >
                   {/* File / resource path */}
-                  <div className="min-w-0 px-5 py-2.5">
-                    <div
-                      className="font-mono text-[13px] leading-relaxed break-all"
-                      style={{ color: unresolved ? '#555' : '#cfcbc7' }}
+                  <div className="min-w-0 px-5 py-2 flex items-center">
+                    <span
+                      className="font-mono text-[13px] break-all"
+                      style={{ color: unresolved ? '#777' : '#cfcbc7' }}
                     >
                       {unresolved ? `Unresolved archive hash — ${archiveHash}` : conflict.resourcePath}
-                    </div>
-                    {showHash && !unresolved && (
-                      <div className="mt-0.5 font-mono text-[11px] text-[#3f3f3f]">{archiveHash}</div>
-                    )}
+                    </span>
                   </div>
 
                   {/* Other mod — full name, wraps, never truncated */}
-                  <div className="min-w-0 border-l border-[#141414] px-5 py-2.5">
-                    <div className="text-[13px] font-medium text-[#d2cec9] break-words leading-snug">
+                  <div className="min-w-0 border-l border-[#141414] px-5 py-2 flex items-center gap-2">
+                    <span className="min-w-0 text-[13px] font-medium text-[#d2cec9] break-words leading-snug">
                       {otherModName || 'Unknown mod'}
-                    </div>
+                    </span>
                     {typeof otherOrder === 'number' && (
-                      <div className="mt-0.5 text-[12px] text-[#555]">Load order #{otherOrder + 1}</div>
+                      <span className="shrink-0 text-[12px] text-[#6f6b67]">#{otherOrder + 1}</span>
                     )}
                   </div>
                 </div>
               )
             })}
-          </div>
         </div>
       ) : (
         <div className="bg-[#090909] px-5 py-8 text-[13px] text-[#555]">
