@@ -41,6 +41,32 @@ Since then, Hyperion has become the manager I use for my own Cyberpunk 2077 mod 
 - **Launch & monitor** — start Cyberpunk 2077 directly from the app
 - **Automatic updates** — delivered through GitHub Releases
 
+## Requirements
+
+- Windows 10 / 11 (64-bit)
+- A copy of Cyberpunk 2077
+
+## Nexus API Key
+
+To use Nexus downloads and update checks, Hyperion needs your personal Nexus Mods API key. For now, Hyperion is not an official Nexus Mods application, so you need to paste the key manually:
+
+1. Log in to Nexus Mods and open [API Key Settings](https://www.nexusmods.com/settings/api-keys).
+2. Scroll to the bottom of the page.
+3. Find **Personal API Key** and copy your personal API key.
+4. In Hyperion, open **Settings > Nexus** and paste it there.
+
+## Download
+
+Get the latest Windows installer from the [Releases](https://github.com/caiovaz567/Hyperion-Mod-Manager/releases/latest) page.
+
+## Building from source
+
+```bash
+npm install
+npm run dev      # run in development
+npm run build    # build a local installer
+```
+
 ## Demonstrations
 
 <!-- Each item below can be a screenshot, GIF, or MP4 demonstration. Upload the file via a
@@ -71,32 +97,6 @@ Set your game, mod library, downloads, Nexus integration, update preferences, an
 Inspect live diagnostic events from Hyperion. The **General** tab captures launcher, VFS, install, and runtime messages, while **Requests** shows Nexus API request details and payloads for troubleshooting.
 
 ![App logs](https://github.com/user-attachments/assets/d2b96bd3-f7f7-4857-8adf-ee70b8978bb3)
-
-## Requirements
-
-- Windows 10 / 11 (64-bit)
-- A copy of Cyberpunk 2077
-
-## Nexus API Key
-
-To use Nexus downloads and update checks, Hyperion needs your personal Nexus Mods API key. For now, Hyperion is not an official Nexus Mods application, so you need to paste the key manually:
-
-1. Log in to Nexus Mods and open [API Key Settings](https://www.nexusmods.com/settings/api-keys).
-2. Scroll to the bottom of the page.
-3. Find **Personal API Key** and copy your personal API key.
-4. In Hyperion, open **Settings > Nexus** and paste it there.
-
-## Download
-
-Get the latest Windows installer from the [Releases](https://github.com/caiovaz567/Hyperion-Mod-Manager/releases/latest) page.
-
-## Building from source
-
-```bash
-npm install
-npm run dev      # run in development
-npm run build    # build a local installer
-```
 
 ## License
 

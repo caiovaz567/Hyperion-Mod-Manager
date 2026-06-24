@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.20.1] - 2026-06-24
+
 ### Changed
 - Release workflow now fetches the usvfs SDK (`npm run fetch:usvfs`) before building, so the native bridge compiles in CI
 - Release workflow pinned to the `windows-2022` runner — node-gyp 10.x cannot detect the Visual Studio 18 on the newer `windows-latest` image, which broke the native usvfs-bridge compile
