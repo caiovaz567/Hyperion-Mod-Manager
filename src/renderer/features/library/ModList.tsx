@@ -161,7 +161,7 @@ export const ModList: React.FC = () => {
       const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.CLEAR_VFS_OVERWRITE)
       if (result.ok && result.data) {
         setOverwriteInfo(result.data)
-        addToast('VFS overwrite cleared', 'success')
+        addToast('VFS overwrite cleaned; settings preserved', 'success')
         return
       }
       addToast(result.error ?? 'Could not clear VFS overwrite', 'error')

@@ -316,6 +316,60 @@ function collectVfsOverwriteInfo(): VfsOverwriteInfo {
   return info
 }
 
+function isVolatileOverwriteFile(relFile: string): boolean {
+  const normalized = normalizeRelativePath(relFile).toLowerCase()
+  const baseName = path.basename(normalized)
+  const extension = path.extname(baseName)
+
+  if (
+    baseName.includes('.physical-conflict-')
+    || baseName.includes('.overwrite-backup-')
+    || baseName.includes('.appdata-migration-')
+  ) {
+    return true
+  }
+
+  if (extension === '.log' || extension === '.tmp' || extension === '.dmp') return true
+  if (normalized.startsWith(normalizeRelativePath(path.join('red4ext', 'logs')).toLowerCase() + path.sep)) return true
+  if (normalized.startsWith(normalizeRelativePath(path.join('r6', 'logs')).toLowerCase() + path.sep)) return true
+
+  const cetRoot = normalizeRelativePath(path.join('bin', 'x64', 'plugins', 'cyber_engine_tweaks')).toLowerCase()
+  if (
+    normalized.startsWith(cetRoot + path.sep)
+    && ['cyber_engine_tweaks.log', 'gamelog.log', 'scripting.log'].includes(baseName)
+  ) {
+    return true
+  }
+
+  return false
+}
+
+function cleanVfsOverwriteVolatileFiles(overwritePath: string): VfsOverwriteCleanResult {
+  const result: VfsOverwriteCleanResult = { removed: 0, removedBytes: 0, errors: [] }
+  if (!fs.existsSync(overwritePath)) return result
+
+  for (const filePath of collectFilesRecursive(overwritePath)) {
+    const relFile = normalizeRelativePath(path.relative(overwritePath, filePath))
+    if (!isVolatileOverwriteFile(relFile)) continue
+
+    try {
+      const stat = fs.statSync(filePath)
+      fs.rmSync(filePath, { force: true })
+      result.removed += 1
+      result.removedBytes += stat.size
+      removeEmptyDirsInside(path.dirname(filePath), overwritePath)
+    } catch (error) {
+      result.errors.push({
+        path: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  fs.mkdirSync(overwritePath, { recursive: true })
+  return result
+}
+
 function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: string } {
   const overwritePath = ensureVfsOverwritePath()
   const resolvedOverwrite = path.resolve(overwritePath)
@@ -331,11 +385,8 @@ function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: st
       return { ok: true, data: collectVfsOverwriteInfo() }
     }
 
-    for (const entry of fs.readdirSync(overwritePath)) {
-      fs.rmSync(path.join(overwritePath, entry), { recursive: true, force: true })
-    }
-    fs.mkdirSync(overwritePath, { recursive: true })
-    appendVfsLaunchLog('vfs overwrite cleared', { overwritePath })
+    const cleanResult = cleanVfsOverwriteVolatileFiles(overwritePath)
+    appendVfsLaunchLog('vfs overwrite cleaned', { overwritePath, ...cleanResult })
     return { ok: true, data: collectVfsOverwriteInfo() }
   } catch (error) {
     return {
@@ -411,6 +462,12 @@ interface VfsResidueMigrationResult {
   removedDuplicates: number
   conflicts: number
   error?: string
+}
+
+interface VfsOverwriteCleanResult {
+  removed: number
+  removedBytes: number
+  errors: Array<{ path: string; error: string }>
 }
 
 interface ActiveVfsLaunchContext {
@@ -600,6 +657,44 @@ function copyFilePreservingTimes(source: string, dest: string): void {
   }
 }
 
+function replaceOverwriteFileWithRuntimeFile(physicalFile: string, overwriteFile: string): 'moved' | 'removed' {
+  if (fs.existsSync(overwriteFile)) {
+    if (filesAreEqual(physicalFile, overwriteFile)) {
+      fs.rmSync(physicalFile, { force: true })
+      return 'removed'
+    }
+
+    const physicalStat = fs.statSync(physicalFile)
+    const overwriteStat = fs.statSync(overwriteFile)
+    if (physicalStat.mtimeMs < overwriteStat.mtimeMs) {
+      fs.rmSync(physicalFile, { force: true })
+      return 'removed'
+    }
+  }
+
+  copyFilePreservingTimes(physicalFile, overwriteFile)
+  fs.rmSync(physicalFile, { force: true })
+  return 'moved'
+}
+
+function removeEmptyDirsInside(startDir: string, rootDir: string): number {
+  let removed = 0
+  let current = path.resolve(startDir)
+  const root = path.resolve(rootDir)
+
+  while (isInsidePath(current, root)) {
+    try {
+      fs.rmdirSync(current)
+      removed += 1
+    } catch {
+      break
+    }
+    current = path.dirname(current)
+  }
+
+  return removed
+}
+
 function allocateConflictPath(targetPath: string, label: string): string {
   const parsed = path.parse(targetPath)
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
@@ -718,11 +813,9 @@ function migratePhysicalResidueDir(
           fs.rmSync(physicalFile, { force: true })
           result.removedDuplicates += 1
         } else {
-          const conflictPath = allocateConflictPath(overwriteFile, 'physical-conflict')
-          copyFilePreservingTimes(physicalFile, conflictPath)
-          fs.rmSync(physicalFile, { force: true })
-          result.moved += 1
-          result.conflicts += 1
+          const action = replaceOverwriteFileWithRuntimeFile(physicalFile, overwriteFile)
+          if (action === 'moved') result.moved += 1
+          else result.removedDuplicates += 1
         }
       } else if (!fs.existsSync(overwriteFile)) {
         copyFilePreservingTimes(physicalFile, overwriteFile)
@@ -732,19 +825,9 @@ function migratePhysicalResidueDir(
         fs.rmSync(physicalFile, { force: true })
         result.removedDuplicates += 1
       } else {
-        const physicalStat = fs.statSync(physicalFile)
-        const overwriteStat = fs.statSync(overwriteFile)
-        if (physicalStat.mtimeMs >= overwriteStat.mtimeMs) {
-          const backupPath = allocateConflictPath(overwriteFile, 'overwrite-backup')
-          copyFilePreservingTimes(overwriteFile, backupPath)
-          copyFilePreservingTimes(physicalFile, overwriteFile)
-        } else {
-          const conflictPath = allocateConflictPath(overwriteFile, 'physical-conflict')
-          copyFilePreservingTimes(physicalFile, conflictPath)
-        }
-        fs.rmSync(physicalFile, { force: true })
-        result.moved += 1
-        result.conflicts += 1
+        const action = replaceOverwriteFileWithRuntimeFile(physicalFile, overwriteFile)
+        if (action === 'moved') result.moved += 1
+        else result.removedDuplicates += 1
       }
 
       removeEmptyDirsUpTo(path.dirname(physicalFile), physicalDir)
@@ -798,6 +881,9 @@ function migrateActiveVfsResidueAfterRun(): void {
       errors: residueMigration.filter((entry) => entry.status === 'error').length,
       entries: residueMigration,
     })
+
+    const cleanResult = cleanVfsOverwriteVolatileFiles(ensureVfsOverwritePath(context.libraryPath))
+    appendVfsLaunchLog('vfs overwrite post-run volatile cleanup result', cleanResult)
   } catch (error) {
     appendVfsLaunchLog('vfs physical residue post-run migration failed', error)
   }

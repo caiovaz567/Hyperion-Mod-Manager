@@ -201,8 +201,8 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           {overwriteFileCount > 0 && (
             <HyperionIconButton
               icon={clearingOverwrite ? 'progress_activity' : 'delete_sweep'}
-              label="Clear VFS overwrite"
-              tooltip="Clear runtime files from the VFS overwrite folder"
+              label="Clean VFS overwrite"
+              tooltip="Clean logs, temporary files, and old backups from the VFS overwrite folder. Settings are preserved."
               variant="danger"
               iconClassName={clearingOverwrite ? 'animate-spin text-[20px]' : 'text-[20px]'}
               disabled={clearingOverwrite}
