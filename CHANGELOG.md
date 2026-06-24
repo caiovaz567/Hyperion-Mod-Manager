@@ -11,8 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Settings > Paths now has a Runtime Captures card to open or clear files written by mod tools (CET, RED4ext) during gameplay; removed from Library toolbar
 
-### Changed
-- Conflict inspector (mod detail Conflicts tab) redesigned: a Conflict Overview panel now leads with the verdict (won / lost counts), lists every opposing mod with a win/loss split bar and per-opponent counts. Conflict rows are grouped by opposing mod so long mod names show in full (no truncation), and each row states the override relationship in plain words (`overrides` / `overridden by`) with the suppressed archive struck through. Section icons use the visibility metaphor (eye = your file loads, eye-off = your file is hidden). Removed the unused standalone ConflictInspectorDialog
+- Conflict inspector (mod detail Conflicts tab) redesigned to a clean MO2-style layout: two flat `File | Mod` tables — "This Mod Wins" (files this mod loads over) and "Other Mods Win" (files that load over this mod). The mod column is wide and wraps so long mod names always show in full (no truncation). Section icons use the visibility metaphor (eye = your file loads, eye-off = your file is hidden). Removed the unused standalone ConflictInspectorDialog
 - Install overlay redesigned: unified into a single compact card (Analyzing/Extracting/Installing), no verbose description text, mod name in DM Sans instead of brand-font uppercase
 - Install overlay no longer appears on Downloads view while a download row is active — modal overlay handles progress exclusively and the row no longer shows its own install fill bar simultaneously
 - VFS launch progress dialog removed — Launch Game button spinner is the only indicator during VFS mount; errors surface as toasts; Close Game waits 1.5s after taskkill before running residue migration so file handles are released
