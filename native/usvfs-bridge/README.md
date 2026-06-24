@@ -14,8 +14,9 @@ usvfs-hooked game: top-level `bin/x64` DLL/ASI/INI/config files and direct
 state stay virtual/overwrite-backed. If an older run left plugin support folders
 physically in the game directory, Hyperion migrates their non-mod files into the
 VFS overwrite folder before launching so future writes do not leak back into the
-game folder. Cyber Engine Tweaks' `version.dll` + ASI loader is one example, not
-a hardcoded special case.
+game folder. The overwrite folder lives beside the configured Mod Library, e.g.
+`Documents/Hyperion/Overwrite`. Cyber Engine Tweaks' `version.dll` + ASI loader
+is one example, not a hardcoded special case.
 
 > usvfs is GPL-3.0 and Hyperion is GPL-3.0, so bundling it is license-compatible.
 

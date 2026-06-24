@@ -33,6 +33,8 @@ const GAME_EXECUTABLE_RELATIVE_PATH = path.join('bin', 'x64', 'Cyberpunk2077.exe
 const BOOTSTRAP_ROOT_EXTENSIONS = new Set(['.dll', '.asi', '.ini', '.cfg', '.toml', '.json'])
 const BOOTSTRAP_PLUGIN_EXTENSIONS = new Set(['.dll', '.asi', '.ini', '.cfg', '.toml', '.json'])
 const BOOTSTRAP_TEMP_DIR_MARKER = '.hyperion-vfs-bootstrap.json'
+const VFS_OVERWRITE_DIR_NAME = 'Overwrite'
+const LEGACY_VFS_OVERWRITE_DIR_NAME = 'vfs-overwrite'
 const USVFS_AUXILIARY_PROCESS_BLACKLIST = [
   'CrashReporter.exe',
   'REDEngineErrorReporter.exe',
@@ -173,12 +175,92 @@ function getVfsLaunchLogPath(): string {
   return path.join(app.getPath('userData'), 'logs', 'vfs-launch.log')
 }
 
-function getVfsOverwritePath(): string {
-  return path.join(app.getPath('userData'), 'vfs-overwrite')
+function getLegacyVfsOverwritePath(): string {
+  return path.join(app.getPath('userData'), LEGACY_VFS_OVERWRITE_DIR_NAME)
+}
+
+function getHyperionManagedRoot(libraryPath?: string): string {
+  const normalizedLibraryPath = libraryPath?.trim() ? path.normalize(libraryPath.trim()) : ''
+  if (normalizedLibraryPath) {
+    const parent = path.dirname(normalizedLibraryPath)
+    if (parent && parent !== normalizedLibraryPath) return parent
+  }
+
+  return path.dirname(getPathDefaults().libraryPath)
+}
+
+function getVfsOverwritePath(libraryPath?: string): string {
+  let resolvedLibraryPath = libraryPath?.trim() ?? ''
+  if (!resolvedLibraryPath) {
+    try {
+      resolvedLibraryPath = loadSettings().libraryPath
+    } catch {
+      resolvedLibraryPath = getPathDefaults().libraryPath
+    }
+  }
+
+  return path.join(getHyperionManagedRoot(resolvedLibraryPath), VFS_OVERWRITE_DIR_NAME)
+}
+
+function migrateLegacyVfsOverwrite(targetPath: string): void {
+  const legacyPath = getLegacyVfsOverwritePath()
+  const resolvedLegacy = path.resolve(legacyPath)
+  const resolvedTarget = path.resolve(targetPath)
+
+  if (resolvedLegacy === resolvedTarget || !fs.existsSync(legacyPath)) return
+
+  fs.mkdirSync(targetPath, { recursive: true })
+  let moved = 0
+  let removedDuplicates = 0
+  let conflicts = 0
+
+  for (const sourceFile of collectFilesRecursive(legacyPath)) {
+    const relFile = normalizeRelativePath(path.relative(legacyPath, sourceFile))
+    const targetFile = path.resolve(targetPath, relFile)
+    if (!isInsidePath(targetFile, targetPath)) continue
+
+    if (!fs.existsSync(targetFile)) {
+      copyFilePreservingTimes(sourceFile, targetFile)
+      fs.rmSync(sourceFile, { force: true })
+      moved += 1
+    } else if (filesAreEqual(sourceFile, targetFile)) {
+      fs.rmSync(sourceFile, { force: true })
+      removedDuplicates += 1
+    } else {
+      const conflictPath = allocateConflictPath(targetFile, 'appdata-migration')
+      copyFilePreservingTimes(sourceFile, conflictPath)
+      fs.rmSync(sourceFile, { force: true })
+      moved += 1
+      conflicts += 1
+    }
+
+    removeEmptyDirsUpTo(path.dirname(sourceFile), legacyPath)
+  }
+
+  try {
+    fs.rmdirSync(legacyPath)
+  } catch {
+    // Leave the legacy folder behind if some process still owns a file.
+  }
+
+  appendVfsLaunchLog('vfs overwrite location migrated', {
+    from: legacyPath,
+    to: targetPath,
+    moved,
+    removedDuplicates,
+    conflicts,
+  })
+}
+
+function ensureVfsOverwritePath(libraryPath?: string): string {
+  const overwritePath = getVfsOverwritePath(libraryPath)
+  fs.mkdirSync(overwritePath, { recursive: true })
+  migrateLegacyVfsOverwrite(overwritePath)
+  return overwritePath
 }
 
 function collectVfsOverwriteInfo(): VfsOverwriteInfo {
-  const overwritePath = getVfsOverwritePath()
+  const overwritePath = ensureVfsOverwritePath()
   const info: VfsOverwriteInfo = {
     path: overwritePath,
     exists: fs.existsSync(overwritePath),
@@ -223,12 +305,12 @@ function collectVfsOverwriteInfo(): VfsOverwriteInfo {
 }
 
 function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: string } {
-  const overwritePath = getVfsOverwritePath()
+  const overwritePath = ensureVfsOverwritePath()
   const resolvedOverwrite = path.resolve(overwritePath)
-  const resolvedUserData = path.resolve(app.getPath('userData'))
+  const resolvedManagedRoot = path.resolve(getHyperionManagedRoot(loadSettings().libraryPath))
 
-  if (resolvedOverwrite === resolvedUserData || !resolvedOverwrite.startsWith(`${resolvedUserData}${path.sep}`)) {
-    return { ok: false, error: 'Overwrite path resolved outside Hyperion user data' }
+  if (!isInsidePath(resolvedOverwrite, resolvedManagedRoot)) {
+    return { ok: false, error: 'Overwrite path resolved outside Hyperion managed folder' }
   }
 
   try {
@@ -669,8 +751,7 @@ function migrateVfsPhysicalResidue(
   libraryPath: string,
   enabledMods: ModMetadata[]
 ): VfsResidueMigrationResult[] {
-  const overwriteRoot = getVfsOverwritePath()
-  fs.mkdirSync(overwriteRoot, { recursive: true })
+  const overwriteRoot = ensureVfsOverwritePath(libraryPath)
 
   const deployFiles = getEnabledDeployFiles(libraryPath, enabledMods)
   const deployFileMap = new Map<string, string>()
@@ -1477,8 +1558,7 @@ function registerGlobalHandlers(): void {
 
   ipcMain.handle(IPC.OPEN_VFS_OVERWRITE, async () => {
     try {
-      const overwritePath = getVfsOverwritePath()
-      fs.mkdirSync(overwritePath, { recursive: true })
+      const overwritePath = ensureVfsOverwritePath()
       const errorMessage = await shell.openPath(overwritePath)
       if (errorMessage) return { ok: false, error: errorMessage }
       return { ok: true, data: collectVfsOverwriteInfo() }
@@ -1804,9 +1884,8 @@ function registerGlobalHandlers(): void {
       // r6/cache). Without it, anything that writes at runtime (RED4ext,
       // redscript) crashes; archive-only mods are unaffected because they are
       // read-only. Persisted across launches so caches/configs survive.
-      const overwriteDir = getVfsOverwritePath()
+      const overwriteDir = ensureVfsOverwritePath(settings.libraryPath)
       try {
-        fs.mkdirSync(overwriteDir, { recursive: true })
         links = [...links, { source: overwriteDir, dest: gameRoot, dir: true, createTarget: true }]
         appendVfsLaunchLog('vfs overwrite layer', { overwriteDir, dest: gameRoot })
       } catch (err: unknown) {
