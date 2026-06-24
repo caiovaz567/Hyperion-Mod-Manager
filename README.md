@@ -19,7 +19,7 @@
 Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps your mod library organized, lets you install and reinstall from original sources, and launches the game — all from one place.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/fa6222aa-1835-46fb-a1a2-f3cc91a6638b" alt="Hyperion mod library" width="900" />
+  <img src="https://github.com/user-attachments/assets/e0458ebb-aad1-4ff5-90d1-38c10bbeba0e" alt="Hyperion mod library" width="900" />
 </p>
 
 ## Features
@@ -34,12 +34,15 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
 - **Launch & monitor** — start Cyberpunk 2077 directly from the app
 - **Automatic updates** — delivered through GitHub Releases
 
-## Screenshots
+## Showcase
+
+<!-- Each item below can be a screenshot, GIF, or MP4. Upload the file via a
+     GitHub issue (drag-and-drop), then paste the user-attachments URL.
+     For MP4, paste the raw URL on its own line; for PNG/GIF use ![alt](url). -->
 
 ### FOMOD Installer
 Conditional install wizard with image previews — choose body type, textures, and options before anything lands in the library.
 
-<!-- Upload via GitHub issue drag-and-drop, paste the user-attachments URL below -->
 ![FOMOD installer](https://github.com/user-attachments/assets/PASTE_FOMOD_URL_HERE)
 
 ### Conflict Inspector
@@ -51,6 +54,11 @@ See exactly which files and archive resources a mod wins or loses against the re
 Browse, search, and install from your downloads folder — with live extraction progress.
 
 ![Downloads](https://github.com/user-attachments/assets/PASTE_DOWNLOADS_URL_HERE)
+
+### Settings
+Set your game, mod library, and downloads paths — each can live on a different drive — and connect your Nexus account.
+
+![Settings](https://github.com/user-attachments/assets/PASTE_SETTINGS_URL_HERE)
 
 ## Requirements
 
