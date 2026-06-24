@@ -23,6 +23,12 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
   <img src="https://github.com/user-attachments/assets/e0458ebb-aad1-4ff5-90d1-38c10bbeba0e" alt="Hyperion mod library" width="900" />
 </p>
 
+## Why Hyperion Exists
+
+Hyperion started as a small personal experiment: I wanted to try Claude Code, had just started modding Cyberpunk 2077, and thought building a mod manager for my own setup would be a fun test project. Then the fun part got a little out of hand.
+
+Since then, Hyperion has become the manager I use for my own Cyberpunk 2077 mod list. It grew around the things I wanted day to day: a clean library, clear conflicts, predictable load order, and a launch flow that keeps the game folder under control. After using it privately for a while, I decided to make it public in case it is useful to someone else too.
+
 ## Features
 
 - **Full mod library management** — enable/disable per mod or in bulk, group mods with separators, and reorder load priority by drag-and-drop (Mod Organizer–style: higher order wins on shared paths)
