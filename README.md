@@ -77,6 +77,15 @@ Inspect live diagnostic events from Hyperion. The **General** tab captures launc
 - Windows 10 / 11 (64-bit)
 - A copy of Cyberpunk 2077
 
+## Nexus API Key
+
+To use Nexus downloads and update checks, Hyperion needs your personal Nexus Mods API key. For now, Hyperion is not an official Nexus Mods application, so you need to paste the key manually:
+
+1. Log in to Nexus Mods and open [API Key Settings](https://www.nexusmods.com/settings/api-keys).
+2. Scroll to the bottom of the page.
+3. Find **Personal API Key** and copy your personal API key.
+4. In Hyperion, open **Settings > Nexus** and paste it there.
+
 ## Download
 
 Get the latest Windows installer from the [Releases](https://github.com/caiovaz567/Hyperion-Mod-Manager/releases/latest) page.
