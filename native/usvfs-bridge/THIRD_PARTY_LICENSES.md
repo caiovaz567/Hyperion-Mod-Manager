@@ -23,4 +23,5 @@ software.
 
 Hyperion is licensed under the GNU General Public License v3.0 and ships no
 proprietary components, satisfying these conditions. The same attribution is
-surfaced in the application's UI (Settings → About / Licenses).
+surfaced in the application's UI (Settings → About) and user-facing
+documentation.
