@@ -100,7 +100,7 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "requestedExecutionLevel": "requireAdministrator",
+      "requestedExecutionLevel": "asInvoker",
       "target": [
         {
           "target": "nsis",

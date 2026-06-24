@@ -31,7 +31,7 @@
 - `buildEnabledModLinks(gamePath, libraryPath)` in `modManager.ts` computes the ordered `{source, dest}` pairs from enabled mods (load order = ascending priority, later overrides earlier). `IPC.LAUNCH_GAME` in `index.ts` calls `mountVfs(links)` → `launchHookedProcess(Cyberpunk2077.exe)` and unmounts on game exit / kill / quit.
 - `redeployEnabledMods` is now a **no-op** that just refreshes library state — enable/disable/install/reorder only update `_metadata.json`; the VFS reflects them on the next launch. The old `deployedPaths` field is vestigial (no longer written).
 - The `createSymlink`/`safeRemoveLink`/`isLink` primitives still exist in `fileUtils.ts` but are no longer used for deployment (kept for a possible one-time cleanup of legacy symlinks left in the game folder by older elevated runs).
-- Goal of the migration: drop `requestedExecutionLevel: requireAdministrator` → `asInvoker`. Reason: elevation breaks the `nxm://` protocol forwarding (a non-elevated browser can't hand a link to an elevated app) and forces UAC on every launch. **Not flipped to `asInvoker` until the real-game VFS test (Phase 4) passes.**
+- Runs as `asInvoker` (no UAC elevation). usvfs does not require admin — it uses user-space API hooking. This also allows `nxm://` protocol forwarding to work correctly (a non-elevated browser can hand links to a non-elevated app).
 - Conflict detection only considers **enabled** mods — both in `modManager.ts` and `modConflictState.ts` (renderer). It reads game-target paths via `getTrackedDeploymentPaths`, which computes them from each mod's files (no longer relies on on-disk deployment).
 
 ## Runtime Captures
