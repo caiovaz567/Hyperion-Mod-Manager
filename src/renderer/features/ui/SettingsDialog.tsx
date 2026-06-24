@@ -6,8 +6,27 @@ import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, SettingCard, StatusReadout, ValidationRow, uiButton } from './uiKit'
 
-type SettingsTab = 'paths' | 'nexus' | 'updates'
+type SettingsTab = 'paths' | 'nexus' | 'updates' | 'about'
 type FolderState = 'valid' | 'invalid' | 'empty'
+
+const HYPERION_GITHUB_URL = 'https://github.com/caiovaz567/Hyperion-Mod-Manager'
+const HYPERION_RELEASES_URL = `${HYPERION_GITHUB_URL}/releases/latest`
+const HYPERION_ISSUES_URL = `${HYPERION_GITHUB_URL}/issues`
+const USVFS_URL = 'https://github.com/ModOrganizer2/usvfs'
+const MOD_ORGANIZER_URL = 'https://github.com/ModOrganizer2/modorganizer'
+const REDMODDING_URL = 'https://wiki.redmodding.org/cyberpunk-2077-modding/'
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = bytes
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`
+}
 
 const NEXUS_FREE_FEATURES = [
   { icon: 'open_in_browser', text: 'Mod updates open Nexus in the browser' },
@@ -111,7 +130,7 @@ export const SettingsPage: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'paths') void refreshRuntimeCaptures()
+    if (activeTab === 'paths' || activeTab === 'about') void refreshRuntimeCaptures()
   }, [activeTab, refreshRuntimeCaptures])
 
   const handleOpenRuntimeCaptures = useCallback(async () => {
@@ -128,6 +147,29 @@ export const SettingsPage: React.FC = () => {
       setClearingCaptures(false)
     }
   }, [])
+
+  const handleOpenExternal = useCallback(async (url: string) => {
+    await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
+  }, [])
+
+  const handleCopyDiagnostics = useCallback(async () => {
+    const lines = [
+      `Hyperion: ${appVersion}`,
+      `Game path: ${gamePath || '(not set)'}`,
+      `Mod library: ${libraryPath || '(not set)'}`,
+      `Downloads: ${getDownloadsStatus(downloadPath, defaultPaths?.downloadPath ?? '').path || '(not set)'}`,
+      `Runtime captures: ${runtimeCapturesInfo?.path ?? '(not loaded)'}`,
+      `Runtime capture files: ${runtimeCapturesInfo?.fileCount ?? 0}`,
+      `Runtime capture size: ${formatBytes(runtimeCapturesInfo?.totalBytes ?? 0)}`,
+    ]
+
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'))
+      addToast('Diagnostics summary copied', 'success', 1800)
+    } catch {
+      addToast('Could not copy diagnostics summary', 'error', 2600)
+    }
+  }, [addToast, appVersion, defaultPaths?.downloadPath, downloadPath, gamePath, libraryPath, runtimeCapturesInfo])
 
   useEffect(() => {
     if (!defaultPaths) {
@@ -288,6 +330,7 @@ export const SettingsPage: React.FC = () => {
     { id: 'paths', label: 'Paths', icon: 'folder_open' },
     { id: 'nexus', label: 'Nexus', icon: 'cloud' },
     { id: 'updates', label: 'Updates', icon: 'update' },
+    { id: 'about', label: 'About', icon: 'info' },
   ]
 
   const resolvedDefaultDownloadPath = defaultPaths?.downloadPath ?? ''
@@ -672,6 +715,122 @@ export const SettingsPage: React.FC = () => {
                 )}
               </div>
             </SettingCard>
+          )}
+
+          {activeTab === 'about' && (
+            <>
+              <SettingCard
+                icon="hexagon"
+                title="About Hyperion"
+                description="Cyberpunk 2077 mod manager focused on virtual deployment, conflict visibility, and a predictable load order."
+                className="fade-up"
+                style={{ animationDelay: '0ms' }}
+              >
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.12fr)_minmax(280px,0.88fr)]">
+                  <section className="rounded-sm border-[0.5px] border-[#171717] bg-[#050505] px-4 py-4">
+                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Project</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <StatusReadout tone="neutral" label={`v${appVersion}`} />
+                      <span className="inline-flex h-7 items-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#090909] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
+                        GPL-3.0
+                      </span>
+                      <span className="inline-flex h-7 items-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#090909] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
+                        Unofficial
+                      </span>
+                    </div>
+                    <p className="mt-3 text-[13.5px] leading-6 text-[#b8b8b8]">
+                      Built for a clean Cyberpunk 2077 modding workflow: install, inspect, reorder, and launch without turning the game folder into the source of truth.
+                    </p>
+                    <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
+                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_GITHUB_URL)} className={`${secondaryBtn} w-full sm:w-auto`}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>code</span>
+                        GitHub
+                      </button>
+                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_RELEASES_URL)} className={`${secondaryBtn} w-full sm:w-auto`}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>new_releases</span>
+                        Releases
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-sm border-[0.5px] border-[#171717] bg-[#050505] px-4 py-4">
+                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Support</div>
+                    <p className="mt-3 text-[13.5px] leading-6 text-[#b8b8b8]">
+                      For bug reports, include your Hyperion version and diagnostics summary so launch, VFS, and path issues are easier to trace.
+                    </p>
+                    <div className="mt-4 grid gap-2">
+                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_ISSUES_URL)} className={secondaryBtn}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bug_report</span>
+                        Report issue
+                      </button>
+                      <button type="button" onClick={() => void handleCopyDiagnostics()} className={accentOutlineBtn}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_copy</span>
+                        Copy diagnostics
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              </SettingCard>
+
+              <SettingCard
+                icon="groups"
+                title="Credits"
+                description="Acknowledgements for the tools, APIs, and modding references that make Hyperion possible."
+                className="fade-up"
+                style={{ animationDelay: '60ms' }}
+              >
+                <div className="overflow-hidden rounded-sm border-[0.5px] border-[#171717] bg-[#050505]">
+                  <div className="grid gap-3 border-b-[0.5px] border-[#171717] px-4 py-4 lg:grid-cols-[150px_minmax(0,1fr)_220px] lg:items-center">
+                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#fcee09]">Core VFS</div>
+                    <div>
+                      <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">usvfs / Mod Organizer 2</div>
+                      <p className="mt-1 text-[13.5px] leading-6 text-[#a8a8a8]">
+                        Hyperion's virtual deployment is powered by usvfs, the User-Space VFS used by Mod Organizer 2.
+                      </p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                      <button type="button" onClick={() => void handleOpenExternal(USVFS_URL)} className={secondaryBtn}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hub</span>
+                        usvfs
+                      </button>
+                      <button type="button" onClick={() => void handleOpenExternal(MOD_ORGANIZER_URL)} className={secondaryBtn}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                        MO2
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 border-b-[0.5px] border-[#171717] px-4 py-4 lg:grid-cols-[150px_minmax(0,1fr)_220px] lg:items-center">
+                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Service API</div>
+                    <div>
+                      <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">Nexus Mods API</div>
+                      <p className="mt-1 text-[13.5px] leading-6 text-[#a8a8a8]">
+                        Account validation, update checks, nxm links, and Premium-aware download handling.
+                      </p>
+                    </div>
+                    <div className="hidden lg:block" />
+                  </div>
+
+                  <div className="grid gap-3 px-4 py-4 lg:grid-cols-[150px_minmax(0,1fr)_220px] lg:items-center">
+                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Reference</div>
+                    <div>
+                      <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">REDmodding ecosystem</div>
+                      <p className="mt-1 text-[13.5px] leading-6 text-[#a8a8a8]">
+                        Archive behavior, load-order details, and public Cyberpunk modding documentation.
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => void handleOpenExternal(REDMODDING_URL)} className={secondaryBtn}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>menu_book</span>
+                      REDmodding
+                    </button>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-[12.5px] leading-5 text-[#7f7f7f]">
+                  Hyperion is not affiliated with CD PROJEKT RED, Nexus Mods, Mod Organizer 2, or the usvfs maintainers.
+                </p>
+              </SettingCard>
+            </>
           )}
           </div>
         </div>

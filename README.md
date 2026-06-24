@@ -25,7 +25,7 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
 ## Features
 
 - **Full mod library management** — enable/disable per mod or in bulk, group mods with separators, and reorder load priority by drag-and-drop (Mod Organizer–style: higher order wins on shared paths)
-- **Virtual deployment (usvfs)** — mods are mapped over the game tree at launch using usvfs, the same User-Space VFS behind Mod Organizer 2. No file copies, no admin UAC prompts. Your mod library, downloads folder, and game installation can each live on different drives — an SSD for the game, a large HDD for mods, wherever makes sense
+- **Virtual deployment (usvfs)** — mods are mapped over the game tree at launch using usvfs, the same User-Space VFS behind Mod Organizer 2. Hyperion avoids full mod deployment into the game folder and keeps the library as the source of truth, with only small runtime bootstrap files staged when needed. Your mod library, downloads folder, and game installation can each live on different drives — an SSD for the game, a large HDD for mods, wherever makes sense
 - **Nexus Mods integration** — install via `nxm://` links, automatic update detection scoped to each file's own lineage, and Premium/Free aware download handling
 - **FOMOD installer** — full wizard support for conditional installs (body type, textures, options) with image previews
 - **Conflict detection** — flags both file-path overwrites and archive-resource conflicts (internal RED4 hash collisions across `.archive` files), with a per-mod win/loss breakdown
@@ -34,31 +34,36 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
 - **Launch & monitor** — start Cyberpunk 2077 directly from the app
 - **Automatic updates** — delivered through GitHub Releases
 
-## Showcase
+## Demonstrations
 
-<!-- Each item below can be a screenshot, GIF, or MP4. Upload the file via a
+<!-- Each item below can be a screenshot, GIF, or MP4 demonstration. Upload the file via a
      GitHub issue (drag-and-drop), then paste the user-attachments URL.
      For MP4, paste the raw URL on its own line; for PNG/GIF use ![alt](url). -->
 
 ### FOMOD Installer
 Conditional install wizard with image previews — choose body type, textures, and options before anything lands in the library.
 
-![FOMOD installer](https://github.com/user-attachments/assets/PASTE_FOMOD_URL_HERE)
+![FOMOD installer](https://github.com/user-attachments/assets/3aae9f60-69f4-40bf-8c87-bb9b4b237ba6)
 
 ### Conflict Inspector
 See exactly which files and archive resources a mod wins or loses against the rest of your load order.
 
-![Conflict inspector](https://github.com/user-attachments/assets/PASTE_CONFLICT_URL_HERE)
+![Conflict inspector](https://github.com/user-attachments/assets/6a87969d-3563-44be-99a2-0b46ebf6cb06)
 
 ### Downloads
 Browse, search, and install from your downloads folder — with live extraction progress.
 
-![Downloads](https://github.com/user-attachments/assets/PASTE_DOWNLOADS_URL_HERE)
+![Downloads](https://github.com/user-attachments/assets/40df2af6-d2af-4ef2-b916-269e0be99989)
 
 ### Settings
-Set your game, mod library, and downloads paths — each can live on a different drive — and connect your Nexus account.
+Set your game, mod library, downloads, Nexus integration, update preferences, and diagnostic paths from one place. Each core folder can live on a different drive, and Nexus account settings stay nearby.
 
-![Settings](https://github.com/user-attachments/assets/PASTE_SETTINGS_URL_HERE)
+![Settings](https://github.com/user-attachments/assets/a83c9a8b-9630-4e17-8849-5ef5d2a9fabf)
+
+### App Logs
+Inspect live diagnostic events from Hyperion. The **General** tab captures launcher, VFS, install, and runtime messages, while **Requests** shows Nexus API request details and payloads for troubleshooting.
+
+![App logs](https://github.com/user-attachments/assets/d2b96bd3-f7f7-4857-8adf-ee70b8978bb3)
 
 ## Requirements
 

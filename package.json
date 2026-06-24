@@ -119,7 +119,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "caiomarcelo567",
+      "owner": "caiovaz567",
       "repo": "Hyperion-Mod-Manager"
     }
   }
