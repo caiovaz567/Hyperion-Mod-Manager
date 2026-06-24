@@ -10,7 +10,10 @@ permissions:
 
 jobs:
   publish:
-    runs-on: windows-latest
+    # Pinned to windows-2022 (Visual Studio 2022 / v17): node-gyp 10.x cannot
+    # detect the Visual Studio 18 that ships on the newer windows-latest image,
+    # which breaks the native usvfs-bridge compile.
+    runs-on: windows-2022
 
     steps:
       - name: Checkout
