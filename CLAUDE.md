@@ -24,13 +24,15 @@
 - Mod library scan must ignore symlinks (they are deployment artifacts, not source files).
 - Installed mod metadata stores sourcePath/sourceType so reinstalls can reuse the original source.
 
-## Deployment System (Symlinks)
-- Mod files are deployed to the game directory as **NTFS file symlinks** (not copies, not hardlinks, not junctions).
-- Symlinks work across drives, unlike hardlinks. The game reads them transparently.
-- `src/main/fileUtils.ts` exports `createSymlink(src, dest)` — the only deployment primitive. It uses `fs.symlink(..., 'file')` and handles dangling links via `lstatSync` (not `existsSync`).
-- Packaged app sets `requestedExecutionLevel: requireAdministrator` in `package.json` build config so Windows grants symlink privilege automatically. Dev mode requires VS Code / terminal opened as Administrator manually.
-- `redeployEnabledMods` in `src/main/ipc/modManager.ts` calls `createSymlink` per file. Disabling a mod removes its symlinks via `safeRemoveLink`.
-- Conflict detection only considers **enabled** mods — both in `modManager.ts` (main process) and `modConflictState.ts` (renderer). Disabled mod files are not in the game directory and must not appear in conflict lists.
+## Deployment System (Virtual / usvfs VFS)
+- Deployment is **virtual by default**: enabled mods are mapped over the game tree by **usvfs** (the MO2 User-Space Virtual File System) at Launch Game, so there are no symlinks, no full copies, no admin/UAC, and it works cross-drive. This replaced the old NTFS-symlink deployment.
+- Bootstrap exception: import-time proxy/loaders must be visible before the process starts. `IPC.LAUNCH_GAME` physically stages only path-based bootstrap candidates (top-level `bin/x64` DLL/ASI/INI/config files and direct `bin/x64/plugins` DLL/ASI/INI/config files) before mounting usvfs; all remaining mod payload stays virtual. CET's `version.dll` + ASI loader is just one example of this rule.
+- Native bridge lives in `native/usvfs-bridge/` (see its README) and is loaded via `src/main/vfsBridge.ts` (`loadVfsBridge()`/`isVfsAvailable()`). Built with `npm run build:native`, bundled to `process.resourcesPath/usvfs` for packaged builds. usvfs binaries are fetched by `npm run fetch:usvfs` (pinned v0.5.7.2, gitignored under `vendor/`).
+- `buildEnabledModLinks(gamePath, libraryPath)` in `modManager.ts` computes the ordered `{source, dest}` pairs from enabled mods (load order = ascending priority, later overrides earlier). `IPC.LAUNCH_GAME` in `index.ts` calls `mountVfs(links)` → `launchHookedProcess(Cyberpunk2077.exe)` and unmounts on game exit / kill / quit.
+- `redeployEnabledMods` is now a **no-op** that just refreshes library state — enable/disable/install/reorder only update `_metadata.json`; the VFS reflects them on the next launch. The old `deployedPaths` field is vestigial (no longer written).
+- The `createSymlink`/`safeRemoveLink`/`isLink` primitives still exist in `fileUtils.ts` but are no longer used for deployment (kept for a possible one-time cleanup of legacy symlinks left in the game folder by older elevated runs).
+- Goal of the migration: drop `requestedExecutionLevel: requireAdministrator` → `asInvoker`. Reason: elevation breaks the `nxm://` protocol forwarding (a non-elevated browser can't hand a link to an elevated app) and forces UAC on every launch. **Not flipped to `asInvoker` until the real-game VFS test (Phase 4) passes.**
+- Conflict detection only considers **enabled** mods — both in `modManager.ts` and `modConflictState.ts` (renderer). It reads game-target paths via `getTrackedDeploymentPaths`, which computes them from each mod's files (no longer relies on on-disk deployment).
 
 ## Archive Resource Sidecar
 - For mods containing `.archive` files, resource hashes are stored in a separate `_archive_resources.json` sidecar alongside `_metadata.json` — not inside the metadata file itself.

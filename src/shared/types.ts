@@ -263,6 +263,17 @@ export interface InstallProgress {
   currentFile?: string
 }
 
+export interface GameLaunchProgress {
+  step: string
+  percent: number
+  detail?: string
+  current?: number
+  total?: number
+  state?: 'running' | 'done' | 'error' | 'cancelled'
+  cancellable?: boolean
+  logPath?: string
+}
+
 export interface ConflictInfo {
   kind: 'overwrite' | 'archive-resource'
   resourcePath: string
@@ -450,6 +461,8 @@ export const IPC = {
   VALIDATE_GAME_PATH: 'game:validatePath',
   VALIDATE_LIBRARY_PATH: 'library:validatePath',
   LAUNCH_GAME: 'game:launch',
+  LAUNCH_GAME_PROGRESS: 'game:launchProgress',
+  CANCEL_GAME_LAUNCH: 'game:launchCancel',
   GAME_RUNNING: 'game:running',
   KILL_GAME: 'game:kill',
 

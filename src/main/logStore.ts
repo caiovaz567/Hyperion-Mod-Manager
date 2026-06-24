@@ -17,6 +17,7 @@ const requestLogEntries: NexusApiLogEntry[] = []
 
 function shouldStoreGeneralLog(entry: Omit<AppGeneralLogEntry, 'id' | 'timestamp'>): boolean {
   if (entry.level !== 'info') return true
+  if (entry.source === 'launcher' || entry.source === 'vfs') return true
 
   return entry.message === 'NXM download requested'
 }

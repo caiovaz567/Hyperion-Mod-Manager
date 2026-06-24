@@ -7,11 +7,13 @@
     "prepare": "node scripts/setup-git-hooks.mjs",
     "clean:dist": "node scripts/clean-dist.mjs",
     "dev": "electron-vite dev",
-    "build": "npm run clean:dist && electron-vite build && electron-builder --win nsis --publish never",
+    "fetch:usvfs": "node scripts/fetch-usvfs.mjs",
+    "build:native": "node scripts/build-native.mjs",
+    "build": "npm run clean:dist && electron-vite build && npm run build:native && electron-builder --win nsis --publish never",
     "preview": "electron-vite preview",
-    "package": "npm run clean:dist && electron-vite build && electron-builder",
-    "preview:win": "npm run clean:dist && electron-vite build && electron-builder --win dir --publish never",
-    "publish": "npm run clean:dist && electron-vite build && electron-builder --win nsis --publish always",
+    "package": "npm run clean:dist && electron-vite build && npm run build:native && electron-builder",
+    "preview:win": "npm run clean:dist && electron-vite build && npm run build:native && electron-builder --win dir --publish never",
+    "publish": "npm run clean:dist && electron-vite build && npm run build:native && electron-builder --win nsis --publish always",
     "release:patch": "node scripts/prepare-release-tag.mjs patch",
     "release:minor": "node scripts/prepare-release-tag.mjs minor",
     "release:major": "node scripts/prepare-release-tag.mjs major"
@@ -35,6 +37,8 @@
     "electron": "^30.0.2",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
+    "node-addon-api": "^8.0.0",
+    "node-gyp": "^10.0.0",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4"
@@ -83,6 +87,15 @@
       {
         "from": "node_modules/7zip-bin-full/win/x64/License.txt",
         "to": "tools/7zip/License.txt"
+      },
+      {
+        "from": "native/usvfs-bridge/build/Release",
+        "to": "usvfs",
+        "filter": [
+          "usvfs_bridge.node",
+          "usvfs_x64.dll",
+          "usvfs_proxy_x64.exe"
+        ]
       }
     ],
     "win": {

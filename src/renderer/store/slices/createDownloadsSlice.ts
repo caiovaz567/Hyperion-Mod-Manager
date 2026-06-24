@@ -1116,10 +1116,6 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         void installCompletedModUpdate(get, savedPath, {
           modId: completedDownload.nxmModId,
           fileId: completedDownload.nxmFileId,
-          key: '',
-          expires: 0,
-          userId: 0,
-          raw: '',
         }, {
           fileName: fileName ?? completedDownload.fileName,
           version: version ?? completedDownload.version ?? completedDownload.intent.latestVersion,

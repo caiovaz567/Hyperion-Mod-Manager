@@ -8,3 +8,10 @@ release/
 Thumbs.db
 .claude/worktrees/
 .worktrees/
+
+# Native addon build artifacts
+native/**/build/
+native/**/*.node
+native/**/*-result.txt
+# Bundled usvfs binaries (fetched separately, not committed)
+native/usvfs-bridge/vendor/

@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import type { BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import { v4 as uuidv4 } from 'uuid'
 import { IPC } from '../../shared/types'
 import type {
@@ -29,10 +30,6 @@ import {
 import {
   listFilesRecursive,
   getPathSizeSafe,
-  ensureRealDirectory,
-  safeRemoveLink,
-  isLink,
-  createSymlink,
 } from '../fileUtils'
 
 function normalizeModName(rawName: string): string {
@@ -129,36 +126,6 @@ function splitSegments(relPath: string): string[] {
   return normalized ? normalized.split(path.sep).filter(Boolean) : []
 }
 
-function removeEmptyParents(startPath: string, stopPath: string): void {
-  let currentPath = path.dirname(startPath)
-  const resolvedStopPath = path.resolve(stopPath)
-
-  while (currentPath.startsWith(resolvedStopPath) && currentPath !== resolvedStopPath) {
-    try {
-      if (!fs.existsSync(currentPath)) break
-      if (fs.readdirSync(currentPath).length > 0) break
-      fs.rmdirSync(currentPath)
-      currentPath = path.dirname(currentPath)
-    } catch {
-      break
-    }
-  }
-}
-
-function removeDeployedFile(targetPath: string, baseGameDir: string): void {
-  try {
-    if (!fs.existsSync(targetPath)) return
-    fs.rmSync(targetPath, { recursive: true, force: true })
-    removeEmptyParents(targetPath, baseGameDir)
-  } catch {
-    // Ignore cleanup failures on missing or locked files.
-  }
-}
-
-function prepareBaseGameDir(baseGameDir: string): Promise<void> {
-  return ensureRealDirectory(baseGameDir)
-}
-
 function readArchiveSidecar(modDir: string): { version: number; resources: ArchiveResourceEntry[] } | null {
   try {
     const sidecarPath = path.join(modDir, ARCHIVE_SIDECAR_FILE)
@@ -195,32 +162,6 @@ function findSequenceIndex(parts: string[], sequence: string[]): number {
   }
 
   return -1
-}
-
-function getLegacyLinkPath(gamePath: string, mod: ModMetadata): string | null {
-  const modFolderKey = getModFolderKey(mod)
-
-  switch (mod.type) {
-    case 'redmod':
-      return path.join(gamePath, 'mods', modFolderKey)
-    case 'cet':
-      return path.join(gamePath, 'bin', 'x64', 'plugins', 'cyber_engine_tweaks', 'mods', modFolderKey)
-    case 'redscript':
-      return path.join(gamePath, 'r6', 'scripts', modFolderKey)
-    case 'tweakxl':
-      return path.join(gamePath, 'r6', 'tweaks', modFolderKey)
-    case 'red4ext':
-      return path.join(gamePath, 'red4ext', 'plugins', modFolderKey)
-    default:
-      return null
-  }
-}
-
-async function removeLegacyFolderLink(gamePath: string, mod: ModMetadata): Promise<void> {
-  const legacyLinkDest = getLegacyLinkPath(gamePath, mod)
-  if (legacyLinkDest && isLink(legacyLinkDest)) {
-    await safeRemoveLink(legacyLinkDest)
-  }
 }
 
 function resolveDeploymentTarget(gamePath: string, relativeDeployPath: string): string | null {
@@ -498,85 +439,110 @@ function resolveScannedModDir(libraryPath: string, mod: ModMetadata): { mod: Mod
   return findModDir(libraryPath, mod.uuid)
 }
 
+/**
+ * Deployment is virtual: enabled mods are mapped into the game by the usvfs VFS
+ * at Launch Game (see `buildEnabledModLinks` + `IPC.LAUNCH_GAME`). Nothing is
+ * ever written into the game folder, so this is a no-op that simply returns the
+ * current library — kept as the single chokepoint that callers invoke to refresh
+ * state after enable/disable/install/reorder.
+ */
 async function redeployEnabledMods(
   gamePath: string,
   libraryPath: string,
   sourceMods?: ModMetadata[]
 ): Promise<IpcResult<ModMetadata[]>> {
   if (!gamePath) return { ok: false, error: 'Game path not set' }
+  return { ok: true, data: sourceMods ?? await scanMods(libraryPath) }
+}
+
+/**
+ * Computes the ordered list of directory mounts for all enabled mods — the
+ * mapping the usvfs VFS virtually links over the game tree at launch.
+ *
+ * Each file's deploy path is reduced to the shallowest `sourceDir -> destDir`
+ * mount by peeling the longest common path suffix, then linked **as a recursive
+ * directory** so usvfs creates folders that don't exist in the game (e.g.
+ * `bin/x64/plugins`). Per-file linking can't do this — usvfs requires a file's
+ * destination directory to already exist.
+ *
+ * Order matches load order (ascending priority): a later mod's link overrides an
+ * earlier one on shared paths, realizing MO2-style "higher load order wins".
+ */
+export async function buildEnabledModLinks(
+  gamePath: string,
+  libraryPath: string,
+  sourceMods?: ModMetadata[]
+): Promise<{ source: string; dest: string; dir: boolean }[]> {
+  if (!gamePath) return []
 
   const mods = sourceMods ?? await scanMods(libraryPath)
   const enabledMods = mods.filter((mod) => mod.kind === 'mod' && mod.enabled)
+  const links: { source: string; dest: string; dir: boolean }[] = []
 
-  try {
-    await prepareBaseGameDir(gamePath)
+  // An empty real directory used to materialize virtual game folders that don't
+  // exist yet (e.g. archive/pc/mod) before linking loose files into them.
+  const emptyDir = path.join(os.tmpdir(), 'hyperion-vfs-empty')
+  try { fs.mkdirSync(emptyDir, { recursive: true }) } catch { /* ignore */ }
 
-    const removalPaths = new Set<string>()
-    for (const mod of mods) {
-      if (mod.kind !== 'mod') continue
+  for (const mod of enabledMods) {
+    const resolvedMod = resolveScannedModDir(libraryPath, mod)
+    const metadata = resolvedMod?.mod ?? mod
+    const modFolderKey = getModFolderKey(metadata)
+    const modDir = resolvedMod?.dir ?? path.join(libraryPath, modFolderKey)
+    const modFiles = Array.isArray(metadata.files) ? metadata.files : []
+    const seen = new Set<string>()
 
-      const trackedPaths = mod.enabled
-        ? getTrackedDeploymentPaths(mod)
-        : Array.isArray(mod.deployedPaths)
-          ? mod.deployedPaths
-          : []
+    for (const relFile of modFiles) {
+      if (relFile === '_metadata.json') continue
 
-      if (trackedPaths.length === 0) continue
+      const normalizedRelativePath = normalizeRelativePath(relFile)
+      const src = path.join(modDir, normalizedRelativePath)
+      if (!fs.existsSync(src)) continue
 
-      await removeLegacyFolderLink(gamePath, mod)
-      for (const deployedRelativePath of trackedPaths) {
-        const normalized = normalizeRelativePath(deployedRelativePath)
-        if (normalized) removalPaths.add(normalized)
-      }
-    }
+      const relativeDeployPath = normalizeRelativePath(getDeployRelativePath(metadata, normalizedRelativePath))
+      const fileDest = resolveDeploymentTarget(gamePath, relativeDeployPath)
+      if (!fileDest) continue
 
-    for (const deployedRelativePath of removalPaths) {
-      const target = resolveDeploymentTarget(gamePath, deployedRelativePath)
-      if (target) removeDeployedFile(target, gamePath)
-    }
-
-    for (const mod of enabledMods) {
-      const resolvedMod = resolveScannedModDir(libraryPath, mod)
-      const metadata = resolvedMod?.mod ?? mod
-      const modFolderKey = getModFolderKey(metadata)
-      const modDir = resolvedMod?.dir ?? path.join(libraryPath, modFolderKey)
-      const modFiles = Array.isArray(metadata.files) ? metadata.files : []
-      const deployedPaths: string[] = []
-
-      for (const relFile of modFiles) {
-        if (relFile === '_metadata.json') continue
-
-        const normalizedRelativePath = normalizeRelativePath(relFile)
-        const src = path.join(modDir, normalizedRelativePath)
-        if (!fs.existsSync(src)) continue
-
-        const relativeDeployPath = getDeployRelativePath(metadata, normalizedRelativePath)
-        const dest = resolveDeploymentTarget(gamePath, relativeDeployPath)
-        if (!dest) continue
-
-        await createSymlink(src, dest)
-        deployedPaths.push(normalizeRelativePath(path.relative(gamePath, dest)))
-      }
-
-      metadata.deployedPaths = Array.from(new Set(deployedPaths))
-      writeMetadata(modDir, metadata)
-    }
-
-    for (const mod of mods) {
-      if (mod.kind !== 'mod' || mod.enabled || !Array.isArray(mod.deployedPaths) || mod.deployedPaths.length === 0) {
+      const srcSegs = normalizedRelativePath.split('\\').filter(Boolean)
+      const destSegs = relativeDeployPath.split('\\').filter(Boolean)
+      // A loose file at the mod root has no source directory to mount. usvfs can't
+      // link a file whose target folder doesn't exist, so first materialize that
+      // folder virtually from an empty directory, then link the file into it.
+      if (srcSegs.length <= 1) {
+        const destParent = path.dirname(fileDest)
+        const dirKey = `mk:${destParent}`
+        if (!seen.has(dirKey)) {
+          seen.add(dirKey)
+          links.push({ source: emptyDir, dest: destParent, dir: true })
+        }
+        if (!seen.has(src)) {
+          seen.add(src)
+          links.push({ source: src, dest: fileDest, dir: false })
+        }
         continue
       }
 
-      const resolvedMod = resolveScannedModDir(libraryPath, mod)
-      if (!resolvedMod) continue
-      resolvedMod.mod.deployedPaths = []
-      writeMetadata(resolvedMod.dir, resolvedMod.mod)
-    }
+      // Nested file: peel common trailing segments but keep the mod's top-level
+      // directory, so the mount is e.g. modDir/bin -> game/bin (recursive) and the
+      // mod root (with _metadata.json) is never linked.
+      let i = srcSegs.length - 1
+      let j = destSegs.length - 1
+      while (i >= 1 && j >= 1 && srcSegs[i].toLowerCase() === destSegs[j].toLowerCase()) {
+        i -= 1
+        j -= 1
+      }
 
-    return { ok: true, data: await scanMods(libraryPath) }
-  } catch (err: unknown) {
-    return { ok: false, error: String(err) }
+      const mountSource = path.join(modDir, ...srcSegs.slice(0, i + 1))
+      const mountDest = path.join(gamePath, ...destSegs.slice(0, j + 1))
+      const key = `${mountSource}\0${mountDest}`
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      links.push({ source: mountSource, dest: mountDest, dir: true })
+    }
   }
+
+  return links
 }
 
 // ─── Metadata helpers ─────────────────────────────────────────────────────────
@@ -1055,28 +1021,20 @@ export async function purgeMods(
   let purged = 0
   let failed = 0
 
-  try {
-    await prepareBaseGameDir(gamePath)
-
-    for (const mod of enabledMods) {
-      await removeLegacyFolderLink(gamePath, mod)
-      for (const deployedRelativePath of getTrackedDeploymentPaths(mod)) {
-        removeDeployedFile(path.join(gamePath, deployedRelativePath), gamePath)
-      }
-
-      const resolvedMod = findModDir(libraryPath, mod.uuid)
-      if (!resolvedMod) {
-        failed += 1
-        continue
-      }
-
-      resolvedMod.mod.enabled = false
-      resolvedMod.mod.deployedPaths = []
-      writeMetadata(resolvedMod.dir, resolvedMod.mod)
-      purged += 1
+  // With virtual (VFS) deployment there is nothing on disk to remove — purging is
+  // just flipping every enabled mod off in the library. The VFS reflects this on
+  // the next Launch Game.
+  for (const mod of enabledMods) {
+    const resolvedMod = findModDir(libraryPath, mod.uuid)
+    if (!resolvedMod) {
+      failed += 1
+      continue
     }
-  } catch {
-    failed += 1
+
+    resolvedMod.mod.enabled = false
+    resolvedMod.mod.deployedPaths = []
+    writeMetadata(resolvedMod.dir, resolvedMod.mod)
+    purged += 1
   }
 
   return { ok: failed === 0, data: { purged, failed }, error: failed > 0 ? `${failed} mod(s) could not be purged` : undefined }
