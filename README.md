@@ -34,6 +34,24 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
 - **Launch & monitor** — start Cyberpunk 2077 directly from the app
 - **Automatic updates** — delivered through GitHub Releases
 
+## Screenshots
+
+### FOMOD Installer
+Conditional install wizard with image previews — choose body type, textures, and options before anything lands in the library.
+
+<!-- Upload via GitHub issue drag-and-drop, paste the user-attachments URL below -->
+![FOMOD installer](https://github.com/user-attachments/assets/PASTE_FOMOD_URL_HERE)
+
+### Conflict Inspector
+See exactly which files and archive resources a mod wins or loses against the rest of your load order.
+
+![Conflict inspector](https://github.com/user-attachments/assets/PASTE_CONFLICT_URL_HERE)
+
+### Downloads
+Browse, search, and install from your downloads folder — with live extraction progress.
+
+![Downloads](https://github.com/user-attachments/assets/PASTE_DOWNLOADS_URL_HERE)
+
 ## Requirements
 
 - Windows 10 / 11 (64-bit)
