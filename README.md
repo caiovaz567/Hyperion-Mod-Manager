@@ -10,6 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/caiovaz567/Hyperion-Mod-Manager?color=fcee09&label=release" alt="Latest release" />
+  <img src="https://img.shields.io/badge/game-Cyberpunk%202077-fcee09" alt="Game: Cyberpunk 2077" />
   <img src="https://img.shields.io/badge/platform-Windows-2a2a2a" alt="Platform: Windows" />
   <img src="https://img.shields.io/github/license/caiovaz567/Hyperion-Mod-Manager?color=34d399" alt="License: GPL-3.0" />
 </p>
