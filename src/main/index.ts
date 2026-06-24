@@ -302,6 +302,23 @@ interface BootstrapTempDir {
   modFolderName?: string
 }
 
+interface DeployFileEntry {
+  relFile: string
+  deployPath: string
+  source: string
+  modName?: string
+  modFolderName?: string
+}
+
+interface VfsResidueMigrationResult {
+  relDir: string
+  status: 'migrated' | 'skipped' | 'error'
+  moved: number
+  removedDuplicates: number
+  conflicts: number
+  error?: string
+}
+
 function filesAreEqual(leftPath: string, rightPath: string): boolean {
   try {
     const leftStat = fs.statSync(leftPath)
@@ -378,6 +395,292 @@ function getPluginSupportDeployPrefix(deployPath: string): string | null {
   if (extension !== '.asi' && extension !== '.dll') return null
 
   return path.join(parts[0], parts[1], parts[2], path.basename(parts[3], extension))
+}
+
+function getEnabledDeployFiles(libraryPath: string, enabledMods: ModMetadata[]): DeployFileEntry[] {
+  const entries: DeployFileEntry[] = []
+
+  for (const mod of enabledMods) {
+    const modDir = path.join(libraryPath, mod.folderName ?? mod.uuid)
+    const modFiles = (Array.isArray(mod.files) ? mod.files : [])
+      .map((relFile) => normalizeRelativePath(relFile))
+      .filter((relFile) => Boolean(relFile) && relFile !== '_metadata.json')
+
+    for (const relFile of modFiles) {
+      entries.push({
+        relFile,
+        deployPath: normalizeRelativePath(getDeployRelativePath(mod, relFile)),
+        source: path.join(modDir, relFile),
+        modName: mod.name,
+        modFolderName: mod.folderName,
+      })
+    }
+  }
+
+  return entries
+}
+
+function getPluginRuntimeDirFromDeployPath(deployPath: string): string | null {
+  const parts = normalizeRelativePath(deployPath).split(path.sep).filter(Boolean)
+  const lowerParts = parts.map((part) => part.toLowerCase())
+
+  if (lowerParts[0] === 'bin' && lowerParts[1] === 'x64' && lowerParts[2] === 'plugins' && parts.length >= 5) {
+    return path.join(parts[0], parts[1], parts[2], parts[3])
+  }
+
+  if (lowerParts[0] === 'red4ext' && lowerParts[1] === 'plugins' && parts.length >= 3) {
+    return path.join(parts[0], parts[1], parts[2])
+  }
+
+  return null
+}
+
+function pathKey(value: string): string {
+  return path.normalize(value).toLowerCase()
+}
+
+function isInsidePath(childPath: string, parentPath: string): boolean {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(childPath))
+  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative)
+}
+
+function collectFilesRecursive(rootDir: string): string[] {
+  const files: string[] = []
+
+  const walk = (dir: string): void => {
+    let entries: fs.Dirent[] = []
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        walk(entryPath)
+      } else if (entry.isFile()) {
+        files.push(entryPath)
+      }
+    }
+  }
+
+  walk(rootDir)
+  return files
+}
+
+function removeEmptyDirsUpTo(startDir: string, stopDir: string): number {
+  let removed = 0
+  let current = path.resolve(startDir)
+  const stop = path.resolve(stopDir)
+
+  while (current === stop || isInsidePath(current, stop)) {
+    try {
+      fs.rmdirSync(current)
+      removed += 1
+    } catch {
+      break
+    }
+
+    if (current === stop) break
+    current = path.dirname(current)
+  }
+
+  return removed
+}
+
+function copyFilePreservingTimes(source: string, dest: string): void {
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.copyFileSync(source, dest)
+  try {
+    const stat = fs.statSync(source)
+    fs.utimesSync(dest, stat.atime, stat.mtime)
+  } catch {
+    // Preserving timestamps is useful for conflict resolution but not required.
+  }
+}
+
+function allocateConflictPath(targetPath: string, label: string): string {
+  const parsed = path.parse(targetPath)
+  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
+  let attempt = 1
+  let candidate = path.join(parsed.dir, `${parsed.name}.${label}-${stamp}${parsed.ext}`)
+
+  while (fs.existsSync(candidate)) {
+    attempt += 1
+    candidate = path.join(parsed.dir, `${parsed.name}.${label}-${stamp}-${attempt}${parsed.ext}`)
+  }
+
+  return candidate
+}
+
+function looksLikeRuntimePluginDirectory(dir: string): boolean {
+  const runtimeFileExtensions = new Set(['.bin', '.db', '.json', '.log', '.sqlite', '.sqlite3', '.tmp'])
+  const runtimeDirectoryNames = new Set(['cache', 'logs', 'mods', 'persistent'])
+  const pending = [dir]
+  let inspected = 0
+
+  while (pending.length > 0 && inspected < 200) {
+    const current = pending.pop()
+    if (!current) break
+
+    let entries: fs.Dirent[] = []
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true })
+    } catch {
+      continue
+    }
+
+    for (const entry of entries) {
+      inspected += 1
+      const lowerName = entry.name.toLowerCase()
+      if (entry.isDirectory()) {
+        if (runtimeDirectoryNames.has(lowerName)) return true
+        pending.push(path.join(current, entry.name))
+      } else if (entry.isFile() && runtimeFileExtensions.has(path.extname(lowerName))) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+function collectVfsResidueDirs(gameRoot: string, deployFiles: DeployFileEntry[]): string[] {
+  const candidates = new Set<string>()
+  const staticRuntimeDirs = [
+    path.join('red4ext', 'logs'),
+  ]
+
+  for (const relDir of staticRuntimeDirs) {
+    candidates.add(normalizeRelativePath(relDir))
+  }
+
+  for (const deployFile of deployFiles) {
+    const supportDir = getPluginSupportDeployPrefix(deployFile.deployPath)
+    if (supportDir) candidates.add(normalizeRelativePath(supportDir))
+
+    const runtimeDir = getPluginRuntimeDirFromDeployPath(deployFile.deployPath)
+    if (runtimeDir) candidates.add(normalizeRelativePath(runtimeDir))
+  }
+
+  const physicalPluginRoot = path.join(gameRoot, 'bin', 'x64', 'plugins')
+  try {
+    for (const entry of fs.readdirSync(physicalPluginRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const physicalDir = path.join(physicalPluginRoot, entry.name)
+      if (!looksLikeRuntimePluginDirectory(physicalDir)) continue
+      candidates.add(normalizeRelativePath(path.join('bin', 'x64', 'plugins', entry.name)))
+    }
+  } catch {
+    // Missing plugin root is fine; Cyberpunk may not have created it yet.
+  }
+
+  return Array.from(candidates).sort((left, right) => left.localeCompare(right))
+}
+
+function migratePhysicalResidueDir(
+  gameRoot: string,
+  overwriteRoot: string,
+  relDir: string,
+  deployFileMap: Map<string, string>
+): VfsResidueMigrationResult {
+  const physicalDir = path.resolve(gameRoot, relDir)
+  const resolvedGameRoot = path.resolve(gameRoot)
+  const resolvedOverwriteRoot = path.resolve(overwriteRoot)
+  const result: VfsResidueMigrationResult = {
+    relDir,
+    status: 'skipped',
+    moved: 0,
+    removedDuplicates: 0,
+    conflicts: 0,
+  }
+
+  try {
+    if (!isInsidePath(physicalDir, resolvedGameRoot) || !fs.existsSync(physicalDir)) {
+      return result
+    }
+
+    const dirStat = fs.statSync(physicalDir)
+    if (!dirStat.isDirectory()) return result
+
+    const files = collectFilesRecursive(physicalDir)
+    for (const physicalFile of files) {
+      const relFile = normalizeRelativePath(path.relative(resolvedGameRoot, physicalFile))
+      const overwriteFile = path.resolve(resolvedOverwriteRoot, relFile)
+      if (!isInsidePath(overwriteFile, resolvedOverwriteRoot)) {
+        throw new Error(`Refusing to migrate outside overwrite folder: ${relFile}`)
+      }
+
+      const virtualSource = deployFileMap.get(pathKey(relFile))
+      if (virtualSource) {
+        if (filesAreEqual(virtualSource, physicalFile)) {
+          fs.rmSync(physicalFile, { force: true })
+          result.removedDuplicates += 1
+        } else {
+          const conflictPath = allocateConflictPath(overwriteFile, 'physical-conflict')
+          copyFilePreservingTimes(physicalFile, conflictPath)
+          fs.rmSync(physicalFile, { force: true })
+          result.moved += 1
+          result.conflicts += 1
+        }
+      } else if (!fs.existsSync(overwriteFile)) {
+        copyFilePreservingTimes(physicalFile, overwriteFile)
+        fs.rmSync(physicalFile, { force: true })
+        result.moved += 1
+      } else if (filesAreEqual(physicalFile, overwriteFile)) {
+        fs.rmSync(physicalFile, { force: true })
+        result.removedDuplicates += 1
+      } else {
+        const physicalStat = fs.statSync(physicalFile)
+        const overwriteStat = fs.statSync(overwriteFile)
+        if (physicalStat.mtimeMs >= overwriteStat.mtimeMs) {
+          const backupPath = allocateConflictPath(overwriteFile, 'overwrite-backup')
+          copyFilePreservingTimes(overwriteFile, backupPath)
+          copyFilePreservingTimes(physicalFile, overwriteFile)
+        } else {
+          const conflictPath = allocateConflictPath(overwriteFile, 'physical-conflict')
+          copyFilePreservingTimes(physicalFile, conflictPath)
+        }
+        fs.rmSync(physicalFile, { force: true })
+        result.moved += 1
+        result.conflicts += 1
+      }
+
+      removeEmptyDirsUpTo(path.dirname(physicalFile), physicalDir)
+    }
+
+    removeEmptyDirsUpTo(physicalDir, physicalDir)
+    if (result.moved > 0 || result.removedDuplicates > 0 || result.conflicts > 0) {
+      result.status = 'migrated'
+    }
+    return result
+  } catch (error) {
+    return {
+      ...result,
+      status: 'error',
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+function migrateVfsPhysicalResidue(
+  gameRoot: string,
+  libraryPath: string,
+  enabledMods: ModMetadata[]
+): VfsResidueMigrationResult[] {
+  const overwriteRoot = getVfsOverwritePath()
+  fs.mkdirSync(overwriteRoot, { recursive: true })
+
+  const deployFiles = getEnabledDeployFiles(libraryPath, enabledMods)
+  const deployFileMap = new Map<string, string>()
+  for (const entry of deployFiles) {
+    deployFileMap.set(pathKey(entry.deployPath), entry.source)
+  }
+
+  return collectVfsResidueDirs(gameRoot, deployFiles)
+    .map((relDir) => migratePhysicalResidueDir(gameRoot, overwriteRoot, relDir, deployFileMap))
+    .filter((result) => result.status !== 'skipped')
 }
 
 function getExpectedBootstrapModuleNames(entries: BootstrapStageEntry[]): string[] {
@@ -1418,6 +1721,29 @@ function registerGlobalHandlers(): void {
           details: { ...bridgeDiagnostics, logPath: getVfsLaunchLogPath() },
         })
         return { ok: false, error }
+      }
+
+      if (settings.libraryPath) {
+        emitLaunchProgress({
+          step: 'Preparing overwrite layer',
+          percent: 54,
+          detail: 'Moving runtime files out of the game folder',
+        })
+        const residueMigration = migrateVfsPhysicalResidue(gameRoot, settings.libraryPath, enabledMods)
+        const residueErrors = residueMigration.filter((entry) => entry.status === 'error')
+        appendVfsLaunchLog('vfs physical residue migration result', {
+          migrated: residueMigration.filter((entry) => entry.status === 'migrated').length,
+          errors: residueErrors.length,
+          entries: residueMigration,
+        })
+        if (residueErrors.length > 0) {
+          pushGeneralLog(mainWindow, {
+            level: 'warn',
+            source: 'launcher',
+            message: 'Some physical VFS residue could not be moved to overwrite',
+            details: { entries: residueErrors, logPath: getVfsLaunchLogPath() },
+          })
+        }
       }
 
       emitLaunchProgress({

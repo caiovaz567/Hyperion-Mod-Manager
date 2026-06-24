@@ -10,12 +10,12 @@ Import-time DLL proxy loaders are the one exception. Windows resolves these
 before usvfs file hooks can affect DLL dependency loading, so Hyperion stages
 only path-based bootstrap candidates physically before launching the
 usvfs-hooked game: top-level `bin/x64` DLL/ASI/INI/config files and direct
-`bin/x64/plugins` DLL/ASI/INI/config files. When a direct plugin module has a
-sibling support folder with the same base name, that folder is staged
-temporarily too, because some ASI/DLL plugins read assets or write initial logs
-through game-relative paths during startup. The rest of the mod remains virtual.
-Cyber Engine Tweaks' `version.dll` + ASI loader is one example, not a hardcoded
-special case.
+`bin/x64/plugins` DLL/ASI/INI/config files. Sibling support folders and runtime
+state stay virtual/overwrite-backed. If an older run left plugin support folders
+physically in the game directory, Hyperion migrates their non-mod files into the
+VFS overwrite folder before launching so future writes do not leak back into the
+game folder. Cyber Engine Tweaks' `version.dll` + ASI loader is one example, not
+a hardcoded special case.
 
 > usvfs is GPL-3.0 and Hyperion is GPL-3.0, so bundling it is license-compatible.
 
@@ -88,8 +88,8 @@ packaged, and returns diagnostics if the addon is unavailable.
   "Launch Game" must route the game (and any tool that needs the mods) through
   the bridge.
 - **DLL proxy bootstrap**: import-time proxy DLLs cannot rely on pure VFS
-  visibility. Stage only the path-based bootstrap set and matching plugin
-  support folders, then keep the rest of the mod in usvfs.
+  visibility. Stage only the path-based bootstrap set, then keep support assets
+  in usvfs and generated files in the overwrite layer.
 - **AV friction**: usvfs uses API hooking/DLL injection; antivirus may flag it.
   CP2077 is single-player (no anti-cheat), so this is false-positive risk, not bans.
 - **VFS lifetime**: the controller (main process) must stay alive while the game
