@@ -148,8 +148,56 @@ export function writeArchiveSidecar(modDir: string, resources: ArchiveResourceEn
 
 const GAME_ROOT_DIRS = new Set(['archive', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
 const ARCHIVE_EXTENSIONS = new Set(['.archive', '.xl'])
+const LOAD_ORDERED_ARCHIVE_EXTENSION = '.archive'
+const ARCHIVE_MOD_DEPLOY_DIR = path.join('archive', 'pc', 'mod')
 export const ARCHIVE_RESOURCE_INDEX_VERSION = 3
 const ARCHIVE_SIDECAR_FILE = '_archive_resources.json'
+
+export function isLoadOrderedArchiveDeployPath(relativeDeployPath: string): boolean {
+  const normalized = normalizeRelativePath(relativeDeployPath)
+  const lower = normalized.toLowerCase()
+  const archiveModDir = ARCHIVE_MOD_DEPLOY_DIR.toLowerCase()
+  return (
+    path.extname(lower) === LOAD_ORDERED_ARCHIVE_EXTENSION
+    && lower.startsWith(`${archiveModDir}${path.sep}`)
+  )
+}
+
+function stableAsciiHash(value: string): string {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619) >>> 0
+  }
+  return hash.toString(36).padStart(7, '0')
+}
+
+function safeVirtualArchiveSegment(value: string | undefined, fallback: string): string {
+  const normalized = (value ?? '').normalize('NFKD')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/[. ]+$/g, '')
+    .replace(/^_+|_+$/g, '')
+
+  return (normalized || fallback).slice(0, 48)
+}
+
+function buildLoadOrderedArchiveDeployPath(
+  mod: ModMetadata,
+  relFile: string,
+  deployPath: string,
+  highestOrder: number
+): string {
+  const rank = Math.max(0, highestOrder - mod.order).toString().padStart(6, '0')
+  const uniqueId = stableAsciiHash(`${mod.uuid}:${relFile}:${deployPath}`)
+  const modSegment = safeVirtualArchiveSegment(mod.name || mod.folderName || mod.uuid, 'mod')
+  const archiveSegment = safeVirtualArchiveSegment(path.basename(deployPath, path.extname(deployPath)), 'archive')
+  return path.join(
+    ARCHIVE_MOD_DEPLOY_DIR,
+    `!${rank}__${uniqueId}__${modSegment}__${archiveSegment}${LOAD_ORDERED_ARCHIVE_EXTENSION}`
+  )
+}
 
 function findSequenceIndex(parts: string[], sequence: string[]): number {
   const lowerParts = parts.map((part) => part.toLowerCase())
@@ -467,6 +515,9 @@ async function redeployEnabledMods(
  *
  * Order matches load order (ascending priority): a later mod's link overrides an
  * earlier one on shared paths, realizing MO2-style "higher load order wins".
+ * Cyberpunk archive conflicts are special: the game resolves resources by archive
+ * filename order, so .archive files are given unique virtual names where lower UI
+ * entries sort first.
  */
 export async function buildEnabledModLinks(
   gamePath: string,
@@ -477,6 +528,7 @@ export async function buildEnabledModLinks(
 
   const mods = sourceMods ?? await scanMods(libraryPath)
   const enabledMods = mods.filter((mod) => mod.kind === 'mod' && mod.enabled)
+  const highestOrder = enabledMods.reduce((highest, mod) => Math.max(highest, mod.order), 0)
   const links: { source: string; dest: string; dir: boolean }[] = []
 
   // An empty real directory used to materialize virtual game folders that don't
@@ -499,12 +551,32 @@ export async function buildEnabledModLinks(
       const src = path.join(modDir, normalizedRelativePath)
       if (!fs.existsSync(src)) continue
 
-      const relativeDeployPath = normalizeRelativePath(getDeployRelativePath(metadata, normalizedRelativePath))
+      const rawDeployPath = normalizeRelativePath(getDeployRelativePath(metadata, normalizedRelativePath))
+      const useLoadOrderedArchiveName = isLoadOrderedArchiveDeployPath(rawDeployPath)
+      const relativeDeployPath = useLoadOrderedArchiveName
+        ? buildLoadOrderedArchiveDeployPath(metadata, normalizedRelativePath, rawDeployPath, highestOrder)
+        : rawDeployPath
       const fileDest = resolveDeploymentTarget(gamePath, relativeDeployPath)
       if (!fileDest) continue
 
       const srcSegs = normalizedRelativePath.split('\\').filter(Boolean)
       const destSegs = relativeDeployPath.split('\\').filter(Boolean)
+      if (useLoadOrderedArchiveName) {
+        const destParent = path.dirname(fileDest)
+        const dirKey = `mk:${destParent}`
+        if (!seen.has(dirKey)) {
+          seen.add(dirKey)
+          links.push({ source: emptyDir, dest: destParent, dir: true })
+        }
+
+        const fileKey = `file:${src}\0${fileDest}`
+        if (!seen.has(fileKey)) {
+          seen.add(fileKey)
+          links.push({ source: src, dest: fileDest, dir: false })
+        }
+        continue
+      }
+
       // A loose file at the mod root has no source directory to mount. usvfs can't
       // link a file whose target folder doesn't exist, so first materialize that
       // folder virtually from an empty directory, then link the file into it.
@@ -1377,6 +1449,7 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
           for (const rel of getTrackedDeploymentPaths(mod)) {
             const normalized = normalizeRelativePath(rel)
             if (!normalized) continue
+            if (isLoadOrderedArchiveDeployPath(normalized)) continue
             const owners = pathOwners.get(normalized) ?? []
             if (!owners.find((o) => o.modId === mod.uuid)) {
               owners.push({ modId: mod.uuid, name: mod.name, order: mod.order })

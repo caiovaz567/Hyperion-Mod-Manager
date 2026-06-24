@@ -23,15 +23,21 @@ function run() {
   fs.writeFileSync(path.join(libLow, 'shared.archive'), 'LOW')
   fs.writeFileSync(path.join(libHigh, 'shared.archive'), 'HIGH')
   fs.writeFileSync(path.join(libHigh, 'highonly.archive'), 'HIGHONLY')
+  fs.writeFileSync(path.join(libLow, 'archive-low.archive'), 'LOW_ARCHIVE')
+  fs.writeFileSync(path.join(libHigh, 'archive-high.archive'), 'HIGH_ARCHIVE')
 
   const sharedDest = path.join(gameModDir, 'shared.archive')
   const highOnlyDest = path.join(gameModDir, 'highonly.archive')
+  const lowArchiveDest = path.join(gameModDir, '!000001__low.archive')
+  const highArchiveDest = path.join(gameModDir, '!000000__high.archive')
 
-  // links in load order: low first, high last → high overrides shared
+  // links in load order: low first, high last -> high overrides shared
   const links = [
     { source: path.join(libLow, 'shared.archive'), dest: sharedDest },
     { source: path.join(libHigh, 'shared.archive'), dest: sharedDest },
     { source: path.join(libHigh, 'highonly.archive'), dest: highOnlyDest },
+    { source: path.join(libLow, 'archive-low.archive'), dest: lowArchiveDest },
+    { source: path.join(libHigh, 'archive-high.archive'), dest: highArchiveDest },
   ]
 
   result.mount = bridge.mountVfs({ instanceName: 'hyperion_phase3a', links })
@@ -49,9 +55,21 @@ function run() {
     capture: true,
     waitMs: 15000,
   })
+  const typeHighArchive = bridge.launchHookedProcess({
+    appPath: comspec,
+    commandLine: `"${comspec}" /c type "${highArchiveDest}"`,
+    capture: true,
+    waitMs: 15000,
+  })
+  const typeLowArchive = bridge.launchHookedProcess({
+    appPath: comspec,
+    commandLine: `"${comspec}" /c type "${lowArchiveDest}"`,
+    capture: true,
+    waitMs: 15000,
+  })
   const dirList = bridge.launchHookedProcess({
     appPath: comspec,
-    commandLine: `"${comspec}" /c dir /b "${gameModDir}"`,
+    commandLine: `"${comspec}" /c dir /b /on "${gameModDir}"`,
     capture: true,
     waitMs: 15000,
   })
@@ -60,19 +78,30 @@ function run() {
 
   result.sharedContent = (typeShared.stdout || '').trim()
   result.highOnlyContent = (typeHighOnly.stdout || '').trim()
+  result.highArchiveContent = (typeHighArchive.stdout || '').trim()
+  result.lowArchiveContent = (typeLowArchive.stdout || '').trim()
   result.dirListing = (dirList.stdout || '').trim().split(/\r?\n/).filter(Boolean)
+  result.virtualArchiveOrder = result.dirListing.filter((entry) => entry.endsWith('.archive') && entry.startsWith('!'))
 
   // real disk must NOT contain the virtual files
   result.sharedOnDisk = fs.existsSync(sharedDest)
   result.highOnlyOnDisk = fs.existsSync(highOnlyDest)
+  result.lowArchiveOnDisk = fs.existsSync(lowArchiveDest)
+  result.highArchiveOnDisk = fs.existsSync(highArchiveDest)
 
   result.verdict =
     result.sharedContent === 'HIGH' &&
     result.highOnlyContent === 'HIGHONLY' &&
+    result.highArchiveContent === 'HIGH_ARCHIVE' &&
+    result.lowArchiveContent === 'LOW_ARCHIVE' &&
     result.dirListing.includes('shared.archive') &&
     result.dirListing.includes('highonly.archive') &&
+    result.virtualArchiveOrder[0] === '!000000__high.archive' &&
+    result.virtualArchiveOrder[1] === '!000001__low.archive' &&
     !result.sharedOnDisk &&
-    !result.highOnlyOnDisk
+    !result.highOnlyOnDisk &&
+    !result.lowArchiveOnDisk &&
+    !result.highArchiveOnDisk
       ? 'PHASE 3a OK'
       : 'PHASE 3a FAILED'
 

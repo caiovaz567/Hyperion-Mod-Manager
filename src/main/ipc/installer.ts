@@ -26,7 +26,7 @@ import {
   getStoredArchiveResources,
   resolveArchiveResources,
 } from './hashResolver'
-import { disableMod, findModDir, getTrackedDeploymentPaths, normalizeRelativePath, scanMods, writeArchiveSidecar, ARCHIVE_RESOURCE_INDEX_VERSION } from './modManager'
+import { disableMod, findModDir, getTrackedDeploymentPaths, isLoadOrderedArchiveDeployPath, normalizeRelativePath, scanMods, writeArchiveSidecar, ARCHIVE_RESOURCE_INDEX_VERSION } from './modManager'
 import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
 import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
 
@@ -989,12 +989,16 @@ async function checkConflicts(
 ): Promise<ConflictInfo[]> {
   const conflicts: ConflictInfo[] = []
   const incomingDeployPaths = Array.from(
-    new Set(getTrackedDeploymentPaths(incomingMod).map((value) => normalizeRelativePath(value)).filter(Boolean))
+    new Set(getTrackedDeploymentPaths(incomingMod)
+      .map((value) => normalizeRelativePath(value))
+      .filter((value) => Boolean(value) && !isLoadOrderedArchiveDeployPath(value)))
   )
 
   for (const mod of enabledMods) {
     const existingDeployPaths = new Set(
-      getTrackedDeploymentPaths(mod).map((value) => normalizeRelativePath(value)).filter(Boolean)
+      getTrackedDeploymentPaths(mod)
+        .map((value) => normalizeRelativePath(value))
+        .filter((value) => Boolean(value) && !isLoadOrderedArchiveDeployPath(value))
     )
 
     for (const deployPath of incomingDeployPaths) {
