@@ -34,6 +34,14 @@
 - Goal of the migration: drop `requestedExecutionLevel: requireAdministrator` → `asInvoker`. Reason: elevation breaks the `nxm://` protocol forwarding (a non-elevated browser can't hand a link to an elevated app) and forces UAC on every launch. **Not flipped to `asInvoker` until the real-game VFS test (Phase 4) passes.**
 - Conflict detection only considers **enabled** mods — both in `modManager.ts` and `modConflictState.ts` (renderer). It reads game-target paths via `getTrackedDeploymentPaths`, which computes them from each mod's files (no longer relies on on-disk deployment).
 
+## Runtime Captures
+- When mods run under usvfs, tools like CET write files physically into the game directory (keybindings, logs, generated configs). On game exit these are migrated out of the game folder into a **Runtime Captures** folder that lives beside the Mod Library (e.g. `Documents/Hyperion/Overwrite`), so the game directory stays clean between sessions.
+- `migrateVfsPhysicalResidue` in `src/main/index.ts` handles migration: `collectVfsResidueDirs` identifies directories that may have runtime writes (plugin dirs, red4ext/logs), then `migratePhysicalResidueDir` processes each file — removing it if it matches the mod's source file exactly, or moving it to Runtime Captures if it was modified at runtime.
+- `cleanVfsOverwriteVolatileFiles` removes log files from Runtime Captures after migration (logs are regenerated on every launch and don't need to persist).
+- On the next launch, Runtime Captures files are mounted back as VFS read overlays via `buildVfsOverwriteReadLinks`, so CET keybindings and other settings persist across sessions.
+- **Close Game timing**: `IPC.KILL_GAME` waits 1.5 s after `taskkill` before running residue migration — `taskkill` completes the command before the OS fully releases file handles, so an immediate migration races against locks.
+- Exposed in **Settings > Paths** as a "Runtime Captures" card with file count and a "Clear captures" destructive action. Intentionally absent from the Library toolbar — the system is fully automatic.
+
 ## Archive Resource Sidecar
 - For mods containing `.archive` files, resource hashes are stored in a separate `_archive_resources.json` sidecar alongside `_metadata.json` — not inside the metadata file itself.
 - Sidecar format: `{ "version": 3, "resources": [{ "hash", "resourcePath", "archivePath" }] }`.
