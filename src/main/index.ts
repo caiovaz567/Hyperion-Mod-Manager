@@ -124,6 +124,16 @@ function isGameProcessRunning(): Promise<boolean> {
   })
 }
 
+function isProcessRunningByPid(pid?: number): Promise<boolean> {
+  if (!pid || !Number.isFinite(pid)) return Promise.resolve(false)
+
+  return new Promise((resolve) => {
+    exec(`tasklist /FI "PID eq ${Math.trunc(pid)}" /NH /FO CSV`, (err, stdout) => {
+      resolve(!err && stdout.includes(`"${Math.trunc(pid)}"`))
+    })
+  })
+}
+
 interface GameModuleSnapshotEntry {
   pid?: number
   module?: string
@@ -1078,16 +1088,20 @@ function makeVfsLaunchError(message: string): string {
   return `${message}. See ${getVfsLaunchLogPath()}`
 }
 
-// Poll for the game: once it has been seen running and then disappears, tear the
-// VFS down. A grace window guards against unmounting before the game shows up.
-function startGameExitMonitor(): void {
+// Poll for the launched game PID: once it disappears and no process remains
+// attached to the VFS, tear down staging promptly.
+function startGameExitMonitor(launchedPid?: number): void {
   if (gameExitTimer) clearInterval(gameExitTimer)
-  let seenRunning = false
+  let seenRunning = Boolean(launchedPid)
   let elapsedSeconds = 0
   let missingChecks = 0
   gameExitTimer = setInterval(() => {
     elapsedSeconds += 4
-    void isGameProcessRunning().then((running) => {
+    const runningPromise = launchedPid
+      ? isProcessRunningByPid(launchedPid)
+      : isGameProcessRunning()
+
+    void runningPromise.then((running) => {
       let attachedToVfs = false
       let vfsProcessCount = 0
       try {
@@ -1103,18 +1117,19 @@ function startGameExitMonitor(): void {
         return
       }
 
-      if (!seenRunning && elapsedSeconds < 60) {
+      if (!seenRunning && elapsedSeconds < 20) {
         return
       }
 
       missingChecks += 1
       appendVfsLaunchLog('vfs exit monitor missing game', {
         elapsedSeconds,
+        launchedPid,
         missingChecks,
         running,
         vfsProcessCount,
       })
-      if (missingChecks >= 3 && elapsedSeconds >= 60) {
+      if (missingChecks >= 1) {
         unmountVfsIfMounted()
       }
     })
@@ -2143,7 +2158,7 @@ function registerGlobalHandlers(): void {
         cancellable: false,
         detail: `PID ${launch.pid ?? 'unknown'} attached to VFS`,
       })
-      startGameExitMonitor()
+      startGameExitMonitor(launch.pid)
       return { ok: true }
     } catch (err: unknown) {
       unmountVfsIfMounted()
