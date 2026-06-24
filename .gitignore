@@ -9,6 +9,10 @@ Thumbs.db
 .claude/worktrees/
 .worktrees/
 
+# Installed agent skills (dev tooling, not product code)
+.agents/
+skills-lock.json
+
 # Native addon build artifacts
 native/**/build/
 native/**/*.node

@@ -63,6 +63,210 @@ export const TabButton: React.FC<{
   </button>
 )
 
+// ─── Conflict overview / summary ─────────────────────────────────────────────
+
+interface OpponentStat {
+  key: string
+  name: string
+  order?: number
+  wins: number
+  losses: number
+}
+
+function aggregateOpponents(
+  winConflicts: ConflictInfo[],
+  lossConflicts: ConflictInfo[],
+): OpponentStat[] {
+  const map = new Map<string, OpponentStat>()
+
+  const bump = (id: string | undefined, name: string, order: number | undefined, field: 'wins' | 'losses') => {
+    const safeName = name || 'Unknown mod'
+    const key = id ?? `${safeName}:${order ?? '?'}`
+    const existing = map.get(key)
+    if (existing) existing[field] += 1
+    else map.set(key, { key, name: safeName, order, wins: field === 'wins' ? 1 : 0, losses: field === 'losses' ? 1 : 0 })
+  }
+
+  for (const c of winConflicts) bump(c.existingModId, c.existingModName, c.existingOrder, 'wins')
+  for (const c of lossConflicts) bump(c.incomingModId, c.incomingModName, c.incomingOrder, 'losses')
+
+  // Opponents that steal the most (highest losses) read first.
+  return Array.from(map.values()).sort((a, b) => (b.losses - a.losses) || (b.wins - a.wins))
+}
+
+export const ConflictSummary: React.FC<{
+  mod: ModMetadata
+  winConflicts: ConflictInfo[]
+  lossConflicts: ConflictInfo[]
+}> = ({ winConflicts, lossConflicts }) => {
+  const opponents = React.useMemo(
+    () => aggregateOpponents(winConflicts, lossConflicts),
+    [winConflicts, lossConflicts],
+  )
+  const totalWins = winConflicts.length
+  const totalLosses = lossConflicts.length
+
+  if (opponents.length === 0) {
+    return (
+      <div className="flex items-center gap-3 rounded-sm border-[0.5px] border-[#1a3a2e] bg-[#08120d] px-5 py-4">
+        <span className="material-symbols-outlined text-[18px] text-[#34d399]">check_circle</span>
+        <div className="text-[13px] text-[#9a9a9a]">
+          No other enabled mod shares files or archive resources with this mod.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-sm border-[0.5px] border-[#1c1c1c] bg-[#0b0b0b] overflow-hidden">
+      {/* Verdict line */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b-[0.5px] border-[#161616] px-5 py-4">
+        <span className="brand-font text-[11px] font-bold uppercase tracking-[0.16em] text-[#666]">
+          Conflict overview
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px] text-[#34d399]">visibility</span>
+          <span className="text-[14px] text-[#cfcbc7]">
+            <span className="font-bold text-[#34d399]">{totalWins}</span> won
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px] text-[#f87171]">visibility_off</span>
+          <span className="text-[14px] text-[#cfcbc7]">
+            <span className="font-bold text-[#f87171]">{totalLosses}</span> lost
+          </span>
+        </div>
+        <span className="text-[13px] text-[#555]">
+          across {opponents.length} {opponents.length === 1 ? 'mod' : 'mods'}
+        </span>
+      </div>
+
+      {/* Per-opponent breakdown */}
+      <div className="divide-y divide-[#141414]">
+        {opponents.map((opp) => {
+          const total = opp.wins + opp.losses
+          const winPct = total > 0 ? (opp.wins / total) * 100 : 0
+          return (
+            <div key={opp.key} className="px-5 py-3.5">
+              <div className="flex items-baseline gap-3">
+                <span className="min-w-0 flex-1 text-[14px] font-semibold text-[#e6e2de] break-words">
+                  {opp.name}
+                </span>
+                {typeof opp.order === 'number' && (
+                  <span className="shrink-0 text-[12px] text-[#555]">#{opp.order + 1}</span>
+                )}
+              </div>
+
+              {/* Win/loss split bar */}
+              <div className="mt-2 flex items-center gap-3">
+                <div className="flex h-[6px] flex-1 overflow-hidden rounded-sm bg-[#161616]">
+                  {opp.wins > 0 && (
+                    <div className="h-full" style={{ width: `${winPct}%`, background: '#34d399' }} />
+                  )}
+                  {opp.losses > 0 && (
+                    <div className="h-full" style={{ width: `${100 - winPct}%`, background: '#f87171' }} />
+                  )}
+                </div>
+                <div className="shrink-0 text-[12px]">
+                  <span className="font-semibold text-[#34d399]">{opp.wins}</span>
+                  <span className="text-[#444]"> won · </span>
+                  <span className="font-semibold text-[#f87171]">{opp.losses}</span>
+                  <span className="text-[#444]"> lost</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+interface OpponentGroup {
+  key: string
+  modName: string
+  order?: number
+  conflicts: ConflictInfo[]
+}
+
+function groupConflictsByOpponent(conflicts: ConflictInfo[], isWin: boolean): OpponentGroup[] {
+  const groups = new Map<string, OpponentGroup>()
+
+  for (const conflict of conflicts) {
+    const modName = (isWin ? conflict.existingModName : conflict.incomingModName) || 'Unknown mod'
+    const order = isWin ? conflict.existingOrder : conflict.incomingOrder
+    const modId = isWin ? conflict.existingModId : conflict.incomingModId
+    const key = modId ?? `${modName}:${order ?? '?'}`
+
+    const existing = groups.get(key)
+    if (existing) {
+      existing.conflicts.push(conflict)
+    } else {
+      groups.set(key, { key, modName, order, conflicts: [conflict] })
+    }
+  }
+
+  // Sort groups by load order (so the highest-priority opponent reads first)
+  return Array.from(groups.values()).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+}
+
+const ConflictResourceRow: React.FC<{
+  conflict: ConflictInfo
+  mod: ModMetadata
+  isWin: boolean
+  accent: string
+  showArchiveDetails: boolean
+  modsById?: Map<string, ModMetadata>
+}> = ({ conflict, mod, isWin, accent, showArchiveDetails, modsById }) => {
+  const archiveHash = getArchiveConflictHash(conflict)
+  const showHash = Boolean(showArchiveDetails && archiveHash && archiveHash !== conflict.resourcePath)
+  const unresolved = isUnresolvedArchiveConflict(conflict)
+  const currentMod = modsById?.get(mod.uuid) ?? mod
+  const otherModId = isWin ? conflict.existingModId : conflict.incomingModId
+  const otherMod = otherModId ? modsById?.get(otherModId) : undefined
+  const thisArchive = resolveConflictArchiveFile(currentMod, conflict, archiveHash)
+  const otherArchive = resolveConflictArchiveFile(otherMod, conflict, archiveHash)
+
+  return (
+    <div className="group flex items-stretch border-b border-[#111] last:border-b-0 transition-colors hover:bg-[#0d0d0d]">
+      <div className="w-[3px] shrink-0" style={{ background: `${accent}3a` }} />
+      <div className="min-w-0 flex-1 px-5 py-3">
+        <div
+          className="font-mono text-[13px] leading-relaxed break-all"
+          style={{ color: unresolved ? '#555' : '#cfcbc7' }}
+        >
+          {unresolved ? `Unresolved archive hash — ${archiveHash}` : conflict.resourcePath}
+        </div>
+
+        {(showHash || thisArchive || otherArchive) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+            {showHash && !unresolved && (
+              <span className="font-mono text-[#4a4a4a]">{archiveHash}</span>
+            )}
+            {(thisArchive || otherArchive) && (
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                {isWin ? (
+                  <>
+                    <span className="font-medium" style={{ color: `${accent}cc` }}>{thisArchive ?? mod.name}</span>
+                    <span className="text-[#555]">overrides</span>
+                    <span className="text-[#5a5a5a] line-through decoration-[#444]">{otherArchive ?? 'other archive'}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[#5a5a5a] line-through decoration-[#444]">{thisArchive ?? mod.name}</span>
+                    <span className="text-[#555]">overridden by</span>
+                    <span className="font-medium" style={{ color: `${accent}cc` }}>{otherArchive ?? 'other archive'}</span>
+                  </>
+                )}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export const ConflictSection: React.FC<{
   conflicts: ConflictInfo[]
   emptyMessage: string
@@ -77,160 +281,98 @@ export const ConflictSection: React.FC<{
 }> = ({ conflicts, emptyMessage, mod, tone, title, collapsed, onToggleCollapsed, className, showArchiveDetails = true, modsById }) => {
   const isWin = tone === 'win'
   const accent = isWin ? '#34d399' : '#f87171'
-  const headerText = isWin
-    ? 'This mod has priority for these resources.'
-    : 'Another mod currently has priority here.'
-  const countLabel = showArchiveDetails
-    ? `${conflicts.length} resource${conflicts.length === 1 ? '' : 's'}`
-    : `${conflicts.length} path${conflicts.length === 1 ? '' : 's'}`
+  const count = conflicts.length
+  const groups = React.useMemo(() => groupConflictsByOpponent(conflicts, isWin), [conflicts, isWin])
 
   return (
     <section
-      className={`flex min-h-0 flex-col overflow-hidden border-[0.5px] bg-[#0c0c0c] ${className ?? ''}`}
-      style={{
-        borderColor: isWin ? 'rgba(52,211,153,0.22)' : 'rgba(248,113,113,0.22)',
-      }}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-sm border-[0.5px] ${className ?? ''}`}
+      style={{ borderColor: `${accent}28` }}
     >
+      {/* Section header */}
       <button
         type="button"
         onClick={onToggleCollapsed}
-        className={`flex items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-[#111] ${
-          collapsed ? '' : 'border-b border-[#171717]'
+        className={`flex items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-[#0e0e0e] ${
+          collapsed ? 'bg-[#0a0a0a]' : 'bg-[#0b0b0b] border-b border-[#161616]'
         }`}
       >
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <span className={`material-symbols-outlined text-[18px] text-[#8d8d8d] transition-transform ${collapsed ? '-rotate-90' : 'rotate-0'}`}>
-              expand_more
-            </span>
-            <span
-              aria-hidden="true"
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ background: accent, boxShadow: `0 0 10px ${accent}55` }}
-            />
-            <h3 className="brand-font text-[0.92rem] font-bold uppercase tracking-[0.1em] text-[#f4f1ee]">
-              {title}
-            </h3>
-          </div>
-          <div className="mt-1 pl-[52px] text-sm text-[#9a9a9a]">
-            {headerText}
-          </div>
-        </div>
-        <span
-          className="shrink-0 rounded-sm border-[0.5px] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]"
-          style={{
-            color: accent,
-            borderColor: `${accent}55`,
-            background: `${accent}14`,
-          }}
+        <div
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border-[0.5px]"
+          style={{ borderColor: `${accent}28`, background: `${accent}0e` }}
         >
-          {countLabel}
+          <span className="material-symbols-outlined text-[15px]" style={{ color: accent }}>
+            {isWin ? 'visibility' : 'visibility_off'}
+          </span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <span className="brand-font text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: accent }}>
+            {title}
+          </span>
+          <span className="ml-3 text-[12px] text-[#555]">
+            {isWin ? 'This mod has priority.' : 'Another mod has priority.'}
+          </span>
+        </div>
+
+        <span
+          className="shrink-0 brand-font text-[11px] font-bold px-2.5 py-1 rounded-sm border-[0.5px]"
+          style={{ color: accent, borderColor: `${accent}30`, background: `${accent}10` }}
+        >
+          {count}
+        </span>
+
+        <span
+          className="material-symbols-outlined shrink-0 text-[16px] text-[#444] transition-transform duration-150"
+          style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+        >
+          expand_more
         </span>
       </button>
 
-      {!collapsed && (conflicts.length > 0 ? (
-        <div className="hyperion-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-          {conflicts.map((conflict, index) => {
-            const otherModName = isWin ? conflict.existingModName : conflict.incomingModName
-            const otherOrder = isWin ? conflict.existingOrder : conflict.incomingOrder
-            const archiveHash = getArchiveConflictHash(conflict)
-            const showArchiveHash = Boolean(showArchiveDetails && archiveHash && archiveHash !== conflict.resourcePath)
-            const unresolvedArchiveHash = isUnresolvedArchiveConflict(conflict)
-            const currentMod = modsById?.get(mod.uuid) ?? mod
-            const otherModId = isWin ? conflict.existingModId : conflict.incomingModId
-            const otherMod = otherModId ? modsById?.get(otherModId) : undefined
-            const currentArchiveFile = resolveConflictArchiveFile(currentMod, conflict, archiveHash)
-            const otherArchiveFile = resolveConflictArchiveFile(otherMod, conflict, archiveHash)
-            const rowKind = conflict.kind === 'archive-resource' && showArchiveDetails
-              ? 'Archive resource'
-              : 'File path'
-            const outcomeText = isWin ? 'This mod wins' : 'Other mod wins'
-
-            return (
-              <div
-                key={`${conflict.kind}:${conflict.resourcePath}:${conflict.existingModId}:${conflict.incomingModId ?? index}`}
-                className="group relative border-b border-[#151515] px-5 py-3.5 transition-colors last:border-b-0 hover:bg-[#101010]"
-              >
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-y-3 left-0 w-[2px] opacity-70 transition-opacity group-hover:opacity-100"
-                  style={{ background: accent, boxShadow: `0 0 10px ${accent}44` }}
-                />
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(230px,280px)]">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-[0.14em]"
-                        style={{
-                          color: accent,
-                          borderColor: `${accent}55`,
-                          background: `${accent}12`,
-                        }}
-                      >
-                        {outcomeText}
-                      </span>
-                      <span className="text-[10px] brand-font font-bold uppercase tracking-[0.16em] text-[#777]">
-                        {rowKind}
-                      </span>
-                    </div>
-
-                    <div className="mt-2 break-all font-mono text-[13px] leading-relaxed text-[#f1eeea]">
-                      {conflict.resourcePath}
-                    </div>
-
-                    {(showArchiveHash || currentArchiveFile) ? (
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-[#a7a7a7]">
-                        {showArchiveHash ? (
-                          <span className="min-w-0 break-all">
-                            <span className="text-[#d0d0d0]">
-                              {unresolvedArchiveHash ? 'Unresolved hash' : 'Hash'}:
-                            </span>{' '}
-                            {archiveHash}
-                          </span>
-                        ) : null}
-                        {currentArchiveFile ? (
-                          <span className="min-w-0 break-words">
-                            <span className="text-[#d0d0d0]">This archive:</span>{' '}
-                            {currentArchiveFile}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="min-w-0 border-l border-[#1b1b1b] pl-4">
-                    <div className="text-[10px] brand-font font-bold uppercase tracking-[0.16em] text-[#777]">
-                      Against
-                    </div>
-                    <div className="mt-1 truncate text-sm font-semibold text-[#f1eeea]">
-                      {otherModName || 'Unknown mod'}
-                    </div>
-                    {typeof otherOrder === 'number' ? (
-                      <div className="mt-0.5 text-xs text-[#9a9a9a]">
-                        Load order #{otherOrder + 1}
-                      </div>
-                    ) : null}
-
-                    {showArchiveDetails && (currentArchiveFile || otherArchiveFile) ? (
-                      <div className="mt-3 grid gap-1.5 text-xs text-[#a7a7a7]">
-                        <div className="grid grid-cols-[58px_minmax(0,1fr)] gap-2">
-                          <span className="text-[#777]">This</span>
-                          <span className="truncate text-[#d8d8d8]">{currentArchiveFile ?? 'Unknown archive'}</span>
-                        </div>
-                        <div className="grid grid-cols-[58px_minmax(0,1fr)] gap-2">
-                          <span className="text-[#777]">Other</span>
-                          <span className="truncate text-[#d8d8d8]">{otherArchiveFile ?? 'Unknown archive'}</span>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
+      {/* Grouped rows */}
+      {!collapsed && (count > 0 ? (
+        <div className="hyperion-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#090909]">
+          {groups.map((group) => (
+            <div key={group.key} className="border-b border-[#151515] last:border-b-0">
+              {/* Opponent header — full width, no truncation */}
+              <div className="flex items-baseline gap-3 bg-[#0c0c0c] px-5 py-3">
+                <span className="brand-font text-[11px] font-bold uppercase tracking-[0.16em] text-[#555]">
+                  {isWin ? 'Beats' : 'Beaten by'}
+                </span>
+                <span className="min-w-0 flex-1 text-[14px] font-semibold text-[#e6e2de] break-words">
+                  {group.modName}
+                </span>
+                {typeof group.order === 'number' && (
+                  <span className="shrink-0 text-[12px] text-[#555]">
+                    Load order #{group.order + 1}
+                  </span>
+                )}
+                <span
+                  className="shrink-0 brand-font text-[11px] font-bold px-2 py-0.5 rounded-sm"
+                  style={{ color: `${accent}cc`, background: `${accent}10` }}
+                >
+                  {group.conflicts.length} {group.conflicts.length === 1 ? 'resource' : 'resources'}
+                </span>
               </div>
-            )
-          })}
+
+              {/* Resources for this opponent — full width */}
+              {group.conflicts.map((conflict, index) => (
+                <ConflictResourceRow
+                  key={`${conflict.kind}:${conflict.resourcePath}:${conflict.existingModId}:${conflict.incomingModId ?? index}`}
+                  conflict={conflict}
+                  mod={mod}
+                  isWin={isWin}
+                  accent={accent}
+                  showArchiveDetails={showArchiveDetails}
+                  modsById={modsById}
+                />
+              ))}
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 items-center px-5 py-8 text-sm text-[#8d8d8d]">
+        <div className="bg-[#090909] px-5 py-8 text-[13px] text-[#555]">
           {emptyMessage}
         </div>
       ))}

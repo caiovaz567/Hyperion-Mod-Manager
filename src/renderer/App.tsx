@@ -9,7 +9,6 @@ import { ToastContainer } from './features/ui/ToastContainer'
 import { DuplicateDownloadDialog } from './features/ui/DuplicateDownloadDialog'
 import { DuplicateInstallDialog } from './features/ui/DuplicateInstallDialog'
 import { VersionMismatchDialog } from './features/ui/VersionMismatchDialog'
-import { ConflictInspectorDialog } from './features/ui/ConflictInspectorDialog'
 import { FomodInstallerDialog } from './features/ui/FomodInstallerDialog'
 import { WelcomeScreen } from './features/ui/WelcomeScreen'
 import { ModList } from './features/library/ModList'
@@ -247,7 +246,6 @@ export const App: React.FC = () => {
         <DuplicateInstallDialog />
         <FomodInstallerDialog />
         <VersionMismatchDialog />
-        <ConflictInspectorDialog />
         {dialogs.appLogs && (
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
         )}

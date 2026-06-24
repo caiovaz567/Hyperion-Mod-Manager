@@ -17,6 +17,7 @@ import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
 import {
   ConflictSection,
+  ConflictSummary,
   FileTreeBranch,
   TabButton,
   detailTitleClass,
@@ -682,6 +683,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </div>
           ) : (
             <div className="mt-5 min-h-0 flex flex-1 flex-col gap-5">
+              <ConflictSummary
+                mod={mod}
+                winConflicts={winConflicts}
+                lossConflicts={lossConflicts}
+              />
+
               <div className="flex items-center gap-3">
                 <TabButton
                   active={conflictSubTab === 'files'}
