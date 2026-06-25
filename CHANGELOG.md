@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.21.0] - 2026-06-25
+
 ### Added
 - Library table columns are now resizable, cascade-style: `#`, `Version`, `Category`, and `Date` each have a right-border drag handle, and dragging one shifts the columns to its right along. Shrinking leaves space on the right; growing scrolls horizontally. The `Mod Name` and `Actions` columns stay static. Resizing is content-aware: a column won't drag narrower than its widest visible text (e.g. "VISUALS AND GRAPHICS" or a full timestamp), so it stops at the limit instead of truncating, and cells clip so a narrowed column can't overlap the next one. `Mod Name` auto-fills the viewport on first run; the layout persists across sessions
 
