@@ -21,7 +21,10 @@ if (!releaseType) {
 const repoRoot = process.cwd()
 
 function runGit(gitArgs, opts = {}) {
-  return execFileSync('git', gitArgs, { cwd: repoRoot, encoding: 'utf8', ...opts }).trim()
+  // execFileSync returns null when stdout is inherited (e.g. commit/push with
+  // stdio: 'inherit'); guard so callers that don't need the output don't crash.
+  const out = execFileSync('git', gitArgs, { cwd: repoRoot, encoding: 'utf8', ...opts })
+  return (out == null ? '' : out).trim()
 }
 
 function runNpmVersion(type) {

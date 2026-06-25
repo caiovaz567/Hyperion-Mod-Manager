@@ -23,6 +23,7 @@
 - Settings, mod scan, path validation, install/reinstall, and updater all flow through IPC.
 - Mod library scan must ignore symlinks (they are deployment artifacts, not source files).
 - Installed mod metadata stores sourcePath/sourceType so reinstalls can reuse the original source.
+- Mod folder names preserve spaces and hyphens — `sanitizeFolderName` only strips filesystem-invalid characters (`<>:"/\|?*`), it does NOT replace spaces with underscores. Mods are keyed by `uuid`/`folderName` (synced to the real on-disk folder during scan), so older mods installed with `_`-style folders and newer space-style folders coexist with no migration. Do not reintroduce underscore folder names or batch-rename existing folders.
 - Installer extraction temp dirs live in `app.getPath('temp')/Hyperion/installer` (created via `createInstallerTempDir`/`removeInstallerTempDir` in `installer.ts`), NOT inside the mod library. `cleanupInstallerTempDirs(settings)` runs on app launch and `before-quit` to remove orphans, and also sweeps legacy `_tmp_*`/`_tmp_fomod_*` folders that older builds left in the library. Never recreate temp dirs inside `libraryPath`.
 
 ## Deployment System (Virtual / usvfs VFS)
