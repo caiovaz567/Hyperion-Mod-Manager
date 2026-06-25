@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.24.1] - 2026-06-25
+
+### Fixed
+- "Use suggested" now creates the suggested Mod Library or Downloads folder immediately after loading that path, so install-dir defaults such as `Hyperion\Mods` and `Hyperion\Downloads` exist before saving.
+
+---
+
 ## [0.24.0] - 2026-06-25
 
 ### Changed

@@ -297,16 +297,31 @@ export const SettingsPage: React.FC = () => {
     addToast('Game path detected', 'success', 1800)
   }
 
-  const applyDefaultLibraryPath = () => {
-    if (!defaultPaths) return
-    setLibraryPath(defaultPaths.libraryPath)
-    addToast('Suggested mod library loaded', 'info', 1800)
+  const ensureDirectory = async (targetPath: string, label: string): Promise<boolean> => {
+    const result = await IpcService.invoke<IpcResult<void>>(IPC.ENSURE_DIRECTORY, targetPath)
+    if (!result.ok) {
+      addToast(result.error ?? `Could not create ${label}`, 'warning', 2600)
+      return false
+    }
+    return true
   }
 
-  const applyDefaultDownloadPath = () => {
+  const applyDefaultLibraryPath = async () => {
     if (!defaultPaths) return
-    setDownloadPath(defaultPaths.downloadPath)
-    addToast('Suggested downloads folder loaded', 'info', 1800)
+    const nextPath = defaultPaths.libraryPath
+    setLibraryPath(nextPath)
+    if (await ensureDirectory(nextPath, 'suggested mod library')) {
+      addToast('Suggested mod library loaded', 'info', 1800)
+    }
+  }
+
+  const applyDefaultDownloadPath = async () => {
+    if (!defaultPaths) return
+    const nextPath = defaultPaths.downloadPath
+    setDownloadPath(nextPath)
+    if (await ensureDirectory(nextPath, 'suggested downloads folder')) {
+      addToast('Suggested downloads folder loaded', 'info', 1800)
+    }
   }
 
   const handleCheckForUpdates = async () => {

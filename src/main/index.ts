@@ -1542,6 +1542,27 @@ function registerGlobalHandlers(): void {
   // Settings
   ipcMain.handle(IPC.GET_SETTINGS, () => loadSettings())
   ipcMain.handle(IPC.GET_PATH_DEFAULTS, () => getPathDefaults())
+  ipcMain.handle(IPC.ENSURE_DIRECTORY, (_event, targetPath: string) => {
+    const resolvedPath = targetPath?.trim()
+    if (!resolvedPath) return { ok: false, error: 'Path not provided' }
+    try {
+      fs.mkdirSync(resolvedPath, { recursive: true })
+      return { ok: true }
+    } catch (error) {
+      pushGeneralLog(mainWindow, {
+        level: 'error',
+        source: 'filesystem',
+        message: 'Directory creation failed',
+        details: error instanceof Error
+          ? { targetPath: resolvedPath, error: error.message }
+          : { targetPath: resolvedPath, error: String(error) },
+      })
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Could not create folder',
+      }
+    }
+  })
   ipcMain.handle(IPC.SET_SETTINGS, (_event, settings) => {
     try {
       saveSettings(settings)

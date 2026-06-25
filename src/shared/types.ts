@@ -448,6 +448,7 @@ export const IPC = {
   GET_SETTINGS: 'settings:get',
   SET_SETTINGS: 'settings:set',
   GET_PATH_DEFAULTS: 'settings:getPathDefaults',
+  ENSURE_DIRECTORY: 'settings:ensureDirectory',
 
   // Mods
   SCAN_MODS: 'mods:scan',

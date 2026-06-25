@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
-import { IPC } from '@shared/types'
+import { IPC, type IpcResult } from '@shared/types'
 import { Tooltip } from './Tooltip'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
@@ -306,19 +306,33 @@ export const WelcomeScreen: React.FC = () => {
     }
   }
 
-  const applyLibraryDefault = () => {
-    if (!defaultPaths) return
-    setLibraryPath(defaultPaths.libraryPath)
-    addToast('Suggested mod library loaded', 'info', 1800)
+  const ensureDirectory = async (targetPath: string, label: string): Promise<boolean> => {
+    const result = await IpcService.invoke<IpcResult<void>>(IPC.ENSURE_DIRECTORY, targetPath)
+    if (!result.ok) {
+      addToast(result.error ?? `Could not create ${label}`, 'warning', 2600)
+      return false
+    }
+    return true
   }
 
-  const applyDownloadsDefault = () => {
+  const applyLibraryDefault = async () => {
+    if (!defaultPaths) return
+    const nextPath = defaultPaths.libraryPath
+    setLibraryPath(nextPath)
+    if (await ensureDirectory(nextPath, 'suggested mod library')) {
+      addToast('Suggested mod library loaded', 'info', 1800)
+    }
+  }
+
+  const applyDownloadsDefault = async () => {
     // Use the independent suggested downloads folder, not one derived from the
     // current library path — clicking this must only set the downloads path.
     const nextDownloadPath =
       defaultPaths?.downloadPath?.trim() || resolveDownloadPath(defaultPaths?.libraryPath || '')
     setDownloadPath(nextDownloadPath)
-    addToast('Suggested downloads folder loaded', 'info', 1800)
+    if (await ensureDirectory(nextDownloadPath, 'suggested downloads folder')) {
+      addToast('Suggested downloads folder loaded', 'info', 1800)
+    }
   }
 
   const applyPaths = async () => {
