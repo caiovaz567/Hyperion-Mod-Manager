@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- "Create Separator Before" on a mod or separator now inserts the new separator at the correct position — previously it could land below the containing separator instead of before the right-clicked row
+
 ---
 
 ## [0.22.1] - 2026-06-25
