@@ -367,7 +367,7 @@ export interface DownloadsSlice {
     request?: Partial<InstallModRequest>
   ) => Promise<IpcResult<InstallModResponse>>
   reinstallMod: (modId: string) => Promise<IpcResult<InstallModResponse>>
-  openReinstallPrompt: (mod: ModMetadata) => void
+  openReinstallPrompt: (mod: ModMetadata) => Promise<void>
   clearInstallPrompt: () => void
   confirmDuplicateDownload: () => Promise<void>
   clearDuplicateDownloadPrompt: () => void
@@ -616,25 +616,41 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     return result
   },
 
-  openReinstallPrompt: (mod) =>
+  openReinstallPrompt: async (mod) => {
+    const addToast = (get() as DownloadsSlice & {
+      addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+    }).addToast
+
+    if (!mod.sourcePath) {
+      addToast?.('Original source is not stored for this mod', 'warning')
+      return
+    }
+
+    // Validate the source archive (resolved against the current Downloads
+    // folder) before opening the dialog, so the user doesn't click Replace
+    // only to hit an error afterwards.
+    const check = await IpcService.invoke<IpcResult>(IPC.REINSTALL_SOURCE_CHECK, mod.sourcePath)
+    if (!check.ok) {
+      addToast?.(check.error ?? 'Original source is no longer available', 'error')
+      return
+    }
+
     set({
-      installPrompt: mod.sourcePath
-        ? {
-            mode: 'reinstall',
-            existingModId: mod.uuid,
-            existingModName: mod.name,
-            incomingModName: mod.name,
-            sourcePath: mod.sourcePath,
-          }
-        : null,
-      pendingInstallRequest: mod.sourcePath
-        ? {
-            filePath: mod.sourcePath,
-            targetModId: mod.uuid,
-            duplicateAction: 'prompt',
-          }
-        : null,
-    }),
+      installPrompt: {
+        mode: 'reinstall',
+        existingModId: mod.uuid,
+        existingModName: mod.name,
+        incomingModName: mod.name,
+        sourcePath: mod.sourcePath,
+      },
+      pendingInstallRequest: {
+        filePath: mod.sourcePath,
+        targetModId: mod.uuid,
+        duplicateAction: 'prompt',
+        reinstall: true,
+      },
+    })
+  },
 
   clearInstallPrompt: () =>
     set({

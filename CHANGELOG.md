@@ -10,6 +10,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.24.3] - 2026-06-25
+
+### Fixed
+- Reinstalling a mod now always looks up the original archive by name inside the currently configured Downloads folder first, falling back to the absolute source path stored at install time only when the archive is not present there. Moving the Downloads folder to a new location in Settings no longer breaks reinstall with "Original source is no longer available".
+- The reinstall source is now validated before the Reinstall dialog opens: if the archive isn't found, a short toast explains it instead of letting the user click Replace only to hit an error.
+
+---
+
 ## [0.24.2] - 2026-06-25
 
 ### Fixed

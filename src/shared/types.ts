@@ -339,6 +339,10 @@ export interface InstallModRequest {
   sourceVersion?: string
   skipVersionMismatchPrompt?: boolean
   allowOverwriteConflicts?: boolean
+  // When true, resolve filePath against the currently configured Downloads
+  // folder (by file name) before installing, so reinstalls keep working after
+  // the Downloads folder is moved to a new location in Settings.
+  reinstall?: boolean
 }
 
 export interface InstallModResponse {
@@ -470,6 +474,7 @@ export const IPC = {
   // Install
   INSTALL_MOD: 'install:mod',
   REINSTALL_MOD: 'install:reinstall',
+  REINSTALL_SOURCE_CHECK: 'install:reinstallSourceCheck',
   INSTALL_PROGRESS: 'install:progress',
   FOMOD_INSTALL: 'install:fomod',
   FOMOD_CANCEL: 'install:fomodCancel',

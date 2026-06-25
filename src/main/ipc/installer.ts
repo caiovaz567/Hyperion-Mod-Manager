@@ -566,6 +566,29 @@ function getSourceModifiedAt(sourcePath: string): string | undefined {
   }
 }
 
+// Reinstall ALWAYS resolves the original archive against the currently
+// configured Downloads folder first (by file name), so moving the Downloads
+// folder to a new location in Settings keeps reinstall working. Only when the
+// archive is not present there do we fall back to the absolute source path
+// stored at install time (covers mods installed from a folder outside Downloads).
+function resolveReinstallSourcePath(
+  storedSourcePath: string,
+  downloadPath: string | undefined
+): string | undefined {
+  if (downloadPath) {
+    const candidate = path.join(downloadPath, path.basename(storedSourcePath))
+    if (fs.existsSync(candidate)) return candidate
+  }
+  if (fs.existsSync(storedSourcePath)) return storedSourcePath
+  return undefined
+}
+
+function reinstallSourceNotFoundError(downloadPath: string | undefined): string {
+  return downloadPath
+    ? `The installation file isn't in your Downloads folder. Download it again to reinstall.`
+    : `The installation file wasn't found. Set a Downloads folder in Settings and download it again to reinstall.`
+}
+
 function findDuplicateMod(
   existingMods: ModMetadata[],
   rawName: string,
@@ -643,6 +666,27 @@ async function installMod(
   win: BrowserWindow | null
 ): Promise<IpcResult<InstallModResponse>> {
   const request = normalizeInstallRequest(requestInput)
+  // Reinstall always resolves the source archive against the currently
+  // configured Downloads folder first (see resolveReinstallSourcePath). If the
+  // archive isn't there (and the original absolute path is also gone), tell the
+  // user exactly which file was expected and where.
+  if (request.reinstall) {
+    const resolved = resolveReinstallSourcePath(request.filePath, settings.downloadPath)
+    if (!resolved) {
+      pushGeneralLog(win, {
+        level: 'error',
+        source: 'install',
+        message: 'Reinstall failed: source archive not found in Downloads folder',
+        details: {
+          archiveName: path.basename(request.filePath),
+          storedSourcePath: request.filePath,
+          downloadPath: settings.downloadPath,
+        },
+      })
+      return { ok: false, error: reinstallSourceNotFoundError(settings.downloadPath) }
+    }
+    request.filePath = resolved
+  }
   const { filePath, duplicateAction = 'prompt', targetModId } = request
   const targetModMatchId = targetModId
   const ext = path.extname(filePath).toLowerCase()
@@ -1399,19 +1443,33 @@ export function registerInstallerHandlers(getMainWindow: GetMainWindow): void {
 
       if (!mod) return { ok: false, error: 'Mod not found' }
       if (!mod.sourcePath) return { ok: false, error: 'Original source path is not stored for this mod' }
-      if (!fs.existsSync(mod.sourcePath)) {
-        return { ok: false, error: 'Original source is no longer available' }
-      }
 
       return installMod(
         {
           filePath: mod.sourcePath,
           duplicateAction: 'replace',
           targetModId: mod.uuid,
+          reinstall: true,
         },
         settings,
         win
       )
+    }
+  )
+
+  // Lightweight pre-check so the renderer can validate the reinstall source
+  // (now resolved against the current Downloads folder) before opening the
+  // Reinstall dialog — avoids letting the user click Replace just to hit an error.
+  ipcMain.handle(
+    IPC.REINSTALL_SOURCE_CHECK,
+    async (_event, sourcePath: string): Promise<IpcResult> => {
+      if (!sourcePath) return { ok: false, error: 'Original source path is not stored for this mod' }
+      const settings = loadSettings()
+      const resolved = resolveReinstallSourcePath(sourcePath, settings.downloadPath)
+      if (!resolved) {
+        return { ok: false, error: reinstallSourceNotFoundError(settings.downloadPath) }
+      }
+      return { ok: true }
     }
   )
 }
