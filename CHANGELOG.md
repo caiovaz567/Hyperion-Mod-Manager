@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.23.1] - 2026-06-25
+
+### Changed
+- The Downloads toolbar's "Delete All" button is now right-aligned at the far end of the row, lining up with the Actions column's per-row delete icon, instead of sitting next to "Open Folder"
+
+---
+
 ## [0.23.0] - 2026-06-25
 
 ### Fixed

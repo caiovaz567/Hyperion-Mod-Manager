@@ -54,14 +54,16 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
       >
         Open Folder
       </HyperionButton>
-      <HyperionIconButton
-        icon="delete_sweep"
-        label="Delete every file in the downloads folder"
-        tooltip="Delete every file in the downloads folder"
-        variant="danger"
-        onClick={onDeleteAll}
-        disabled={localFileCount === 0}
-      />
+      <div className="ml-auto">
+        <HyperionIconButton
+          icon="delete_sweep"
+          label="Delete every file in the downloads folder"
+          tooltip="Delete every file in the downloads folder"
+          variant="danger"
+          onClick={onDeleteAll}
+          disabled={localFileCount === 0}
+        />
+      </div>
     </div>
   </div>
 )
