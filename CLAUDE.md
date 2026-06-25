@@ -20,6 +20,7 @@
 ## Architecture Notes
 - Main window stays hidden until the renderer sends IPC.APP_READY.
 - Splash is handled by the main process. Do not add a second renderer splash.
+- Native Cut/Copy/Paste/Select All on editable fields and selected text is wired in the main process via `attachEditContextMenu` (the `webContents.on('context-menu')` handler in `createMainWindow`, `index.ts`) — Electron shows no edit menu by default. It returns early for non-editable, non-selection targets so renderer-side custom menus (library rows, etc.) are unaffected. Do not add a duplicate renderer-side copy/paste menu.
 - Settings, mod scan, path validation, install/reinstall, and updater all flow through IPC.
 - Mod library scan must ignore symlinks (they are deployment artifacts, not source files).
 - Installed mod metadata stores sourcePath/sourceType so reinstalls can reuse the original source.
@@ -77,6 +78,7 @@
 
 ## Nexus Downloads And Mod Updates
 - Nexus download/update IPC lives in `src/main/ipc/nexusDownloader.ts`; renderer orchestration lives mostly in `createDownloadsSlice.ts` and `createLibrarySlice.ts`.
+- The Nexus API key can be set in two places: the `Nexus` step of the first-run onboarding wizard (`WelcomeScreen.tsx`, optional, validated live via `useNexusAccount`) and Settings > Nexus. Both persist to `settings.nexusApiKey`. Key validation goes through `IPC.NEXUS_VALIDATE_KEY` / the `useNexusAccount` hook.
 - Startup and manual `Check Updates` must use a full per-mod Nexus file pass (`full: true`) so every installed Nexus mod gets a reliable status and older available updates are not missed. Startup begins this check during the splash screen but only waits briefly before opening the Library; slow Nexus responses continue non-blocking. Later automatic library refreshes may keep the cheaper `updated.json?period=1m` path.
 - Update detection must be scoped to the installed file's own lineage, never the mod page's latest MAIN release. A mod page can host unrelated files (MAIN/OPTIONAL/PATCH) with independent versions — e.g. an installed OPTIONAL "Nova LUT Pack" v1.4 must not be flagged as updatable to the MAIN "Core" v2.5. Resolution order in `deepCheckMod` (`nexusDownloader.ts`): (1) follow the authoritative `file_updates` chain (`old_file_id` → `new_file_id`) from the installed `nexusFileId` to its newest successor; (2) if the chain has no link, match by identical file display name and a newer upload timestamp / version; (3) only when there is no recorded file id, fall back to comparing against the latest MAIN file by numeric version. Example: ArchiveXL `1.26.2` should detect Nexus `1.26.8`.
 - Large Nexus `files.json` responses are allowed internally for full manual checks, but request logs should summarize them (count + small sample) instead of storing/rendering the full payload.
