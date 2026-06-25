@@ -464,7 +464,7 @@ function findFomodConfig(
 function sanitizeFolderName(name: string): string {
   return (name
     .replace(/[<>:"/\\|?*]/g, '')
-    .replace(/\s+/g, '_')
+    .replace(/\s+/g, ' ')
     .replace(/\.+$/, '')
     .trim()
     .slice(0, 80)) || 'mod'
