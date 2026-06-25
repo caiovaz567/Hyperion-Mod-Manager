@@ -240,7 +240,15 @@ async function installCompletedDownload(
   }
 
   if (result.data?.status === 'installed' && result.data.mod) {
-    state.setRecentLibraryBadge?.(result.data.mod.uuid, 'installed')
+    const mod = result.data.mod
+    await state.scanMods?.()
+    const enableResult = await state.enableMod?.(mod.uuid)
+    if (enableResult && !enableResult.ok) {
+      state.addToast?.(`${mod.name} installed — couldn't activate: ${enableResult.error}`, 'warning', 3000)
+    } else {
+      state.addToast?.(`${mod.name} installed & activated`, 'success', 2200)
+    }
+    state.setRecentLibraryBadge?.(mod.uuid, 'installed')
   }
 }
 
