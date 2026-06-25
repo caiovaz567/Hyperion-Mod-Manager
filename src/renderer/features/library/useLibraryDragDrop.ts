@@ -13,6 +13,7 @@ type RowDropPosition = 'before' | 'after'
 interface UseLibraryDragDropOptions {
   orderedEntries: ModMetadata[]
   sortKey: LibrarySortKey | null
+  scrollContainerRef: MutableRefObject<HTMLDivElement | null>
   selectedIdsRef: MutableRefObject<string[]>
   expandSelectionWithSeparatorBlocks: (ids: string[]) => string[]
   getSeparatorBlockIds: (separatorId: string) => string[]
@@ -27,6 +28,7 @@ interface UseLibraryDragDropOptions {
 export function useLibraryDragDrop({
   orderedEntries,
   sortKey,
+  scrollContainerRef,
   selectedIdsRef,
   expandSelectionWithSeparatorBlocks,
   getSeparatorBlockIds,
@@ -43,6 +45,25 @@ export function useLibraryDragDrop({
   const [dropSeparatorId, setDropSeparatorId] = useState<string | null>(null)
   const [topLevelDropActive, setTopLevelDropActive] = useState(false)
   const draggedModIdsRef = useRef<string[]>([])
+
+  const maybeAutoScroll = useCallback((event: DragEvent) => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const threshold = Math.min(120, Math.max(72, rect.height * 0.14))
+    let delta = 0
+
+    if (event.clientY < rect.top + threshold) {
+      delta = -Math.ceil((1 - ((event.clientY - rect.top) / threshold)) * 28)
+    } else if (event.clientY > rect.bottom - threshold) {
+      delta = Math.ceil((1 - ((rect.bottom - event.clientY) / threshold)) * 28)
+    }
+
+    if (delta !== 0) {
+      container.scrollTop += delta
+    }
+  }, [scrollContainerRef])
 
   const draggedModCount = useMemo(
     () => orderedEntries.filter((entry) => entry.kind === 'mod' && draggedModIds.includes(entry.uuid)).length,
@@ -136,6 +157,7 @@ export function useLibraryDragDrop({
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'move'
+    maybeAutoScroll(event)
 
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
     const position: RowDropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
@@ -145,7 +167,7 @@ export function useLibraryDragDrop({
     }
     if (dropSeparatorId !== null) setDropSeparatorId(null)
     if (topLevelDropActive) setTopLevelDropActive(false)
-  }, [dropSeparatorId, getDraggedIdsFromEvent, rowDropTarget, sortKey, topLevelDropActive])
+  }, [dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, rowDropTarget, sortKey, topLevelDropActive])
 
   const handleModRowDragLeave = useCallback((event: DragEvent, targetMod: ModMetadata) => {
     if (!rowDropTarget || rowDropTarget.targetId !== targetMod.uuid) return
@@ -181,6 +203,7 @@ export function useLibraryDragDrop({
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'move'
+    maybeAutoScroll(event)
 
     if (draggingSeparatorBlock) {
       const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
@@ -199,7 +222,7 @@ export function useLibraryDragDrop({
     }
     if (rowDropTarget !== null) setRowDropTarget(null)
     if (topLevelDropActive) setTopLevelDropActive(false)
-  }, [dropSeparatorId, getDraggedIdsFromEvent, orderedEntries, rowDropTarget, sortKey, topLevelDropActive])
+  }, [dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, orderedEntries, rowDropTarget, sortKey, topLevelDropActive])
 
   const handleSeparatorDragLeave = useCallback((event: DragEvent, separator: ModMetadata) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -241,10 +264,11 @@ export function useLibraryDragDrop({
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'move'
+    maybeAutoScroll(event)
     if (!topLevelDropActive) setTopLevelDropActive(true)
     if (rowDropTarget !== null) setRowDropTarget(null)
     if (dropSeparatorId !== null) setDropSeparatorId(null)
-  }, [dropSeparatorId, getDraggedIdsFromEvent, rowDropTarget, sortKey, topLevelDropActive])
+  }, [dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, rowDropTarget, sortKey, topLevelDropActive])
 
   const handleTopLevelDragLeave = useCallback((event: DragEvent) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -311,10 +335,11 @@ export function useLibraryDragDrop({
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'move'
+    maybeAutoScroll(event)
     if (!topLevelDropActive) setTopLevelDropActive(true)
     if (rowDropTarget !== null) setRowDropTarget(null)
     if (dropSeparatorId !== null) setDropSeparatorId(null)
-  }, [dropSeparatorId, getDraggedIdsFromEvent, rowDropTarget, sortKey, topLevelDropActive])
+  }, [dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, rowDropTarget, sortKey, topLevelDropActive])
 
   const handleListRowsDragLeave = useCallback((event: DragEvent) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node)) {

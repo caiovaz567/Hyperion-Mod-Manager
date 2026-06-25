@@ -77,7 +77,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
       }}
     >
       <div
-        className="relative w-full max-w-[480px] overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
+        className="relative w-full max-w-[680px] overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09] shadow-[0_0_12px_rgba(252,238,9,0.35)]" />
@@ -105,7 +105,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 placeholder={placeholder}
-                className="h-11 w-full border-[0.5px] border-[#2d2d2d] bg-[#050505] px-4 text-sm font-medium tracking-[0.01em] text-white transition-colors focus:border-[#fcee09]/60 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.1)]"
+                className="h-12 w-full border-[0.5px] border-[#2d2d2d] bg-[#050505] px-4 text-[15px] font-medium tracking-[0.01em] text-white transition-colors focus:border-[#fcee09]/60 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.1)]"
               />
             </div>
           </div>

@@ -34,13 +34,14 @@ const MenuButton: React.FC<{
   children: React.ReactNode
   onClick: MenuAction
   tone?: MenuButtonTone
-}> = ({ icon, children, onClick, tone = 'default' }) => (
+  labelClassName?: string
+}> = ({ icon, children, onClick, tone = 'default', labelClassName = '' }) => (
   <button
     onClick={() => void onClick()}
     className={`flex items-center w-full px-4 py-2 text-[11px] transition-colors gap-3 tracking-wider font-semibold uppercase ${menuButtonClassByTone[tone]}`}
   >
     <span className="material-symbols-outlined text-[16px]">{icon}</span>
-    <span>{children}</span>
+    <span className={labelClassName}>{children}</span>
   </button>
 )
 
@@ -48,8 +49,8 @@ interface LibraryContextMenuProps {
   menu: LibraryContextMenuState
   menuRef: React.RefObject<HTMLDivElement>
   selectedModCount: number
+  separators: ModMetadata[]
   hasSeparators: boolean
-  hasCollapsedSeparators: boolean
   canMoveSelectedToTopLevel: boolean
   canMoveContextToTopLevel: boolean
   contextTargetCount: number
@@ -57,17 +58,16 @@ interface LibraryContextMenuProps {
   onCreateSeparatorHere: MenuAction
   onCreateSeparatorAtEnd: MenuAction
   onMoveSelectedToTopLevel: MenuAction
-  onToggleAllSeparators: MenuAction
+  onExpandAllSeparators: MenuAction
+  onCollapseAllSeparators: MenuAction
+  onOpenMoveToSeparator: MenuAction
   onCreateSeparatorBeforeRow: MenuAction
   onRename: MenuAction
-  onMoveSelectedHere: MenuAction
   onOpenFolder: MenuAction
   onDelete: MenuAction
   onReinstall: MenuAction
   onDetails: MenuAction
   onMoveContextToTopLevel: MenuAction
-  onEnable: MenuAction
-  onDisable: MenuAction
   onOpenOnNexus: MenuAction
 }
 
@@ -75,8 +75,8 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   menu,
   menuRef,
   selectedModCount,
+  separators,
   hasSeparators,
-  hasCollapsedSeparators,
   canMoveSelectedToTopLevel,
   canMoveContextToTopLevel,
   contextTargetCount,
@@ -84,17 +84,16 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   onCreateSeparatorHere,
   onCreateSeparatorAtEnd,
   onMoveSelectedToTopLevel,
-  onToggleAllSeparators,
+  onExpandAllSeparators,
+  onCollapseAllSeparators,
+  onOpenMoveToSeparator,
   onCreateSeparatorBeforeRow,
   onRename,
-  onMoveSelectedHere,
   onOpenFolder,
   onDelete,
   onReinstall,
   onDetails,
   onMoveContextToTopLevel,
-  onEnable,
-  onDisable,
   onOpenOnNexus,
 }) => {
   useLayoutEffect(() => {
@@ -123,10 +122,14 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
       style={{ left: menu.x, top: menu.y }}
       onClick={(event) => event.stopPropagation()}
     >
-      <MenuButton icon="refresh" onClick={onRefreshLibrary}>
-        Refresh Library
-      </MenuButton>
-      <MenuDivider />
+      {menu.kind !== 'row' && (
+        <>
+          <MenuButton icon="refresh" onClick={onRefreshLibrary}>
+            Refresh Library
+          </MenuButton>
+          <MenuDivider />
+        </>
+      )}
 
       {menu.kind === 'list' ? (
         <>
@@ -143,71 +146,81 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
             </MenuButton>
           )}
           {hasSeparators && (
-            <MenuButton
-              icon={hasCollapsedSeparators ? 'unfold_more' : 'unfold_less'}
-              onClick={onToggleAllSeparators}
-            >
-              {hasCollapsedSeparators ? 'Expand All Separators' : 'Collapse All Separators'}
+            <>
+            <MenuButton icon="unfold_more" onClick={onExpandAllSeparators}>
+              Expand All Separators
             </MenuButton>
+            <MenuButton icon="unfold_less" onClick={onCollapseAllSeparators}>
+              Collapse All Separators
+            </MenuButton>
+            </>
           )}
         </>
       ) : menu.mod.kind === 'separator' ? (
         <>
-          <MenuButton icon="segment" onClick={onCreateSeparatorBeforeRow}>
-            Create Separator Before
-          </MenuButton>
-          {hasSeparators && (
-            <MenuButton
-              icon={hasCollapsedSeparators ? 'unfold_more' : 'unfold_less'}
-              onClick={onToggleAllSeparators}
-            >
-              {hasCollapsedSeparators ? 'Expand All Separators' : 'Collapse All Separators'}
-            </MenuButton>
-          )}
-          <MenuDivider />
+          {/* Edit */}
           <MenuButton icon="edit" onClick={onRename}>
             Rename Separator
           </MenuButton>
-          {selectedModCount > 0 && canMoveSelectedToTopLevel && (
-            <MenuButton icon="move_down" onClick={onMoveSelectedHere} tone="blue">
-              Move {selectedModCount} Selected Here
+
+          {/* Separator structure */}
+          <MenuDivider />
+          <MenuButton icon="segment" onClick={onCreateSeparatorBeforeRow} tone="blue">
+            Create Separator Before
+          </MenuButton>
+          {hasSeparators && (
+            <>
+            <MenuButton icon="unfold_more" onClick={onExpandAllSeparators} tone="blue">
+              Expand All Separators
             </MenuButton>
+            <MenuButton icon="unfold_less" onClick={onCollapseAllSeparators} tone="blue">
+              Collapse All Separators
+            </MenuButton>
+            </>
           )}
+
+          {/* Locate */}
           <MenuDivider />
           <MenuButton icon="folder_open" onClick={onOpenFolder}>
             Open in File Explorer
           </MenuButton>
+
+          {/* Destructive */}
+          <MenuDivider />
           <MenuButton icon="delete" onClick={onDelete} tone="danger">
             Delete Separator
           </MenuButton>
         </>
       ) : (
         <>
-          <MenuButton icon="segment" onClick={onCreateSeparatorBeforeRow}>
-            Create Separator Before
-          </MenuButton>
-          <MenuButton icon="settings_backup_restore" onClick={onReinstall}>
-            Reinstall
-          </MenuButton>
-          <MenuDivider />
+          {/* Inspect & edit */}
           <MenuButton icon="info" onClick={onDetails}>
             Details
           </MenuButton>
           <MenuButton icon="edit" onClick={onRename}>
             Rename
           </MenuButton>
+          <MenuButton icon="settings_backup_restore" onClick={onReinstall}>
+            Reinstall
+          </MenuButton>
+
+          {/* Organize */}
+          <MenuDivider />
+          <MenuButton icon="segment" onClick={onCreateSeparatorBeforeRow} tone="blue">
+            Create Separator Before
+          </MenuButton>
+          {separators.length > 0 && (
+            <MenuButton icon="move_item" onClick={onOpenMoveToSeparator} tone="blue">
+              Move to Separator
+            </MenuButton>
+          )}
           {canMoveContextToTopLevel && (
             <MenuButton icon="vertical_align_top" onClick={onMoveContextToTopLevel} tone="blue">
               {contextTargetCount > 1 ? 'Move Selected to Top Level' : 'Move to Top Level'}
             </MenuButton>
           )}
-          <MenuDivider />
-          <MenuButton icon="toggle_on" onClick={onEnable}>
-            Enable
-          </MenuButton>
-          <MenuButton icon="toggle_off" onClick={onDisable} tone="disable">
-            Disable
-          </MenuButton>
+
+          {/* Open & locate */}
           <MenuDivider />
           {(menu.mod.nexusModId || menu.mod.nexusFileId) && (
             <MenuButton icon="open_in_new" onClick={onOpenOnNexus}>
@@ -217,6 +230,14 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
           <MenuButton icon="folder_open" onClick={onOpenFolder}>
             Open in File Explorer
           </MenuButton>
+
+          {/* Utility */}
+          <MenuDivider />
+          <MenuButton icon="refresh" onClick={onRefreshLibrary}>
+            Refresh Library
+          </MenuButton>
+
+          {/* Destructive */}
           <MenuDivider />
           <MenuButton icon="delete" onClick={onDelete} tone="danger">
             Delete

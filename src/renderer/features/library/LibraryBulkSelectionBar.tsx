@@ -1,32 +1,23 @@
 import React from 'react'
-import type { ModMetadata } from '@shared/types'
 import { HyperionButton, HyperionIconButton } from '../ui/HyperionPrimitives'
 
 interface LibraryBulkSelectionBarProps {
-  selectedModCount: number
   canMove: boolean
-  separators: ModMetadata[]
-  moveMenuOpen: boolean
-  moveMenuRef: React.Ref<HTMLDivElement>
-  onToggleMoveMenu: () => void
+  hasSeparators: boolean
+  onOpenMoveMenu: () => void
   onEnableSelected: () => void | Promise<void>
   onDisableSelected: () => void | Promise<void>
-  onMoveToSeparator: (separatorId: string) => void | Promise<void>
   onMoveToTopLevel: () => void | Promise<void>
   onDeleteSelected: () => void
   onClearSelection: () => void
 }
 
 export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = ({
-  selectedModCount,
   canMove,
-  separators,
-  moveMenuOpen,
-  moveMenuRef,
-  onToggleMoveMenu,
+  hasSeparators,
+  onOpenMoveMenu,
   onEnableSelected,
   onDisableSelected,
-  onMoveToSeparator,
   onMoveToTopLevel,
   onDeleteSelected,
   onClearSelection,
@@ -53,41 +44,17 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
       </HyperionButton>
       {canMove && (
         <>
-          <div ref={moveMenuRef} className="relative">
+          {hasSeparators && (
             <HyperionButton
-              onClick={onToggleMoveMenu}
+              onClick={onOpenMoveMenu}
               variant="toolbar"
               size="sm"
               icon="move_item"
               iconClassName="text-[15px]"
             >
               Move to Separator
-              <span className="material-symbols-outlined text-[15px]">{moveMenuOpen ? 'expand_less' : 'expand_more'}</span>
             </HyperionButton>
-            {moveMenuOpen && (
-              <div className="absolute bottom-[calc(100%+8px)] left-0 min-w-[260px] overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] shadow-[0_16px_32px_rgba(0,0,0,0.55)]">
-                <div className="border-b-[0.5px] border-[#1a1a1a] px-4 py-2 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#7f7f7f]">
-                  Move {selectedModCount} Selected Mods
-                </div>
-                <div className="max-h-[240px] overflow-y-auto py-1">
-                  {separators.length > 0 ? separators.map((separator) => (
-                    <button
-                      key={separator.uuid}
-                      onClick={() => void onMoveToSeparator(separator.uuid)}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-[11px] brand-font font-bold uppercase tracking-[0.14em] text-[#d8d8d8] transition-colors hover:bg-[#101010] hover:text-[#fcee09]"
-                    >
-                      <span className="truncate">{separator.name}</span>
-                      <span className="material-symbols-outlined text-[15px] text-[#6d6d6d]">subdirectory_arrow_right</span>
-                    </button>
-                  )) : (
-                    <div className="px-4 py-3 text-sm text-[#8a8a8a]">
-                      No separators available yet.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
           <HyperionButton
             onClick={() => void onMoveToTopLevel()}
             variant="toolbar"

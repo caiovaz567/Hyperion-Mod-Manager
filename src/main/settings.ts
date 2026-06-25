@@ -36,6 +36,14 @@ function getDownloadPathFromLibrary(libraryPath?: string): string {
   return path.join(libraryParent, 'Downloads')
 }
 
+function normalizeLibraryColumnWidths(raw?: AppSettings['libraryColumnWidths']): AppSettings['libraryColumnWidths'] {
+  if (!raw) return undefined
+  const entries = Object.entries(raw).filter((entry): entry is [keyof NonNullable<AppSettings['libraryColumnWidths']>, number] =>
+    typeof entry[1] === 'number' && Number.isFinite(entry[1])
+  )
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
+}
+
 export function getPathDefaults(): PathDefaults {
   const managedRoot = getManagedRoot()
   return {
@@ -57,7 +65,9 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
       : (getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath),
     theme: 'dark',
     autoUpdate: raw?.autoUpdate ?? true,
+    autoInstallDownloads: raw?.autoInstallDownloads ?? true,
     nexusApiKey: raw?.nexusApiKey ?? '',
+    libraryColumnWidths: normalizeLibraryColumnWidths(raw?.libraryColumnWidths),
     autoInstallPerMod: normalizePerModChoices(raw?.autoInstallPerMod),
   }
 }

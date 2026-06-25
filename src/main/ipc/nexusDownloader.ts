@@ -21,6 +21,7 @@ import { parseNxmUrl } from '../../shared/nxm'
 import { pushGeneralLog, pushRequestLog, safeSendToWindow } from '../logStore'
 import { loadSettings } from '../settings'
 import { findNexusDownloadRecord, removeNexusDownloadRecordByPath, upsertNexusDownloadRecord } from '../nexusDownloadRegistry'
+import { findModDir } from './modManager'
 
 const NEXUS_API = 'https://api.nexusmods.com/v1'
 const APPLICATION_NAME = 'Hyperion'
@@ -324,8 +325,8 @@ async function fetchFileInfo(
   fileId: number,
   apiKey: string,
   mainWindow: BrowserWindow | null,
-): Promise<{ version?: string; fileName?: string }> {
-  const result = await nexusGet<{ version?: string; mod_version?: string; file_name?: string }>(
+): Promise<{ version?: string; fileName?: string; displayName?: string }> {
+  const result = await nexusGet<{ version?: string; mod_version?: string; file_name?: string; name?: string }>(
     `/games/${GAME_DOMAIN}/mods/${modId}/files/${fileId}.json`,
     apiKey,
     mainWindow,
@@ -337,7 +338,114 @@ async function fetchFileInfo(
   const fileName = typeof result.data.file_name === 'string' && result.data.file_name.trim()
     ? result.data.file_name.trim()
     : undefined
-  return { version, fileName }
+  // `name` is the human display name (e.g. "Weird Glass Begone"); `file_name` is
+  // the raw upload (may carry tokens like "Weird_Glass_Begone_1_sHIUHDmOO.zip").
+  const displayName = typeof result.data.name === 'string' && result.data.name.trim()
+    ? result.data.name.trim()
+    : undefined
+  return { version, fileName, displayName }
+}
+
+interface RawNexusModInfo {
+  category_id?: number | string | null
+  category_name?: string | null
+  category?: {
+    category_id?: number | string | null
+    id?: number | string | null
+    name?: string | null
+  } | string | null
+}
+
+interface RawNexusGameInfo {
+  categories?: Array<{
+    category_id?: number | string | null
+    name?: string | null
+  }> | null
+}
+
+// The Nexus mod-info endpoint only returns a numeric `category_id`; the human-readable
+// name lives in the game's category list (`/games/{game}.json`). We fetch that list once
+// and cache it for the session to resolve ids → names.
+let gameCategoryMapCache: Map<number, string> | null = null
+let gameCategoryMapPromise: Promise<Map<number, string>> | null = null
+
+async function getGameCategoryMap(
+  apiKey: string,
+  mainWindow: BrowserWindow | null,
+): Promise<Map<number, string>> {
+  if (gameCategoryMapCache) return gameCategoryMapCache
+  if (gameCategoryMapPromise) return gameCategoryMapPromise
+
+  gameCategoryMapPromise = (async () => {
+    const result = await nexusGet<RawNexusGameInfo>(
+      `/games/${GAME_DOMAIN}.json`,
+      apiKey,
+      mainWindow,
+      { gameDomain: GAME_DOMAIN },
+    )
+    const map = new Map<number, string>()
+    if (result.ok && Array.isArray(result.data?.categories)) {
+      for (const entry of result.data!.categories!) {
+        const rawId = entry?.category_id
+        const id = typeof rawId === 'number'
+          ? rawId
+          : typeof rawId === 'string'
+            ? Number.parseInt(rawId, 10)
+            : NaN
+        const name = typeof entry?.name === 'string' ? entry.name.trim() : ''
+        if (Number.isFinite(id) && name) map.set(id, name)
+      }
+    }
+    // Only cache a successful, non-empty result so transient failures retry later.
+    if (map.size > 0) gameCategoryMapCache = map
+    return map
+  })()
+
+  try {
+    return await gameCategoryMapPromise
+  } finally {
+    gameCategoryMapPromise = null
+  }
+}
+
+async function fetchModCategoryInfo(
+  modId: number,
+  apiKey: string,
+  mainWindow: BrowserWindow | null,
+): Promise<{ categoryId?: number; categoryName?: string }> {
+  const [result, categoryMap] = await Promise.all([
+    nexusGet<RawNexusModInfo>(
+      `/games/${GAME_DOMAIN}/mods/${modId}.json`,
+      apiKey,
+      mainWindow,
+      { modId, gameDomain: GAME_DOMAIN },
+    ),
+    getGameCategoryMap(apiKey, mainWindow),
+  ])
+  if (!result.ok || !result.data) return {}
+
+  const rawCategory = result.data.category
+  const rawCategoryId = result.data.category_id
+    ?? (rawCategory && typeof rawCategory === 'object' ? rawCategory.category_id ?? rawCategory.id : undefined)
+  const parsedCategoryId = typeof rawCategoryId === 'number'
+    ? rawCategoryId
+    : typeof rawCategoryId === 'string'
+      ? Number.parseInt(rawCategoryId, 10)
+      : undefined
+  const categoryId = typeof parsedCategoryId === 'number' && Number.isFinite(parsedCategoryId)
+    ? parsedCategoryId
+    : undefined
+  // Prefer an explicit name from the mod payload, then resolve the id against the
+  // game's category list (the usual path, since the mod payload omits the name).
+  const rawCategoryName = result.data.category_name
+    ?? (rawCategory && typeof rawCategory === 'object' ? rawCategory.name : undefined)
+    ?? (typeof rawCategory === 'string' ? rawCategory : undefined)
+    ?? (categoryId != null ? categoryMap.get(categoryId) : undefined)
+  const categoryName = typeof rawCategoryName === 'string' && rawCategoryName.trim()
+    ? rawCategoryName.trim()
+    : undefined
+
+  return { categoryId, categoryName }
 }
 
 function normalizeVersionString(value?: string): string | undefined {
@@ -533,6 +641,9 @@ interface DownloadHandle {
   status: 'downloading' | 'paused' | 'cancelling'
   requestToken: number
   version?: string
+  categoryId?: number
+  categoryName?: string
+  displayName?: string
 }
 
 const inFlightDownloads = new Map<string, DownloadHandle>()
@@ -676,6 +787,9 @@ function beginDownload(
         fileName: latestHandle.fileName,
         createdAt: latestHandle.startedAt,
         version: latestHandle.version,
+        categoryId: latestHandle.categoryId,
+        categoryName: latestHandle.categoryName,
+        displayName: latestHandle.displayName,
       })
       safeSendToWindow(mainWindow, IPC.NXM_DOWNLOAD_COMPLETE, {
         id,
@@ -871,12 +985,19 @@ export async function checkModUpdates(
   })
 
   const deepCheckMod = async (mod: ModUpdateCheckRequest['mods'][number]): Promise<ModUpdateStatus> => {
-    const filesResult = await nexusGet<NexusFilesResponse>(
-      `/games/${GAME_DOMAIN}/mods/${mod.nexusModId}/files.json`,
-      apiKey,
-      mainWindow,
-      { modId: mod.nexusModId },
-    )
+    const [filesResult, categoryInfo] = await Promise.all([
+      nexusGet<NexusFilesResponse>(
+        `/games/${GAME_DOMAIN}/mods/${mod.nexusModId}/files.json`,
+        apiKey,
+        mainWindow,
+        { modId: mod.nexusModId },
+      ),
+      // Only fetch category when the mod doesn't already have one
+      !mod.nexusCategoryName
+        ? fetchModCategoryInfo(mod.nexusModId, apiKey, mainWindow)
+        : Promise.resolve({ categoryId: undefined, categoryName: undefined }),
+    ])
+
     if (!filesResult.ok || !filesResult.data?.files) {
       return {
         uuid: mod.uuid,
@@ -884,6 +1005,8 @@ export async function checkModUpdates(
         state: 'unknown',
         currentVersion: mod.version,
         modPageUrl: nexusModPageUrl(mod.nexusModId),
+        nexusCategoryId: categoryInfo.categoryId,
+        nexusCategoryName: categoryInfo.categoryName,
       }
     }
 
@@ -964,6 +1087,8 @@ export async function checkModUpdates(
       latestFileName: state === 'update-available' ? latest?.name : undefined,
       updatedAt: state === 'update-available' ? updatedAtIso : undefined,
       modPageUrl: nexusModPageUrl(mod.nexusModId),
+      nexusCategoryId: categoryInfo.categoryId,
+      nexusCategoryName: categoryInfo.categoryName,
     }
   }
 
@@ -993,6 +1118,23 @@ export async function checkModUpdates(
         ? deepCheckMod(mod)
         : createUpToDateStatus(mod)
     ))
+  }
+
+  // Persist fetched Nexus categories to _metadata.json
+  const libraryPath = settings.libraryPath
+  for (const status of statuses) {
+    if (!status.nexusCategoryName && !status.nexusCategoryId) continue
+    try {
+      const found = findModDir(libraryPath, status.uuid)
+      if (!found) continue
+      const metaPath = path.join(found.dir, '_metadata.json')
+      const raw = JSON.parse(fs.readFileSync(metaPath, 'utf-8')) as Record<string, unknown>
+      if (status.nexusCategoryId != null) raw.nexusCategoryId = status.nexusCategoryId
+      if (status.nexusCategoryName) raw.nexusCategoryName = status.nexusCategoryName
+      fs.writeFileSync(metaPath, JSON.stringify(raw, null, 2), 'utf-8')
+    } catch {
+      // Non-fatal — category will be fetched again on the next check
+    }
   }
 
   lastModUpdateCheckAt = Date.now()
@@ -1092,7 +1234,10 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     }
 
     const existingDownload = findNexusDownloadRecord(payload.modId, payload.fileId)
-    if (existingDownload && !allowDuplicate) {
+    const existingIsInCurrentDir = existingDownload
+      ? path.normalize(path.dirname(existingDownload.filePath)).toLowerCase() === path.normalize(downloadDir).toLowerCase()
+      : false
+    if (existingDownload && existingIsInCurrentDir && !allowDuplicate) {
       pushGeneralLog(mainWindow, {
         level: 'info',
         source: 'nexus',
@@ -1147,8 +1292,12 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     const ARCHIVE_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
     const hasValidExtension = ARCHIVE_EXTENSIONS.has(path.extname(rawName).toLowerCase())
 
-    const fileInfo = await fetchFileInfo(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
-      .catch(() => ({} as { version?: string; fileName?: string }))
+    const [fileInfo, modCategoryInfo] = await Promise.all([
+      fetchFileInfo(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
+        .catch(() => ({} as { version?: string; fileName?: string; displayName?: string })),
+      fetchModCategoryInfo(payload.modId, settings.nexusApiKey, mainWindow)
+        .catch(() => ({} as { categoryId?: number; categoryName?: string })),
+    ])
 
     const detectedVersion = normalizeVersionString(fileInfo.version)
 
@@ -1158,13 +1307,15 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       ? fileInfo.fileName
       : undefined
 
+    const currentDirDownload = existingIsInCurrentDir ? existingDownload : null
+
     const resolvedFileName = activeDownload?.fileName
-      || existingDownload?.fileName
+      || currentDirDownload?.fileName
       || (hasValidExtension ? rawName : undefined)
       || nameFromApi
       || `mod-${payload.modId}-file-${payload.fileId}.zip`
 
-    const target = (existingDownload || activeDownload) && allowDuplicate
+    const target = (currentDirDownload || activeDownload) && allowDuplicate
       ? resolveDuplicateDownloadTarget(downloadDir, resolvedFileName)
       : {
           fileName: resolvedFileName,
@@ -1180,6 +1331,9 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       status: 'downloading',
       requestToken: 0,
       version: detectedVersion,
+      categoryId: modCategoryInfo.categoryId,
+      categoryName: modCategoryInfo.categoryName,
+      displayName: fileInfo.displayName,
     })
 
     beginDownload(id, mainWindow, cdnUrl)

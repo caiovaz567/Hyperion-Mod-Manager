@@ -158,21 +158,28 @@ Setup wizard:
 - The mod details modal may scale wider than before to prioritize the `Files` workspace, but it must remain centered and sized from the current app window rather than from tree depth/content
 - Visual emphasis goes to name, status, type, actions, and activation state
 - Mod search belongs to the library surface itself, not the global header, so filtering stays contextual to `Managed Mods`
+- Library search matches a mod's name, author, and category label, so users can filter by category text as well
 - The mod search field should share the same dark squared chrome, border language, and vertical rhythm as adjacent library action buttons instead of reading like a different widget family
 - Library status filtering should live in the screen itself, below the selection guidance, not in the global header
 - Use local segmented controls for `All`, `Enabled`, and `Disabled`; `All` may use the cyber blue accent while activation-oriented controls should reuse the same squared button language as Browse and other path actions
 - Enable/disable-all control should read as a compact rectangular command block, not a toggle switch and not a rounded pill
-- Table sorting should be available from `Mod Name`, `Type`, and `Installed`
+- Table sorting should be available from `Mod Name`, `Category`, and `Installed`
 - Sort icons should stay visually secondary and sit tight to the label without affecting the left alignment of the header text
+- The `Category` column shows the mod's category as plain left-aligned text in the neutral secondary text color (not type-colored, not a bordered badge chip); when a Nexus category is known it shows the real Nexus category name, otherwise the detected type label. Category values must preserve source casing from Nexus or the detected type label
+- Columns resize **cascade-style** (like a file explorer / data grid): `#`, `Version`, `Category`, and `Date` each have their own right-border drag handle and an explicit pixel width. Dragging a handle resizes only that column; the columns to its right shift along (cascade). Growing past the viewport scrolls horizontally (the list scroll region is `overflow-auto`, and rows use `min-w-max` so they extend to the full column width). The enable-toggle, `Mod Name`, and trailing `Actions` columns are **static** (no handle): `Mod Name` absorbs extra horizontal space so `Version`, `Category`, `Date`, and `Actions` stay pushed to the right edge on wide layouts, while `Actions` still holds only icon buttons and stays adjacent to `Date`. After first run the layout is persisted in app settings (`libraryColumnWidths`) and restored across sessions
+- Every data cell (`Mod Name`, `Version`, `Category`, `Date`) clips with `overflow-hidden` + single-line truncation, so a narrowed column never lets its text spill over the next column; the `gap` between columns keeps a minimum visual separation
+- Resizing is **content-aware**: each column's minimum width is raised at runtime to the widest actual text currently shown (measured from the loaded mods, plus a small buffer), so a drag stops exactly where the content still fits rather than continuing to shrink and truncate. Columns also grow to that content minimum on load so they never start truncated. `Category` and `Date` use this so e.g. "VISUALS AND GRAPHICS" or a full timestamp can't be cut off by dragging
+- All library row variants (header, mod rows, install/delete progress rows) read one shared grid template from the `--library-grid` CSS variable set on the list scroll container, so a resize updates every row in lockstep
 - Bulk actions should appear only when multiple mods are selected
 - Sort affordance should keep the entire header cell clickable, left align the label, and show only one active sorted column at a time
 - When the local status filter is `Enabled` or `Disabled`, the enable/disable-all control should be visibly disabled and explain that state through the shared tooltip treatment
 - Separators are first-class library rows in `Custom Order`, not a separate grouping mode layered on top of the list
 - While a column sort is active, flatten the library into a pure sorted mod list and hide separators entirely; the third click must return to `Custom Order` with separators restored in their saved positions
-- Mods inside a separator should shift the entire row inward as a grouped sub-block; do not move only the left active bar
+- Mods inside a separator are left-aligned flush with ungrouped rows — they are NOT indented/shifted inward. Group membership is conveyed by the cyan left accent bar and the separator header above them, not by horizontal displacement
 - Grouped mods should use the regular left accent position with a cyan accent instead of introducing a second cyan guide line beside the row
 - Separators should support moving selected mods into the block through direct drag/drop and explicit library actions
 - Separator headers should align left like a real section marker, use readable label sizing, and avoid compressed microtype
+- Separator names must render exactly as the user typed them; do not force uppercase or title case on user-authored separator labels
 - Separator helper copy should stay hidden until an actual drag is in progress; do not keep `Drag mods here` permanently visible on the row
 - Separators should be collapsible so large grouped sections can fold away without losing their custom-order placement
 - Expanding a separator should use a subtle motion cue; use one chevron affordance only and avoid stacking multiple right-pointing icons in the same header
@@ -183,15 +190,20 @@ Setup wizard:
 - Creating or renaming a separator should use a compact confirmation/input modal instead of forcing inline rename on the row itself
 - The `Create Separator` modal should open with the text cursor already active in the input so the user can type immediately without clicking first
 - In `Custom Order`, the library should explain how to group mods: drag onto a separator, use the separator context action, or use the bulk `Move to Separator` command
-- `Add Separator` belongs beside the local filter controls, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar
+- `Open Mods Folder` belongs beside the local filter controls, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar. Separator creation remains available through context menus and bulk/custom-order workflows instead of the main toolbar
 - Right-clicking empty library space should expose `Create Separator Here` so the user can insert a separator at that exact point in custom order
 - Right-clicking any library row should include a `Create Separator` action, and empty-library context menus should also offer `Refresh` and other lightweight utilities such as separator expand/collapse
-- In row context menus, `Reinstall` should stay near the top of the action stack instead of being buried below secondary utilities
-- Right-clicking a separator should offer a single toggle that expands or collapses every separator in the library, using the current collapsed state to decide the label
+- Per-separator `Expand`/`Collapse` is no longer a context-menu action — clicking a separator row already toggles it, so the menu only exposes `Expand All Separators` / `Collapse All Separators`
+- Right-clicking a mod should not expose Enable/Disable; activation belongs to the row toggle and bulk selection controls
+- `Move to Separator` (from a mod row context menu or the bulk selection bar) opens a centered modal listing every separator with a live name search, instead of inlining destinations into the menu. Separator names render exactly as typed; the modal auto-focuses the search, filters as you type, sizes wider for long names, and keeps a comfortable minimum height for many separators. The bulk bar and the row context menu share the same dialog
+- Right-clicking a separator should also expose explicit `Expand All Separators` and `Collapse All Separators` actions
+- Library context menus are grouped by function with dividers and a consistent color language: cyan (cyber blue) marks separator/organization actions (`Create Separator Before`, `Move to Separator`, `Move to Top Level`), the default yellow-hover marks generic mod actions (`Details`, `Rename`, `Reinstall`, `Open on Nexus`, `Open in File Explorer`, `Refresh Library`), and red marks the destructive `Delete`. In the mod row menu the inspect/edit actions (`Details`, `Rename`, `Reinstall`) lead, the cyan organize group follows, then open/locate, then `Refresh Library`, then `Delete`. `Refresh Library` only leads the separator and empty-space menus, not the mod row menu
+- Renaming a separator inline uses a full-width input that spans to the end of the row
 - Reinstalling as copy should insert the new mod immediately after the source mod's current `#` position; if that insertion point is right before the next separator, the separator must shift down so the copy stays in the same context as the source
 - Normal mod installations should always place the new mod at the end of the library list
 - For deploy-path conflicts between enabled mods, Hyperion follows Mod Organizer style priority: the mod with the higher `#` order (lower in the library) wins on shared game-target paths
 - Changing enable state or reordering enabled mods must immediately rebuild the active deployment stack so the on-disk game state always reflects current library priority
+- Dragging a mod near the top or bottom edge of a long library list must auto-scroll the list so rows can move across large mod sets without dropping and re-grabbing
 
 ### Conflict Detection
 
@@ -260,6 +272,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Nexus downloads should enter Downloads with a `NEW` badge; clicking the archive row itself acknowledges it and clears the marker, and successful install/reinstall also clears it.
 - The sidebar Downloads item shows active transfer attention while downloads are running, then falls back to a compact `NEW` marker only while unacknowledged downloads remain.
 - Library-initiated mod updates are the exception: their download is treated as update work, shown as active download attention in the sidebar, and should auto-install/replace the source mod without navigating to Downloads or leaving a persistent `NEW` download marker.
+- Normal Nexus downloads should auto-install after completion by default. If the archive needs FOMOD, duplicate, version, or overwrite input, the existing prompt flow takes over. Users can disable this behavior in Settings > General
 - When Nexus metadata is available, Downloads should surface the resolved file version so multiple staged versions are distinguishable before install
 - Install/extract progress launched from Downloads should reuse the same active-row language as live downloads instead of falling back to a tiny button-only state
 - Archive extraction is its own phase and should use a distinct cool accent from the default download/install yellow, while later install/finalization can return to the product accent
@@ -289,7 +302,8 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Accessible as a full content view, not merely a hidden modal afterthought
 - Used for game path, library path, downloads path, Nexus connection, library maintenance, and app-level utilities
 - Should feel operational and clear, not decorative
-- Settings should be organized into three explicit sections only: `Paths`, `Nexus`, and `Updates`
+- Settings should be organized into explicit sections: `General`, `Paths`, `Nexus`, `Updates`, and `About`
+- Settings opens on the `General` tab by default so the auto-install / Install Behavior toggle is visible immediately on entry
 - Do not keep a generic `Workspace` section or placeholder future-module scaffold in the primary UX
 - Settings must keep Hyperion's operational chrome: squared small-radius panels, 0.5px borders, dark surfaces, uppercase `brand-font` section names, and yellow as signal rather than decoration
 - `src/renderer/features/ui/uiKit.tsx` may provide shared helpers for Settings and Welcome, but Settings should not inherit a soft onboarding or SaaS-style card language from first-run flows
@@ -310,7 +324,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - The sidebar should always expose a compact Nexus identity marker (avatar or initials) even when the rail is collapsed; expanding the rail may reveal the full name and subscription label
 - Sidebar avatars/identity markers should use the same squared border language as other Hyperion controls and buttons; avoid soft pill or circular treatments that break the shell rhythm
 - In the expanded sidebar account block, stack the content clearly as `name -> subscription badge -> connection state` so the subscription tag does not drift between labels
-- Nexus settings should describe the manual download-to-install flow clearly; do not expose a global Nexus auto-install toggle in the primary UX
+- Nexus settings should describe that Nexus downloads auto-install by default while still landing through Downloads; the global auto-install toggle belongs in Settings > General, not inside the Nexus account card
 - Nexus API validation should happen automatically after the key changes; avoid a dedicated `Test Connection` button as a primary interaction
 - When Nexus validation succeeds, show real account identity details such as display name, premium/free state, and user id/email rather than generic placeholder text
 - Keep library maintenance tools in the main library workflow instead of duplicating them inside Settings
@@ -345,6 +359,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 
 - MUST: operational UI surfaces default to squared rectangular corners; rounded pills, soft capsules, and curved card chrome are not allowed unless a shipped screen explicitly requires them and the exception is documented
 - Any shared `uiKit` controls used inside Settings must follow the squared Hyperion chrome; onboarding may be softer only where the first-run flow explicitly needs it.
+- Icons inside text buttons must track the button label color in every state. On yellow hover states, icons such as `folder_open`, `refresh`, and `content_copy` must become the same black as the label, never remain yellow-on-yellow or disappear into the background
 
 Primary:
 - Yellow background
@@ -407,6 +422,7 @@ Release expectations:
 - Sidebar: src/renderer/features/ui/Sidebar.tsx
 - Welcome: src/renderer/features/ui/WelcomeScreen.tsx
 - Library: src/renderer/features/library/*
+- Move to Separator modal: src/renderer/features/ui/MoveToSeparatorDialog.tsx
 - Downloads: src/renderer/features/downloads/DownloadsPane.tsx
 - Settings: src/renderer/features/ui/SettingsDialog.tsx
 - Toasts: src/renderer/features/ui/ToastContainer.tsx

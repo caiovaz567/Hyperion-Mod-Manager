@@ -1,4 +1,5 @@
 import type { ModMetadata } from '../../../shared/types'
+import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 
 export const sortModsByOrder = (mods: ModMetadata[]): ModMetadata[] =>
   [...mods].sort((left, right) => left.order - right.order)
@@ -69,7 +70,8 @@ export const filterLibraryMods = (
     list = list.filter(
       (mod) =>
         mod.name.toLowerCase().includes(lower) ||
-        mod.author?.toLowerCase().includes(lower)
+        mod.author?.toLowerCase().includes(lower) ||
+        getModCategoryLabel(mod).toLowerCase().includes(lower)
     )
   }
 

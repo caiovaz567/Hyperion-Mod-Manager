@@ -12,7 +12,18 @@ import { LibraryRows } from './LibraryRows'
 import { LibraryTableHeader } from './LibraryTableHeader'
 import { LibraryDeleteProgressRow, LibraryInstallProgressRow } from './LibraryProgressRows'
 import { LibraryToolbar } from './LibraryToolbar'
+import {
+  applyColumnResize,
+  areLibraryColumnWidthsEqual,
+  buildLibraryGridTemplate,
+  fitNameWidthToContainer,
+  hasStoredColumnWidths,
+  readLibraryColumnWidths,
+  type LibraryColumnWidths,
+  type LibraryResizableColumnKey,
+} from './libraryColumns'
 import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
+import { MoveToSeparatorDialog } from '../ui/MoveToSeparatorDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 import { useLibraryBulkToggle } from './useLibraryBulkToggle'
@@ -43,6 +54,8 @@ export const ModList: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<LibraryPendingActionState | null>(null)
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null)
   const [collapsedSeparatorIds, setCollapsedSeparatorIds] = useState<string[]>([])
+  const [moveSeparatorTargets, setMoveSeparatorTargets] = useState<string[] | null>(null)
+  const [columnWidths, setColumnWidths] = useState(readLibraryColumnWidths)
   const listScrollRef = useRef<HTMLDivElement>(null)
   const listRowsRef = useRef<HTMLDivElement>(null)
 
@@ -66,6 +79,7 @@ export const ModList: React.FC = () => {
     clearLibraryDeleteAllRequest,
     settings,
     setActiveView,
+    updateSettings,
     updateModMetadata,
     gamePathValid,
     libraryPathValid,
@@ -104,6 +118,7 @@ export const ModList: React.FC = () => {
     clearLibraryDeleteAllRequest: state.clearLibraryDeleteAllRequest,
     settings: state.settings,
     setActiveView: state.setActiveView,
+    updateSettings: state.updateSettings,
     updateModMetadata: state.updateModMetadata,
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
@@ -125,7 +140,40 @@ export const ModList: React.FC = () => {
   }), shallow)
 
   const updateCount = Object.values(modUpdates).filter((status) => status.state === 'update-available').length
+  const columnWidthsHydratedRef = useRef(false)
 
+  const handleColumnResize = useCallback((key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => {
+    const next = applyColumnResize(start, key, deltaPx)
+    setColumnWidths(next)
+  }, [])
+
+  useEffect(() => {
+    if (!settings) return
+    const next = readLibraryColumnWidths(settings.libraryColumnWidths)
+    setColumnWidths(next)
+    columnWidthsHydratedRef.current = true
+  }, [settings?.libraryColumnWidths])
+
+  useEffect(() => {
+    if (!settings || hasStoredColumnWidths(settings.libraryColumnWidths)) return
+    const el = listScrollRef.current
+    if (!el) return
+    setColumnWidths((prev) => {
+      const next = { ...prev, name: fitNameWidthToContainer(el.clientWidth, prev) }
+      return next
+    })
+  }, [settings])
+
+  useEffect(() => {
+    if (!settings || !columnWidthsHydratedRef.current) return
+    if (areLibraryColumnWidthsEqual(settings.libraryColumnWidths, columnWidths)) return
+    const timer = window.setTimeout(() => {
+      void updateSettings({ libraryColumnWidths: columnWidths })
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [columnWidths, settings, updateSettings])
+
+  const libraryGridTemplate = useMemo(() => buildLibraryGridTemplate(columnWidths), [columnWidths])
 
   const {
     handleInstallFile,
@@ -261,23 +309,19 @@ export const ModList: React.FC = () => {
   })
 
   const {
-    hasCollapsedSeparators,
     recentlyRevealedSeparatorId,
     separatorDialog,
     separatorDialogSubmitting,
-    moveSeparatorMenuOpen,
-    moveSeparatorMenuRef,
     revealSeparator,
     moveModsToSeparator,
     moveModsToTopLevel,
-    handleMoveSelectedToSeparator,
     handleMoveSelectedToTopLevel,
     handleCreateSeparator,
     handleSubmitSeparatorDialog,
-    handleToggleAllSeparators,
+    handleExpandAllSeparators,
+    handleCollapseAllSeparators,
     handleSeparatorDialogValueChange,
     handleCancelSeparatorDialog,
-    toggleMoveSeparatorMenu,
   } = useLibrarySeparatorActions({
     collapsedSeparatorIds,
     setCollapsedSeparatorIds,
@@ -345,6 +389,19 @@ export const ModList: React.FC = () => {
     virtualizedMods.startIndex <= displayedMods.length &&
     virtualizedMods.endIndex > displayedMods.length
 
+  const handleOpenModsFolder = useCallback(async () => {
+    const libraryPath = settings?.libraryPath?.trim()
+    if (!libraryPath) {
+      addToast('Mods folder is not configured yet', 'warning')
+      return
+    }
+
+    const result = await IpcService.invoke<IpcResult>(IPC.OPEN_PATH, libraryPath)
+    if (!result.ok) {
+      addToast(result.error ?? 'Could not open mods folder', 'error')
+    }
+  }, [addToast, settings?.libraryPath])
+
   useEffect(() => {
     if (!libraryDeleteAllRequestedAt) return
     setPendingAction({ type: 'delete-all', count: orderedEntries.length })
@@ -383,6 +440,7 @@ export const ModList: React.FC = () => {
   } = useLibraryDragDrop({
     orderedEntries,
     sortKey,
+    scrollContainerRef: listScrollRef,
     selectedIdsRef,
     expandSelectionWithSeparatorBlocks,
     getSeparatorBlockIds,
@@ -397,31 +455,43 @@ export const ModList: React.FC = () => {
 
   const {
     getContextTargetModIds,
-    handleContextEnable,
-    handleContextDisable,
     handleContextOpenFolder,
     handleContextOpenOnNexus,
     handleContextDelete,
     handleContextRename,
     handleContextDetails,
     handleContextReinstall,
-    handleContextMoveSelectedHere,
     handleContextMoveToTopLevel,
   } = useLibraryContextMenuActions({
     contextMenu,
     selectedModIds,
     settings,
-    enableMod,
-    disableMod,
     addToast,
     openReinstallPrompt,
-    moveModsToSeparator,
     moveModsToTopLevel,
     closeContextMenu,
     requestDelete,
     beginRename,
     openDetails,
   })
+
+  const handleContextOpenMoveToSeparator = useCallback(() => {
+    const targetIds = getContextTargetModIds()
+    if (targetIds.length === 0) return
+    setMoveSeparatorTargets(targetIds)
+    closeContextMenu()
+  }, [closeContextMenu, getContextTargetModIds])
+
+  const handleBulkOpenMoveToSeparator = useCallback(() => {
+    if (selectedModIds.length === 0) return
+    setMoveSeparatorTargets([...selectedModIds])
+  }, [selectedModIds])
+
+  const handleMoveTargetsToSeparator = useCallback(async (separatorId: string) => {
+    if (!moveSeparatorTargets) return
+    await moveModsToSeparator(moveSeparatorTargets, separatorId)
+    setMoveSeparatorTargets(null)
+  }, [moveModsToSeparator, moveSeparatorTargets])
 
   const handleContextCreateSeparator = useCallback(() => {
     if (!contextMenu || contextMenu.kind !== 'list') return
@@ -496,7 +566,7 @@ export const ModList: React.FC = () => {
         showCustomOrderBadge={showCustomOrderBadge}
         onFilterChange={handleFilterChange}
         onStatusFilterChange={setLibraryStatusFilter}
-        onCreateSeparator={() => void handleCreateSeparator()}
+        onOpenModsFolder={() => void handleOpenModsFolder()}
         onDeleteAll={() => requestLibraryDeleteAll()}
         onInstallMod={handleInstallClick}
         onCheckUpdates={() => void checkModUpdates({ force: true, notify: true, full: true })}
@@ -507,7 +577,11 @@ export const ModList: React.FC = () => {
         {/* Table — has its own scroll, toolbar stays fixed above */}
       <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
         <HyperionPanel className="h-full overflow-hidden">
-          <div ref={listScrollRef} className="hyperion-scrollbar managed-mods-scroll h-full overflow-y-auto">
+          <div
+            ref={listScrollRef}
+            className="hyperion-scrollbar managed-mods-scroll h-full overflow-auto"
+            style={{ '--library-grid': libraryGridTemplate } as React.CSSProperties}
+          >
 
           <LibraryTableHeader
             sortKey={sortKey}
@@ -519,6 +593,8 @@ export const ModList: React.FC = () => {
             bulkToggleTooltip={bulkToggleTooltip}
             isBulkToggling={isBulkToggling}
             allVisibleEnabled={allVisibleEnabled}
+            columnWidths={columnWidths}
+            onColumnResize={handleColumnResize}
             onSort={handleSort}
             onTopLevelDragOver={handleTopLevelDragOver}
             onTopLevelDragLeave={handleTopLevelDragLeave}
@@ -615,13 +691,22 @@ export const ModList: React.FC = () => {
         />
       )}
 
+      {moveSeparatorTargets && (
+        <MoveToSeparatorDialog
+          separators={allSeparators}
+          modCount={moveSeparatorTargets.length}
+          onSelect={(separatorId) => void handleMoveTargetsToSeparator(separatorId)}
+          onCancel={() => setMoveSeparatorTargets(null)}
+        />
+      )}
+
       {contextMenu && (
         <LibraryContextMenu
           menu={contextMenu}
           menuRef={contextMenuRef}
           selectedModCount={selectedModCount}
+          separators={allSeparators}
           hasSeparators={allSeparatorIds.length > 0}
-          hasCollapsedSeparators={hasCollapsedSeparators}
           canMoveSelectedToTopLevel={sortKey === null}
           canMoveContextToTopLevel={sortKey === null}
           contextTargetCount={getContextTargetModIds().length}
@@ -629,17 +714,16 @@ export const ModList: React.FC = () => {
           onCreateSeparatorHere={handleContextCreateSeparator}
           onCreateSeparatorAtEnd={handleContextCreateSeparatorAtEnd}
           onMoveSelectedToTopLevel={handleMoveSelectedToTopLevel}
-          onToggleAllSeparators={handleToggleAllSeparators}
+          onExpandAllSeparators={handleExpandAllSeparators}
+          onCollapseAllSeparators={handleCollapseAllSeparators}
+          onOpenMoveToSeparator={handleContextOpenMoveToSeparator}
           onCreateSeparatorBeforeRow={handleContextCreateSeparatorBeforeRow}
           onRename={handleContextRename}
-          onMoveSelectedHere={handleContextMoveSelectedHere}
           onOpenFolder={handleContextOpenFolder}
           onDelete={handleContextDelete}
           onReinstall={handleContextReinstall}
           onDetails={handleContextDetails}
           onMoveContextToTopLevel={handleContextMoveToTopLevel}
-          onEnable={handleContextEnable}
-          onDisable={handleContextDisable}
           onOpenOnNexus={handleContextOpenOnNexus}
         />
       )}
@@ -662,15 +746,11 @@ export const ModList: React.FC = () => {
 
       {bulkSelectionActive && (
         <LibraryBulkSelectionBar
-          selectedModCount={selectedModCount}
           canMove={sortKey === null}
-          separators={allSeparators}
-          moveMenuOpen={moveSeparatorMenuOpen}
-          moveMenuRef={moveSeparatorMenuRef}
-          onToggleMoveMenu={toggleMoveSeparatorMenu}
+          hasSeparators={allSeparators.length > 0}
+          onOpenMoveMenu={handleBulkOpenMoveToSeparator}
           onEnableSelected={() => runBulkToggle(selectedModIds, 'enable')}
           onDisableSelected={() => runBulkToggle(selectedModIds, 'disable')}
-          onMoveToSeparator={handleMoveSelectedToSeparator}
           onMoveToTopLevel={() => moveModsToTopLevel(selectedModIds)}
           onDeleteSelected={() => setPendingAction({ type: 'delete-selected', count: selectedModCount, modIds: [...selectedModIds] })}
           onClearSelection={clearSelection}

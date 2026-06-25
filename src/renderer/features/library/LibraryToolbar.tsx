@@ -11,7 +11,7 @@ interface LibraryToolbarProps {
   showCustomOrderBadge: boolean
   onFilterChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   onStatusFilterChange: (filter: LibraryStatusFilter) => void
-  onCreateSeparator: () => void
+  onOpenModsFolder: () => void
   onDeleteAll: () => void
   onInstallMod: () => void
   onCheckUpdates: () => void
@@ -35,7 +35,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   showCustomOrderBadge,
   onFilterChange,
   onStatusFilterChange,
-  onCreateSeparator,
+  onOpenModsFolder,
   onDeleteAll,
   onInstallMod,
   onCheckUpdates,
@@ -140,8 +140,8 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             )}
           </div>
 
-          <HyperionButton onClick={onCreateSeparator} variant="toolbar" className="px-5">
-            Add Separator
+          <HyperionButton onClick={onOpenModsFolder} variant="toolbar" icon="folder_open" className="px-5">
+            Open Mods Folder
           </HyperionButton>
 
           <Tooltip content="Check installed Nexus mods for newer versions" side="bottom" variant="help">

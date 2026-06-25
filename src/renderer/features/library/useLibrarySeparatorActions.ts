@@ -296,6 +296,27 @@ export function useLibrarySeparatorActions({
     closeContextMenu()
   }, [allSeparatorIds, closeContextMenu, hasCollapsedSeparators, setCollapsedSeparatorIds])
 
+  const handleExpandAllSeparators = useCallback(() => {
+    setCollapsedSeparatorIds([])
+    closeContextMenu()
+  }, [closeContextMenu, setCollapsedSeparatorIds])
+
+  const handleCollapseAllSeparators = useCallback(() => {
+    if (allSeparatorIds.length === 0) return
+    setCollapsedSeparatorIds(allSeparatorIds)
+    closeContextMenu()
+  }, [allSeparatorIds, closeContextMenu, setCollapsedSeparatorIds])
+
+  const handleExpandSeparator = useCallback((separatorId: string) => {
+    setCollapsedSeparatorIds((current) => current.filter((id) => id !== separatorId))
+    closeContextMenu()
+  }, [closeContextMenu, setCollapsedSeparatorIds])
+
+  const handleCollapseSeparator = useCallback((separatorId: string) => {
+    setCollapsedSeparatorIds((current) => current.includes(separatorId) ? current : [...current, separatorId])
+    closeContextMenu()
+  }, [closeContextMenu, setCollapsedSeparatorIds])
+
   const handleSeparatorDialogValueChange = useCallback((value: string) => {
     setSeparatorDialog((current) => current ? { ...current, value } : current)
   }, [])
@@ -325,6 +346,10 @@ export function useLibrarySeparatorActions({
     handleCreateSeparator,
     handleSubmitSeparatorDialog,
     handleToggleAllSeparators,
+    handleExpandAllSeparators,
+    handleCollapseAllSeparators,
+    handleExpandSeparator,
+    handleCollapseSeparator,
     handleSeparatorDialogValueChange,
     handleCancelSeparatorDialog,
     toggleMoveSeparatorMenu,

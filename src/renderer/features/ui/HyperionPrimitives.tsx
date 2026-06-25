@@ -30,7 +30,7 @@ const buttonVariantClass: Record<HyperionButtonVariant, string> = {
   primary:
     'border-transparent bg-[#fcee09] text-[#050505] shadow-[0_0_20px_rgba(252,238,9,0.15)] hover:bg-white disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:hover:bg-[#1c1b07]',
   toolbar:
-    'group border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-[#fcee09] [&_.material-symbols-outlined]:transition-colors hover:[&_.material-symbols-outlined]:!text-[#050505] disabled:border-[#303030] disabled:bg-[#131313] disabled:text-[#666666] disabled:hover:bg-[#131313] disabled:hover:text-[#666666]',
+    'group border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:bg-[#fcee09] hover:text-[#050505] disabled:border-[#303030] disabled:bg-[#131313] disabled:text-[#666666] disabled:hover:bg-[#131313] disabled:hover:text-[#666666]',
   danger:
     'border-[#5b1818] bg-[#160707] text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1] disabled:border-[#3a1010] disabled:bg-[#0d0404] disabled:text-[#7c4a4a] disabled:hover:border-[#3a1010] disabled:hover:bg-[#0d0404] disabled:hover:text-[#7c4a4a]',
   ghost:
@@ -48,7 +48,14 @@ export const HyperionButton = React.forwardRef<HTMLButtonElement, HyperionButton
       {...props}
     >
       {icon ? (
-        <span className={cx('material-symbols-outlined text-[16px]', iconClassName)} aria-hidden="true">
+        <span
+          className={cx(
+            'material-symbols-outlined text-[16px] transition-colors',
+            variant === 'toolbar' && 'text-[#fcee09] group-hover:text-[#050505] group-disabled:text-[#666666]',
+            iconClassName
+          )}
+          aria-hidden="true"
+        >
           {icon}
         </span>
       ) : null}
@@ -194,14 +201,14 @@ export function HyperionSortHeader<TSortKey extends string>({
     >
       <div className={cx('flex min-w-0 items-center gap-2', innerClassName)}>
         <span className={cx(
-          'text-sm uppercase tracking-widest brand-font font-bold',
+          'min-w-0 truncate whitespace-nowrap text-sm uppercase tracking-widest brand-font font-bold',
           active ? 'text-[#fcee09]' : 'text-[#9d9d9d] hover:text-[#fcee09]'
         )}>
           {label}
         </span>
         <span
           className={cx(
-            'material-symbols-outlined text-[8px] leading-none',
+            'material-symbols-outlined shrink-0 text-[8px] leading-none',
             active ? 'text-[#fcee09]' : 'text-[#727272]'
           )}
           aria-hidden="true"

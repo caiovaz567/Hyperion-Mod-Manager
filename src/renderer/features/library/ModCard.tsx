@@ -6,6 +6,7 @@ import Switch from '@mui/material/Switch'
 import type { ModMetadata } from '@shared/types'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { useAppStore } from '../../store/useAppStore'
+import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 
 interface ModCardProps {
   mod: ModMetadata
@@ -30,6 +31,7 @@ const TYPE_COLORS: Record<string, string> = {
 export const ModCard: React.FC<ModCardProps> = ({ mod, selected, onSelect, index = 0 }) => {
   const { enableMod, disableMod, addToast } = useAppStore()
   const typeColor = TYPE_COLORS[mod.type] ?? '#455a64'
+  const categoryLabel = getModCategoryLabel(mod)
   const delay = `${(index % 16) * 0.04}s`
 
   if (mod.kind === 'separator') {
@@ -47,8 +49,7 @@ export const ModCard: React.FC<ModCardProps> = ({ mod, selected, onSelect, index
           color: 'rgba(0,180,255,0.4)',
           fontFamily: '"Orbitron", monospace',
           fontSize: '0.52rem',
-          letterSpacing: '0.25em',
-          textTransform: 'uppercase'
+          letterSpacing: '0.08em',
         }}>
           {mod.name}
         </Typography>
@@ -113,7 +114,7 @@ export const ModCard: React.FC<ModCardProps> = ({ mod, selected, onSelect, index
       {/* Top row: type chip + status dot */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Chip
-          label={mod.type.toUpperCase()}
+          label={categoryLabel}
           size="small"
           sx={{
             height: 16,

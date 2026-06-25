@@ -8,6 +8,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Library table columns are now resizable, cascade-style: `#`, `Version`, `Category`, and `Date` each have a right-border drag handle, and dragging one shifts the columns to its right along. Shrinking leaves space on the right; growing scrolls horizontally. The `Mod Name` and `Actions` columns stay static. Resizing is content-aware: a column won't drag narrower than its widest visible text (e.g. "VISUALS AND GRAPHICS" or a full timestamp), so it stops at the limit instead of truncating, and cells clip so a narrowed column can't overlap the next one. `Mod Name` auto-fills the viewport on first run; the layout persists across sessions
+
+- "Move to Separator" in the right-click context menu and bulk selection bar now opens a centered modal with a search field that filters separators by name as you type. The context menu shows a single "Move to Separator" entry instead of an inline list, and both entry points share the same dialog. The modal is wider for long separator names and keeps a comfortable minimum height for many separators
+- Completed Nexus downloads now auto-install by default. A new `General` tab in Settings ("Install Behavior") toggles this; with it off, archives stay staged in Downloads. The flow still pauses for duplicate, FOMOD, version, or overwrite decisions
+- Library search now matches a mod's category in addition to its name and author
+- Dragging a mod near the top or bottom edge of the list now auto-scrolls so rows can be reordered across long lists without dropping and re-grabbing
+
+### Changed
+- Library `Category` column now resolves and shows the real Nexus category name (e.g. "Modders Resources", "Visuals and Graphics") instead of only the detected type. The Nexus category id is resolved to its name against the game's category list and stored in mod metadata on the next update check. Sorting by `Category` and the Mod Card chip use the same resolved label
+- Library `Category` column renders as plain left-aligned uppercase text (neutral color) instead of a cramped bordered badge chip
+- Mods grouped under a separator are no longer indented — they align flush with ungrouped rows; the cyan left accent and separator header still convey grouping. Install/delete progress rows also drop the nested indent
+- Library context menus are reorganized into function groups with a consistent color language: cyan for separator/organization actions (`Create Separator Before`, `Move to Separator`, `Move to Top Level`), yellow for generic mod actions, and red for `Delete`. The mod row menu now leads with `Details`/`Rename`/`Reinstall` and moves `Refresh Library` to a utility group at the bottom
+- Inline separator rename now uses a full-width input that spans to the end of the row
+- Library toolbar's `Add Separator` button is replaced by `Open Mods Folder`; separator creation lives in context menus and custom-order workflows
+- Installer extraction temp directories now live in the OS temp folder (`temp/Hyperion/installer`) instead of inside the mod library, and are cleaned up automatically on launch and quit — including legacy `_tmp_*` folders left in the library by older builds
+
+### Removed
+- Per-separator `Expand Separator` / `Collapse Separator` context-menu actions (clicking the separator row already toggles it); `Expand All` / `Collapse All` remain
+- `Move Selected Here` from the separator context menu — moving a selection now goes through the shared `Move to Separator` modal
+
+### Fixed
+- Settings now opens on the General tab by default instead of Paths, making Install Behavior visible immediately on open
+- Nexus-sourced mods now use the clean Nexus file display name (e.g. "Weird Glass Begone") for the library name instead of inheriting author tokens/hashes baked into the archive filename (e.g. "Weird Glass Begone 1 sHIUHDmOO")
+- Nexus duplicate-download prompt no longer fires for files that only exist in a previous downloads folder; the duplicate check is now scoped to the currently configured downloads directory
+- FOMOD installer preview panel now scrolls long plugin descriptions instead of pushing the preview image out of view, with a stable scrollbar gutter so content doesn't shift
+- FOMOD installer now clears a stale prompt when its config fails to load, instead of leaving an empty wizard open
+- Toolbar button icons now track the label color in every state (e.g. turn black on the yellow hover) instead of staying yellow-on-yellow
+- Sort header labels truncate cleanly when a column is narrowed, keeping the sort arrow aligned
+
 ---
 
 ## [0.20.1] - 2026-06-24

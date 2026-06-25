@@ -23,6 +23,7 @@
 - Settings, mod scan, path validation, install/reinstall, and updater all flow through IPC.
 - Mod library scan must ignore symlinks (they are deployment artifacts, not source files).
 - Installed mod metadata stores sourcePath/sourceType so reinstalls can reuse the original source.
+- Installer extraction temp dirs live in `app.getPath('temp')/Hyperion/installer` (created via `createInstallerTempDir`/`removeInstallerTempDir` in `installer.ts`), NOT inside the mod library. `cleanupInstallerTempDirs(settings)` runs on app launch and `before-quit` to remove orphans, and also sweeps legacy `_tmp_*`/`_tmp_fomod_*` folders that older builds left in the library. Never recreate temp dirs inside `libraryPath`.
 
 ## Deployment System (Virtual / usvfs VFS)
 - Deployment is **virtual by default**: enabled mods are mapped over the game tree by **usvfs** (the MO2 User-Space Virtual File System) at Launch Game, so there are no symlinks, no full copies, no admin/UAC, and it works cross-drive. This replaced the old NTFS-symlink deployment.
@@ -80,6 +81,10 @@
 - Library-initiated mod updates should stay on the Library view, download through the existing NXM pipeline, replace the source mod automatically, and re-enable it after install. Do not navigate to Downloads for this flow.
 - Normal Nexus downloads still belong in Downloads and use `NEW` markers. Clicking the archive row acknowledges `NEW`; install/reinstall also clears it. Inline mod updates should not leave a persistent `NEW` marker.
 - Free Nexus accounts cannot mint direct download links from the API. For updates, open the Nexus files page and queue the update intent so the next matching `nxm://` link installs inline.
+- Completed downloads auto-install by default, gated on the `autoInstallDownloads` setting (Settings > General "Install Behavior", default on). The `NXM_DOWNLOAD_COMPLETE` handler in `createDownloadsSlice.ts` calls `installCompletedDownload` unless the setting is `false` or the download is a mod-update intent (which has its own path). The shared duplicate/FOMOD/version/overwrite prompts still take over when needed.
+- Library names prefer the clean Nexus file display name (`name`), not the raw `file_name` upload (which can carry author tokens/hashes). It is captured into the download registry (`displayName`) and used by `installer.ts` for both normal and FOMOD installs.
+- Nexus mod category is resolved id→name via the game's category list (`/games/{game}.json`, cached for the session in `getGameCategoryMap`), fetched during update checks and on download, stored as `nexusCategoryId`/`nexusCategoryName` in `_metadata.json`. The renderer label helper is `src/renderer/utils/modCategoryDisplay.ts` (`getModCategoryLabel`), used by the Category column, sort, search, and Mod Card.
+- Library column widths persist in `settings.libraryColumnWidths`; resize logic + grid template live in `src/renderer/features/library/libraryColumns.ts`.
 
 ## Core Commands
 - Dev: npm run dev

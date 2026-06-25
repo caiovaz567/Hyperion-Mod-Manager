@@ -250,6 +250,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         nexusFileId: mod.nexusFileId,
         version: mod.version,
         installedAt: mod.installedAt,
+        nexusCategoryName: mod.nexusCategoryName,
       }))
     if (inputs.length === 0) {
       set({ modUpdates: {}, modUpdatesCheckedAt: new Date().toISOString() })
@@ -272,6 +273,19 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
             : status
         }
         set({ modUpdates: map, modUpdatesCheckedAt: result.data.checkedAt })
+
+        // Patch categories in the store for mods that received Nexus category data
+        const withCategory = result.data.statuses.filter((s) => s.nexusCategoryName)
+        if (withCategory.length > 0) {
+          const categoryMap = new Map(withCategory.map((s) => [s.uuid, s]))
+          set((state) => ({
+            mods: state.mods.map((mod) => {
+              const status = categoryMap.get(mod.uuid)
+              if (!status?.nexusCategoryName) return mod
+              return { ...mod, nexusCategoryId: status.nexusCategoryId, nexusCategoryName: status.nexusCategoryName }
+            }),
+          }))
+        }
         if (announce) {
           if (result.data.skippedReason === 'no-api-key') {
             notify('Add a Nexus API key in Settings to check for updates.', 'warning')

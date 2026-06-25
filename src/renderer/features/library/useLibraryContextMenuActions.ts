@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { ModMetadata, AppSettings, IpcResult } from '@shared/types'
+import type { ModMetadata, AppSettings } from '@shared/types'
 import { IPC } from '@shared/types'
 import { IpcService } from '../../services/IpcService'
 import type { LibraryContextMenuState } from './LibraryContextMenu'
@@ -11,11 +11,8 @@ interface UseLibraryContextMenuActionsOptions {
   contextMenu: LibraryContextMenuState | null
   selectedModIds: string[]
   settings?: AppSettings | null
-  enableMod: (id: string) => Promise<IpcResult>
-  disableMod: (id: string) => Promise<IpcResult>
   addToast: AddToast
   openReinstallPrompt: (mod: ModMetadata) => void
-  moveModsToSeparator: (modIds: string[], separatorId: string) => Promise<void>
   moveModsToTopLevel: (modIds: string[]) => Promise<void>
   closeContextMenu: () => void
   requestDelete: (mod: ModMetadata) => void
@@ -27,11 +24,8 @@ export function useLibraryContextMenuActions({
   contextMenu,
   selectedModIds,
   settings,
-  enableMod,
-  disableMod,
   addToast,
   openReinstallPrompt,
-  moveModsToSeparator,
   moveModsToTopLevel,
   closeContextMenu,
   requestDelete,
@@ -42,20 +36,6 @@ export function useLibraryContextMenuActions({
     if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'mod') return []
     return selectedModIds.includes(contextMenu.mod.uuid) ? selectedModIds : [contextMenu.mod.uuid]
   }, [contextMenu, selectedModIds])
-
-  const handleContextEnable = useCallback(async () => {
-    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'mod') return
-    const result = await enableMod(contextMenu.mod.uuid)
-    if (!result.ok) addToast(result.error ?? 'Enable failed', 'error')
-    closeContextMenu()
-  }, [addToast, closeContextMenu, contextMenu, enableMod])
-
-  const handleContextDisable = useCallback(async () => {
-    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'mod') return
-    const result = await disableMod(contextMenu.mod.uuid)
-    if (!result.ok) addToast(result.error ?? 'Disable failed', 'error')
-    closeContextMenu()
-  }, [addToast, closeContextMenu, contextMenu, disableMod])
 
   const handleContextOpenFolder = useCallback(async () => {
     if (!contextMenu || contextMenu.kind !== 'row' || !settings?.libraryPath) return
@@ -109,12 +89,6 @@ export function useLibraryContextMenuActions({
     closeContextMenu()
   }, [addToast, closeContextMenu, contextMenu, openReinstallPrompt])
 
-  const handleContextMoveSelectedHere = useCallback(async () => {
-    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'separator') return
-    await moveModsToSeparator(selectedModIds, contextMenu.mod.uuid)
-    closeContextMenu()
-  }, [closeContextMenu, contextMenu, moveModsToSeparator, selectedModIds])
-
   const handleContextMoveToTopLevel = useCallback(async () => {
     const targetIds = getContextTargetModIds()
     if (targetIds.length === 0) return
@@ -124,15 +98,12 @@ export function useLibraryContextMenuActions({
 
   return {
     getContextTargetModIds,
-    handleContextEnable,
-    handleContextDisable,
     handleContextOpenFolder,
     handleContextOpenOnNexus,
     handleContextDelete,
     handleContextRename,
     handleContextDetails,
     handleContextReinstall,
-    handleContextMoveSelectedHere,
     handleContextMoveToTopLevel,
   }
 }

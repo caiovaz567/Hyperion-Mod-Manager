@@ -196,10 +196,10 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
     <div className="w-[420px] shrink-0 flex flex-col gap-3 border-l border-[#1a1a1a] pl-6 min-h-0 overflow-hidden">
       <div className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a] shrink-0">Preview</div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto hyperion-scrollbar flex flex-col gap-3 pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto hyperion-scrollbar flex flex-col gap-3" style={{ scrollbarGutter: 'stable' }}>
         {imagePath ? (
           <div
-            className="overflow-hidden rounded-sm border border-[#1e1e1e] cursor-zoom-in"
+            className="shrink-0 overflow-hidden rounded-sm border border-[#1e1e1e] cursor-zoom-in"
             title="Click to expand"
             onClick={() => onOpenLightbox(imagePath)}
           >
@@ -245,6 +245,12 @@ export const FomodInstallerDialog: React.FC = () => {
       return null
     }
   }, [fomodPrompt])
+
+  useEffect(() => {
+    if (fomodPrompt && !config) {
+      clearFomodPrompt()
+    }
+  }, [clearFomodPrompt, config, fomodPrompt])
 
   const [currentStep, setCurrentStep] = useState(0)
   const [selections, setSelections] = useState<Map<string, Set<number>>>(new Map)

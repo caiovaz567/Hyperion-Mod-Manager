@@ -9,6 +9,12 @@ export interface NexusDownloadRecord {
   fileName: string
   createdAt: string
   version?: string
+  categoryId?: number
+  categoryName?: string
+  // Human-readable Nexus file display name (the `name` field, not the raw
+  // `file_name` upload), used so installed mods get a clean library name even
+  // when the archive filename carries author tokens/hashes.
+  displayName?: string
 }
 
 interface NexusDownloadRegistryShape {
