@@ -508,7 +508,7 @@ export const ModList: React.FC = () => {
     if (!contextMenu || contextMenu.kind !== 'row') return
 
     const rowIndex = displayedMods.findIndex((entry) => entry.uuid === contextMenu.mod.uuid)
-    handleCreateSeparator(rowIndex >= 0 ? rowIndex : undefined)
+    handleCreateSeparator(rowIndex >= 0 ? rowIndex : undefined, contextMenu.mod.uuid)
     closeContextMenu()
   }, [closeContextMenu, contextMenu, displayedMods, handleCreateSeparator])
 

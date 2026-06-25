@@ -11,6 +11,7 @@ export interface SeparatorDialogState {
   separatorId?: string
   value: string
   insertIndex?: number
+  insertBeforeUuid?: string
 }
 
 interface UseLibrarySeparatorActionsOptions {
@@ -145,6 +146,28 @@ export function useLibrarySeparatorActions({
     await useAppStore.getState().reorderMods(nextEntries.map((entry) => entry.uuid))
   }, [displayedMods])
 
+  // UUID-based insert: no displayedMods dependency, safe against stale closures.
+  const insertSeparatorBeforeEntry = useCallback(async (separatorId: string, beforeUuid?: string) => {
+    const currentEntries = [...useAppStore.getState().mods].sort((left, right) => left.order - right.order)
+    const nextEntries = [...currentEntries.filter((entry) => entry.uuid !== separatorId)]
+    const separator = currentEntries.find((entry) => entry.uuid === separatorId)
+    if (!separator) return
+
+    if (!beforeUuid) {
+      nextEntries.push(separator)
+      await useAppStore.getState().reorderMods(nextEntries.map((entry) => entry.uuid))
+      return
+    }
+
+    const insertAt = nextEntries.findIndex((entry) => entry.uuid === beforeUuid)
+    if (insertAt >= 0) {
+      nextEntries.splice(insertAt, 0, separator)
+    } else {
+      nextEntries.push(separator)
+    }
+    await useAppStore.getState().reorderMods(nextEntries.map((entry) => entry.uuid))
+  }, [])
+
   const moveModsToSeparator = useCallback(async (modIds: string[], separatorId: string) => {
     if (sortKey !== null) {
       addToast('Return to Custom Order to move mods between separators', 'warning')
@@ -225,7 +248,7 @@ export function useLibrarySeparatorActions({
     closeContextMenu()
   }, [closeContextMenu, moveModsToTopLevel, selectedModIds])
 
-  const handleCreateSeparator = useCallback((insertIndex?: number) => {
+  const handleCreateSeparator = useCallback((insertIndex?: number, insertBeforeUuid?: string) => {
     const allowIndexedInsert = sortKey === null
 
     if (sortKey !== null) {
@@ -237,6 +260,7 @@ export function useLibrarySeparatorActions({
       mode: 'create',
       value: '',
       insertIndex: allowIndexedInsert ? insertIndex : undefined,
+      insertBeforeUuid: allowIndexedInsert ? insertBeforeUuid : undefined,
     })
   }, [resetToCustomOrder, sortKey])
 
@@ -260,7 +284,11 @@ export function useLibrarySeparatorActions({
       }
 
       await scanMods()
-      await insertSeparatorAtDisplayIndex(created.uuid, separatorDialog.insertIndex)
+      if (separatorDialog.insertBeforeUuid) {
+        await insertSeparatorBeforeEntry(created.uuid, separatorDialog.insertBeforeUuid)
+      } else {
+        await insertSeparatorAtDisplayIndex(created.uuid, separatorDialog.insertIndex)
+      }
       setSeparatorDialogSubmitting(false)
       setSeparatorDialog(null)
       resetSelection()
