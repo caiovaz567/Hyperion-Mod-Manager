@@ -1,6 +1,6 @@
 {
   "name": "hyperion",
-  "version": "0.21.2",
+  "version": "0.22.0",
   "description": "Cyberpunk 2077 Mod Manager",
   "main": "out/main/index.js",
   "scripts": {
