@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.21.1] - 2026-06-25
+
 ### Fixed
 - Installed mod folders now keep spaces in their on-disk folder name instead of replacing them with underscores (e.g. `LUT Switcher - Nova LUT Pack` instead of `LUT_Switcher_-_Nova_LUT_Pack`), matching how separators already name their folders. Only invalid filesystem characters are stripped. Existing mods installed with underscore folders keep working unchanged
 - Release script (`prepare-release-tag.mjs`) no longer crashes after committing when git output is inherited, so `release:*` completes the tag + push in one run
