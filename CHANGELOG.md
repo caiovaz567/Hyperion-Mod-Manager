@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Renaming a mod in the library now renames its on-disk folder to match the new name (previously only the display name changed). Existing mods are unaffected until renamed; the folder name is a sanitized form of the display name (invalid filesystem characters stripped)
+
 ---
 
 ## [0.21.1] - 2026-06-25

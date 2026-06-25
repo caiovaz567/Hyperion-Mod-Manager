@@ -98,6 +98,37 @@ function getUniqueSeparatorFolderName(
   }
 }
 
+function sanitizeModFolderName(rawName: string): string {
+  const cleaned = rawName
+    .replace(/[<>:"/\\|?*]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/g, '')
+
+  return cleaned || 'mod'
+}
+
+function getUniqueModFolderName(
+  libraryPath: string,
+  rawName: string,
+  excludeDirPath?: string
+): string {
+  const baseName = sanitizeModFolderName(rawName)
+  const excludedPath = excludeDirPath ? path.resolve(excludeDirPath) : null
+  let candidate = baseName
+  let suffix = 2
+
+  while (true) {
+    const candidatePath = path.join(libraryPath, candidate)
+    if (!fs.existsSync(candidatePath) || (excludedPath && path.resolve(candidatePath) === excludedPath)) {
+      return candidate
+    }
+
+    candidate = `${baseName} ${suffix}`
+    suffix += 1
+  }
+}
+
 function getSourceModifiedAt(sourcePath?: string): string | undefined {
   if (!sourcePath || !fs.existsSync(sourcePath)) return undefined
 
@@ -1369,6 +1400,15 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       if (found.mod.kind === 'separator' && typeof updates.name === 'string') {
         const nextName = updates.name.trim() || found.mod.name
         const nextFolderName = getUniqueSeparatorFolderName(settings.libraryPath, nextName, found.dir)
+        if (nextFolderName !== path.basename(found.dir)) {
+          nextDir = path.join(settings.libraryPath, nextFolderName)
+          fs.renameSync(found.dir, nextDir)
+        }
+        updated.folderName = nextFolderName
+      } else if (found.mod.kind === 'mod' && typeof updates.name === 'string') {
+        // Keep the on-disk folder name in sync with the display name on rename.
+        const nextName = updates.name.trim() || found.mod.name
+        const nextFolderName = getUniqueModFolderName(settings.libraryPath, nextName, found.dir)
         if (nextFolderName !== path.basename(found.dir)) {
           nextDir = path.join(settings.libraryPath, nextFolderName)
           fs.renameSync(found.dir, nextDir)
