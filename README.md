@@ -47,16 +47,21 @@ Since then, Hyperion has become the manager I use for my own Cyberpunk 2077 mod 
 - Windows 10 / 11 (64-bit)
 - A copy of Cyberpunk 2077
 
-## Nexus API Key
+## First-run setup
 
-To use Nexus downloads and update checks, Hyperion needs your personal Nexus Mods API key. For now, Hyperion is not an official Nexus Mods application, so you need to paste the key manually:
+The first time you launch Hyperion, a one-time setup walks you through everything it needs before the main window appears. It opens on a short welcome screen, then a four-step wizard:
 
-1. Log in to Nexus Mods and open [API Key Settings](https://www.nexusmods.com/settings/api-keys).
-2. Scroll to the bottom of the page.
-3. Find **Personal API Key** and copy your personal API key.
-4. In Hyperion, open **Settings > Nexus** and paste it there.
+1. **Game** — where Cyberpunk 2077 is installed. Hyperion auto-detects this in the background, so the step usually opens already valid.
+2. **Mod library** — the folder Hyperion uses as the source of truth for your installed mods.
+3. **Downloads** — the folder Hyperion watches for archives (optional).
+4. **Nexus** — paste your personal Nexus Mods API key to enable downloads and update checks (optional). The step walks you through getting the key (open [API Key Settings](https://www.nexusmods.com/settings/api-keys), copy your **Personal API Key**, paste it) with a live "Connected as …" check. You can also add it later in **Settings > Nexus**.
 
-![Nexus Mods personal API key location](https://github.com/user-attachments/assets/f215cec2-111e-4aee-a638-518099b53338)
+Each path is validated inline, and you can finish without the optional steps — anything you skip can be set later in **Settings**. The setup reappears automatically if a required path ever goes missing or becomes invalid.
+
+<!-- Onboarding demo: upload a GIF/MP4 via a GitHub issue (drag-and-drop), then paste the
+     user-attachments URL below. For GIF/PNG use ![alt](url); for MP4 paste the raw URL on its own line. -->
+
+![Hyperion first-run setup](https://github.com/user-attachments/assets/11b6cf8c-0e1f-4916-a316-5c5815ede701)
 
 ## Download
 

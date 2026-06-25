@@ -106,7 +106,7 @@
 - A locally built installer from npm run build does not publish update metadata to GitHub.
 
 ## Updater Expectations
-- GitHub publish target is caiomarcelo567/Hyperion-Mod-Manager.
+- GitHub publish target is caiovaz567/Hyperion-Mod-Manager (matches the `publish` block in package.json and the `origin` remote).
 - If update checks fail, inspect src/main/updater.ts, the release workflow, and whether the current version exists as a published GitHub release.
 - Renderer update state lives in createUpdatesSlice.ts and header status lives in Header.tsx.
 - The startup self-update check runs in the main process during the splash (`checkForUpdatesOnStartup` in updater.ts, fired from index.ts when `app.isPackaged && settings.autoUpdate`), so the header button is ready as the window opens. The result is cached and re-emitted on `APP_READY` (`flushCachedUpdateInfo`) to avoid a race with renderer listeners. Do not reintroduce a delayed renderer-side startup check; the Settings "Check for updates" button still calls `checkForUpdates` manually.
