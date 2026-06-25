@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.22.3] - 2026-06-25
+
+### Changed
+- `release:patch|minor|major` now folds the version bump + changelog roll into the last local commit (single commit per release) instead of adding a separate `chore(release)` commit. It only amends when the commit hasn't been pushed yet; otherwise it falls back to a fresh commit so public history is never rewritten
+
+---
+
 ## [0.22.2] - 2026-06-25
 
 ### Fixed

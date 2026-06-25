@@ -100,21 +100,43 @@ fs.writeFileSync(path.join(repoRoot, gitDir, 'hyperion-pending-tag'), `${tagName
 // 3) Roll the changelog
 rollChangelog(version)
 
-// 4) Commit only the release files (post-commit hook creates the annotated tag)
+// 4) Commit the release. Fold the version bump + changelog roll into the last
+//    local commit so a release is a single commit. Only amend when HEAD has not
+//    been pushed yet (never rewrite public history); otherwise make a fresh
+//    commit. Either way the post-commit hook turns the pending tag into an
+//    annotated tag.
 const files = ['package.json', 'package-lock.json', 'CHANGELOG.md'].filter((f) =>
   fs.existsSync(path.join(repoRoot, f)),
 )
+const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+function headIsUnpushed() {
+  try {
+    // Count commits on HEAD not yet on origin/<branch>. >0 means HEAD is local.
+    const ahead = runGit(['rev-list', '--count', `origin/${branch}..HEAD`])
+    return Number.parseInt(ahead, 10) > 0
+  } catch {
+    // No origin/<branch> ref locally — be conservative and don't amend.
+    return false
+  }
+}
+
 runGit(['add', ...files])
-runGit(['commit', '-m', `chore(release): bump version to ${version}`, '--', ...files], { stdio: 'inherit' })
-console.log(`[release] Committed release ${tagName} and created its tag.`)
+if (headIsUnpushed()) {
+  // `--amend --no-edit` keeps the existing (feature) commit message; only the
+  // staged release files are folded in. Unstaged changes stay untouched.
+  runGit(['commit', '--amend', '--no-edit'], { stdio: 'inherit' })
+  console.log(`[release] Folded version bump into the last commit and created tag ${tagName}.`)
+} else {
+  runGit(['commit', '-m', `chore(release): bump version to ${version}`, '--', ...files], { stdio: 'inherit' })
+  console.log(`[release] Committed release ${tagName} and created its tag.`)
+}
 
 // 5) Push commit + tag
 if (noPush) {
   console.log('[release] --no-push set. Push manually with: git push --follow-tags')
   process.exit(0)
 }
-
-const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD'])
 try {
   runGit(['push', '--follow-tags', 'origin', branch], { stdio: 'inherit' })
   console.log(`[release] Pushed ${branch} with ${tagName}. The Release workflow will build and publish.`)
