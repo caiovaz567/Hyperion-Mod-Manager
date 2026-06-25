@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
 import type {
   ActiveDownload,
+  AppSettings,
   ConflictInfo,
   DownloadEntry,
   DuplicateNxmDownloadInfo,
@@ -208,11 +209,39 @@ function shouldPromptForVersionDecision(existingVersion?: string, incomingVersio
 }
 
 type DownloadsStoreBridge = DownloadsSlice & {
+  settings?: AppSettings | null
   addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
   scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
   enableMod?: (modId: string) => Promise<IpcResult>
   setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
   checkModUpdates?: (options?: { force?: boolean; notify?: boolean; full?: boolean }) => Promise<void>
+}
+
+async function installCompletedDownload(
+  get: () => DownloadsSlice,
+  filePath: string,
+  payload: Pick<NxmLinkPayload, 'modId' | 'fileId'>,
+  details: {
+    fileName?: string
+    version?: string
+  },
+): Promise<void> {
+  const state = get() as DownloadsStoreBridge
+  const result = await state.installMod(filePath, {
+    nexusModId: payload.modId,
+    nexusFileId: payload.fileId,
+    sourceFileName: details.fileName,
+    sourceVersion: details.version,
+  })
+
+  if (!result.ok) {
+    state.addToast?.(result.error ?? 'Auto-install failed', 'error')
+    return
+  }
+
+  if (result.data?.status === 'installed' && result.data.mod) {
+    state.setRecentLibraryBadge?.(result.data.mod.uuid, 'installed')
+  }
 }
 
 async function installCompletedModUpdate(
@@ -1120,6 +1149,14 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           fileName: fileName ?? completedDownload.fileName,
           version: version ?? completedDownload.version ?? completedDownload.intent.latestVersion,
           intent: completedDownload.intent,
+        })
+      } else if (completedDownload && (get() as DownloadsStoreBridge).settings?.autoInstallDownloads !== false) {
+        void installCompletedDownload(get, savedPath, {
+          modId: completedDownload.nxmModId,
+          fileId: completedDownload.nxmFileId,
+        }, {
+          fileName: fileName ?? completedDownload.fileName,
+          version: version ?? completedDownload.version,
         })
       }
     })

@@ -20,7 +20,7 @@ import {
   scanMods,
 } from './ipc/modManager'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridge'
-import { registerInstallerHandlers } from './ipc/installer'
+import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
 import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
 import { IPC, type GameLaunchProgress, type ModMetadata, type VfsOverwriteInfo } from '../shared/types'
@@ -2437,6 +2437,7 @@ app.whenReady().then(async () => {
   if (settings.libraryPath && !fs.existsSync(settings.libraryPath)) {
     fs.mkdirSync(settings.libraryPath, { recursive: true })
   }
+  const cleanedInstallerTempDirs = cleanupInstallerTempDirs(settings)
 
   // Create main window (hidden)
   mainWindow = createMainWindow()
@@ -2444,7 +2445,7 @@ app.whenReady().then(async () => {
     level: 'info',
     source: 'app',
     message: 'App started',
-    details: { packaged: app.isPackaged, version: app.getVersion() },
+    details: { packaged: app.isPackaged, version: app.getVersion(), cleanedInstallerTempDirs },
   })
 
   if (settings.gamePath?.trim() && !isValidConfiguredGamePath(settings.gamePath)) {
@@ -2503,6 +2504,11 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
   // Tear down any active VFS so usvfs shared state doesn't outlive the controller.
   unmountVfsIfMounted()
+  try {
+    cleanupInstallerTempDirs(loadSettings())
+  } catch {
+    // Best-effort shutdown cleanup only.
+  }
   pushGeneralLog(mainWindow, {
     level: 'info',
     source: 'app',

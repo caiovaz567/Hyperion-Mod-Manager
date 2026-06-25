@@ -34,6 +34,7 @@ type GetMainWindow = () => BrowserWindow | null
 
 const SUPPORTED_EXTENSIONS = new Set(['.zip', '.7z', '.rar'])
 const PRESERVED_ARCHIVE_ROOT_DIRS = new Set(['archive', 'archives', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
+const INSTALLER_TEMP_DIR_PATTERN = /^_tmp_(?:fomod_)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 interface ArchiveExtractor {
   binPath: string
@@ -43,6 +44,70 @@ interface ArchiveExtractor {
 
 const rarSupportCache = new Map<string, boolean>()
 const PACKAGED_7ZIP_DIR = path.join(process.resourcesPath, 'tools', '7zip')
+
+function getInstallerTempRoot(): string {
+  return path.join(app.getPath('temp'), 'Hyperion', 'installer')
+}
+
+function createInstallerTempDir(prefix = '_tmp_'): string {
+  const tempRoot = getInstallerTempRoot()
+  fs.mkdirSync(tempRoot, { recursive: true })
+  return path.join(tempRoot, `${prefix}${uuidv4()}`)
+}
+
+function isDirectChildPath(parentDir: string, candidatePath: string): boolean {
+  const relative = path.relative(path.resolve(parentDir), path.resolve(candidatePath))
+  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative) && !relative.includes(path.sep)
+}
+
+function isInstallerTempDirPath(candidatePath: string, settings?: ReturnType<typeof loadSettings>): boolean {
+  if (!candidatePath || typeof candidatePath !== 'string') return false
+
+  const resolvedPath = path.resolve(candidatePath)
+  const dirName = path.basename(resolvedPath)
+  if (!INSTALLER_TEMP_DIR_PATTERN.test(dirName)) return false
+
+  if (isDirectChildPath(getInstallerTempRoot(), resolvedPath)) return true
+
+  // Legacy cleanup: older Hyperion builds created _tmp_* directly inside the mod library.
+  const libraryPath = settings?.libraryPath
+  return Boolean(libraryPath && isDirectChildPath(libraryPath, resolvedPath))
+}
+
+function removeInstallerTempDir(tempDir: string, settings?: ReturnType<typeof loadSettings>): boolean {
+  if (!isInstallerTempDirPath(tempDir, settings)) return false
+  try {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function cleanupInstallerTempRoot(rootPath: string): number {
+  if (!rootPath || !fs.existsSync(rootPath)) return 0
+
+  let removed = 0
+  for (const entry of fs.readdirSync(rootPath, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !INSTALLER_TEMP_DIR_PATTERN.test(entry.name)) continue
+    const tempDir = path.join(rootPath, entry.name)
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+      removed += 1
+    } catch {
+      // Best-effort cleanup: a locked temp can be retried on the next app start.
+    }
+  }
+  return removed
+}
+
+export function cleanupInstallerTempDirs(settings?: ReturnType<typeof loadSettings>): number {
+  let removed = cleanupInstallerTempRoot(getInstallerTempRoot())
+  if (settings?.libraryPath) {
+    removed += cleanupInstallerTempRoot(settings.libraryPath)
+  }
+  return removed
+}
 
 function unpackElectronAsarPath(filePath: string): string {
   return filePath.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1')
@@ -585,7 +650,7 @@ async function installMod(
   let isDir = false
   let normalizedName = path.basename(filePath, ext) || path.basename(filePath)
   let folderBase = sanitizeFolderName(normalizedName)
-  const tempDir = path.join(settings.libraryPath, `_tmp_${uuidv4()}`)
+  const tempDir = createInstallerTempDir()
   let modDir = ''
 
   try {
@@ -635,8 +700,11 @@ async function installMod(
     }
 
     const rawName = isDir ? path.basename(filePath) : path.basename(filePath, ext)
-    normalizedName = normalizeModName(rawName)
-    folderBase = sanitizeFolderName(rawName)
+    // Prefer the clean Nexus file display name over the raw archive filename, which
+    // can carry author tokens/hashes (e.g. "Weird_Glass_Begone_1_sHIUHDmOO.zip").
+    const nexusDisplayName = findNexusDownloadRecordByPath(filePath)?.displayName?.trim()
+    normalizedName = nexusDisplayName || normalizeModName(rawName)
+    folderBase = sanitizeFolderName(normalizedName)
 
     pushGeneralLog(win, {
       level: 'info',
@@ -709,7 +777,7 @@ async function installMod(
 
         if (!earlyOk) {
           // Clean up the partial mini-dir and reset for full extraction
-          fs.rmSync(tempDir, { recursive: true, force: true })
+          removeInstallerTempDir(tempDir, settings)
           fs.mkdirSync(tempDir, { recursive: true })
         }
       }
@@ -774,7 +842,7 @@ async function installMod(
         : nextInstallOrder
 
     if (duplicateMod && duplicateAction === 'prompt') {
-      fs.rmSync(tempDir, { recursive: true, force: true })
+      removeInstallerTempDir(tempDir, settings)
       sendProgress(win, 'Duplicate mod detected', 100)
       const duplicate: DuplicateModInfo = {
         existingModId: duplicateMod.uuid,
@@ -794,7 +862,7 @@ async function installMod(
     if (duplicateMod && duplicateAction === 'replace') {
       const removalResult = await removeExistingMod(duplicateMod, settings)
       if (!removalResult.ok) {
-        fs.rmSync(tempDir, { recursive: true, force: true })
+        removeInstallerTempDir(tempDir, settings)
         return { ok: false, error: removalResult.error }
       }
     }
@@ -830,7 +898,7 @@ async function installMod(
 
     if (conflicts.length > 0 && !request.allowOverwriteConflicts) {
       // Clean up temp, return conflicts for user resolution
-      fs.rmSync(tempDir, { recursive: true, force: true })
+      removeInstallerTempDir(tempDir, settings)
       sendProgress(win, 'Conflicts detected', 100)
       pushGeneralLog(win, {
         level: 'warn',
@@ -860,7 +928,7 @@ async function installMod(
 
     // Copy files from extractRoot to modDir (archive resources already resolved above)
     copyDirSync(extractRoot, modDir)
-    fs.rmSync(tempDir, { recursive: true, force: true })
+    removeInstallerTempDir(tempDir, settings)
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
 
     const meta: ModMetadata = {
@@ -879,6 +947,8 @@ async function installMod(
       sourceType: isDir ? 'directory' : 'archive',
       nexusModId: nexusRecord?.modId,
       nexusFileId: nexusRecord?.fileId,
+      nexusCategoryId: nexusRecord?.categoryId,
+      nexusCategoryName: nexusRecord?.categoryName,
       version: nexusRecord?.version ?? extractVersionFromName(rawName),
     }
 
@@ -914,7 +984,7 @@ async function installMod(
     }
   } catch (err: unknown) {
     // Cleanup on failure
-    fs.rmSync(tempDir, { recursive: true, force: true })
+    removeInstallerTempDir(tempDir, settings)
     if (modDir && fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true })
     pushGeneralLog(win, {
       level: 'error',
@@ -1092,7 +1162,10 @@ async function installFromFomod(
 
   const ext = path.extname(originalFilePath).toLowerCase()
   const rawName = path.basename(originalFilePath, ext) || path.basename(originalFilePath)
-  const normalizedName = normalizeModName(rawName)
+  // Prefer the clean Nexus display name over the raw archive filename (which may
+  // carry author tokens), matching the normal install flow.
+  const fomodNexusDisplayName = findNexusDownloadRecordByPath(originalFilePath)?.displayName?.trim()
+  const normalizedName = fomodNexusDisplayName || normalizeModName(rawName)
   let modDir = ''
   // Tracks a fullTempDir created during needsExtraction so we can clean it up on error
   // if the tempDir switch hasn't happened yet.
@@ -1102,7 +1175,7 @@ async function installFromFomod(
     if (needsExtraction) {
       // The early-detection path only extracted the FOMOD XML.  Do the full
       // extraction now so copyFomodEntries can read the selected source files.
-      const fullTempDir = path.join(settings.libraryPath, `_tmp_fomod_${uuidv4()}`)
+      const fullTempDir = createInstallerTempDir('_tmp_fomod_')
       pendingFullTempDir = fullTempDir
       fs.mkdirSync(fullTempDir, { recursive: true })
 
@@ -1115,13 +1188,13 @@ async function installFromFomod(
 
       const fomodInFull = findFomodConfig(fullTempDir)
       if (!fomodInFull) {
-        fs.rmSync(fullTempDir, { recursive: true, force: true })
-        try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+        removeInstallerTempDir(fullTempDir, settings)
+        removeInstallerTempDir(tempDir, settings)
         return { ok: false, error: 'FOMOD configuration not found in the extracted archive' }
       }
 
       // Switch over: clean up the mini XML-only dir, use the full extraction
-      try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+      removeInstallerTempDir(tempDir, settings)
       pendingFullTempDir = null  // now owned by tempDir below
       tempDir = fullTempDir
       extractRoot = fomodInFull.fomodRoot
@@ -1139,7 +1212,7 @@ async function installFromFomod(
         : nextInstallOrder
 
     if (duplicateMod && duplicateAction === 'prompt') {
-      fs.rmSync(tempDir, { recursive: true, force: true })
+      removeInstallerTempDir(tempDir, settings)
       sendProgress(win, 'Duplicate mod detected', 100)
       return {
         ok: true,
@@ -1158,7 +1231,7 @@ async function installFromFomod(
     if (duplicateMod && duplicateAction === 'replace') {
       const removalResult = await removeExistingMod(duplicateMod, settings)
       if (!removalResult.ok) {
-        fs.rmSync(tempDir, { recursive: true, force: true })
+        removeInstallerTempDir(tempDir, settings)
         return { ok: false, error: removalResult.error }
       }
     }
@@ -1207,7 +1280,7 @@ async function installFromFomod(
 
     modDir = path.join(settings.libraryPath, folderName)
     copyDirSync(stagingDir, modDir)
-    fs.rmSync(tempDir, { recursive: true, force: true })
+    removeInstallerTempDir(tempDir, settings)
     const nexusRecord = findNexusDownloadRecordByPath(originalFilePath)
 
     const meta: ModMetadata = {
@@ -1226,6 +1299,8 @@ async function installFromFomod(
       sourceType: 'archive',
       nexusModId: nexusRecord?.modId,
       nexusFileId: nexusRecord?.fileId,
+      nexusCategoryId: nexusRecord?.categoryId,
+      nexusCategoryName: nexusRecord?.categoryName,
       version: nexusRecord?.version ?? extractVersionFromName(rawName),
     }
 
@@ -1244,10 +1319,10 @@ async function installFromFomod(
     })
     return { ok: true, data: { status: 'installed', mod: meta, conflicts: [] } }
   } catch (err) {
-    try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+    removeInstallerTempDir(tempDir, settings)
     // If extraction failed before we could switch tempDir, clean up the full dir too
     if (pendingFullTempDir) {
-      try { fs.rmSync(pendingFullTempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+      removeInstallerTempDir(pendingFullTempDir, settings)
     }
     if (modDir && fs.existsSync(modDir)) {
       try { fs.rmSync(modDir, { recursive: true, force: true }) } catch { /* ignore */ }
@@ -1306,8 +1381,9 @@ export function registerInstallerHandlers(getMainWindow: GetMainWindow): void {
   ipcMain.handle(
     IPC.FOMOD_CANCEL,
     async (_event, tempDir: string) => {
+      const settings = loadSettings()
       if (tempDir && typeof tempDir === 'string') {
-        try { fs.rmSync(tempDir, { recursive: true, force: true }) } catch { /* ignore */ }
+        removeInstallerTempDir(tempDir, settings)
       }
       return { ok: true }
     }

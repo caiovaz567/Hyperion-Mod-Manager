@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import type { ModMetadata } from '@shared/types'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import type { LibrarySortKey, SortDirection } from './LibraryTableHeader'
+import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 
 interface UseLibraryEntriesOptions {
   mods: ModMetadata[]
@@ -56,7 +57,8 @@ export function useLibraryEntries({
       const lower = filter.toLowerCase()
       list = list.filter((mod) =>
         mod.name.toLowerCase().includes(lower) ||
-        mod.author?.toLowerCase().includes(lower)
+        mod.author?.toLowerCase().includes(lower) ||
+        getModCategoryLabel(mod).toLowerCase().includes(lower)
       )
     }
 
@@ -166,8 +168,8 @@ export function useLibraryEntries({
         return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
       }
 
-      if (sortKey === 'type') {
-        return left.type.localeCompare(right.type, undefined, { sensitivity: 'base' })
+      if (sortKey === 'category') {
+        return getModCategoryLabel(left).localeCompare(getModCategoryLabel(right), undefined, { sensitivity: 'base' })
       }
 
       const leftTime = left.installedAt ? new Date(left.installedAt).getTime() : 0

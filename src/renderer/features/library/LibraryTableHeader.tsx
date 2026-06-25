@@ -1,11 +1,52 @@
 import React from 'react'
 import { HyperionSortHeader } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
+import { LIBRARY_GRID_FALLBACK, type LibraryColumnWidths, type LibraryResizableColumnKey } from './libraryColumns'
 
-export type LibrarySortKey = 'name' | 'type' | 'installedAt'
+export type LibrarySortKey = 'name' | 'category' | 'installedAt'
 export type SortDirection = 'asc' | 'desc'
 
-export const LIBRARY_GRID_TEMPLATE = '64px 56px minmax(320px,1fr) 110px 156px 184px 96px'
+export const LIBRARY_GRID_TEMPLATE = `var(--library-grid, ${LIBRARY_GRID_FALLBACK})`
+
+const ColumnResizeHandle: React.FC<{
+  columnKey: LibraryResizableColumnKey
+  columnWidths: LibraryColumnWidths
+  onResize: (key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => void
+}> = ({ columnKey, columnWidths, onResize }) => {
+  const handleMouseDown = (event: React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const startX = event.clientX
+    const start = columnWidths
+    const onMove = (move: MouseEvent) => {
+      onResize(columnKey, move.clientX - startX, start)
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
+
+  return (
+    <span
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${columnKey} column`}
+      onMouseDown={handleMouseDown}
+      onClick={(event) => event.stopPropagation()}
+      className="group/resize absolute top-0 z-20 flex h-full w-4 cursor-col-resize items-center justify-center"
+      style={{ left: '-24px' }}
+    >
+      <span className="h-4 w-px bg-[#2a2a2a] transition-colors group-hover/resize:bg-[#fcee09]/70" />
+    </span>
+  )
+}
 
 interface LibraryTableHeaderProps {
   sortKey: LibrarySortKey | null
@@ -17,6 +58,8 @@ interface LibraryTableHeaderProps {
   bulkToggleTooltip: string
   isBulkToggling: boolean
   allVisibleEnabled: boolean
+  columnWidths: LibraryColumnWidths
+  onColumnResize: (key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => void
   onSort: (key: LibrarySortKey) => void
   onBulkToggle: () => void
   onTopLevelDragOver?: (event: React.DragEvent<HTMLDivElement>) => void
@@ -34,6 +77,8 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
   bulkToggleTooltip,
   isBulkToggling,
   allVisibleEnabled,
+  columnWidths,
+  onColumnResize,
   onSort,
   onBulkToggle,
   onTopLevelDragOver,
@@ -41,7 +86,7 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
   onTopLevelDrop,
 }) => (
   <div
-    className="sticky top-0 z-10 grid gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+    className="sticky top-0 z-10 grid w-full gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
     onDragOver={showCustomOrderBadge ? onTopLevelDragOver : undefined}
     onDragLeave={showCustomOrderBadge ? onTopLevelDragLeave : undefined}
     onDrop={showCustomOrderBadge ? onTopLevelDrop : undefined}
@@ -98,7 +143,9 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         </span>
       </Tooltip>
     </div>
-    <div className="flex h-8 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">#</div>
+    <div className="flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+      #
+    </div>
     <HyperionSortHeader
       columnKey="name"
       label="Mod Name"
@@ -109,27 +156,36 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
       className="justify-start gap-0.5"
       innerClassName="gap-0.5"
     />
-    <div className="flex h-8 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Version</div>
-    <HyperionSortHeader
-      columnKey="type"
-      label="Type"
-      sortKey={sortKey}
-      sortDirection={sortDirection}
-      onSort={onSort}
-      ariaLabel="Sort by type"
-      className="justify-start gap-0.5"
-      innerClassName="gap-0.5"
-    />
-    <HyperionSortHeader
-      columnKey="installedAt"
-      label="Date"
-      sortKey={sortKey}
-      sortDirection={sortDirection}
-      onSort={onSort}
-      ariaLabel="Sort by installed date"
-      className="justify-start gap-0.5"
-      innerClassName="gap-0.5"
-    />
-    <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
+    <div className="relative flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+      <span className="min-w-0 truncate whitespace-nowrap">Version</span>
+      <ColumnResizeHandle columnKey="version" columnWidths={columnWidths} onResize={onColumnResize} />
+    </div>
+    <div className="relative flex min-w-0 items-center">
+      <HyperionSortHeader
+        columnKey="category"
+        label="Category"
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        ariaLabel="Sort by category"
+        className="justify-start gap-0.5"
+        innerClassName="gap-0.5"
+      />
+      <ColumnResizeHandle columnKey="category" columnWidths={columnWidths} onResize={onColumnResize} />
+    </div>
+    <div className="relative flex min-w-0 items-center">
+      <HyperionSortHeader
+        columnKey="installedAt"
+        label="Date"
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        ariaLabel="Sort by installed date"
+        className="justify-start gap-0.5"
+        innerClassName="gap-0.5"
+      />
+      <ColumnResizeHandle columnKey="date" columnWidths={columnWidths} onResize={onColumnResize} />
+    </div>
+    <div className="flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
   </div>
 )

@@ -6,7 +6,7 @@ import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, SettingCard, StatusReadout, ValidationRow, uiButton } from './uiKit'
 
-type SettingsTab = 'paths' | 'nexus' | 'updates' | 'about'
+type SettingsTab = 'general' | 'paths' | 'nexus' | 'updates' | 'about'
 type FolderState = 'valid' | 'invalid' | 'empty'
 
 const HYPERION_GITHUB_URL = 'https://github.com/caiovaz567/Hyperion-Mod-Manager'
@@ -31,7 +31,7 @@ function formatBytes(bytes: number): string {
 const NEXUS_FREE_FEATURES = [
   { icon: 'open_in_browser', text: 'Mod updates open Nexus in the browser' },
   { icon: 'link', text: 'Downloads via nxm:// link from the site' },
-  { icon: 'download', text: 'Archive lands in Downloads — install from there' },
+  { icon: 'deployed_code', text: 'Completed downloads auto-install by default' },
 ]
 
 const NEXUS_PREMIUM_FEATURES = [
@@ -114,7 +114,7 @@ export const SettingsPage: React.FC = () => {
   const [detectingGame, setDetectingGame] = useState(false)
   const [gamePathValid, setGamePathValid] = useState(false)
   const [libraryPathValid, setLibraryPathValid] = useState(false)
-  const [activeTab, setActiveTab] = useState<SettingsTab>('paths')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [nexusApiKey, setNexusApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
   const [updateActionLoading, setUpdateActionLoading] = useState<null | 'check' | 'download'>(null)
@@ -327,6 +327,7 @@ export const SettingsPage: React.FC = () => {
   const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn } = uiButton
 
   const tabMeta: Array<{ id: SettingsTab; label: string; icon: string }> = [
+    { id: 'general', label: 'General', icon: 'tune' },
     { id: 'paths', label: 'Paths', icon: 'folder_open' },
     { id: 'nexus', label: 'Nexus', icon: 'cloud' },
     { id: 'updates', label: 'Updates', icon: 'update' },
@@ -410,6 +411,46 @@ export const SettingsPage: React.FC = () => {
 
         <div className="border-[0.5px] border-[#171717] bg-[#050505] p-3 sm:p-4">
           <div key={activeTab} className="grid gap-3">
+            {activeTab === 'general' && (
+              <SettingCard
+                icon="deployed_code"
+                title="Install Behavior"
+                description="Default behavior for archives that finish downloading through Nexus links."
+                className="fade-up"
+                style={{ animationDelay: '0ms' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    void updateSettings({ autoInstallDownloads: !(settings?.autoInstallDownloads ?? true) })
+                  }}
+                  className="flex w-full items-center justify-between gap-4 rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] px-4 py-3 text-left transition-colors hover:border-[#3a3a3a]"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[14px] font-semibold text-[#e5e2e1]">Auto-install completed downloads</span>
+                    <span className="mt-1 block text-[13px] leading-5 text-[#8f8f8f]">
+                      Nexus downloads install automatically when the archive is ready. Disable this if you prefer staging files in Downloads first.
+                    </span>
+                  </span>
+                  <span
+                    className={`relative h-5 w-10 shrink-0 rounded-full border-[0.5px] transition-colors ${
+                      (settings?.autoInstallDownloads ?? true)
+                        ? 'border-[#fcee09]/45 bg-[#2a2604]'
+                        : 'border-[#2a2a2a] bg-[#111]'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-full transition-all ${
+                        (settings?.autoInstallDownloads ?? true)
+                          ? 'right-[2px] bg-[#fcee09]'
+                          : 'left-[2px] bg-[#5a5a5a]'
+                      }`}
+                    />
+                  </span>
+                </button>
+              </SettingCard>
+            )}
+
             {activeTab === 'paths' && (
               <>
                 <SettingCard
@@ -640,11 +681,11 @@ export const SettingsPage: React.FC = () => {
                 <div className="space-y-3 text-[13.5px] leading-relaxed text-[#b8b8b8]">
                   <div className="flex items-start gap-2.5">
                     <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[#fcee09]" style={{ fontSize: 17 }}>subdirectory_arrow_right</span>
-                    <span>Nexus links always land in your Downloads folder first.</span>
+                    <span>Nexus links land in Downloads and install automatically unless disabled in General.</span>
                   </div>
                   <div className="flex items-start gap-2.5">
                     <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[#fcee09]" style={{ fontSize: 17 }}>rule</span>
-                    <span>Hyperion only asks about replace, keep, or copy when you start installing.</span>
+                    <span>Hyperion still asks when a duplicate, FOMOD, or overwrite decision needs your input.</span>
                   </div>
                 </div>
               </SettingCard>

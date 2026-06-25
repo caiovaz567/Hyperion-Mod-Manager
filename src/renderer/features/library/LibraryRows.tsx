@@ -125,6 +125,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
     onDragOver={onDragOver}
     onDragLeave={onDragLeave}
     onDrop={onDrop}
+    className="w-full"
     style={{ minHeight: 'calc(100% - 32px)' }}
   >
     {displayedMods.length === 0 ? (

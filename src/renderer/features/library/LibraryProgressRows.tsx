@@ -17,19 +17,9 @@ const getInstallDisplayName = (sourcePath: string, currentFile: string, targetNa
 }
 
 const NestedProgressFrame: React.FC<React.PropsWithChildren<{ nested?: boolean }>> = ({
-  nested = false,
   children,
 }) => (
-  <div className={`relative ${nested ? 'pl-6' : ''}`}>
-    {nested ? (
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 left-[12px] top-0 w-px"
-        style={{
-          background: 'linear-gradient(180deg, rgba(79,216,255,0.12), rgba(79,216,255,0.34), rgba(79,216,255,0.12))',
-        }}
-      />
-    ) : null}
+  <div className="relative">
     {children}
   </div>
 )
@@ -148,7 +138,7 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
           <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
             {status || appearance.summary}
           </div>
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-start">
             <div
               className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
               style={{
@@ -273,7 +263,7 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
           <div className="flex items-center min-w-0 text-sm font-mono tracking-tight text-[#ffb4ab]">
             <span className="truncate">{summary}</span>
           </div>
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-start">
             <div
               className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
               style={{

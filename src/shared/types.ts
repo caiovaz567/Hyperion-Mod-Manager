@@ -39,6 +39,8 @@ export interface ModMetadata {
   sourceType?: 'archive' | 'directory'
   nexusModId?: number
   nexusFileId?: number
+  nexusCategoryId?: number
+  nexusCategoryName?: string
   previewImagePath?: string
   galleryImagePaths?: string[]
   deployedPaths?: string[]
@@ -62,7 +64,14 @@ export interface AppSettings {
   downloadPath: string
   theme: 'dark'
   autoUpdate: boolean
+  autoInstallDownloads: boolean
   nexusApiKey: string
+  libraryColumnWidths?: {
+    name?: number
+    version?: number
+    category?: number
+    date?: number
+  }
   autoInstallPerMod?: Record<string, 'replace' | 'copy' | 'none'>
 }
 
@@ -403,6 +412,7 @@ export interface ModUpdateCheckInput {
   nexusFileId?: number
   version?: string
   installedAt?: string
+  nexusCategoryName?: string
 }
 
 export interface ModUpdateCheckRequest {
@@ -421,6 +431,8 @@ export interface ModUpdateStatus {
   latestFileName?: string
   updatedAt?: string
   modPageUrl?: string
+  nexusCategoryId?: number
+  nexusCategoryName?: string
 }
 
 export interface ModUpdateCheckResult {

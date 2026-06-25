@@ -4,6 +4,8 @@ import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { Tooltip } from '../ui/Tooltip'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
+import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
+import { LIBRARY_GRID_TEMPLATE } from './LibraryTableHeader'
 
 interface ModRowProps {
   mod: ModMetadata
@@ -38,34 +40,8 @@ interface ModRowProps {
   onSeparatorDrop?: (event: React.DragEvent, separator: ModMetadata) => void
 }
 
-const TYPE_COLOR: Record<string, string> = {
-  archive: '#60A5FA',
-  redmod: '#34D399',
-  cet: '#40dbdb',
-  redscript: '#A78BFA',
-  tweakxl: '#fbbf24',
-  red4ext: '#F87171',
-  bin: '#94A3B8',
-  engine: '#C084FC',
-  r6: '#60A5FA',
-  unknown: '#64748B',
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  archive: 'ARCHIVE',
-  redmod: 'REDMOD',
-  cet: 'CET',
-  redscript: 'REDSCRIPT',
-  tweakxl: 'TWEAKXL',
-  red4ext: 'RED4EXT',
-  bin: 'BINARY',
-  engine: 'ENGINE',
-  r6: 'R6SCRIPTS',
-  unknown: 'UNKNOWN',
-}
-
 const ACTIVE_COLOR = '#fcee09'
-const NESTED_ACCENT_COLOR = '#4fd8ff'
+const NESTED_ACCENT_COLOR = '#2f3f45'
 
 export const ModRow: React.FC<ModRowProps> = ({
   mod,
@@ -197,7 +173,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                 if (event.key === 'Enter') onRenameSave()
                 if (event.key === 'Escape') onRenameCancel()
               }}
-              className="allow-text-selection h-9 min-w-[220px] max-w-[340px] border-[0.5px] border-[#3d3d3d] bg-[#0a0a0a] px-3 text-[13px] brand-font font-bold uppercase tracking-[0.14em] leading-none text-white focus:border-[#4fd8ff]/55 focus:outline-none"
+              className="allow-text-selection h-9 w-full border-[0.5px] border-[#3d3d3d] bg-[#0a0a0a] px-3 text-[13px] font-semibold tracking-[0.01em] leading-none text-white focus:border-[#4fd8ff]/55 focus:outline-none"
             />
           ) : (
             <div className="flex min-w-0 items-center gap-3 pl-[32px]">
@@ -215,7 +191,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                 }}
               />
               <span
-                className={`truncate text-[13px] brand-font font-bold uppercase tracking-[0.14em] transition-colors duration-150 ${
+                className={`truncate text-[13px] font-semibold tracking-[0.01em] transition-colors duration-150 ${
                   separatorDropTarget
                     ? 'text-[#4fd8ff]'
                     : selected
@@ -250,8 +226,7 @@ export const ModRow: React.FC<ModRowProps> = ({
     )
   }
 
-  const color = TYPE_COLOR[mod.type] ?? '#64748B'
-  const label = TYPE_LABEL[mod.type] ?? 'UNKNOWN'
+  const categoryLabel = getModCategoryLabel(mod)
   const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
   const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0 }
   // Conflicts only exist between enabled mods in the active deployment stack — a disabled
@@ -344,9 +319,6 @@ export const ModRow: React.FC<ModRowProps> = ({
   const secondaryTextClass = conflictTone === 'none'
     ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]'
     : 'text-[#c7c7c7]'
-  const typeChipClass = conflictTone === 'none'
-    ? 'bg-[#111] border-[#222] group-hover:border-[#343434]'
-    : 'bg-[rgba(17,17,17,0.84)] border-[rgba(255,255,255,0.09)]'
   const leftRailColor = conflictTone === 'focus'
     ? '#FCEE09'
     : conflictTone === 'win'
@@ -373,7 +345,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   }
 
   return (
-    <div className={`relative ${nested ? 'pl-6' : ''} ${animateOnEnter ? 'fade-up' : ''}`}>
+    <div className={`relative ${animateOnEnter ? 'fade-up' : ''}`}>
       <div
         data-mod-row="true"
         draggable={dragEnabled && !isRenaming}
@@ -385,11 +357,11 @@ export const ModRow: React.FC<ModRowProps> = ({
         onClick={onSelect}
         onDoubleClick={() => onOpenDetails(mod)}
         onContextMenu={(event) => onContextMenu(event, mod)}
-        className={`library-mod-row grid h-[38px] gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${rowHoverClass} ${selectedRingClass} ${
+        className={`library-mod-row grid h-[38px] w-full gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${rowHoverClass} ${selectedRingClass} ${
           dragEnabled ? 'active:cursor-grabbing' : ''
         } ${dragging ? 'opacity-45 translate-x-1' : ''}`}
         style={{
-          gridTemplateColumns: '64px 56px minmax(320px,1fr) 110px 156px 184px 96px',
+          gridTemplateColumns: LIBRARY_GRID_TEMPLATE,
         }}
       >
         {rowDropPosition ? (
@@ -514,7 +486,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-sm font-mono tracking-tight">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-sm font-mono tracking-tight">
           <span className={`truncate transition-colors ${hasModUpdate ? 'text-[#f87171]' : secondaryTextClass}`}>
             {mod.version ?? '—'}
           </span>
@@ -538,20 +510,19 @@ export const ModRow: React.FC<ModRowProps> = ({
           ) : null}
         </div>
 
-        <div className="flex items-center">
-          <span
-            className={`px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm transition-colors ${typeChipClass}`}
-            style={{ color }}
-          >
-            {label}
-          </span>
+        <div className="flex min-w-0 items-center overflow-hidden">
+          <Tooltip content={`Category: ${categoryLabel}`} side="bottom" wrapperClassName="block w-full min-w-0">
+            <span className={`block truncate text-sm transition-colors ${secondaryTextClass}`}>
+              {categoryLabel}
+            </span>
+          </Tooltip>
         </div>
 
-        <div className={`flex items-center text-sm font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
-          {formatWindowsDateTime(mod.installedAt)}
+        <div className={`flex min-w-0 items-center overflow-hidden text-sm font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
+          <span className="truncate whitespace-nowrap">{formatWindowsDateTime(mod.installedAt)}</span>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-start gap-2">
           {isRenaming ? (
             <>
               <Tooltip content="Save name">
