@@ -219,7 +219,11 @@ export const SettingsPage: React.FC = () => {
           }
         }
 
-        await updateSettings({ gamePath, libraryPath, downloadPath })
+        const saveResult = await updateSettings({ gamePath, libraryPath, downloadPath })
+        if (!saveResult.ok) {
+          addToast(saveResult.error ?? 'Could not save configuration', 'error', 5000)
+          return
+        }
 
         if (libraryChanged || gameChanged) {
           selectMod(null)

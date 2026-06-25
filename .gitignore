@@ -13,6 +13,9 @@ Thumbs.db
 .agents/
 skills-lock.json
 
+# Generated at build time by scripts/after-pack.cjs (NSIS uninstall manifest)
+build/uninstall-files.nsh
+
 # Native addon build artifacts
 native/**/build/
 native/**/*.node

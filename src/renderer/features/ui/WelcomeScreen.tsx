@@ -345,7 +345,11 @@ export const WelcomeScreen: React.FC = () => {
         }
       }
 
-      await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim() })
+      const saveResult = await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim() })
+      if (!saveResult.ok) {
+        addToast(saveResult.error ?? 'Could not save setup', 'error', 5000)
+        return
+      }
       const scannedMods = await scanMods()
 
       if (gamePathValid && libraryPathValid) {

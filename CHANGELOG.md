@@ -10,6 +10,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.24.0] - 2026-06-25
+
+### Changed
+- The suggested Mod Library and Downloads locations now live inside the Hyperion install directory (a `Mods` and `Downloads` folder beside the app) for a self-contained, portable layout. "Use suggested" reflects this. Existing installs keep their saved paths
+
+### Fixed
+- The uninstaller (used by both manual uninstall and auto-update) now removes only Hyperion's own files instead of recursively deleting the entire install directory. Previously, an update or uninstall wiped everything inside the install folder — including the Mod Library, Downloads, and any unrelated folder the user had placed there. The uninstaller now deletes exactly its packed footprint (recorded at build time) and removes the install directory only if it is empty, so user data and any other content alongside the app are preserved. Note: this protects updates/uninstalls from this version onward; the first update from an older build still runs that build's destructive uninstaller, so back up first if your mods currently live inside a pre-fix install folder
+
+---
+
 ## [0.23.1] - 2026-06-25
 
 ### Changed

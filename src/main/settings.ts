@@ -44,11 +44,33 @@ function normalizeLibraryColumnWidths(raw?: AppSettings['libraryColumnWidths']):
   return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
+/**
+ * The directory Hyperion is installed into. Only meaningful for packaged builds;
+ * during `npm run dev` the executable is Electron under node_modules, so we fall back
+ * to the Documents managed root.
+ */
+export function getInstallDir(): string | null {
+  if (!app.isPackaged) return null
+  try {
+    return path.dirname(app.getPath('exe'))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Suggested data locations. By design these live INSIDE the Hyperion install directory
+ * (a `Mods` and `Downloads` folder beside the executable) for a self-contained, portable
+ * layout. This is only safe because the NSIS uninstaller is surgical — it removes only
+ * Hyperion's own files (see build/installer.nsh + scripts/after-pack.cjs), so updating or
+ * uninstalling never touches these folders or any other user content placed alongside the app.
+ * In dev (unpackaged) we fall back to Documents/Hyperion so we never scatter files in node_modules.
+ */
 export function getPathDefaults(): PathDefaults {
-  const managedRoot = getManagedRoot()
+  const root = getInstallDir() ?? getManagedRoot()
   return {
-    libraryPath: path.join(managedRoot, 'Mod Library'),
-    downloadPath: path.join(managedRoot, 'Downloads')
+    libraryPath: path.join(root, 'Mods'),
+    downloadPath: path.join(root, 'Downloads')
   }
 }
 

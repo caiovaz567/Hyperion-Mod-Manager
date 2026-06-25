@@ -12,7 +12,7 @@ export interface SettingsSlice {
   gameRunning: boolean
   loadSettings: () => Promise<AppSettings>
   loadDefaultPaths: () => Promise<PathDefaults>
-  updateSettings: (partial: Partial<AppSettings>) => Promise<void>
+  updateSettings: (partial: Partial<AppSettings>) => Promise<IpcResult<void>>
   detectGamePath: () => Promise<IpcResult<string>>
   checkGamePath: (gamePath?: string) => Promise<boolean>
   checkLibraryPath: (libraryPath?: string) => Promise<boolean>
@@ -52,9 +52,14 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
 
   updateSettings: async (partial) => {
     const current = get().settings
-    if (!current) return
+    if (!current) return { ok: false, error: 'Settings not loaded yet' }
     const merged = { ...current, ...partial }
-    await IpcService.invoke(IPC.SET_SETTINGS, merged)
+    const saveResult = await IpcService.invoke<IpcResult<void>>(IPC.SET_SETTINGS, merged)
+    if (!saveResult.ok) {
+      // The save was rejected (e.g. a data path inside the install folder). Leave the
+      // persisted settings untouched so the UI never reflects an unsaved value.
+      return saveResult
+    }
     const validation = await IpcService.invoke<IpcResult<boolean>>(IPC.VALIDATE_GAME_PATH, merged.gamePath)
     const libraryValidation = await IpcService.invoke<IpcResult<boolean>>(IPC.VALIDATE_LIBRARY_PATH, merged.libraryPath)
     set({
@@ -62,6 +67,7 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
       gamePathValid: Boolean(validation.ok && validation.data),
       libraryPathValid: Boolean(libraryValidation.ok && libraryValidation.data),
     })
+    return saveResult
   },
 
   detectGamePath: async () => IpcService.invoke<IpcResult<string>>(IPC.DETECT_GAME),
