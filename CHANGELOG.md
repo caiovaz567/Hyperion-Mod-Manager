@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- First-run onboarding now has a fourth step, `Nexus`, that walks the user through getting their personal Nexus Mods API key (open the API Key page, copy the Personal API Key, paste it), with a masked input + reveal toggle and live validation showing the connected account and tier. The step is optional and `Finish setup` saves the key. The welcome wizard is now `Game → Mod library → Downloads → Nexus`
+- Right-clicking an editable field (e.g. the Nexus API key input) or selected text now shows a native Cut/Copy/Paste/Select All menu
+
 ---
 
 ## [0.21.2] - 2026-06-25

@@ -4,6 +4,7 @@ import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import { Tooltip } from './Tooltip'
 import { useAppVersion } from '../../hooks/useAppVersion'
+import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, ValidationRow, uiButton } from './uiKit'
 
 function getParentDirectory(targetPath: string): string {
@@ -52,7 +53,18 @@ const SETUP_STEPS: SetupStepDef[] = [
     preview: 'Where new mod archives are picked up',
     optional: true,
   },
+  {
+    key: 'nexus',
+    label: 'Nexus',
+    icon: 'vpn_key',
+    heading: 'Connect your Nexus account',
+    description: 'Paste your personal Nexus Mods API key to enable downloads and update checks. You can skip this and add it later in Settings > Nexus.',
+    preview: 'Enable Nexus downloads & update checks',
+    optional: true,
+  },
 ]
+
+const NEXUS_API_KEYS_URL = 'https://www.nexusmods.com/settings/api-keys'
 
 const BrandMark: React.FC<{ size?: 'sm' | 'lg' }> = ({ size = 'sm' }) => {
   const isLarge = size === 'lg'
@@ -150,6 +162,8 @@ export const WelcomeScreen: React.FC = () => {
   const [gamePath, setGamePath] = useState('')
   const [libraryPath, setLibraryPath] = useState('')
   const [downloadPath, setDownloadPath] = useState('')
+  const [nexusApiKey, setNexusApiKey] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
   const [detectingGame, setDetectingGame] = useState(false)
   const [gamePathValid, setGamePathValid] = useState(false)
   const [libraryPathValid, setLibraryPathValid] = useState(false)
@@ -158,6 +172,12 @@ export const WelcomeScreen: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0)
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward')
   const [isInitializing, setIsInitializing] = useState(false)
+
+  const nexusAccount = useNexusAccount(nexusApiKey)
+
+  const openNexusApiKeysPage = () => {
+    void IpcService.invoke(IPC.OPEN_EXTERNAL, NEXUS_API_KEYS_URL)
+  }
 
   const resolveDownloadPath = (nextLibraryPath: string): string => {
     const normalizedLibraryPath = nextLibraryPath.trim()
@@ -183,7 +203,8 @@ export const WelcomeScreen: React.FC = () => {
     setGamePath(settings?.gamePath ?? '')
     setLibraryPath(settings?.libraryPath ?? defaultPaths?.libraryPath ?? '')
     setDownloadPath(settings?.downloadPath ?? resolveDownloadPath(settings?.libraryPath ?? defaultPaths?.libraryPath ?? ''))
-  }, [defaultPaths?.libraryPath, settings?.downloadPath, settings?.gamePath, settings?.libraryPath])
+    setNexusApiKey(settings?.nexusApiKey ?? '')
+  }, [defaultPaths?.libraryPath, settings?.downloadPath, settings?.gamePath, settings?.libraryPath, settings?.nexusApiKey])
 
   useEffect(() => {
     checkGamePath(gamePath).then((valid) => {
@@ -320,7 +341,7 @@ export const WelcomeScreen: React.FC = () => {
         }
       }
 
-      await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath })
+      await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim() })
       const scannedMods = await scanMods()
 
       if (gamePathValid && libraryPathValid) {
@@ -544,6 +565,85 @@ export const WelcomeScreen: React.FC = () => {
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
                       Choose folder
                     </button>
+                  </div>
+                </>
+              )}
+
+              {currentStep === 3 && (
+                <>
+                  {/* How to get the key — mirrors the README */}
+                  <ol className="mb-5 space-y-2.5">
+                    {[
+                      <>Log in to Nexus Mods and open the <span className="text-[#e5e2e1]">API Key Settings</span> page.</>,
+                      <>Scroll to the bottom and find <span className="text-[#e5e2e1]">Personal API Key</span>.</>,
+                      <>Copy your personal API key and paste it below.</>,
+                    ].map((text, index) => (
+                      <li key={index} className="flex items-start gap-3 text-[13.5px] leading-relaxed text-[#9a9a9a]">
+                        <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#141414] text-[11px] font-semibold text-[#8a8a8a]">
+                          {index + 1}
+                        </span>
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <button onClick={openNexusApiKeysPage} className={`${secondaryBtn} mb-5 w-full sm:w-auto`}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                    Open API Key page
+                  </button>
+
+                  <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">Personal API key</div>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={nexusApiKey}
+                      onChange={(event) => setNexusApiKey(event.target.value)}
+                      placeholder="Paste your Nexus Mods API key"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="h-11 w-full rounded-md border-[0.5px] border-[#2d2d2d] bg-[#050505] px-3 pr-11 text-[13.5px] text-white outline-none transition-colors focus:border-[#fcee09]/55 focus-visible:outline-none"
+                    />
+                    {nexusApiKey && (
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey((value) => !value)}
+                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[#111111] hover:text-[#cfcfcf]"
+                        aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                      >
+                        <span className="material-symbols-outlined text-[17px] leading-none">{showApiKey ? 'visibility_off' : 'visibility'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Live validation */}
+                  <div className="mt-3 flex items-start gap-2 text-[13px] leading-relaxed">
+                    {nexusAccount.status === 'not-configured' && (
+                      <>
+                        <span className="material-symbols-outlined mt-px text-[#60A5FA]" style={{ fontSize: 16 }}>info</span>
+                        <span className="text-[#9a9a9a]">Optional — you can add this later in Settings &gt; Nexus.</span>
+                      </>
+                    )}
+                    {nexusAccount.status === 'checking' && (
+                      <>
+                        <span className="material-symbols-outlined mt-px animate-spin text-[#9a9a9a]" style={{ fontSize: 16 }}>progress_activity</span>
+                        <span className="text-[#9a9a9a]">Validating your API key…</span>
+                      </>
+                    )}
+                    {nexusAccount.status === 'connected' && (
+                      <>
+                        <span className="material-symbols-outlined mt-px text-[#34d399]" style={{ fontSize: 16 }}>check_circle</span>
+                        <span className="text-[#cfe9dc]">
+                          Connected as <span className="font-semibold text-white">{nexusAccount.data.name}</span>
+                          {' '}({nexusAccount.data.isPremium ? 'Premium' : 'Free'})
+                        </span>
+                      </>
+                    )}
+                    {nexusAccount.status === 'error' && (
+                      <>
+                        <span className="material-symbols-outlined mt-px text-[#fcee09]" style={{ fontSize: 16 }}>error</span>
+                        <span className="text-[#d8c98a]">We couldn't validate this key. Double-check you copied the Personal API Key.</span>
+                      </>
+                    )}
                   </div>
                 </>
               )}

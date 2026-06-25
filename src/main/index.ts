@@ -4,7 +4,9 @@ import {
   ipcMain,
   dialog,
   shell,
-  screen
+  screen,
+  Menu,
+  clipboard
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -1506,7 +1508,34 @@ function createMainWindow(): BrowserWindow {
     win.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 
+  attachEditContextMenu(win)
+
   return win
+}
+
+// Native Cut/Copy/Paste/Select All menu for editable fields and selected text
+// (Electron does not show one by default). Enables right-click copy/paste in
+// inputs such as the Nexus API key field.
+function attachEditContextMenu(win: BrowserWindow): void {
+  win.webContents.on('context-menu', (_event, params) => {
+    const isEditable = params.isEditable
+    const hasSelection = params.selectionText.trim().length > 0
+    if (!isEditable && !hasSelection) return
+
+    const canPaste = clipboard.readText().length > 0
+    const template: Electron.MenuItemConstructorOptions[] = []
+
+    if (isEditable) {
+      template.push({ role: 'cut', enabled: hasSelection })
+    }
+    template.push({ role: 'copy', enabled: hasSelection })
+    if (isEditable) {
+      template.push({ role: 'paste', enabled: canPaste })
+    }
+    template.push({ type: 'separator' }, { role: 'selectAll' })
+
+    Menu.buildFromTemplate(template).popup({ window: win })
+  })
 }
 
 function registerGlobalHandlers(): void {

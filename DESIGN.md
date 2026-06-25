@@ -124,21 +124,22 @@ Alignment rules:
 
 ### Welcome / first setup
 
-- Shown when required paths are missing or invalid
+- Shown on first run (no game path is set yet) and whenever required paths later become missing or invalid; the welcome screen is the canonical first-launch experience
 - Header and sidebar stay hidden until setup is complete, then the full shell appears
-- Onboarding has two phases: a **welcome screen** first, then a **3-step setup wizard** (`Game` -> `Mod library` -> `Downloads`), each step focused on a single path
+- Onboarding has two phases: a **welcome screen** first, then a **4-step setup wizard** (`Game` -> `Mod library` -> `Downloads` -> `Nexus`), each step focused on one decision. The game path is auto-detected in the background so the `Game` step usually opens already valid. `Downloads` and `Nexus` are optional
 - The whole surface is centered in the viewport on a narrow-to-moderate column (welcome ~560px, steps ~600px); it never anchors as a tall top-left column
 - Voice is plain and human: sentence-case headings phrased as questions ("Where is Cyberpunk 2077 installed?"), friendly one-line descriptions, and no dense uppercase micro-labels or technical jargon. Avoid the badge-heavy "dashboard" look (no `REQUIRED`/`OPTIONAL`/`TARGET INVALID` chips, no `FIRST RUN` ribbon, no mono `01/02/03` boxes)
 - Show the current Hyperion version as a subdued detail so first-run/setup states still expose build context before the main shell appears
 
 Welcome screen:
 - Centered: the Hyperion brand mark (the shared yellow rounded square + dark inner square + `HYPERION` wordmark, reused from the header), a large sentence-case headline ("Let's set up your workspace"), and a short reassuring subtitle that the setup is quick and one-time
-- A preview list of the three things to configure — each row is a numbered circle, an accent icon, the label, and a plain one-line description; the Downloads row carries a quiet `Optional` tag
+- A preview list of the things to configure — each row is a numbered circle, an accent icon, the label, and a plain one-line description; the optional rows (Downloads, Nexus) carry a quiet `Optional` tag
 - A single primary `Get started` CTA advances into the wizard; elements stagger in with `.fade-up` (small `animationDelay` increments)
 
 Setup wizard:
 - Top: the small brand mark plus a `Step X of N` counter, then a step progress rail of **rounded numbered circles** connected by a fill bar — active circle is filled yellow with a soft ring, completed circles show a check on a green ring (and the connector fills green), future circles stay dim. Clicking a completed circle navigates back to it
-- Each step is one rounded card: an accent icon tile, the question heading, a plain description, a `Selected folder` path box, an inline validation row, and two folder actions (`Detect automatically`/`Use suggested` as a neutral button + `Choose folder` as the accent-outline button)
+- Each path step is one rounded card: an accent icon tile, the question heading, a plain description, a `Selected folder` path box, an inline validation row, and two folder actions (`Detect automatically`/`Use suggested` as a neutral button + `Choose folder` as the accent-outline button)
+- The final `Nexus` step teaches the user how to get their personal Nexus Mods API key (mirroring the README: open API Key Settings, scroll to Personal API Key, copy, paste), with an `Open API Key page` button, a masked key input with a reveal toggle, and a live validation line (`Validating…` / `Connected as {name} (Premium|Free)` / error). It is optional — finishing without a key is allowed and the key can be added later in Settings > Nexus. `Finish setup` saves the key alongside the paths
 - Validation is communicated inline, not via badges: green `check_circle` + positive copy when valid, yellow `error` + plain explanation when invalid, a muted `radio_button_unchecked` when empty, and a neutral `info` line on the optional Downloads step
 - Step transitions use `.slide-in-right` when advancing and `.slide-in-left` when going back, keyed by step index so the animation replays every change; the valid-state validation row replays a `.scale-in` pop
 - Footer holds a ghost `Back` button (returns to the welcome screen from step 1) plus either `Continue` (non-final steps, gated on that step's path validating, with a tooltip explaining why it's disabled) or `Finish setup` (final step, with a loading-spinner state while applying)
