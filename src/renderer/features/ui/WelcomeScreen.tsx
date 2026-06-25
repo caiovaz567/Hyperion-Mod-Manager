@@ -313,7 +313,10 @@ export const WelcomeScreen: React.FC = () => {
   }
 
   const applyDownloadsDefault = () => {
-    const nextDownloadPath = resolveDownloadPath(libraryPath || defaultPaths?.libraryPath || '')
+    // Use the independent suggested downloads folder, not one derived from the
+    // current library path — clicking this must only set the downloads path.
+    const nextDownloadPath =
+      defaultPaths?.downloadPath?.trim() || resolveDownloadPath(defaultPaths?.libraryPath || '')
     setDownloadPath(nextDownloadPath)
     addToast('Suggested downloads folder loaded', 'info', 1800)
   }
@@ -328,7 +331,8 @@ export const WelcomeScreen: React.FC = () => {
     try {
       const libraryChanged = libraryPath !== (settings?.libraryPath ?? '')
       const gameChanged = gamePath !== (settings?.gamePath ?? '')
-      const resolvedDownloadPath = downloadPath.trim() || resolveDownloadPath(libraryPath)
+      const resolvedDownloadPath =
+        downloadPath.trim() || defaultPaths?.downloadPath?.trim() || resolveDownloadPath(libraryPath)
       const downloadChanged = resolvedDownloadPath !== (settings?.downloadPath ?? '')
 
       if ((libraryChanged || gameChanged) && settings?.gamePath?.trim() && settings?.libraryPath?.trim()) {
@@ -358,7 +362,8 @@ export const WelcomeScreen: React.FC = () => {
     }
   }
 
-  const resolvedDefaultDownloadPath = resolveDownloadPath(libraryPath || defaultPaths?.libraryPath || '')
+  const resolvedDefaultDownloadPath =
+    defaultPaths?.downloadPath?.trim() || resolveDownloadPath(defaultPaths?.libraryPath || '')
   const effectiveDownloadPath = downloadPath.trim() || resolvedDefaultDownloadPath
 
   const step = SETUP_STEPS[currentStep]

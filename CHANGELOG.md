@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.23.0] - 2026-06-25
+
+### Fixed
+- "Use suggested" in Settings > Paths now only sets its own folder — clicking it on the Mod Library card no longer also overwrites the Downloads path (and vice versa). The same independence was applied to the first-run onboarding wizard: the Downloads step's suggestion and preview no longer derive from the current library path
+
+---
+
 ## [0.22.3] - 2026-06-25
 
 ### Changed

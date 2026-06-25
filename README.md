@@ -58,8 +58,6 @@ The first time you launch Hyperion, a one-time setup walks you through everythin
 
 Each path is validated inline, and you can finish without the optional steps — anything you skip can be set later in **Settings**. The setup reappears automatically if a required path ever goes missing or becomes invalid.
 
-<!-- Onboarding demo: upload a GIF/MP4 via a GitHub issue (drag-and-drop), then paste the
-     user-attachments URL below. For GIF/PNG use ![alt](url); for MP4 paste the raw URL on its own line. -->
 
 ![Hyperion first-run setup](https://github.com/user-attachments/assets/11b6cf8c-0e1f-4916-a316-5c5815ede701)
 
@@ -76,10 +74,6 @@ npm run build    # build a local installer
 ```
 
 ## Demonstrations
-
-<!-- Each item below can be a screenshot, GIF, or MP4 demonstration. Upload the file via a
-     GitHub issue (drag-and-drop), then paste the user-attachments URL.
-     For MP4, paste the raw URL on its own line; for PNG/GIF use ![alt](url). -->
 
 ### FOMOD Installer
 Conditional install wizard with image previews — choose body type, textures, and options before anything lands in the library.

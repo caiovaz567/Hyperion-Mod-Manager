@@ -293,11 +293,16 @@ export const SettingsPage: React.FC = () => {
     addToast('Game path detected', 'success', 1800)
   }
 
-  const applyDefaultManagedPaths = () => {
+  const applyDefaultLibraryPath = () => {
     if (!defaultPaths) return
     setLibraryPath(defaultPaths.libraryPath)
+    addToast('Suggested mod library loaded', 'info', 1800)
+  }
+
+  const applyDefaultDownloadPath = () => {
+    if (!defaultPaths) return
     setDownloadPath(defaultPaths.downloadPath)
-    addToast('Suggested folders loaded', 'info', 1800)
+    addToast('Suggested downloads folder loaded', 'info', 1800)
   }
 
   const handleCheckForUpdates = async () => {
@@ -504,7 +509,7 @@ export const SettingsPage: React.FC = () => {
                   invalidText="This folder can't be used as a mod library. Installs stay blocked until it's fixed."
                 />
                 <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
-                  <button onClick={applyDefaultManagedPaths} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
+                  <button onClick={applyDefaultLibraryPath} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
                     Use suggested
                   </button>
@@ -528,7 +533,7 @@ export const SettingsPage: React.FC = () => {
                 <PathBox value={downloadsStatus.path} placeholder="Waiting for a library path..." />
                 <ValidationRow state="info" infoText={downloadsStatus.description} />
                 <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
-                  <button onClick={applyDefaultManagedPaths} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
+                  <button onClick={applyDefaultDownloadPath} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
                     Use suggested
                   </button>
