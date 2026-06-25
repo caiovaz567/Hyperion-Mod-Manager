@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.24.2] - 2026-06-25
+
+### Fixed
+- The installer finish page now hides immediately after clicking Finish with "Run Hyperion" checked and launches Hyperion directly, so Windows/Electron startup no longer leaves the installer looking frozen.
+
+---
+
 ## [0.24.1] - 2026-06-25
 
 ### Fixed

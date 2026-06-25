@@ -3,6 +3,28 @@
   StrCpy $isForceCurrentInstall "1"
 !macroend
 
+# The assisted NSIS finish page runs its "Run Hyperion" action before the page
+# closes. Hide the installer first, launch the installed exe asynchronously, and
+# quit so Windows/Electron startup cannot leave the final page looking frozen.
+!macro customFinishPage
+  !ifndef HIDE_RUN_AFTER_FINISH
+    Function StartApp
+      HideWindow
+      SetOutPath "$INSTDIR"
+      ${if} ${isUpdated}
+        Exec '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" --updated'
+      ${else}
+        Exec '"$INSTDIR\${APP_EXECUTABLE_FILENAME}"'
+      ${endif}
+      Quit
+    FunctionEnd
+
+    !define MUI_FINISHPAGE_RUN
+    !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
+  !endif
+  !insertmacro MUI_PAGE_FINISH
+!macroend
+
 # Surgical uninstall: remove only Hyperion's own files instead of the default
 # `RMDir /r $INSTDIR`, which would also delete the suggested `Mods` / `Downloads`
 # folders (and any other user content) that live inside the install directory.
