@@ -12,6 +12,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.22.1] - 2026-06-25
 
+### Fixed
+- Auto-install now scans the library and enables the mod after install, so it immediately appears in Managed Mods as active without a manual Refresh Library
+
 ---
 
 ## [0.22.0] - 2026-06-25
