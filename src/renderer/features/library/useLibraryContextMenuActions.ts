@@ -18,6 +18,7 @@ interface UseLibraryContextMenuActionsOptions {
   requestDelete: (mod: ModMetadata) => void
   beginRename: (mod: ModMetadata) => void
   openDetails: (modId: string) => void
+  checkModUpdate: (modId: string) => void
 }
 
 export function useLibraryContextMenuActions({
@@ -31,6 +32,7 @@ export function useLibraryContextMenuActions({
   requestDelete,
   beginRename,
   openDetails,
+  checkModUpdate,
 }: UseLibraryContextMenuActionsOptions) {
   const getContextTargetModIds = useCallback(() => {
     if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'mod') return []
@@ -96,6 +98,12 @@ export function useLibraryContextMenuActions({
     closeContextMenu()
   }, [closeContextMenu, getContextTargetModIds, moveModsToTopLevel])
 
+  const handleContextCheckUpdate = useCallback(() => {
+    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'mod') return
+    checkModUpdate(contextMenu.mod.uuid)
+    closeContextMenu()
+  }, [checkModUpdate, closeContextMenu, contextMenu])
+
   return {
     getContextTargetModIds,
     handleContextOpenFolder,
@@ -105,5 +113,6 @@ export function useLibraryContextMenuActions({
     handleContextDetails,
     handleContextReinstall,
     handleContextMoveToTopLevel,
+    handleContextCheckUpdate,
   }
 }

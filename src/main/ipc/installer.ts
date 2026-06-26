@@ -29,6 +29,7 @@ import {
 import { disableMod, findModDir, getTrackedDeploymentPaths, isLoadOrderedArchiveDeployPath, normalizeRelativePath, scanMods, writeArchiveSidecar, ARCHIVE_RESOURCE_INDEX_VERSION } from './modManager'
 import { listFilesRecursive, getPathSizeSafe } from '../fileUtils'
 import { findNexusDownloadRecordByPath } from '../nexusDownloadRegistry'
+import { lookupNexusModByMd5, type NexusMd5Match } from './nexusDownloader'
 
 type GetMainWindow = () => BrowserWindow | null
 
@@ -520,6 +521,81 @@ function extractVersionFromName(rawName: string): string | undefined {
   return undefined
 }
 
+interface MetaIniNexusInfo {
+  modId?: number
+  fileId?: number
+  version?: string
+}
+
+// Some mod managers write a `meta.ini` beside the mod content for files pulled
+// from Nexus, recording the Nexus mod id / file id. Reading it lets us reconstruct
+// the mod page link even when the archive was installed manually (no download
+// record). Format (relevant keys):
+//   [General]
+//   modid=3993
+//   version=2.16.1
+//   repository=Nexus
+//   [installedFiles]
+//   1\modid=3993
+//   1\fileid=12345
+function parseMetaIniNexusInfo(contents: string): MetaIniNexusInfo | null {
+  let modId: number | undefined
+  let fileId: number | undefined
+  let version: string | undefined
+  let isNexus = false
+
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith(';') || line.startsWith('[')) continue
+    const eq = line.indexOf('=')
+    if (eq === -1) continue
+    const key = line.slice(0, eq).trim().toLowerCase()
+    let value = line.slice(eq + 1).trim().replace(/^"|"$/g, '')
+    if (!value) continue
+
+    if (key === 'repository') {
+      if (value.toLowerCase() === 'nexus') isNexus = true
+    } else if (key === 'modid' || key.endsWith('\\modid')) {
+      const parsed = Number.parseInt(value, 10)
+      if (Number.isFinite(parsed) && parsed > 0 && modId == null) modId = parsed
+    } else if (key === 'fileid' || key.endsWith('\\fileid')) {
+      const parsed = Number.parseInt(value, 10)
+      if (Number.isFinite(parsed) && parsed > 0 && fileId == null) fileId = parsed
+    } else if (key === 'version' && !version) {
+      version = value.replace(/^v/i, '') || undefined
+    }
+  }
+
+  // Only treat it as a Nexus source when we actually recovered a mod id. The
+  // explicit `repository=Nexus` is a bonus signal but not always present.
+  if (modId == null && !isNexus) return null
+  if (modId == null) return null
+  return { modId, fileId, version }
+}
+
+// Search the extracted tree for a `meta.ini` and pull Nexus identity out of it.
+// Returns null when none is found or it carries no usable mod id.
+function findNexusInfoFromMetaIni(rootDir: string): MetaIniNexusInfo | null {
+  let relativeMetaPaths: string[]
+  try {
+    relativeMetaPaths = listFilesRecursive(rootDir).filter(
+      (relative) => path.basename(relative).toLowerCase() === 'meta.ini'
+    )
+  } catch {
+    return null
+  }
+  for (const relative of relativeMetaPaths) {
+    try {
+      const contents = fs.readFileSync(path.join(rootDir, relative), 'utf-8')
+      const info = parseMetaIniNexusInfo(contents)
+      if (info) return info
+    } catch {
+      // Ignore unreadable/garbage meta.ini and keep looking.
+    }
+  }
+  return null
+}
+
 function normalizeModName(rawName: string): string {
   const cleaned = rawName
     .replace(/\[[^\]]*\]/g, ' ')
@@ -974,6 +1050,35 @@ async function installMod(
     copyDirSync(extractRoot, modDir)
     removeInstallerTempDir(tempDir, settings)
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
+    // Manual installs carry no download record — recover Nexus identity from a
+    // bundled meta.ini so the "Open on Nexus" action still works.
+    const metaIniInfo = nexusRecord ? null : findNexusInfoFromMetaIni(modDir)
+    // Last-resort fallback: when there's still no Nexus id, hash the source
+    // archive and ask Nexus which mod/file it belongs to (md5_search).
+    let md5Info: NexusMd5Match | null = null
+    const needsNexusLookup = !nexusRecord && !metaIniInfo?.modId && !isDir
+    if (needsNexusLookup && settings.nexusApiKey?.trim()) {
+      sendProgress(win, 'Identifying mod on Nexus...', 98)
+      try {
+        md5Info = await lookupNexusModByMd5(filePath, settings.nexusApiKey.trim(), win)
+      } catch {
+        md5Info = null
+      }
+    }
+    if (needsNexusLookup) {
+      pushGeneralLog(win, {
+        level: md5Info?.modId ? 'info' : 'warn',
+        source: 'install',
+        message: md5Info?.modId
+          ? `Nexus identity recovered via MD5 query: mod ${md5Info.modId}`
+          : 'Could not recover Nexus identity (no download record, no meta.ini, MD5 query unmatched)',
+        details: {
+          filePath,
+          hadApiKey: Boolean(settings.nexusApiKey?.trim()),
+          md5Match: md5Info ?? null,
+        },
+      })
+    }
 
     const meta: ModMetadata = {
       uuid: modUuid,
@@ -989,11 +1094,11 @@ async function installMod(
       folderName,
       sourcePath: filePath,
       sourceType: isDir ? 'directory' : 'archive',
-      nexusModId: nexusRecord?.modId,
-      nexusFileId: nexusRecord?.fileId,
-      nexusCategoryId: nexusRecord?.categoryId,
-      nexusCategoryName: nexusRecord?.categoryName,
-      version: nexusRecord?.version ?? extractVersionFromName(rawName),
+      nexusModId: nexusRecord?.modId ?? metaIniInfo?.modId ?? md5Info?.modId,
+      nexusFileId: nexusRecord?.fileId ?? metaIniInfo?.fileId ?? md5Info?.fileId,
+      nexusCategoryId: nexusRecord?.categoryId ?? md5Info?.categoryId,
+      nexusCategoryName: nexusRecord?.categoryName ?? md5Info?.categoryName,
+      version: nexusRecord?.version ?? metaIniInfo?.version ?? md5Info?.version ?? extractVersionFromName(rawName),
     }
 
     if (archiveResources.length > 0) {
@@ -1326,6 +1431,33 @@ async function installFromFomod(
     copyDirSync(stagingDir, modDir)
     removeInstallerTempDir(tempDir, settings)
     const nexusRecord = findNexusDownloadRecordByPath(originalFilePath)
+    // Recover Nexus identity from a bundled meta.ini when there's no record.
+    const metaIniInfo = nexusRecord ? null : findNexusInfoFromMetaIni(modDir)
+    // Last-resort fallback: identify the source archive on Nexus by its MD5 hash.
+    let md5Info: NexusMd5Match | null = null
+    const needsNexusLookup = !nexusRecord && !metaIniInfo?.modId
+    if (needsNexusLookup && settings.nexusApiKey?.trim()) {
+      sendProgress(win, 'Identifying mod on Nexus...', 96)
+      try {
+        md5Info = await lookupNexusModByMd5(originalFilePath, settings.nexusApiKey.trim(), win)
+      } catch {
+        md5Info = null
+      }
+    }
+    if (needsNexusLookup) {
+      pushGeneralLog(win, {
+        level: md5Info?.modId ? 'info' : 'warn',
+        source: 'install',
+        message: md5Info?.modId
+          ? `Nexus identity recovered via MD5 query: mod ${md5Info.modId}`
+          : 'Could not recover Nexus identity (no download record, no meta.ini, MD5 query unmatched)',
+        details: {
+          filePath: originalFilePath,
+          hadApiKey: Boolean(settings.nexusApiKey?.trim()),
+          md5Match: md5Info ?? null,
+        },
+      })
+    }
 
     const meta: ModMetadata = {
       uuid: modUuid,
@@ -1341,11 +1473,11 @@ async function installFromFomod(
       folderName,
       sourcePath: originalFilePath,
       sourceType: 'archive',
-      nexusModId: nexusRecord?.modId,
-      nexusFileId: nexusRecord?.fileId,
-      nexusCategoryId: nexusRecord?.categoryId,
-      nexusCategoryName: nexusRecord?.categoryName,
-      version: nexusRecord?.version ?? extractVersionFromName(rawName),
+      nexusModId: nexusRecord?.modId ?? metaIniInfo?.modId ?? md5Info?.modId,
+      nexusFileId: nexusRecord?.fileId ?? metaIniInfo?.fileId ?? md5Info?.fileId,
+      nexusCategoryId: nexusRecord?.categoryId ?? md5Info?.categoryId,
+      nexusCategoryName: nexusRecord?.categoryName ?? md5Info?.categoryName,
+      version: nexusRecord?.version ?? metaIniInfo?.version ?? md5Info?.version ?? extractVersionFromName(rawName),
     }
 
     if (archiveResources.length > 0) {

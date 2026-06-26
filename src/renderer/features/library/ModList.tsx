@@ -462,6 +462,7 @@ export const ModList: React.FC = () => {
     handleContextDetails,
     handleContextReinstall,
     handleContextMoveToTopLevel,
+    handleContextCheckUpdate,
   } = useLibraryContextMenuActions({
     contextMenu,
     selectedModIds,
@@ -473,6 +474,7 @@ export const ModList: React.FC = () => {
     requestDelete,
     beginRename,
     openDetails,
+    checkModUpdate: (modId) => void checkModUpdates({ force: true, notify: true, modIds: [modId] }),
   })
 
   const handleContextOpenMoveToSeparator = useCallback(() => {
@@ -569,7 +571,7 @@ export const ModList: React.FC = () => {
         onOpenModsFolder={() => void handleOpenModsFolder()}
         onDeleteAll={() => requestLibraryDeleteAll()}
         onInstallMod={handleInstallClick}
-        onCheckUpdates={() => void checkModUpdates({ force: true, notify: true, full: true })}
+        onCheckUpdates={() => void checkModUpdates({ force: true, notify: true })}
         checkingUpdates={checkingModUpdates}
         updateCount={updateCount}
       />
@@ -725,6 +727,7 @@ export const ModList: React.FC = () => {
           onDetails={handleContextDetails}
           onMoveContextToTopLevel={handleContextMoveToTopLevel}
           onOpenOnNexus={handleContextOpenOnNexus}
+          onCheckUpdate={handleContextCheckUpdate}
         />
       )}
 

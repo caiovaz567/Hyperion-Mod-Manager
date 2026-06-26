@@ -69,6 +69,7 @@ interface LibraryContextMenuProps {
   onDetails: MenuAction
   onMoveContextToTopLevel: MenuAction
   onOpenOnNexus: MenuAction
+  onCheckUpdate: MenuAction
 }
 
 export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
@@ -95,6 +96,7 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   onDetails,
   onMoveContextToTopLevel,
   onOpenOnNexus,
+  onCheckUpdate,
 }) => {
   useLayoutEffect(() => {
     if (!menuRef.current) return
@@ -222,6 +224,11 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
 
           {/* Open & locate */}
           <MenuDivider />
+          {menu.mod.nexusModId != null && (
+            <MenuButton icon="update" onClick={onCheckUpdate}>
+              Check for Update
+            </MenuButton>
+          )}
           {(menu.mod.nexusModId || menu.mod.nexusFileId) && (
             <MenuButton icon="open_in_new" onClick={onOpenOnNexus}>
               Open on Nexus

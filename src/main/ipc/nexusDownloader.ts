@@ -3,6 +3,7 @@ import type { BrowserWindow } from 'electron'
 import type { IncomingMessage } from 'http'
 import https from 'https'
 import fs from 'fs'
+import crypto from 'crypto'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { IPC } from '../../shared/types'
@@ -446,6 +447,98 @@ async function fetchModCategoryInfo(
     : undefined
 
   return { categoryId, categoryName }
+}
+
+// ─── MD5 lookup (identify a manually-added archive on Nexus) ────────────────────
+
+interface RawNexusMd5Result {
+  mod?: {
+    mod_id?: number
+    category_id?: number
+    name?: string
+  }
+  file_details?: {
+    file_id?: number
+    name?: string
+    version?: string
+    mod_version?: string
+  }
+}
+
+export interface NexusMd5Match {
+  modId: number
+  fileId?: number
+  version?: string
+  categoryId?: number
+  categoryName?: string
+}
+
+function computeFileMd5(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5')
+    const stream = fs.createReadStream(filePath)
+    stream.on('error', reject)
+    stream.on('data', (chunk) => hash.update(chunk as Buffer))
+    stream.on('end', () => resolve(hash.digest('hex')))
+  })
+}
+
+// Identify an archive on Nexus by its MD5 hash via the md5_search endpoint: hash
+// the archive and ask Nexus which mod/file it belongs to. Lets manually-downloaded
+// archives recover their Nexus identity (mod id, file id, version, category) when
+// there's no download record or meta.ini. Best-effort: returns null on any failure
+// or no match.
+export async function lookupNexusModByMd5(
+  filePath: string,
+  apiKey: string,
+  mainWindow: BrowserWindow | null,
+): Promise<NexusMd5Match | null> {
+  if (!apiKey?.trim() || !filePath || !fs.existsSync(filePath)) return null
+
+  let md5: string
+  try {
+    md5 = await computeFileMd5(filePath)
+  } catch {
+    return null
+  }
+
+  const result = await nexusGet<RawNexusMd5Result[]>(
+    `/games/${GAME_DOMAIN}/mods/md5_search/${md5}.json`,
+    apiKey,
+    mainWindow,
+    { md5, gameDomain: GAME_DOMAIN },
+  )
+  if (!result.ok || !Array.isArray(result.data) || result.data.length === 0) return null
+
+  // An MD5 collision across different mods is effectively impossible for real
+  // archives, but the endpoint returns an array — take the first usable entry.
+  const match = result.data.find((entry) => {
+    const id = entry?.mod?.mod_id
+    return typeof id === 'number' && id > 0
+  })
+  if (!match?.mod?.mod_id) return null
+
+  const modId = match.mod.mod_id
+  const fileId = typeof match.file_details?.file_id === 'number' && match.file_details.file_id > 0
+    ? match.file_details.file_id
+    : undefined
+  const version = normalizeVersionString(match.file_details?.version ?? match.file_details?.mod_version)
+
+  let categoryId: number | undefined
+  let categoryName: string | undefined
+  const rawCategoryId = match.mod.category_id
+  if (typeof rawCategoryId === 'number' && Number.isFinite(rawCategoryId)) {
+    categoryId = rawCategoryId
+    // Category resolution is secondary — never let it throw away the mod id.
+    try {
+      const categoryMap = await getGameCategoryMap(apiKey, mainWindow)
+      categoryName = categoryMap.get(rawCategoryId) ?? undefined
+    } catch {
+      categoryName = undefined
+    }
+  }
+
+  return { modId, fileId, version, categoryId, categoryName }
 }
 
 function normalizeVersionString(value?: string): string | undefined {
@@ -957,8 +1050,12 @@ export async function checkModUpdates(
   const checkedAt = new Date().toISOString()
   const settings = loadSettings()
   const apiKey = settings.nexusApiKey
+  const restrictIds = request.modIds && request.modIds.length > 0 ? new Set(request.modIds) : null
   const mods = (request.mods || []).filter(
-    (mod) => typeof mod.nexusModId === 'number' && mod.nexusModId > 0,
+    (mod) =>
+      typeof mod.nexusModId === 'number' &&
+      mod.nexusModId > 0 &&
+      (!restrictIds || restrictIds.has(mod.uuid)),
   )
 
   if (!apiKey) {
@@ -975,14 +1072,6 @@ export async function checkModUpdates(
   ) {
     return { ok: true, data: { statuses: lastModUpdateStatuses, checkedAt, skippedReason: 'throttled' } }
   }
-
-  const createUpToDateStatus = (mod: ModUpdateCheckRequest['mods'][number]): ModUpdateStatus => ({
-    uuid: mod.uuid,
-    nexusModId: mod.nexusModId,
-    state: 'up-to-date',
-    currentVersion: mod.version,
-    modPageUrl: nexusModPageUrl(mod.nexusModId),
-  })
 
   const deepCheckMod = async (mod: ModUpdateCheckRequest['mods'][number]): Promise<ModUpdateStatus> => {
     const [filesResult, categoryInfo] = await Promise.all([
@@ -1093,17 +1182,23 @@ export async function checkModUpdates(
   }
 
   let statuses: ModUpdateStatus[]
-  if (request.full) {
+  if (restrictIds || request.full) {
+    // Scoped check (specific mod ids) or a manual full pass — deep-check each mod
+    // directly. The scoped path skips the updated.json bulk call entirely, so
+    // refreshing one freshly-installed mod costs a single files.json request.
     statuses = await mapWithConcurrency(mods, MOD_UPDATE_DEEP_CHECK_CONCURRENCY, deepCheckMod)
   } else {
-    // One bulk call lists every mod updated in the last month, so background checks
-    // only deep-check the handful that actually changed. Manual checks pass
-    // request.full to inspect every Nexus-sourced mod.
+    // One bulk call lists every mod in the game updated within `period`, so a check
+    // only deep-checks the handful of installed mods that actually changed. The period
+    // is derived from the time since the last check so it always covers the gap. Only
+    // the changed mods' statuses are returned; the renderer merges them into the cache
+    // and leaves untouched mods as they were (no per-mod request for the rest).
+    const period = request.period ?? '1m'
     const updated = await nexusGet<NexusUpdatedMod[]>(
-      `/games/${GAME_DOMAIN}/mods/updated.json?period=1m`,
+      `/games/${GAME_DOMAIN}/mods/updated.json?period=${period}`,
       apiKey,
       mainWindow,
-      { period: '1m' },
+      { period },
     )
     if (!updated.ok || !Array.isArray(updated.data)) {
       return { ok: false, error: updated.error || 'Failed to fetch Nexus mod updates' }
@@ -1113,11 +1208,8 @@ export async function checkModUpdates(
       recentlyUpdated.add(entry.mod_id)
     }
 
-    statuses = await mapWithConcurrency(mods, MOD_UPDATE_DEEP_CHECK_CONCURRENCY, async (mod) => (
-      recentlyUpdated.has(mod.nexusModId)
-        ? deepCheckMod(mod)
-        : createUpToDateStatus(mod)
-    ))
+    const changedMods = mods.filter((mod) => recentlyUpdated.has(mod.nexusModId))
+    statuses = await mapWithConcurrency(changedMods, MOD_UPDATE_DEEP_CHECK_CONCURRENCY, deepCheckMod)
   }
 
   // Persist fetched Nexus categories to _metadata.json

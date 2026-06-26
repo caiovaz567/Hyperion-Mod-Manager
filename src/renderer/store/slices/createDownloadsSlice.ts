@@ -214,7 +214,8 @@ type DownloadsStoreBridge = DownloadsSlice & {
   scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
   enableMod?: (modId: string) => Promise<IpcResult>
   setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
-  checkModUpdates?: (options?: { force?: boolean; notify?: boolean; full?: boolean }) => Promise<void>
+  checkModUpdates?: (options?: { force?: boolean; notify?: boolean; full?: boolean; modIds?: string[] }) => Promise<void>
+  clearModUpdate?: (uuid: string) => void
 }
 
 async function installCompletedDownload(
@@ -288,7 +289,9 @@ async function installCompletedModUpdate(
       state.addToast?.(`${result.data.mod.name} updated & activated`, 'success')
     }
     state.setRecentLibraryBadge?.(result.data.mod.uuid, 'updated')
-    void state.checkModUpdates?.({ force: true, full: true })
+    // We just installed this mod's latest file — clear its update flag locally,
+    // no Nexus request needed.
+    state.clearModUpdate?.(result.data.mod.uuid)
   }
 }
 
@@ -1194,11 +1197,25 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       }))
     })
 
+    // The main process watches the Downloads folder and pings us when its
+    // contents change (e.g. a manually-downloaded archive dropped in), so the
+    // list stays current without the user pressing refresh.
+    let folderChangeTimer: ReturnType<typeof setTimeout> | null = null
+    const unsubFolderChange = IpcService.on(IPC.DOWNLOADS_CHANGED, () => {
+      if (folderChangeTimer) clearTimeout(folderChangeTimer)
+      folderChangeTimer = setTimeout(() => {
+        folderChangeTimer = null
+        void get().refreshLocalFiles()
+      }, 250)
+    })
+
     return () => {
       unsubLink()
       unsubProgress()
       unsubComplete()
       unsubError()
+      if (folderChangeTimer) clearTimeout(folderChangeTimer)
+      unsubFolderChange()
     }
   },
 })

@@ -19,7 +19,6 @@ import { getInstallProgressAppearance } from './utils/installProgressAppearance'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
-const STARTUP_MOD_UPDATE_CHECK_GRACE_MS = 1500
 
 async function waitForFirstPaint(): Promise<void> {
   await new Promise<void>((resolve) => {
@@ -139,21 +138,23 @@ export const App: React.FC = () => {
 
       cleanup = releaseListeners
 
+      // Load the persisted Nexus update cache (from the main process) before scanning,
+      // so cached indicators show instantly and the scan's prune keeps the right data.
+      await useAppStore.getState().hydrateModUpdates()
+
       updateBootStatus('Scanning mod library...')
       await scanMods({ refreshConflicts: false, refreshModUpdates: false })
 
-      updateBootStatus('Checking Nexus mod updates...')
-      const startupModUpdateCheck = useAppStore.getState()
-        .checkModUpdates({ force: true, full: true })
-        .catch(() => undefined)
+      // Refresh Nexus update status on launch, but cheaply: this is the bulk path, so
+      // it's one `updated.json` request (window adapts to time since the last check)
+      // plus a deep check only for the few mods that changed since then — never one
+      // request per mod. Cached indicators already show instantly (hydrated above);
+      // this runs in the background (non-blocking, silent) and refreshes them shortly
+      // after the window opens. The toolbar button still does an on-demand re-check.
+      void useAppStore.getState().checkModUpdates({ force: true })
 
       updateBootStatus('Checking mod conflicts...')
       await useAppStore.getState().refreshConflicts({ immediate: true })
-
-      await Promise.race([
-        startupModUpdateCheck,
-        new Promise((resolve) => window.setTimeout(resolve, STARTUP_MOD_UPDATE_CHECK_GRACE_MS)),
-      ])
 
       const elapsed = Date.now() - bootStartedAt
       const remaining = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed)

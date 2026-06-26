@@ -423,6 +423,14 @@ export interface ModUpdateCheckRequest {
   mods: ModUpdateCheckInput[]
   force?: boolean
   full?: boolean
+  // When set, only these mod uuids are checked (deep per-mod), and the results are
+  // merged into the existing cached statuses instead of replacing them. Used after
+  // installing a mod to refresh just that mod without re-scanning the whole library.
+  modIds?: string[]
+  // Window for the bulk `updated.json` pass (mods changed in the game in this period).
+  // Derived from the time since the last check so it always covers the gap. Ignored
+  // for `full` and `modIds` checks.
+  period?: '1d' | '1w' | '1m'
 }
 
 export interface ModUpdateStatus {
@@ -443,6 +451,13 @@ export interface ModUpdateCheckResult {
   statuses: ModUpdateStatus[]
   checkedAt: string
   skippedReason?: 'no-api-key' | 'throttled'
+}
+
+// Persisted Nexus update cache (lives in the main process userData so it survives
+// app restarts in both dev and packaged builds, unlike renderer localStorage).
+export interface ModUpdateCache {
+  statuses: Record<string, ModUpdateStatus>
+  checkedAt: string | null
 }
 
 // ─── IPC Channels ────────────────────────────────────────────────────────────
@@ -482,6 +497,7 @@ export const IPC = {
   LIST_DOWNLOADS: 'downloads:list',
   DELETE_DOWNLOAD: 'downloads:delete',
   DELETE_ALL_DOWNLOADS: 'downloads:deleteAll',
+  DOWNLOADS_CHANGED: 'downloads:changed',
 
   // Game
   DETECT_GAME: 'game:detect',
@@ -516,6 +532,8 @@ export const IPC = {
   NXM_DOWNLOAD_RESUME:   'nxm:downloadResume',
   NEXUS_VALIDATE_KEY:    'nexus:validateKey',
   NEXUS_CHECK_MOD_UPDATES: 'nexus:checkModUpdates',
+  MOD_UPDATE_CACHE_GET:   'nexus:modUpdateCacheGet',
+  MOD_UPDATE_CACHE_SET:   'nexus:modUpdateCacheSet',
   NEXUS_API_LOG_LIST:    'nexus:apiLogList',
   NEXUS_API_LOG_CLEAR:   'nexus:apiLogClear',
   NEXUS_API_LOG_UPDATED: 'nexus:apiLogUpdated',

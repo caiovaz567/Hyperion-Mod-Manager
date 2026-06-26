@@ -25,10 +25,11 @@ import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridg
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
 import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
-import { IPC, type GameLaunchProgress, type ModMetadata, type VfsOverwriteInfo } from '../shared/types'
+import { IPC, type GameLaunchProgress, type ModMetadata, type ModUpdateCache, type VfsOverwriteInfo } from '../shared/types'
 import { parseNxmUrl } from '../shared/nxm'
 import { clearAppLogs, getAppLogsSnapshot, pushGeneralLog, safeSendToWindow } from './logStore'
 import { findNexusDownloadRecordByPath, removeNexusDownloadRecordByPath } from './nexusDownloadRegistry'
+import { loadModUpdateCache, saveModUpdateCache } from './modUpdateCache'
 
 const DOWNLOAD_EXTENSIONS = new Set(['.zip', '.rar', '.7z'])
 const GAME_EXECUTABLE_RELATIVE_PATH = path.join('bin', 'x64', 'Cyberpunk2077.exe')
@@ -1346,6 +1347,55 @@ let mainWindow: BrowserWindow | null = null
 let rendererReady = false
 const pendingNxmUrls: string[] = []
 
+// Watches the configured Downloads folder so externally-added archives (e.g. a
+// manual Nexus download dropped into the folder) surface in the Downloads view
+// without a manual refresh. Non-recursive fs.watch is enough — the folder is flat.
+let downloadsWatcher: fs.FSWatcher | null = null
+let downloadsWatcherPath: string | null = null
+let downloadsChangeTimer: ReturnType<typeof setTimeout> | null = null
+
+function stopDownloadsWatcher(): void {
+  if (downloadsChangeTimer) {
+    clearTimeout(downloadsChangeTimer)
+    downloadsChangeTimer = null
+  }
+  if (downloadsWatcher) {
+    try {
+      downloadsWatcher.close()
+    } catch {
+      // Best-effort teardown.
+    }
+    downloadsWatcher = null
+  }
+  downloadsWatcherPath = null
+}
+
+function startDownloadsWatcher(downloadPath: string | undefined | null): void {
+  const target = downloadPath?.trim()
+  // Re-mounting on the same path would just churn handles for no gain.
+  if (target && target === downloadsWatcherPath && downloadsWatcher) return
+  stopDownloadsWatcher()
+  if (!target || !isUsableDirectoryPath(target)) return
+  try {
+    downloadsWatcher = fs.watch(target, { persistent: false }, () => {
+      // Debounce bursts (archive writes fire many events) into one refresh ping.
+      if (downloadsChangeTimer) clearTimeout(downloadsChangeTimer)
+      downloadsChangeTimer = setTimeout(() => {
+        downloadsChangeTimer = null
+        safeSendToWindow(mainWindow, IPC.DOWNLOADS_CHANGED)
+      }, 400)
+    })
+    downloadsWatcherPath = target
+    downloadsWatcher.on('error', () => {
+      // A removed/renamed folder invalidates the watcher; drop it and let the
+      // next settings change or app restart re-establish it.
+      stopDownloadsWatcher()
+    })
+  } catch {
+    stopDownloadsWatcher()
+  }
+}
+
 function normalizeNxmProtocolArg(value?: string): string | null {
   if (!value) return null
   const normalized = value.trim().replace(/^"+|"+$/g, '')
@@ -1585,6 +1635,9 @@ function registerGlobalHandlers(): void {
         })
       }
 
+      // Re-point the Downloads folder watcher at the (possibly) new path.
+      startDownloadsWatcher(settings.downloadPath)
+
       return { ok: true }
     } catch (error) {
       pushGeneralLog(mainWindow, {
@@ -1612,6 +1665,12 @@ function registerGlobalHandlers(): void {
       properties: ['openDirectory']
     })
     return result
+  })
+
+  ipcMain.handle(IPC.MOD_UPDATE_CACHE_GET, () => loadModUpdateCache())
+  ipcMain.handle(IPC.MOD_UPDATE_CACHE_SET, (_event, cache: ModUpdateCache) => {
+    saveModUpdateCache(cache)
+    return { ok: true }
   })
 
   ipcMain.handle(IPC.LIST_DOWNLOADS, () => {
@@ -2516,6 +2575,9 @@ app.whenReady().then(async () => {
     })
   }
 
+  // Watch the Downloads folder so externally-added archives appear without a manual refresh.
+  startDownloadsWatcher(settings.downloadPath)
+
   mainWindow.once('ready-to-show', () => {
     mainWindowReadyToShow = true
     revealMainWindow()
@@ -2554,6 +2616,7 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
   // Tear down any active VFS so usvfs shared state doesn't outlive the controller.
   unmountVfsIfMounted()
+  stopDownloadsWatcher()
   try {
     cleanupInstallerTempDirs(loadSettings())
   } catch {

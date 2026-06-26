@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
-import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo, ModUpdateStatus, ModUpdateCheckResult, ModUpdateCheckInput, NxmLinkPayload, NexusValidateResult } from '../../../shared/types'
+import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo, ModUpdateStatus, ModUpdateCheckResult, ModUpdateCheckInput, ModUpdateCache, NxmLinkPayload, NexusValidateResult } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
 import { recomputeConflictStateFromExistingConflicts } from '../../utils/modConflictState'
 import { applyConflictState, scheduleConflictRefresh } from './libraryConflictRefresh'
@@ -18,6 +18,27 @@ import {
 } from './librarySliceHelpers'
 
 export type LibraryStatusFilter = 'all' | 'enabled' | 'disabled'
+
+// Persist Nexus update statuses across sessions so the app doesn't re-query every
+// installed mod on every launch. The cache lives in the main process (userData) so it
+// survives restarts in both dev and packaged builds — renderer localStorage would be
+// wiped on every dev restart (sessionData is namespaced per process id in dev). The
+// store hydrates from it asynchronously on boot via hydrateModUpdates().
+function persistModUpdates(statuses: Record<string, ModUpdateStatus>, checkedAt: string | null): void {
+  void IpcService.invoke(IPC.MOD_UPDATE_CACHE_SET, { statuses, checkedAt }).catch(() => undefined)
+}
+
+// Pick the `updated.json` window for a bulk check based on how long since the last
+// check, so it always covers the gap (mirrors how MO2 adapts its query period).
+function pickUpdatedPeriod(lastCheckedAt: string | null): '1d' | '1w' | '1m' {
+  if (!lastCheckedAt) return '1m'
+  const elapsedMs = Date.now() - Date.parse(lastCheckedAt)
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return '1m'
+  const DAY = 86_400_000
+  if (elapsedMs <= DAY) return '1d'
+  if (elapsedMs <= 7 * DAY) return '1w'
+  return '1m'
+}
 
 export interface LibrarySlice {
   mods: ModMetadata[]
@@ -44,7 +65,9 @@ export interface LibrarySlice {
   reorderMods: (orderedIds: string[]) => Promise<void>
   updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
   refreshConflicts: (options?: { immediate?: boolean }) => Promise<void>
-  checkModUpdates: (options?: { force?: boolean; notify?: boolean; full?: boolean }) => Promise<void>
+  checkModUpdates: (options?: { force?: boolean; notify?: boolean; full?: boolean; modIds?: string[] }) => Promise<void>
+  hydrateModUpdates: () => Promise<void>
+  clearModUpdate: (uuid: string) => void
   updateMod: (uuid: string) => Promise<void>
   setFilter: (filter: string) => void
   setTypeFilter: (type: string) => void
@@ -78,17 +101,17 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS)
     if (result.ok && result.data) {
       const currentModIds = new Set(result.data.map((mod) => mod.uuid))
-      set((state) => ({
-        mods: result.data,
-        modUpdates: Object.fromEntries(
-          Object.entries(state.modUpdates).filter(([uuid]) => currentModIds.has(uuid))
-        ),
-      }))
-      // Refresh Nexus update status whenever the library changes (install/reinstall/delete).
-      // Background scans stay lightweight; the toolbar button performs a full check.
-      if (options?.refreshModUpdates !== false) {
-        void get().checkModUpdates({ force: true })
-      }
+      const previousModUpdates = get().modUpdates
+      const keptEntries = Object.entries(previousModUpdates).filter(([uuid]) => currentModIds.has(uuid))
+      const removedSome = keptEntries.length !== Object.keys(previousModUpdates).length
+      // Only rebuild + re-persist the cache when a mod actually went away (e.g. delete);
+      // a plain enable/disable/reorder scan shouldn't trigger a cache write.
+      const prunedModUpdates = removedSome ? Object.fromEntries(keptEntries) : previousModUpdates
+      set({ mods: result.data, modUpdates: prunedModUpdates })
+      if (removedSome) persistModUpdates(prunedModUpdates, get().modUpdatesCheckedAt)
+      // Update status is never fetched automatically — not on scan, install, or delete.
+      // Cached indicators persist and refreshing is fully user-driven via per-mod
+      // "Check for Update" or the "Check Updates" toolbar button.
       if (options?.refreshConflicts !== false) {
         void scheduleConflictRefresh(set, options?.immediateConflicts ?? true)
       }
@@ -236,6 +259,9 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     const force = options?.force === true
     const full = options?.full === true
     const announce = options?.notify === true
+    // Scoped check: only refresh these mod uuids and merge into the cached statuses
+    // (used after installing a mod, so we don't re-scan the whole library).
+    const modIds = options?.modIds && options.modIds.length > 0 ? options.modIds : undefined
     const notify = (message: string, severity: 'info' | 'success' | 'warning' | 'error' = 'info') => {
       const ext = get() as LibrarySlice & {
         addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
@@ -253,26 +279,36 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         nexusCategoryName: mod.nexusCategoryName,
       }))
     if (inputs.length === 0) {
-      set({ modUpdates: {}, modUpdatesCheckedAt: new Date().toISOString() })
+      // No Nexus mods at all — clear the cache (but never from a scoped check).
+      if (!modIds) {
+        const clearedAt = new Date().toISOString()
+        set({ modUpdates: {}, modUpdatesCheckedAt: clearedAt })
+        persistModUpdates({}, clearedAt)
+      }
       if (announce) notify('No Nexus-sourced mods to check.', 'info')
       return
     }
+    // A bulk "check all" derives its window from the last check; full and scoped
+    // checks don't use the window.
+    const period = !full && !modIds ? pickUpdatedPeriod(get().modUpdatesCheckedAt) : undefined
     set({ checkingModUpdates: true })
     try {
       const result = await IpcService.invoke<IpcResult<ModUpdateCheckResult>>(
         IPC.NEXUS_CHECK_MOD_UPDATES,
-        { mods: inputs, force, full }
+        { mods: inputs, force, full, modIds, period }
       )
       if (result.ok && result.data) {
         const previousUpdates = get().modUpdates
-        const map: Record<string, ModUpdateStatus> = {}
+        // A full pass inspects every mod and replaces the cache. Bulk and scoped checks
+        // only return the mods they actually deep-checked, so they merge into the cache
+        // (untouched mods keep their known status — no per-mod request needed).
+        const replace = full && !modIds
+        const map: Record<string, ModUpdateStatus> = replace ? {} : { ...previousUpdates }
         for (const status of result.data.statuses) {
-          const previous = previousUpdates[status.uuid]
-          map[status.uuid] = !full && previous?.state === 'update-available' && status.state === 'up-to-date'
-            ? previous
-            : status
+          map[status.uuid] = status
         }
         set({ modUpdates: map, modUpdatesCheckedAt: result.data.checkedAt })
+        persistModUpdates(map, result.data.checkedAt)
 
         // Patch categories in the store for mods that received Nexus category data
         const withCategory = result.data.statuses.filter((s) => s.nexusCategoryName)
@@ -290,13 +326,23 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
           if (result.data.skippedReason === 'no-api-key') {
             notify('Add a Nexus API key in Settings to check for updates.', 'warning')
           } else {
-            const count = result.data.statuses.filter((status) => status.state === 'update-available').length
-            notify(
-              count > 0
-                ? `${count} mod update${count === 1 ? '' : 's'} available.`
-                : 'All Nexus mods are up to date.',
-              count > 0 ? 'info' : 'success'
-            )
+            if (modIds && modIds.length === 1) {
+              const single = result.data.statuses.some((status) => status.state === 'update-available')
+              notify(
+                single ? 'Update available on Nexus.' : 'This mod is up to date.',
+                single ? 'info' : 'success'
+              )
+            } else {
+              // Count across the whole (merged) cache — a bulk check only returns the
+              // mods that changed, so counting just the response would undercount.
+              const count = Object.values(map).filter((status) => status.state === 'update-available').length
+              notify(
+                count > 0
+                  ? `${count} mod update${count === 1 ? '' : 's'} available.`
+                  : 'All Nexus mods are up to date.',
+                count > 0 ? 'info' : 'success'
+              )
+            }
           }
         }
       } else if (announce) {
@@ -305,6 +351,27 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     } finally {
       set({ checkingModUpdates: false })
     }
+  },
+  hydrateModUpdates: async () => {
+    // Load the persisted update cache from the main process into the store on boot,
+    // so cached indicators show with zero Nexus requests and the adaptive check
+    // window has the real last-check timestamp.
+    const cache = await IpcService.invoke<ModUpdateCache>(IPC.MOD_UPDATE_CACHE_GET).catch(() => null)
+    if (!cache) return
+    set({
+      modUpdates: cache.statuses && typeof cache.statuses === 'object' ? cache.statuses : {},
+      modUpdatesCheckedAt: typeof cache.checkedAt === 'string' ? cache.checkedAt : null,
+    })
+  },
+  clearModUpdate: (uuid) => {
+    // Locally drop a mod's update flag without any Nexus request — used right after
+    // updating a mod in place, since we just installed its latest file.
+    const current = get().modUpdates
+    if (!current[uuid]) return
+    const next = { ...current }
+    delete next[uuid]
+    set({ modUpdates: next })
+    persistModUpdates(next, get().modUpdatesCheckedAt)
   },
   updateMod: async (uuid) => {
     const status = get().modUpdates[uuid]

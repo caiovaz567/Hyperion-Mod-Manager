@@ -10,6 +10,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.25.0] - 2026-06-26
+
+### Added
+- Manual mod installs now recover their Nexus identity from a bundled `meta.ini` (reading `modid`/`fileid`/`version`) when there is no Hyperion download record. Mods downloaded via Nexus "manual download" that ship a `meta.ini` get the "Open on Nexus" action and version info, the same as mods installed through the in-app Nexus pipeline. Reinstall an existing mod to pick this up.
+- Nexus identity lookup by file hash on install: when an archive has no download record and no `meta.ini`, Hyperion hashes the source archive (MD5) and queries the Nexus `md5_search` API to identify which mod/file it came from, filling in the Nexus mod id, file id, version, and category. Requires a Nexus API key (Settings > Nexus); it's best-effort and skipped silently when no key is set or the archive isn't recognized.
+
+### Changed
+- Nexus update checking no longer does a full per-mod pass automatically. Update indicators are persisted across sessions and shown instantly from cache. On launch the app does a single lightweight bulk check (one request that finds what changed since the last check, plus a detailed look only at those few mods) — not one request per installed mod. Beyond launch, refreshing is user-driven: the new per-mod **Check for Update** right-click action, or the **Check Updates** toolbar button. Install/reinstall/delete no longer trigger update checks. This keeps a 2,000-mod library from spending thousands of requests on launch.
+- The **Check Updates** button now uses an efficient bulk check instead of one request per mod: a single `updated.json` call (with a window that adapts to how long since the last check — 1 day / 1 week / 1 month) finds which mods changed, and only those get a detailed check. Checking a 2,000-mod library now costs roughly one request plus the few that actually changed, instead of 2,000 requests.
+- Added a **Check for Update** action to the mod right-click menu (Nexus-sourced mods only), which checks that single mod and toasts the result.
+- The persisted update cache (statuses + last-check time) now lives in the app's data folder instead of renderer storage, so it survives restarts reliably and the "what changed since last check" window stays accurate across sessions.
+- The Downloads view now refreshes itself automatically when archives are added to or removed from the configured Downloads folder externally (e.g. a manual Nexus download dropped in). The main process watches the folder and the list updates without pressing refresh; the watcher re-points when the Downloads path is changed in Settings.
+
+---
+
 ## [0.24.3] - 2026-06-25
 
 ### Fixed
