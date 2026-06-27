@@ -10,6 +10,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.27.3] - 2026-06-27
+
+### Changed
+- Settings now uses cleaner categorized decision rows with underline tabs, fewer bordered boxes, and a stricter left/right alignment grid.
+- App Logs now shares the same underline tab rail visual language as Settings.
+- Settings About links now use clearer filled secondary button surfaces so outbound actions read as clickable controls.
+
+---
+
 ## [0.27.2] - 2026-06-27
 
 ### Changed

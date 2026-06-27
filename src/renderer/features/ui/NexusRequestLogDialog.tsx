@@ -11,6 +11,7 @@ import {
 import { IpcService } from '../../services/IpcService'
 import { useAppStore } from '../../store/useAppStore'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
+import { SurfaceTabRail } from './uiKit'
 import { Tooltip } from './Tooltip'
 
 interface AppLogsDialogProps {
@@ -39,13 +40,6 @@ const generalLevelBadgeClass: Record<AppGeneralLogEntry['level'], string> = {
   warn: 'border-[#4a3f08] bg-[#171303] text-[#fcee09]',
   error: 'border-[#4a1212] bg-[#150404] text-[#f87171]',
 }
-
-const tabButtonClass = (active: boolean) =>
-  `min-w-[118px] rounded-sm px-4 py-2.5 text-center transition-colors ${
-    active
-      ? 'bg-[#120f03] text-[#fcee09]'
-      : 'bg-transparent text-[#9c9c9c] hover:bg-[#0d0d0d] hover:text-[#d9d9d9]'
-  }`
 
 const inlineBadgeClass = 'inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[10px] font-mono uppercase tracking-[0.14em]'
 
@@ -434,6 +428,10 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
 
   const activeCount = activeTab === 'general' ? generalEntries.length : requestEntries.length
   const clearTabLabel = activeTab === 'general' ? 'Clear General logs' : 'Clear Request logs'
+  const logTabItems = [
+    { id: 'general' as const, label: 'General', icon: 'article', count: generalEntries.length },
+    { id: 'requests' as const, label: 'Requests', icon: 'cloud_sync', count: requestEntries.length },
+  ]
 
   const emptyLabel = useMemo(() => {
     if (loading) return 'Loading logs...'
@@ -643,27 +641,21 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
         </div>
 
         <div
-          className="border-b-[0.5px] border-[#1a1a1a] py-3"
+          className="border-b-[0.5px] border-[#1a1a1a] pt-3"
           style={{
             paddingLeft: `${APP_LOGS_CONTENT_GUTTER_PX}px`,
             paddingRight: `${APP_LOGS_CONTENT_GUTTER_PX}px`,
           }}
         >
-          <div className="flex items-center justify-between gap-6">
-            <div className="inline-flex shrink-0 flex-wrap items-center gap-1 border-[0.5px] border-[#1a1a1a] bg-[#070707] p-1">
-              <button type="button" onClick={() => setActiveTab('general')} className={tabButtonClass(activeTab === 'general')}>
-                <span className="brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em]">General</span>
-                <span className="ml-2 brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em] text-inherit/85">
-                  {generalEntries.length}
-                </span>
-              </button>
-              <button type="button" onClick={() => setActiveTab('requests')} className={tabButtonClass(activeTab === 'requests')}>
-                <span className="brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em]">Requests</span>
-                <span className="ml-2 brand-font text-[0.88rem] font-bold uppercase tracking-[0.12em] text-inherit/85">
-                  {requestEntries.length}
-                </span>
-              </button>
-            </div>
+          <div className="flex items-end justify-between gap-6">
+            <SurfaceTabRail
+              items={logTabItems}
+              activeId={activeTab}
+              onChange={setActiveTab}
+              ariaLabel="App log sections"
+              className="min-w-0 flex-1"
+              withBottomBorder={false}
+            />
             <div className="flex min-w-0 items-center justify-end gap-2">
               <div className="ui-support-mono shrink-0 uppercase tracking-[0.14em]">
                 {activeCount} entr{activeCount === 1 ? 'y' : 'ies'}

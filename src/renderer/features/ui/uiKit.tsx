@@ -19,12 +19,76 @@ export const uiButton = {
     'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-transparent px-3 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#777777] transition-colors hover:bg-[#101010] hover:text-white disabled:cursor-not-allowed disabled:text-[#4d4d4d] disabled:hover:bg-transparent [&_.material-symbols-outlined]:leading-none',
 } as const
 
+/* -- Underline tab rail -- */
+export interface SurfaceTabItem<T extends string> {
+  id: T
+  label: string
+  icon?: string
+  count?: number | string
+}
+
+export const SurfaceTabRail = <T extends string,>({
+  items,
+  activeId,
+  onChange,
+  ariaLabel = 'Sections',
+  className = '',
+  withBottomBorder = true,
+}: {
+  items: Array<SurfaceTabItem<T>>
+  activeId: T
+  onChange: (id: T) => void
+  ariaLabel?: string
+  className?: string
+  withBottomBorder?: boolean
+}) => (
+  <nav
+    aria-label={ariaLabel}
+    className={`relative flex flex-wrap items-end gap-2 bg-transparent ${
+      withBottomBorder ? 'border-b-[0.5px] border-[#1a1a1a]' : ''
+    } ${className}`}
+  >
+    {items.map((item) => {
+      const active = activeId === item.id
+      return (
+        <button
+          key={item.id}
+          type="button"
+          aria-current={active ? 'page' : undefined}
+          onClick={() => onChange(item.id)}
+          className={`relative -mb-px inline-flex h-14 min-w-[128px] items-center justify-center gap-2 border-0 px-5 transition-colors after:absolute after:bottom-0 after:left-4 after:right-4 after:h-[2px] after:bg-transparent after:transition-colors focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.34)] ${
+            active
+              ? 'text-[#fcee09] after:bg-[#fcee09]'
+              : 'text-[#8f8f8f] hover:text-[#e2e2e2]'
+          }`}
+        >
+          {item.icon ? (
+            <span className="material-symbols-outlined text-[17px] leading-none" aria-hidden="true">
+              {item.icon}
+            </span>
+          ) : null}
+          <span className="brand-font text-[0.84rem] font-bold uppercase tracking-[0.12em]">{item.label}</span>
+          {item.count !== undefined ? (
+            <span
+              className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-sm px-1.5 ui-support-mono text-[11px] leading-none ${
+                active ? 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]' : 'bg-[#151515] text-[#777]'
+              }`}
+            >
+              {item.count}
+            </span>
+          ) : null}
+        </button>
+      )
+    })}
+  </nav>
+)
+
 /* -- Icon tile -- */
 export const IconTile: React.FC<{ icon: string; size?: 'sm' | 'md' }> = ({ icon, size = 'md' }) => {
   const isMd = size === 'md'
   return (
     <div
-      className={`flex flex-shrink-0 items-center justify-center rounded-sm border-0 bg-[rgba(252,238,9,0.10)] ${
+      className={`flex flex-shrink-0 items-center justify-center rounded-sm border-0 bg-[rgba(252,238,9,0.09)] ${
         isMd ? 'h-10 w-10' : 'h-8 w-8'
       }`}
     >
@@ -46,20 +110,22 @@ export const SettingCard: React.FC<{
   children: React.ReactNode
 }> = ({ icon, title, description, headerRight, className = '', style, children }) => (
   <div
-    className={`relative rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#070707] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_6px_18px_rgba(0,0,0,0.24)] ${className}`}
+    className={`relative border-b-[0.5px] border-[#171717] px-4 py-7 last:border-b-0 sm:px-5 ${className}`}
     style={style}
   >
-    <div className="flex items-start gap-3">
-      <IconTile icon={icon} size="sm" />
-      <div className="min-w-0 flex-1 text-left">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="grid gap-5 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start">
+      <div className="flex items-start gap-3">
+        <IconTile icon={icon} size="sm" />
+        <div className="min-w-0 flex-1 text-left">
           <h3 className="brand-font text-[0.95rem] font-bold uppercase tracking-[0.12em] text-white">{title}</h3>
-          {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
-        </div>
         {description ? <p className="mt-2 text-[14px] leading-[1.55] text-[#b8b8b8]">{description}</p> : null}
+        </div>
+      </div>
+      <div className="min-w-0">
+        {headerRight ? <div className="mb-4 flex justify-start lg:justify-end">{headerRight}</div> : null}
+        {children}
       </div>
     </div>
-    <div className="mt-4">{children}</div>
   </div>
 )
 
@@ -96,8 +162,8 @@ export const PathBox: React.FC<{ value: string; placeholder: string; emphasize?:
   emphasize = false,
 }) => (
   <div
-    className={`allow-text-selection flex min-h-10 min-w-0 items-center rounded-sm border-[0.5px] px-4 py-3 font-mono text-[13px] leading-[1.35] text-[#e5e2e1] ${
-      emphasize ? 'border-[#242424] bg-[#100f08]' : 'border-[#1a1a1a] bg-[#0a0a0a]'
+    className={`allow-text-selection flex min-h-10 min-w-0 items-center rounded-sm border-0 px-4 py-3 font-mono text-[13px] leading-[1.35] text-[#e5e2e1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] ${
+      emphasize ? 'bg-[#100f08] shadow-[inset_0_0_0_1px_rgba(252,238,9,0.12)]' : 'bg-[#101010]'
     }`}
   >
     <div className="break-all">{value || <span className="text-[#6b6b6b]">{placeholder}</span>}</div>

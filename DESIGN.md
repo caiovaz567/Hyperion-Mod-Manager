@@ -317,17 +317,17 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Settings should be organized into explicit sections: `General`, `Paths`, `Nexus`, `Updates`, and `About`
 - Settings opens on the `General` tab by default so the auto-install / Install Behavior toggle is visible immediately on entry
 - Do not keep a generic `Workspace` section or placeholder future-module scaffold in the primary UX
-- Settings must keep Hyperion's operational chrome: squared small-radius panels, 0.5px borders, dark surfaces, uppercase `brand-font` section names, and yellow as signal rather than decoration
+- Settings must keep Hyperion's operational chrome: squared small-radius surfaces, dark filled/tinted panels, low-contrast separators or inset shadows, uppercase `brand-font` section names, and yellow as signal rather than decoration
 - `src/renderer/features/ui/uiKit.tsx` may provide shared helpers for Settings and Welcome, but Settings should not inherit a soft onboarding or SaaS-style card language from first-run flows
-- Cards use the compact `SettingCard` pattern: squared dark surface, thin yellow top rail, small icon tile, uppercase heading, and one readable line of support copy
-- State is shown two ways: an inline `ValidationRow` under the relevant control for the human, consequence-aware message, and an optional squared `StatusReadout` in the card header for at-a-glance status
+- Cards use the compact `SettingCard` pattern as aligned decision rows: explanatory icon/title/copy on the left, the actual control or action set on the right, one shared column grid, and no nested colored outline boxes competing for attention
+- State is shown two ways: an inline `ValidationRow` under the relevant control for the human, consequence-aware message, and an optional squared `StatusReadout` aligned with the card actions for at-a-glance status
 - Validation copy must be consequence-aware (e.g. `Cyberpunk 2077 found. Launch and deployment validation are ready.` / invalid copy that names what stays blocked) while the surrounding chrome stays compact and operational
 - Header status readouts must communicate only the concrete state value: `CONNECTED`, `PREMIUM`, `READY TO INSTALL`, or `v0.14.0`; avoid split prefix/value badges such as `NEXUS / CONNECTED` and avoid decorative side bars inside the badge
 - Path values render in the shared monospace `PathBox`; buttons use the shared kit set with Hyperion button proportions, squared chrome, and no hover lift or press-scale theatrics
-- Tabs read as a compact segmented strip with icon + uppercase label per tab; the active tab is a restrained dark/yellow segment, not a solid pill
-- Settings tabs should visually attach to the content panel below: active tabs use a connected top-tab shape (`rounded-t`, no rounded bottom), sit flush with the panel edge, and avoid looking like isolated colored pills
+- Tabs use the shared underline `SurfaceTabRail` from `uiKit`: icon + uppercase label, no outer colored rectangle, muted inactive labels, and a thin yellow underline on the active tab
+- Settings tabs should visually align with the content panel below: the tab rail and content share the same horizontal boundary, and the active tab is communicated by the underline rather than by a filled box, pill, or raised connected tab
 - Settings should use a calmer reading width (~960px) than Library/Downloads; avoid stretching linear form decisions across the full desktop
-- Inside each section, prefer a small number of large decision cards over many nested bordered boxes competing for attention
+- Inside each section, prefer a small number of categorized decision rows over many nested bordered boxes competing for attention
 - Card content and follow-up actions stay within the card; the leading action sits left, the folder/primary action may sit at the row end on wide layouts
 - Cards enter with a light staggered `fade-up`; rely on the main app surface for vertical scroll (no nested scroll regions inside Settings content)
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
@@ -344,12 +344,14 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - When Nexus validation succeeds, show real account identity details such as display name, premium/free state, and user id/email rather than generic placeholder text
 - Keep library maintenance tools in the main library workflow instead of duplicating them inside Settings
 - The third Settings section should focus on Hyperion application updates only; diagnostics and app logs remain available from the shell header
+- About links such as GitHub, Releases, issue reporting, usvfs, MO2, and REDmodding must look like real secondary buttons when placed inside dark cards: use a filled dark surface, subtle inset boundary, clear hover tint, and icon/text color that changes together
 
 ### App Logs
 
 - App Logs is a global overlay opened from the header terminal icon
 - It should group diagnostics into clear tabs rather than separate scattered dialogs
 - Use at least two tabs: `General` for app/runtime events and `Requests` for Nexus API traffic
+- App Logs uses the same underline `SurfaceTabRail` tab language as Settings so global utility screens share one visual model
 - Log rows should stay single-line and compact in the collapsed state
 - Expanding a row reveals structured content below the same row instead of opening a second screen
 - Request payloads and structured log details should use a collapsible tree viewer similar to a JSON formatter

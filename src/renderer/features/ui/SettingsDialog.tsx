@@ -4,7 +4,7 @@ import { IpcService } from '../../services/IpcService'
 import { IPC, type IpcResult, type VfsOverwriteInfo } from '@shared/types'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
-import { PathBox, SettingCard, StatusReadout, ValidationRow, uiButton } from './uiKit'
+import { PathBox, SettingCard, StatusReadout, SurfaceTabRail, ValidationRow, uiButton } from './uiKit'
 
 type SettingsTab = 'general' | 'paths' | 'nexus' | 'updates' | 'about'
 type FolderState = 'valid' | 'invalid' | 'empty'
@@ -44,7 +44,7 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-[12.5px]">
       {/* Free */}
-      <div className={`rounded-sm border-[0.5px] border-[#171717] p-3 space-y-2.5 ${isPremium === false ? 'bg-[rgba(96,165,250,0.10)]' : 'bg-[#080808]'}`}>
+      <div className={`rounded-sm border-0 p-3 space-y-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)] ${isPremium === false ? 'bg-[rgba(96,165,250,0.10)]' : 'bg-[#101010]'}`}>
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#555]'}`}>Free</div>
         {NEXUS_FREE_FEATURES.map((f) => (
           <div key={f.text} className="flex items-start gap-2">
@@ -55,7 +55,7 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
       </div>
 
       {/* Premium */}
-      <div className={`rounded-sm border-[0.5px] border-[#171717] p-3 space-y-2.5 ${isPremium === true ? 'bg-[rgba(252,238,9,0.10)]' : 'bg-[#080808]'}`}>
+      <div className={`rounded-sm border-0 p-3 space-y-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)] ${isPremium === true ? 'bg-[rgba(252,238,9,0.10)]' : 'bg-[#101010]'}`}>
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#555]'}`}>Premium</div>
         {NEXUS_PREMIUM_FEATURES.map((f) => (
           <div key={f.text} className="flex items-start gap-2">
@@ -349,6 +349,8 @@ export const SettingsPage: React.FC = () => {
   }
 
   const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn } = uiButton
+  const aboutActionBtn =
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[#171717] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#c9c9c9] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07),0_8px_18px_rgba(0,0,0,0.20)] transition-colors hover:bg-[rgba(252,238,9,0.16)] hover:text-[#fcee09] focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.42),0_8px_18px_rgba(0,0,0,0.20)] [&_.material-symbols-outlined]:text-current [&_.material-symbols-outlined]:leading-none'
 
   const tabMeta: Array<{ id: SettingsTab; label: string; icon: string }> = [
     { id: 'general', label: 'General', icon: 'tune' },
@@ -410,31 +412,15 @@ export const SettingsPage: React.FC = () => {
           </div>
         </header>
 
-        <div className="relative z-10 flex flex-wrap items-end gap-1 border-x-[0.5px] border-t-[0.5px] border-[#171717] bg-[#080808] px-2 pt-2">
-          {tabMeta.map((tab) => {
-            const active = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex min-w-[124px] items-center justify-center gap-2 rounded-t-sm rounded-b-none px-4 py-3 transition-colors ${
-                  active
-                    ? '-mb-px bg-[#050505] text-[#fcee09] shadow-[inset_0_2px_0_rgba(252,238,9,0.28),inset_1px_0_0_rgba(255,255,255,0.04),inset_-1px_0_0_rgba(255,255,255,0.04)]'
-                    : 'mb-[3px] text-[#8f8f8f] hover:bg-[#101010] hover:text-[#d9d9d9]'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[17px]" aria-hidden="true">
-                  {tab.icon}
-                </span>
-                <span className="brand-font text-[0.84rem] font-bold uppercase tracking-[0.12em]">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
+        <SurfaceTabRail
+          items={tabMeta}
+          activeId={activeTab}
+          onChange={setActiveTab}
+          ariaLabel="Settings sections"
+        />
 
-        <div className="relative z-0 border-[0.5px] border-[#171717] bg-[#050505] p-3 sm:p-4">
-          <div key={activeTab} className="grid gap-3">
+        <div className="relative z-0 bg-[#050505] shadow-[inset_0_-1px_0_rgba(255,255,255,0.045)]">
+          <div key={activeTab}>
             {activeTab === 'general' && (
               <>
                 <SettingCard
@@ -449,7 +435,7 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => {
                     void updateSettings({ autoInstallDownloads: !(settings?.autoInstallDownloads ?? true) })
                   }}
-                  className="flex w-full items-center justify-between gap-4 rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 text-left transition-colors hover:bg-[#101010]"
+                  className="flex w-full items-center justify-between gap-4 rounded-sm border-0 bg-[#101010] px-4 py-3 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.055)] transition-colors hover:bg-[#151515]"
                 >
                   <span className="min-w-0">
                     <span className="block text-[14px] font-semibold text-[#e5e2e1]">Auto-install completed downloads</span>
@@ -794,7 +780,7 @@ export const SettingsPage: React.FC = () => {
                 style={{ animationDelay: '0ms' }}
               >
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1.12fr)_minmax(280px,0.88fr)]">
-                  <section className="rounded-sm border-[0.5px] border-[#171717] bg-[#050505] px-4 py-4">
+                  <section className="rounded-sm border-0 bg-[#101010] px-4 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
                     <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Project</div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <StatusReadout tone="neutral" label={`v${appVersion}`} />
@@ -809,24 +795,24 @@ export const SettingsPage: React.FC = () => {
                       Built for a clean Cyberpunk 2077 modding workflow: install, inspect, reorder, and launch without turning the game folder into the source of truth.
                     </p>
                     <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
-                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_GITHUB_URL)} className={`${secondaryBtn} w-full sm:w-auto`}>
+                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_GITHUB_URL)} className={`${aboutActionBtn} w-full sm:w-auto`}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>code</span>
                         GitHub
                       </button>
-                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_RELEASES_URL)} className={`${secondaryBtn} w-full sm:w-auto`}>
+                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_RELEASES_URL)} className={`${aboutActionBtn} w-full sm:w-auto`}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>new_releases</span>
                         Releases
                       </button>
                     </div>
                   </section>
 
-                  <section className="rounded-sm border-[0.5px] border-[#171717] bg-[#050505] px-4 py-4">
+                  <section className="rounded-sm border-0 bg-[#101010] px-4 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
                     <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Support</div>
                     <p className="mt-3 text-[13.5px] leading-6 text-[#b8b8b8]">
                       For bug reports, include your Hyperion version and diagnostics summary so launch, VFS, and path issues are easier to trace.
                     </p>
                     <div className="mt-4 grid gap-2">
-                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_ISSUES_URL)} className={secondaryBtn}>
+                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_ISSUES_URL)} className={aboutActionBtn}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bug_report</span>
                         Report issue
                       </button>
@@ -846,8 +832,8 @@ export const SettingsPage: React.FC = () => {
                 className="fade-up"
                 style={{ animationDelay: '60ms' }}
               >
-                <div className="overflow-hidden rounded-sm border-[0.5px] border-[#171717] bg-[#050505]">
-                  <div className="grid gap-3 border-b-[0.5px] border-[#171717] px-4 py-4 lg:grid-cols-[150px_minmax(0,1fr)_220px] lg:items-center">
+                <div className="overflow-hidden rounded-sm border-0 bg-[#101010] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
+                  <div className="grid gap-3 border-b-[0.5px] border-[#1a1a1a] px-4 py-4 lg:grid-cols-[116px_minmax(0,1fr)_174px] lg:items-center">
                     <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#fcee09]">Core VFS</div>
                     <div>
                       <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">usvfs / Mod Organizer 2</div>
@@ -856,18 +842,18 @@ export const SettingsPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                      <button type="button" onClick={() => void handleOpenExternal(USVFS_URL)} className={secondaryBtn}>
+                      <button type="button" onClick={() => void handleOpenExternal(USVFS_URL)} className={aboutActionBtn}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hub</span>
                         usvfs
                       </button>
-                      <button type="button" onClick={() => void handleOpenExternal(MOD_ORGANIZER_URL)} className={secondaryBtn}>
+                      <button type="button" onClick={() => void handleOpenExternal(MOD_ORGANIZER_URL)} className={aboutActionBtn}>
                         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
                         MO2
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid gap-3 border-b-[0.5px] border-[#171717] px-4 py-4 lg:grid-cols-[150px_minmax(0,1fr)_220px] lg:items-center">
+                  <div className="grid gap-3 border-b-[0.5px] border-[#1a1a1a] px-4 py-4 lg:grid-cols-[116px_minmax(0,1fr)_174px] lg:items-center">
                     <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Service API</div>
                     <div>
                       <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">Nexus Mods API</div>
@@ -878,7 +864,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="hidden lg:block" />
                   </div>
 
-                  <div className="grid gap-3 px-4 py-4 lg:grid-cols-[150px_minmax(0,1fr)_220px] lg:items-center">
+                  <div className="grid gap-3 px-4 py-4 lg:grid-cols-[116px_minmax(0,1fr)_174px] lg:items-center">
                     <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Reference</div>
                     <div>
                       <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">REDmodding ecosystem</div>
@@ -886,7 +872,7 @@ export const SettingsPage: React.FC = () => {
                         Archive behavior, load-order details, and public Cyberpunk modding documentation.
                       </p>
                     </div>
-                    <button type="button" onClick={() => void handleOpenExternal(REDMODDING_URL)} className={secondaryBtn}>
+                    <button type="button" onClick={() => void handleOpenExternal(REDMODDING_URL)} className={aboutActionBtn}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>menu_book</span>
                       REDmodding
                     </button>

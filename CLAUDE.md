@@ -133,6 +133,9 @@
 - Preserve the dark industrial Hyperion look: near-black surfaces, precise yellow accent, restrained shadows.
 - Do not introduce purple-heavy palettes, glassmorphism, neon Tron motifs, scanlines, or random gradients.
 - Routine buttons, badges, status readouts, progress icons, toggles, and row actions should use borderless filled/tinted surfaces instead of colored outline boxes. Keep borders for containers, tables, separators, and structural grouping.
+- Settings sections should use the shared `SettingCard` as clean two-column decision rows: explanation on the left, controls on the right, one shared alignment grid, subtle row separators, and no stacked colored outline boxes.
+- Settings and App Logs tabs should both use the shared underline `SurfaceTabRail` pattern: icon + uppercase label, muted inactive tabs, and a thin yellow active underline instead of standalone boxed buttons.
+- About-page outbound links should not look like plain text. Use filled secondary button surfaces with subtle inset boundaries and visible hover/focus states for GitHub, Releases, issue reporting, usvfs, MO2, and REDmodding.
 - Managed Mods status filtering is a compact readout (`All N | On N | Off N`) under the title, not a dropdown. Keep the active item as yellow text with a thin underline, and show a small `Viewing enabled` / `Viewing disabled` clearable notice in the toolbar whenever the filter is not `All`.
 - Conflict badges on mod rows are `+N` green, `-N` red, and yellow `!` for redundant. Their tooltip is a compact JSX tooltip with color-separated rows; keep the full combined explanation in `aria-label` for accessibility.
 - Sidebar navigation is intentionally compact when collapsed and expands on hover.
