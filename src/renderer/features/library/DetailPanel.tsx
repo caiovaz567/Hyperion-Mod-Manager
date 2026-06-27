@@ -90,6 +90,47 @@ function dedupeConflicts(conflicts: ConflictInfo[]): ConflictInfo[] {
 const treeMenuButtonClass = 'flex w-full items-center gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e5e2e1] transition-colors hover:bg-[#111] hover:text-[#fcee09]'
 const treeMenuDangerButtonClass = 'flex w-full items-center gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ffb4ab] transition-colors hover:bg-[#93000a]/10'
 
+function sanitizeTreeEntryName(rawName: string): string {
+  return rawName
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[ ]+$/g, '')
+}
+
+function getParentTreeNodeId(nodeId: string): string | null {
+  const parts = normalizeRelativePath(nodeId).split('/').filter(Boolean)
+  if (parts.length <= 1) return null
+  return parts.slice(0, -1).join('/')
+}
+
+function replaceTreeNodeName(nodeId: string, nextName: string): string {
+  const parts = normalizeRelativePath(nodeId).split('/').filter(Boolean)
+  if (parts.length === 0) return nextName
+  return [...parts.slice(0, -1), nextName].join('/')
+}
+
+function remapExpandedTreeIds(currentIds: Set<string>, previousNodeId: string, nextNodeId: string): Set<string> {
+  const nextIds = new Set<string>()
+  const previousPrefix = `${previousNodeId}/`
+
+  currentIds.forEach((id) => {
+    if (id === previousNodeId) {
+      nextIds.add(nextNodeId)
+      return
+    }
+
+    if (id.startsWith(previousPrefix)) {
+      nextIds.add(`${nextNodeId}${id.slice(previousNodeId.length)}`)
+      return
+    }
+
+    nextIds.add(id)
+  })
+
+  return nextIds
+}
+
 export const DetailPanel: React.FC<DetailPanelProps> = ({
   modId,
   onClose,
@@ -267,11 +308,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     [fileTreeEntries]
   )
 
-  const defaultExpandedTreeIds = useMemo(
-    () => collectDefaultExpandedIds(fileTree),
-    [fileTree]
-  )
-
   const filteredFileTree = useMemo(
     () => filterFileTree(fileTree, searchQuery),
     [fileTree, searchQuery]
@@ -329,8 +365,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const modsById = useMemo(() => new Map(mods.map((m) => [m.uuid, m])), [mods])
 
   useEffect(() => {
-    setExpandedTreeIds(new Set(defaultExpandedTreeIds))
-  }, [defaultExpandedTreeIds, mod?.uuid])
+    setExpandedTreeIds(new Set(collectDefaultExpandedIds(fileTree)))
+  // Tree mutations rescan the same mod; preserve expansion unless the mod changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mod?.uuid])
 
   // Auto-collapse sections that have no conflicts when switching mods
   useEffect(() => {
@@ -403,15 +441,17 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   }
   const contextMenuNode = findFileTreeNode(fileTree, treeContextMenu?.nodeId ?? null)
   const contextMenuExistingRelativePath = getExistingNodeRelativePath(contextMenuNode)
+  const contextMenuCreateParentRelativePath = getCreateParentRelativePath(contextMenuNode)
   const contextMenuRevealPath = contextMenuNode
     ? (
       fileTreeUsesDeployedPaths && settings?.gamePath?.trim()
         ? joinWindowsPath(settings.gamePath, contextMenuNode.path)
-        : contextMenuNode.sourcePath && modFolderPath
-          ? joinWindowsPath(modFolderPath, contextMenuNode.sourcePath)
-          : modFolderPath
+        : contextMenuExistingRelativePath && modFolderPath
+          ? joinWindowsPath(modFolderPath, contextMenuExistingRelativePath)
+          : null
     )
     : modFolderPath
+  const contextMenuCanCreateFolder = !contextMenuNode || contextMenuCreateParentRelativePath !== null
   const contextMenuCanRename = Boolean(contextMenuNode && contextMenuExistingRelativePath)
   const contextMenuCanDelete = Boolean(contextMenuNode && contextMenuExistingRelativePath)
 
@@ -495,11 +535,18 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     let successMessage = 'Tree updated'
 
     if (treeActionDialog.mode === 'create-folder') {
+      const parentRelativePath = getCreateParentRelativePath(targetNode)
+      if (parentRelativePath === null) {
+        setTreeActionSubmitting(false)
+        addToast('This inferred folder has no exact source location in the mod package', 'warning')
+        return
+      }
+
       const request: ModTreeCreateEntryRequest = {
         modId: mod.uuid,
         kind: 'folder',
         name: treeActionValue,
-        parentRelativePath: getCreateParentRelativePath(targetNode),
+        parentRelativePath,
       }
       result = await IpcService.invoke<IpcResult<ModMetadata>>(IPC.MOD_TREE_CREATE_ENTRY, request)
       successMessage = 'Folder created'
@@ -541,10 +588,34 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       return
     }
 
+    let nextSelectedNodeId: string | null = null
+
+    if (treeActionDialog.mode === 'create-folder') {
+      const nodeToKeepOpen = targetNode?.kind === 'folder'
+        ? targetNode.id
+        : targetNode
+          ? getParentTreeNodeId(targetNode.id)
+          : null
+
+      if (nodeToKeepOpen) {
+        setExpandedTreeIds((current) => new Set(current).add(nodeToKeepOpen))
+      }
+    } else if (treeActionDialog.mode === 'rename' && targetNode?.kind === 'folder') {
+      const nextName = sanitizeTreeEntryName(treeActionValue)
+      if (nextName) {
+        const nextNodeId = replaceTreeNodeName(targetNode.id, nextName)
+        setExpandedTreeIds((current) => remapExpandedTreeIds(current, targetNode.id, nextNodeId))
+        nextSelectedNodeId = nextNodeId
+      }
+    } else if (treeActionDialog.mode === 'rename' && targetNode) {
+      const nextName = sanitizeTreeEntryName(treeActionValue)
+      nextSelectedNodeId = nextName ? replaceTreeNodeName(targetNode.id, nextName) : null
+    }
+
     await scanMods()
     setTreeActionDialog(null)
     setTreeActionValue('')
-    setSelectedNodeId(null)
+    setSelectedNodeId(nextSelectedNodeId)
     addToast(successMessage, 'success', 1800)
   }
 
@@ -753,7 +824,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
               <button
                 type="button"
                 onClick={() => openTreeActionDialog('create-folder', contextMenuNode.id)}
-                className={treeMenuButtonClass}
+                disabled={!contextMenuCanCreateFolder}
+                className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
                 <span>Create Folder</span>
@@ -837,7 +909,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
               setTreeActionDialog(null)
               setTreeActionValue('')
             }}
-            selectOnOpen={treeActionDialog.mode === 'rename'}
             submitting={treeActionSubmitting}
           />,
           document.body
@@ -854,7 +925,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           onChange={setNameValue}
           onSubmit={() => void handleSaveName()}
           onCancel={handleCancelNameEdit}
-          selectOnOpen
           submitting={nameSaving}
         />,
         document.body

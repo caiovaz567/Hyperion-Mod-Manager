@@ -422,6 +422,10 @@ function archiveResourcesEqual(left: ArchiveResourceEntry[], right: ArchiveResou
   return normalizedLeft.every((value, index) => value === normalizedRight[index])
 }
 
+function hasUnresolvedArchiveResources(resources: ArchiveResourceEntry[]): boolean {
+  return resources.some((resource) => Boolean(resource.hash) && !resource.resourcePath)
+}
+
 async function refreshArchiveResourceMetadata(
   modDir: string,
   meta: ModMetadata,
@@ -460,7 +464,18 @@ async function refreshArchiveResourceMetadata(
     meta.archiveResourceIndexVersion === ARCHIVE_RESOURCE_INDEX_VERSION &&
     storedResources.length > 0
   ) {
-    return false
+    if (!hasUnresolvedArchiveResources(storedResources)) {
+      return false
+    }
+
+    const hydratedResources = await hydrateArchiveResourcePaths(storedResources)
+    if (archiveResourcesEqual(storedResources, hydratedResources)) {
+      return false
+    }
+
+    meta.archiveResources = hydratedResources
+    writeArchiveSidecar(modDir, hydratedResources, ARCHIVE_RESOURCE_INDEX_VERSION)
+    return true
   }
 
   const parsedResources = await resolveArchiveResources(modDir)
@@ -885,7 +900,7 @@ async function renameModTreeEntry(
 
   fs.renameSync(sourceInfo.absolute, targetInfo.absolute)
   if (found.mod.kind === 'mod') {
-    const sourcePrefix = `${sourceInfo.normalized}${path.sep}`
+    const sourcePrefix = `${sourceInfo.normalized}/`
     const nextEmptyDirs = normalizeEmptyDirs(
       (found.mod.emptyDirs ?? []).map((entry) => {
         if (entry === sourceInfo.normalized) return targetInfo.normalized
@@ -918,7 +933,7 @@ async function deleteModTreeEntry(
 
   fs.rmSync(targetInfo.absolute, { recursive: true, force: true })
   if (found.mod.kind === 'mod') {
-    const removedPrefix = `${targetInfo.normalized}${path.sep}`
+    const removedPrefix = `${targetInfo.normalized}/`
     const parentRelativePath = normalizeRelativePath(path.dirname(targetInfo.normalized))
     const nextEmptyDirs = normalizeEmptyDirs([
       ...(found.mod.emptyDirs ?? []).filter((entry) => entry !== targetInfo.normalized && !entry.startsWith(removedPrefix)),

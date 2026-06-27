@@ -202,8 +202,8 @@ export const FileTreeBranch: React.FC<{
 
         <button
           type="button"
-          onClick={() => onSelect(node.id)}
-          onDoubleClick={() => {
+          onClick={() => {
+            onSelect(node.id)
             if (isFolder) onToggle(node.id)
           }}
           className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left"

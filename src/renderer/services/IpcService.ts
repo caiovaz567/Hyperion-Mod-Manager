@@ -8,6 +8,7 @@ declare global {
       send: (channel: string, ...args: unknown[]) => void
       on: (channel: IpcChannel, listener: (...args: unknown[]) => void) => () => void
       once: (channel: IpcChannel, listener: (...args: unknown[]) => void) => void
+      getPathForFile: (file: File) => string
     }
   }
 }
@@ -31,6 +32,10 @@ class IpcServiceClass {
 
   once(channel: IpcChannel, listener: (...args: unknown[]) => void): void {
     window.api.once(channel, listener)
+  }
+
+  getPathForFile(file: File): string {
+    return window.api.getPathForFile(file)
   }
 }
 

@@ -2,9 +2,11 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { DragEvent, MutableRefObject } from 'react'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
+import { IpcService } from '../../services/IpcService'
 import type { LibrarySortKey } from './LibraryTableHeader'
 
 const INTERNAL_MOD_DRAG_TYPE = 'application/x-hyperion-mod-ids'
+const SUPPORTED_ARCHIVE_EXTENSIONS = new Set(['.zip', '.rar', '.7z'])
 
 type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -23,6 +25,19 @@ interface UseLibraryDragDropOptions {
   moveModsToSeparator: (modIds: string[], separatorId: string) => Promise<void>
   moveModsToTopLevel: (modIds: string[]) => Promise<void>
   installDroppedFile: (filePath: string) => Promise<void>
+}
+
+function hasFileTransfer(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer.types).includes('Files')
+}
+
+function getFileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf('.')
+  return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : ''
+}
+
+function isSupportedArchive(file: File): boolean {
+  return SUPPORTED_ARCHIVE_EXTENSIONS.has(getFileExtension(file.name))
 }
 
 export function useLibraryDragDrop({
@@ -178,6 +193,7 @@ export function useLibraryDragDrop({
 
   const handleModRowDrop = useCallback(async (event: DragEvent, targetMod: ModMetadata) => {
     if (targetMod.kind !== 'mod') return
+    if (hasFileTransfer(event)) return
 
     event.preventDefault()
     event.stopPropagation()
@@ -236,6 +252,8 @@ export function useLibraryDragDrop({
   }, [dropSeparatorId, rowDropTarget])
 
   const handleSeparatorDrop = useCallback(async (event: DragEvent, separator: ModMetadata) => {
+    if (hasFileTransfer(event)) return
+
     event.preventDefault()
     event.stopPropagation()
 
@@ -277,6 +295,8 @@ export function useLibraryDragDrop({
   }, [])
 
   const handleTopLevelDrop = useCallback(async (event: DragEvent) => {
+    if (hasFileTransfer(event)) return
+
     event.preventDefault()
     event.stopPropagation()
 
@@ -286,7 +306,7 @@ export function useLibraryDragDrop({
   }, [clearInternalDragState, getDraggedIdsFromEvent, moveModsToTopLevel])
 
   const handleDragOver = useCallback((event: DragEvent) => {
-    if (!Array.from(event.dataTransfer.types).includes('Files')) return
+    if (!hasFileTransfer(event)) return
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'copy'
@@ -294,7 +314,7 @@ export function useLibraryDragDrop({
   }, [isDragging])
 
   const handleDragLeave = useCallback((event: DragEvent) => {
-    if (!Array.from(event.dataTransfer.types).includes('Files')) return
+    if (!hasFileTransfer(event)) return
     event.preventDefault()
     event.stopPropagation()
     if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -303,7 +323,7 @@ export function useLibraryDragDrop({
   }, [])
 
   const handleDrop = useCallback(async (event: DragEvent) => {
-    if (!Array.from(event.dataTransfer.types).includes('Files')) {
+    if (!hasFileTransfer(event)) {
       setDropSeparatorId(null)
       setDraggedModIds([])
       return
@@ -314,13 +334,18 @@ export function useLibraryDragDrop({
     setIsDragging(false)
 
     const files = Array.from(event.dataTransfer.files)
-    const zipFile = files.find((file) => file.name.toLowerCase().endsWith('.zip'))
-    if (!zipFile) {
-      addToast('Drop a .zip mod archive to install', 'warning')
+    const archiveFile = files.find(isSupportedArchive)
+    if (!archiveFile) {
+      addToast('Drop a .zip, .rar, or .7z mod archive to install', 'warning')
       return
     }
 
-    const filePath = (zipFile as unknown as { path: string }).path
+    const filePath = IpcService.getPathForFile(archiveFile)
+    if (!filePath) {
+      addToast('Could not read the dropped file path. Use Install Mod to select it manually.', 'error')
+      return
+    }
+
     await installDroppedFile(filePath)
   }, [addToast, installDroppedFile])
 
@@ -348,6 +373,8 @@ export function useLibraryDragDrop({
   }, [])
 
   const handleListRowsDrop = useCallback(async (event: DragEvent) => {
+    if (hasFileTransfer(event)) return
+
     const target = event.target as HTMLElement | null
     if (target?.closest('[data-mod-row="true"]')) return
     if (sortKey !== null) return

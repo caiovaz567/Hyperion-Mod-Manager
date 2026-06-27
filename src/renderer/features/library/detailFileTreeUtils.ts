@@ -31,6 +31,22 @@ function splitPathSegments(relPath: string): string[] {
   return normalized ? normalized.split('/').filter(Boolean) : []
 }
 
+function pathsEqual(left: string, right: string): boolean {
+  return left.toLowerCase() === right.toLowerCase()
+}
+
+function findSourceSuffixStart(deployParts: string[], sourceParts: string[]): number {
+  if (sourceParts.length === 0 || sourceParts.length > deployParts.length) return -1
+
+  const lastPossibleStart = deployParts.length - sourceParts.length
+  for (let index = lastPossibleStart; index >= 0; index -= 1) {
+    const matches = sourceParts.every((segment, offset) => pathsEqual(deployParts[index + offset], segment))
+    if (matches) return index
+  }
+
+  return -1
+}
+
 function getModFolderKey(mod: ModMetadata): string {
   const folderName = mod.folderName?.trim()
   if (folderName) return folderName
@@ -226,14 +242,14 @@ export function buildFileTree(entries: FileTreeEntry[]): FileTreeNode[] {
       continue
     }
 
-    const deployFolderParts = splitPathSegments(getParentRelativePath(entry.deployPath))
-    const sourceFolderParts = splitPathSegments(getParentRelativePath(entry.sourcePath))
-    if (deployFolderParts.length === 0 || sourceFolderParts.length === 0) continue
+    const deployParts = splitPathSegments(entry.deployPath)
+    const sourceParts = splitPathSegments(entry.sourcePath)
+    const sourceStartIndex = findSourceSuffixStart(deployParts, sourceParts)
+    if (sourceStartIndex < 0 || sourceParts.length <= 1) continue
 
-    const prefixOffset = Math.max(0, deployFolderParts.length - sourceFolderParts.length)
-    for (let index = 0; index < sourceFolderParts.length; index += 1) {
-      const deployFolderPath = deployFolderParts.slice(0, prefixOffset + index + 1).join('/')
-      const sourceFolderPath = sourceFolderParts.slice(0, index + 1).join('/')
+    for (let index = 1; index < sourceParts.length; index += 1) {
+      const deployFolderPath = deployParts.slice(0, sourceStartIndex + index).join('/')
+      const sourceFolderPath = sourceParts.slice(0, index).join('/')
       if (!deployFolderPath || !sourceFolderPath || folderSourcePaths.has(deployFolderPath)) continue
       folderSourcePaths.set(deployFolderPath, sourceFolderPath)
     }
@@ -380,11 +396,11 @@ export function collectVisibleNodeIds(nodes: FileTreeNode[]): Set<string> {
 export function getExistingNodeRelativePath(node: FileTreeNode | null): string | null {
   if (!node) return null
   if (node.kind === 'folder') return node.sourcePath ?? null
-  return node.sourcePath ?? node.path
+  return node.sourcePath ?? null
 }
 
-export function getCreateParentRelativePath(node: FileTreeNode | null): string {
+export function getCreateParentRelativePath(node: FileTreeNode | null): string | null {
   if (!node) return ''
-  if (node.kind === 'folder') return node.sourcePath ?? node.path
-  return getParentRelativePath(node.sourcePath ?? node.path)
+  if (node.kind === 'folder') return node.sourcePath ?? null
+  return node.sourcePath ? getParentRelativePath(node.sourcePath) : null
 }

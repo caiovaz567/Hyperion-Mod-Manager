@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { IpcChannel } from '../shared/types'
 
 const api = {
@@ -18,6 +18,9 @@ const api = {
   },
   once: (channel: IpcChannel, listener: (...args: unknown[]) => void): void => {
     ipcRenderer.once(channel, (_event, ...args) => listener(...args))
+  },
+  getPathForFile: (file: File): string => {
+    return webUtils.getPathForFile(file)
   }
 }
 
