@@ -501,11 +501,6 @@ export const ModList: React.FC = () => {
     closeContextMenu()
   }, [closeContextMenu, contextMenu, handleCreateSeparator])
 
-  const handleContextCreateSeparatorAtEnd = useCallback(() => {
-    handleCreateSeparator(displayedMods.length)
-    closeContextMenu()
-  }, [closeContextMenu, displayedMods.length, handleCreateSeparator])
-
   const handleContextCreateSeparatorBeforeRow = useCallback(() => {
     if (!contextMenu || contextMenu.kind !== 'row') return
 
@@ -714,7 +709,6 @@ export const ModList: React.FC = () => {
           contextTargetCount={getContextTargetModIds().length}
           onRefreshLibrary={handleRefreshLibrary}
           onCreateSeparatorHere={handleContextCreateSeparator}
-          onCreateSeparatorAtEnd={handleContextCreateSeparatorAtEnd}
           onMoveSelectedToTopLevel={handleMoveSelectedToTopLevel}
           onExpandAllSeparators={handleExpandAllSeparators}
           onCollapseAllSeparators={handleCollapseAllSeparators}

@@ -56,7 +56,6 @@ interface LibraryContextMenuProps {
   contextTargetCount: number
   onRefreshLibrary: MenuAction
   onCreateSeparatorHere: MenuAction
-  onCreateSeparatorAtEnd: MenuAction
   onMoveSelectedToTopLevel: MenuAction
   onExpandAllSeparators: MenuAction
   onCollapseAllSeparators: MenuAction
@@ -83,7 +82,6 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   contextTargetCount,
   onRefreshLibrary,
   onCreateSeparatorHere,
-  onCreateSeparatorAtEnd,
   onMoveSelectedToTopLevel,
   onExpandAllSeparators,
   onCollapseAllSeparators,
@@ -137,9 +135,6 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
         <>
           <MenuButton icon="label" onClick={onCreateSeparatorHere}>
             Create Separator Here
-          </MenuButton>
-          <MenuButton icon="south" onClick={onCreateSeparatorAtEnd} tone="subtle">
-            Create Separator at End
           </MenuButton>
           {((selectedModCount > 0 && canMoveSelectedToTopLevel) || hasSeparators) && <MenuDivider />}
           {selectedModCount > 0 && canMoveSelectedToTopLevel && (

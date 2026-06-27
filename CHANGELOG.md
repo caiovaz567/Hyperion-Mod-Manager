@@ -10,6 +10,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.28.0] - 2026-06-27
+
+### Changed
+- `Move to Separator` destinations now use compact centered clickable rows with subtle arrows and stronger hover/focus states.
+- Removed the redundant `Create Separator at End` item from the empty-library context menu; `Create Separator Here` is now the single separator creation action there.
+
+---
+
 ## [0.27.3] - 2026-06-27
 
 ### Changed

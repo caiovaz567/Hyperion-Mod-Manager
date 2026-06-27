@@ -93,9 +93,15 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
                 <button
                   key={separator.uuid}
                   onClick={() => onSelect(separator.uuid)}
-                  className="block w-full truncate border-b-[0.5px] border-[#141414] px-4 py-3 text-left text-[13px] font-medium text-[#d8d8d8] transition-colors last:border-b-0 hover:bg-[#101010] hover:text-[#fcee09]"
+                  className="group grid h-10 w-full grid-cols-[28px_minmax(0,1fr)_28px] items-center border-b-[0.5px] border-[#141414] px-3 text-center transition-colors last:border-b-0 hover:bg-[rgba(252,238,9,0.08)] focus:outline-none focus-visible:bg-[rgba(252,238,9,0.10)] focus-visible:shadow-[inset_2px_0_0_rgba(252,238,9,0.85)]"
                 >
-                  {separator.name}
+                  <span aria-hidden="true" />
+                  <span className="truncate text-center text-[13px] font-semibold text-[#e5e2e1] transition-colors group-hover:text-[#fcee09]">
+                    {separator.name}
+                  </span>
+                  <span className="material-symbols-outlined justify-self-end text-[16px] text-[#555] transition-colors group-hover:text-[#fcee09]">
+                    arrow_forward
+                  </span>
                 </button>
               ))
             ) : (
