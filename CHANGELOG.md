@@ -10,6 +10,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.27.2] - 2026-06-27
+
+### Changed
+- Managed Mods status filtering now uses a compact `All / On / Off` readout with a clearable `Viewing enabled/disabled` notice instead of a dropdown trigger.
+- The Hyperion self-update CTA in the header now uses the same borderless filled/tinted button language as the Library toolbar.
+
+---
+
 ## [0.27.1] - 2026-06-27
 
 ---

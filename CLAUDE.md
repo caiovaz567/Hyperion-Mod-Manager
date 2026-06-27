@@ -122,6 +122,7 @@
 - Renderer update state lives in createUpdatesSlice.ts and header status lives in Header.tsx.
 - The startup self-update check runs in the main process during the splash (`checkForUpdatesOnStartup` in updater.ts, fired from index.ts when `app.isPackaged && settings.autoUpdate`), so the header button is ready as the window opens. The result is cached and re-emitted on `APP_READY` (`flushCachedUpdateInfo`) to avoid a race with renderer listeners. Do not reintroduce a delayed renderer-side startup check; the Settings "Check for updates" button still calls `checkForUpdates` manually.
 - Current updater UX is single-step: one header button starts download, shows inline progress, then installs and relaunches without a second click.
+- The header self-update CTA should use the same borderless filled/tinted Hyperion button language as Library toolbar controls. Avoid colored outline boxes; progress should fill inside the button with a restrained yellow tint.
 - Silent install behavior depends on src/main/updater.ts calling quitAndInstall with silent relaunch flags; if the NSIS wizard appears during auto-update, inspect that call first.
 - Windows installer should stay current-user only. Do not add an all-users/current-user selection screen; keep NSIS installing for the current user.
 - If first-install directory selection is needed, use assisted NSIS with a custom installer include that forces current-user mode instead of reverting to oneClick.
@@ -132,6 +133,7 @@
 - Preserve the dark industrial Hyperion look: near-black surfaces, precise yellow accent, restrained shadows.
 - Do not introduce purple-heavy palettes, glassmorphism, neon Tron motifs, scanlines, or random gradients.
 - Routine buttons, badges, status readouts, progress icons, toggles, and row actions should use borderless filled/tinted surfaces instead of colored outline boxes. Keep borders for containers, tables, separators, and structural grouping.
+- Managed Mods status filtering is a compact readout (`All N | On N | Off N`) under the title, not a dropdown. Keep the active item as yellow text with a thin underline, and show a small `Viewing enabled` / `Viewing disabled` clearable notice in the toolbar whenever the filter is not `All`.
 - Conflict badges on mod rows are `+N` green, `-N` red, and yellow `!` for redundant. Their tooltip is a compact JSX tooltip with color-separated rows; keep the full combined explanation in `aria-label` for accessibility.
 - Sidebar navigation is intentionally compact when collapsed and expands on hover.
 - Current sidebar nav items are Mod Library, Downloads, and Settings, plus the Launch Game CTA.

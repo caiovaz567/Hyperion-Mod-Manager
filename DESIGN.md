@@ -163,8 +163,8 @@ Setup wizard:
 - Mod search belongs to the library surface itself, not the global header, so filtering stays contextual to `Managed Mods`
 - Library search matches a mod's name, author, and category label, so users can filter by category text as well
 - The mod search field should share the same dark squared chrome, inset boundary language, and vertical rhythm as adjacent library action buttons instead of reading like a different widget family
-- Library status filtering should live in the screen itself, below the selection guidance, not in the global header
-- Use local segmented controls for `All`, `Enabled`, and `Disabled`; `All` may use the cyber blue accent while activation-oriented controls should reuse the same squared button language as Browse and other path actions
+- Library status filtering should live in the screen itself as a compact readout below the title, not as a dropdown or a global-header control
+- Use the local `All N | On N | Off N` readout for status filtering; keep all three states in the yellow/neutral Hyperion palette rather than introducing a separate blue accent for `All`
 - Enable/disable-all control should read as a compact rectangular command block, not a toggle switch and not a rounded pill
 - Table sorting should be available from `Mod Name`, `Category`, and `Installed`
 - Sort icons should stay visually secondary and sit tight to the label without affecting the left alignment of the header text
@@ -193,9 +193,10 @@ Setup wizard:
 - Creating or renaming a separator should use a compact confirmation/input modal instead of forcing inline rename on the row itself
 - The `Create Separator` modal should open with the text cursor already active in the input so the user can type immediately without clicking first
 - In `Custom Order`, the library should explain how to group mods: drag onto a separator, use the separator context action, or use the bulk `Move to Separator` command
-- `Open Mods Folder` belongs beside the local filter controls, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar. Separator creation remains available through context menus and bulk/custom-order workflows instead of the main toolbar
+- `Open Mods Folder` belongs beside search and `Check Updates`, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar. Separator creation remains available through context menus and bulk/custom-order workflows instead of the main toolbar
 - Library toolbar controls should use the quiet filled/tinted button language: no bright colored outline rectangles around search, filter, Open Mods Folder, Check Updates, or destructive icon buttons. Use subtle inset shadows for input boundaries and let color live in the surface fill/icon/text
-- The `All` / `Enabled` / `Disabled` filter trigger has a fixed width and fixed icon/label/chevron positions, so changing the selected filter never pushes adjacent toolbar buttons or shifts the dropdown arrow. Its focus state must not leave yellow corner artifacts
+- The status filter is a text readout: `All N | On N | Off N`. Items are real buttons for accessibility, but visually read as status tabs with muted text, an active yellow underline, and no boxed outline treatment
+- When `On` or `Off` is active, the toolbar shows a compact tinted notice (`Viewing enabled` / `Viewing disabled`) with a close icon to clear the filter. This prevents users from missing that they are viewing a filtered subset without reintroducing a large dropdown trigger
 - Toolbar button icons must remain visible on hover and track the current text color; Open Mods Folder and Check Updates keep their existing hover fill behavior while the icon color changes cleanly with the label
 - Right-clicking empty library space should expose `Create Separator Here` so the user can insert a separator at that exact point in custom order
 - Right-clicking any library row should include a `Create Separator` action, and empty-library context menus should also offer `Refresh` and other lightweight utilities such as separator expand/collapse
@@ -411,6 +412,7 @@ Tooltips:
 ## 6. Updater UX
 
 - Update availability appears in the header as a single compact CTA
+- The self-update CTA follows the same borderless filled/tinted Hyperion button language as routine toolbar controls; do not use bright colored outline boxes for available/downloading/downloaded states
 - The self-update check is kicked off in the main process during the splash so the CTA is present the moment the window opens, rather than appearing a few seconds after the renderer finishes booting
 - One click on Install update starts download immediately; no separate popover or second confirmation step
 - Download progress is rendered inside the button itself

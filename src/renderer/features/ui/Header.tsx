@@ -76,6 +76,11 @@ export const Header: React.FC = () => {
     : updateDownloaded
       ? 'autorenew'
       : 'download_for_offline'
+  const updateToneClass = updateDownloaded
+    ? 'bg-[rgba(252,238,9,0.14)] text-[#fff6a8]'
+    : updateDownloading
+      ? 'bg-[rgba(252,238,9,0.10)] text-[#fcee09]'
+      : 'bg-[rgba(252,238,9,0.10)] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
 
   return (
     <header
@@ -105,32 +110,29 @@ export const Header: React.FC = () => {
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         {showUpdateTrigger && (
-          <button
-            onClick={() => void handleUpdateAction()}
-            disabled={updateDownloading || updateDownloaded}
-            title={updateActionLabel}
-            className={`relative flex h-10 min-w-[204px] items-center justify-center overflow-hidden rounded-sm border-[0.5px] px-4 text-[10px] uppercase tracking-[0.18em] transition-all ${
-              updateDownloaded
-                ? 'border-[#fcee09]/60 bg-[#151202] text-[#fcee09]'
-                : updateDownloading
-                  ? 'border-[#5f5a08] bg-[#0b0b0b] text-[#fcee09]'
-                  : 'border-[#4a3f08] bg-[#120f03] text-[#fcee09] hover:border-[#fcee09] hover:bg-[#171303] hover:text-white'
-            } ${updateDownloading || updateDownloaded ? 'cursor-default' : ''}`}
-          >
-            {updateDownloading && (
-              <span
-                className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,rgba(252,238,9,0.22),rgba(252,238,9,0.5))] transition-[width] duration-200 ease-out"
-                style={{ width: updateProgressWidth }}
-              />
-            )}
+          <Tooltip content={updateActionLabel} side="bottom">
+            <button
+              onClick={() => void handleUpdateAction()}
+              disabled={updateDownloading || updateDownloaded}
+              className={`group relative flex h-10 min-w-[204px] items-center justify-center overflow-hidden rounded-sm border-0 px-4 text-[10px] uppercase tracking-[0.18em] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-colors ${updateToneClass} ${
+                updateDownloading || updateDownloaded ? 'cursor-default' : ''
+              }`}
+            >
+              {updateDownloading && (
+                <span
+                  className="absolute inset-y-0 left-0 bg-[rgba(252,238,9,0.22)] transition-[width] duration-200 ease-out"
+                  style={{ width: updateProgressWidth }}
+                />
+              )}
 
-            <span className="relative z-10 flex items-center gap-2 brand-font font-bold">
-              <span className={`material-symbols-outlined text-[18px] ${updateDownloading || updateDownloaded ? 'animate-pulse' : ''}`}>
-                {updateIcon}
+              <span className="relative z-10 flex items-center gap-2 brand-font font-bold [&_.material-symbols-outlined]:!text-current">
+                <span className={`material-symbols-outlined text-[18px] ${updateDownloading || updateDownloaded ? 'animate-pulse' : ''}`}>
+                  {updateIcon}
+                </span>
+                <span>{updateActionLabel}</span>
               </span>
-              <span>{updateActionLabel}</span>
-            </span>
-          </button>
+            </button>
+          </Tooltip>
         )}
 
         {updateError && !updateAvailable && (

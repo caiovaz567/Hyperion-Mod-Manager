@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React from 'react'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { HyperionBadge, HyperionButton, HyperionIconButton, HyperionSearchField } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
@@ -19,14 +19,6 @@ interface LibraryToolbarProps {
   updateCount: number
 }
 
-const statusFilterOptions: LibraryStatusFilter[] = ['all', 'enabled', 'disabled']
-
-function getStatusFilterLabel(filter: LibraryStatusFilter): string {
-  if (filter === 'enabled') return 'Enabled'
-  if (filter === 'disabled') return 'Disabled'
-  return 'All'
-}
-
 export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   totalCount,
   enabledCount,
@@ -42,21 +34,22 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   checkingUpdates,
   updateCount,
 }) => {
-  const [statusFilterOpen, setStatusFilterOpen] = useState(false)
-  const statusFilterRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!statusFilterOpen) return
-
-    const close = (event: MouseEvent) => {
-      if (!statusFilterRef.current?.contains(event.target as Node)) {
-        setStatusFilterOpen(false)
-      }
-    }
-
-    window.addEventListener('mousedown', close)
-    return () => window.removeEventListener('mousedown', close)
-  }, [statusFilterOpen])
+  const disabledCount = Math.max(0, totalCount - enabledCount)
+  const statusReadouts: Array<{
+    filter: LibraryStatusFilter
+    label: string
+    count: number
+    tooltip: string
+  }> = [
+    { filter: 'all', label: 'All', count: totalCount, tooltip: 'Show all mods' },
+    { filter: 'enabled', label: 'On', count: enabledCount, tooltip: 'Show enabled mods' },
+    { filter: 'disabled', label: 'Off', count: disabledCount, tooltip: 'Show disabled mods' },
+  ]
+  const activeStatusNotice = statusFilter === 'enabled'
+    ? { icon: 'toggle_on', label: 'Viewing enabled' }
+    : statusFilter === 'disabled'
+      ? { icon: 'visibility_off', label: 'Viewing disabled' }
+      : null
 
   return (
     <div className="shrink-0 px-8 pt-6 pb-3 w-full">
@@ -88,12 +81,48 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
         )}
       </div>
 
-      <p
-        className="mt-1 flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]"
+      <div
+        className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em]"
         style={{ fontFamily: '"DM Sans", sans-serif' }}
+        role="group"
+        aria-label="Mod status filter"
       >
-        TOTAL: {totalCount} &nbsp;|&nbsp; ACTIVE: {enabledCount}
-      </p>
+        {statusReadouts.map((option, index) => {
+          const active = statusFilter === option.filter
+
+          return (
+            <React.Fragment key={option.filter}>
+              <Tooltip content={option.tooltip} side="bottom" variant="help">
+                <button
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onStatusFilterChange(option.filter)}
+                  className={`group relative -ml-1 inline-flex h-7 min-w-[44px] items-center gap-1.5 rounded-sm border-0 px-1.5 text-left transition-colors focus:outline-none focus-visible:bg-[#141414] focus-visible:text-[#fcee09] ${
+                    active
+                      ? 'text-[#fcee09]'
+                      : 'text-[#898989] hover:text-[#efebe8]'
+                  }`}
+                >
+                  <span className="brand-font text-[11px] font-bold tracking-[0.16em]">
+                    {option.label}
+                  </span>
+                  <span className={`text-[12px] tabular-nums transition-colors ${
+                    active ? 'text-[#fff6a8]' : 'text-[#6f6f6f] group-hover:text-[#c7c7c7]'
+                  }`}>
+                    {option.count}
+                  </span>
+                  {active ? (
+                    <span className="absolute bottom-0 left-1.5 right-1.5 h-px bg-[#fcee09] shadow-[0_0_8px_rgba(252,238,9,0.28)]" />
+                  ) : null}
+                </button>
+              </Tooltip>
+              {index < statusReadouts.length - 1 ? (
+                <span className="text-[#363636]" aria-hidden="true">|</span>
+              ) : null}
+            </React.Fragment>
+          )
+        })}
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <HyperionSearchField
@@ -102,44 +131,25 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           onChange={onFilterChange}
         />
 
-        <div className="flex items-center gap-2">
-          <div ref={statusFilterRef} className="relative">
+        {activeStatusNotice ? (
+          <Tooltip content="Clear status filter" side="bottom" variant="help">
             <button
               type="button"
-              onClick={() => setStatusFilterOpen((current) => !current)}
-              className={`hyperion-filter-button group relative h-10 w-[172px] rounded-sm border-0 text-xs brand-font font-bold uppercase tracking-widest shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-all ${
-                statusFilterOpen
-                  ? 'bg-[#121212] text-[#f0f0f0] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-                  : 'bg-[#101010] text-[#cccccc] hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
-              }`}
+              onClick={() => onStatusFilterChange('all')}
+              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-sm border-0 bg-[rgba(252,238,9,0.10)] px-3 text-[11px] brand-font font-bold uppercase tracking-[0.14em] text-[#fcee09] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-colors hover:bg-[rgba(252,238,9,0.16)] hover:text-[#fff6a8] focus:outline-none focus-visible:bg-[rgba(252,238,9,0.16)]"
             >
-              <span className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[16px] transition-colors ${statusFilterOpen ? 'text-[#fcee09]' : 'text-[#8a8a8a] group-hover:text-[#e8e8e8]'}`}>filter_list</span>
-              <span className="absolute left-[48px] right-9 top-1/2 -translate-y-1/2 truncate text-left">{getStatusFilterLabel(statusFilter)}</span>
-              <span className={`material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[14px] transition-colors duration-150 ${statusFilterOpen ? 'text-[#fcee09]' : 'text-[#8a8a8a] group-hover:text-[#e8e8e8]'}`}>expand_more</span>
+              <span className="material-symbols-outlined text-[16px] text-current">
+                {activeStatusNotice.icon}
+              </span>
+              <span>{activeStatusNotice.label}</span>
+              <span className="material-symbols-outlined ml-1 text-[15px] text-[#aaa35a] transition-colors group-hover:text-[#fcee09]">
+                close
+              </span>
             </button>
-            {statusFilterOpen && (
-              <div className="absolute top-full left-0 mt-1 z-[200] min-w-[130px] rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] shadow-[0_8px_24px_rgba(0,0,0,0.6)] py-1">
-                {statusFilterOptions.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      onStatusFilterChange(option)
-                      setStatusFilterOpen(false)
-                    }}
-                    className={`flex w-full items-center px-4 py-2.5 text-xs brand-font font-bold uppercase tracking-widest transition-colors ${
-                      statusFilter === option
-                        ? 'text-[#fcee09] bg-[#111]'
-                        : 'text-[#9d9d9d] hover:text-[#fcee09] hover:bg-[#0d0d0d]'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          </Tooltip>
+        ) : null}
 
+        <div className="flex items-center gap-2">
           <HyperionButton
             onClick={onOpenModsFolder}
             variant="toolbar"
