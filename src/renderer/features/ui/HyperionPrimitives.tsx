@@ -18,7 +18,7 @@ interface HyperionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
 }
 
 const buttonBaseClass =
-  'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-sm border-[0.5px] brand-font font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-45'
+  'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-sm border-0 brand-font font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-45'
 
 const buttonSizeClass: Record<HyperionButtonSize, string> = {
   md: 'h-10 gap-2 px-4 text-[10px]',
@@ -28,15 +28,15 @@ const buttonSizeClass: Record<HyperionButtonSize, string> = {
 
 const buttonVariantClass: Record<HyperionButtonVariant, string> = {
   primary:
-    'border-transparent bg-[#fcee09] text-[#050505] shadow-[0_0_20px_rgba(252,238,9,0.15)] hover:bg-white disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:hover:bg-[#1c1b07]',
+    'bg-[#fcee09] text-[#050505] shadow-[0_0_20px_rgba(252,238,9,0.15)] hover:bg-white disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:shadow-none disabled:hover:bg-[#1c1b07]',
   toolbar:
-    'group border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:bg-[#fcee09] hover:text-[#050505] disabled:border-[#303030] disabled:bg-[#131313] disabled:text-[#666666] disabled:hover:bg-[#131313] disabled:hover:text-[#666666]',
+    'group bg-[rgba(252,238,9,0.10)] text-[#d8d19a] hover:bg-[#fcee09] hover:text-[#050505] disabled:bg-[#131313] disabled:text-[#666666] disabled:hover:bg-[#131313] disabled:hover:text-[#666666]',
   danger:
-    'border-[#5b1818] bg-[#160707] text-[#f18d8d] hover:border-[#f87171] hover:bg-[#2a0909] hover:text-[#ffe1e1] disabled:border-[#3a1010] disabled:bg-[#0d0404] disabled:text-[#7c4a4a] disabled:hover:border-[#3a1010] disabled:hover:bg-[#0d0404] disabled:hover:text-[#7c4a4a]',
+    'bg-[rgba(248,113,113,0.13)] text-[#ff9b9b] hover:bg-[#f87171] hover:text-[#190505] disabled:bg-[#0d0404] disabled:text-[#7c4a4a] disabled:hover:bg-[#0d0404] disabled:hover:text-[#7c4a4a]',
   ghost:
-    'border-[#242424] bg-[#0b0b0b] text-[#8a8a8a] hover:border-[#5d5d5d] hover:text-white disabled:border-[#1a1a1a] disabled:bg-[#0a0a0a] disabled:text-[#555555]',
+    'bg-[#101010] text-[#8a8a8a] hover:bg-[#1a1a1a] hover:text-white disabled:bg-[#0a0a0a] disabled:text-[#555555]',
   cyan:
-    'border-[#4fd8ff]/30 bg-[#081118] text-[#4fd8ff] hover:border-[#4fd8ff] hover:bg-[#0c1a24] hover:text-white disabled:border-[#1b333b] disabled:bg-[#071014] disabled:text-[#426b76]',
+    'bg-[rgba(79,216,255,0.12)] text-[#7fe6ff] hover:bg-[#4fd8ff] hover:text-[#051017] disabled:bg-[#071014] disabled:text-[#426b76]',
 }
 
 export const HyperionButton = React.forwardRef<HTMLButtonElement, HyperionButtonProps>(
@@ -50,8 +50,7 @@ export const HyperionButton = React.forwardRef<HTMLButtonElement, HyperionButton
       {icon ? (
         <span
           className={cx(
-            'material-symbols-outlined text-[16px] transition-colors',
-            variant === 'toolbar' && 'text-[#fcee09] group-hover:text-[#050505] group-disabled:text-[#666666]',
+            'material-symbols-outlined text-[16px] text-current transition-colors',
             iconClassName
           )}
           aria-hidden="true"
@@ -106,14 +105,14 @@ export const HyperionSearchField: React.FC<HyperionSearchFieldProps> = ({
   ...props
 }) => (
   <div className={cx('group relative min-w-[300px] flex-1 max-w-[460px]', wrapperClassName)}>
-    <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#6a6a6a] transition-colors group-hover:text-[#e8e8e8] group-focus-within:text-[#fcee09]">
+    <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#777] transition-colors group-hover:text-[#d0d0d0] group-focus-within:text-[#fcee09]">
       search
     </span>
     <input
       {...props}
       type="text"
       className={cx(
-        'h-10 w-full rounded-sm border-[0.5px] border-[#fcee09]/50 bg-[#0a0a0a] py-1.5 pl-10 pr-4 text-sm text-[#e5e2e1] placeholder-[#6f6f6f] transition-all hover:border-[#fcee09]/70 hover:text-[#e8e8e8] focus:border-[#fcee09]/65 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.08)]',
+        'h-10 w-full rounded-sm border-0 bg-[#101010] py-1.5 pl-10 pr-4 text-sm text-[#e5e2e1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] placeholder-[#6f6f6f] transition-all hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] focus:bg-[#121212] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.28)]',
         inputClassName,
         className
       )}
@@ -148,18 +147,18 @@ interface HyperionBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const badgeToneClass: Record<HyperionBadgeTone, string> = {
-  accent: 'border-[#2d2a10] bg-[#090804] text-[#fcee09]',
-  neutral: 'border-[#2a2a2a] bg-[#111111] text-[#8a8a8a]',
-  success: 'border-[#1d3d2e] bg-[#091410] text-[#34d399]',
-  warning: 'border-[#7e6d12] bg-[#0d0b00] text-[#fcee09]',
-  danger: 'border-[#5a2020] bg-[rgba(248,113,113,0.1)] text-[#f87171]',
-  cyan: 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]',
+  accent: 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]',
+  neutral: 'bg-[#151515] text-[#a0a0a0]',
+  success: 'bg-[rgba(52,211,153,0.13)] text-[#55e0ad]',
+  warning: 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]',
+  danger: 'bg-[rgba(248,113,113,0.14)] text-[#ff9b9b]',
+  cyan: 'bg-[rgba(79,216,255,0.13)] text-[#7fe6ff]',
 }
 
 export const HyperionBadge: React.FC<HyperionBadgeProps> = ({ tone = 'neutral', className, ...props }) => (
   <span
     className={cx(
-      'inline-flex h-6 items-center rounded-sm border-[0.5px] px-2.5 text-[10px] brand-font font-bold uppercase tracking-[0.16em]',
+      'inline-flex h-6 items-center rounded-sm border-0 px-2.5 text-[10px] brand-font font-bold uppercase tracking-[0.16em]',
       badgeToneClass[tone],
       className
     )}

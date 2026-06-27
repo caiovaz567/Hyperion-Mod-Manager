@@ -86,6 +86,7 @@ Current implementation state:
 - Top account block is hidden while collapsed and revealed on hover
 - Top account block should reflect real Nexus connection state when available: account name plus `Premium Connected` / `Free Connected`
 - When Nexus is not configured, the block should fall back to a neutral `Nexus Account / Not Connected` treatment instead of faux online-system language
+- Sidebar account avatar and subscription chips should use compact squared filled/tinted surfaces instead of colored outline boxes. Premium stays warm yellow/gold, Free stays cool blue, and disconnected/checking states stay neutral/yellow without extra border noise
 
 Navigation order:
 1. Mod Library
@@ -161,7 +162,7 @@ Setup wizard:
 - Visual emphasis goes to name, status, type, actions, and activation state
 - Mod search belongs to the library surface itself, not the global header, so filtering stays contextual to `Managed Mods`
 - Library search matches a mod's name, author, and category label, so users can filter by category text as well
-- The mod search field should share the same dark squared chrome, border language, and vertical rhythm as adjacent library action buttons instead of reading like a different widget family
+- The mod search field should share the same dark squared chrome, inset boundary language, and vertical rhythm as adjacent library action buttons instead of reading like a different widget family
 - Library status filtering should live in the screen itself, below the selection guidance, not in the global header
 - Use local segmented controls for `All`, `Enabled`, and `Disabled`; `All` may use the cyber blue accent while activation-oriented controls should reuse the same squared button language as Browse and other path actions
 - Enable/disable-all control should read as a compact rectangular command block, not a toggle switch and not a rounded pill
@@ -193,9 +194,16 @@ Setup wizard:
 - The `Create Separator` modal should open with the text cursor already active in the input so the user can type immediately without clicking first
 - In `Custom Order`, the library should explain how to group mods: drag onto a separator, use the separator context action, or use the bulk `Move to Separator` command
 - `Open Mods Folder` belongs beside the local filter controls, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar. Separator creation remains available through context menus and bulk/custom-order workflows instead of the main toolbar
+- Library toolbar controls should use the quiet filled/tinted button language: no bright colored outline rectangles around search, filter, Open Mods Folder, Check Updates, or destructive icon buttons. Use subtle inset shadows for input boundaries and let color live in the surface fill/icon/text
+- The `All` / `Enabled` / `Disabled` filter trigger has a fixed width and fixed icon/label/chevron positions, so changing the selected filter never pushes adjacent toolbar buttons or shifts the dropdown arrow. Its focus state must not leave yellow corner artifacts
+- Toolbar button icons must remain visible on hover and track the current text color; Open Mods Folder and Check Updates keep their existing hover fill behavior while the icon color changes cleanly with the label
 - Right-clicking empty library space should expose `Create Separator Here` so the user can insert a separator at that exact point in custom order
 - Right-clicking any library row should include a `Create Separator` action, and empty-library context menus should also offer `Refresh` and other lightweight utilities such as separator expand/collapse
 - Per-separator `Expand`/`Collapse` is no longer a context-menu action — clicking a separator row already toggles it, so the menu only exposes `Expand All Separators` / `Collapse All Separators`
+- Conflict status on mod rows is shown with compact numeric badges, not a generic warning triangle: `+X` in green for unique resources this mod overwrites, `-Y` in red for unique resources overwritten by later-loading mods, and a yellow `!` badge when the mod is fully redundant
+- A mod is redundant only when every tracked deploy resource for that enabled mod is overwritten by later load-order owners. Do not mark a mod redundant merely because it loses some conflicts
+- Conflict tooltips should be structured by semantic color: green row for `+` overwrites, red row for `-` overwritten-by, yellow row for redundant, plus a restrained action hint. Avoid one long sentence with every state joined together
+- Conflict highlight must show both directions for the selected mod. A middle mod that overwrites earlier mods and is overwritten by later mods should highlight both the lower-priority mods it wins over and the higher-priority mods it loses to, even when it is redundant
 - Right-clicking a mod should not expose Enable/Disable; activation belongs to the row toggle and bulk selection controls
 - `Move to Separator` (from a mod row context menu or the bulk selection bar) opens a centered modal listing every separator with a live name search, instead of inlining destinations into the menu. Separator names render exactly as typed; the modal auto-focuses the search, filters as you type, sizes wider for long names, and keeps a comfortable minimum height for many separators. The bulk bar and the row context menu share the same dialog
 - Right-clicking a separator should also expose explicit `Expand All Separators` and `Collapse All Separators` actions
@@ -262,12 +270,13 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Separate screen sourced from configured downloads directory
 - Header includes a contextual search field plus refresh and open-folder actions
 - The Downloads search field should reuse the same squared chrome, yellow border rhythm, and hover/focus treatment as the Managed Mods search instead of introducing a second search style
-- Downloads toolbar buttons should reuse the same bordered action language as Managed Mods so both screens read as one product system
+- Downloads toolbar buttons should reuse the same filled/tinted action language as Managed Mods so both screens read as one product system
 - Downloads should behave like a real sortable table: `Archive Name`, `Status`, `Version`, `Size`, and `Downloaded` must support the same `asc -> desc -> default` sort cycle used in Managed Mods
 - Downloads should remember the user's last search and sort state between visits/restarts instead of resetting to the default table every time
 - `Status` in Downloads is an operational column (`Downloading`, `Paused`, `Installed`, `Downloaded`, `Error`, etc.); temporary attention markers such as `NEW` remain badges on the archive name rather than becoming status values
 - Because the table now has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` inside the `Actions` column
 - Status badges in Downloads should stay visually stable while hovering the row; the row hover may brighten the line, but the badge itself should not morph into another semantic state
+- Downloads status badges and row action buttons use filled/tinted semantic surfaces instead of colored outline boxes. `Downloaded`/`Installed`, active transfer states, pause/resume/cancel, install/reinstall, and delete controls should keep their color meaning through background fill, icon/text color, and hover fill
 - Summary strip shows configured path, file count, and zip-ready count
 - Download rows prioritize file name, format, modified date, install/reinstall action, and delete action
 - Download ordering should remain stable across navigation and library changes; Nexus archives should keep the chronology of when the user initiated each download request, not the order in which transfers happen to finish or related mods get installed/removed
@@ -315,16 +324,19 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Header status readouts must communicate only the concrete state value: `CONNECTED`, `PREMIUM`, `READY TO INSTALL`, or `v0.14.0`; avoid split prefix/value badges such as `NEXUS / CONNECTED` and avoid decorative side bars inside the badge
 - Path values render in the shared monospace `PathBox`; buttons use the shared kit set with Hyperion button proportions, squared chrome, and no hover lift or press-scale theatrics
 - Tabs read as a compact segmented strip with icon + uppercase label per tab; the active tab is a restrained dark/yellow segment, not a solid pill
+- Settings tabs should visually attach to the content panel below: active tabs use a connected top-tab shape (`rounded-t`, no rounded bottom), sit flush with the panel edge, and avoid looking like isolated colored pills
 - Settings should use a calmer reading width (~960px) than Library/Downloads; avoid stretching linear form decisions across the full desktop
 - Inside each section, prefer a small number of large decision cards over many nested bordered boxes competing for attention
 - Card content and follow-up actions stay within the card; the leading action sits left, the folder/primary action may sit at the row end on wide layouts
 - Cards enter with a light staggered `fade-up`; rely on the main app surface for vertical scroll (no nested scroll regions inside Settings content)
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
 - `Paths` is the primary section and must surface consequence (launch blocked / installs blocked) in the invalid validation copy when required targets are missing
+- `General` owns runtime behavior decisions. It contains both Install Behavior and Runtime Captures, because captured files are automatic runtime output rather than a path configuration task
+- Runtime Captures is no longer shown in `Paths`; keep the Paths tab focused on Game Path, Mod Library, and Downloads Intake
 - Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold readout tone, while `Free` uses the cool info-blue readout tone
-- The Account card in Settings > Nexus shows a two-card side-by-side tier comparison (`NexusTierComparison` in `SettingsDialog.tsx`): one card per tier, each listing 3 bullets describing how that tier behaves inside Hyperion. The active tier's card gets a colored border and icon accent (blue for Free, amber for Premium); the inactive tier is rendered in muted grey. When the user is not connected, both cards render in neutral grey with no highlight
+- The Account card in Settings > Nexus shows a two-card side-by-side tier comparison (`NexusTierComparison` in `SettingsDialog.tsx`): one card per tier, each listing 3 bullets describing how that tier behaves inside Hyperion. The active tier's card gets a subtle tinted fill and icon/text accent (blue for Free, amber for Premium); the inactive tier is rendered in muted grey. When the user is not connected, both cards render in neutral grey with no highlight
 - The sidebar should always expose a compact Nexus identity marker (avatar or initials) even when the rail is collapsed; expanding the rail may reveal the full name and subscription label
-- Sidebar avatars/identity markers should use the same squared border language as other Hyperion controls and buttons; avoid soft pill or circular treatments that break the shell rhythm
+- Sidebar avatars/identity markers should use the same squared filled/tinted language as other Hyperion controls and buttons; avoid soft pill or circular treatments that break the shell rhythm
 - In the expanded sidebar account block, stack the content clearly as `name -> subscription badge -> connection state` so the subscription tag does not drift between labels
 - Nexus settings should describe that Nexus downloads auto-install by default while still landing through Downloads; the global auto-install toggle belongs in Settings > General, not inside the Nexus account card
 - Nexus API validation should happen automatically after the key changes; avoid a dedicated `Test Connection` button as a primary interaction
@@ -362,6 +374,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - MUST: operational UI surfaces default to squared rectangular corners; rounded pills, soft capsules, and curved card chrome are not allowed unless a shipped screen explicitly requires them and the exception is documented
 - Any shared `uiKit` controls used inside Settings must follow the squared Hyperion chrome; onboarding may be softer only where the first-run flow explicitly needs it.
 - Icons inside text buttons must track the button label color in every state. On yellow hover states, icons such as `folder_open`, `refresh`, and `content_copy` must become the same black as the label, never remain yellow-on-yellow or disappear into the background
+- Prefer filled/tinted rectangular controls over colored outline boxes for routine actions, badges, status readouts, icon buttons, toggles, and progress rows. Borders may still define containers and table separators, but semantic color should usually come from a restrained background tint plus text/icon color
 
 Primary:
 - Yellow background
@@ -369,18 +382,19 @@ Primary:
 - Hover can brighten slightly to white/yellow edge without becoming glossy
 
 Secondary:
-- Very dark background or transparent dark surface
-- Fine border and muted text
-- Hover strengthens border/text contrast
+- Very dark filled surface
+- Muted text that brightens on hover
+- Hover strengthens the fill/text contrast rather than adding a bright colored border
 
 Destructive:
-- Error-tinted text or border
-- Subtle red emphasis only on hover
+- Error-tinted filled surface and text
+- Hover may fill red with dark text for clear destructive feedback
 
 Tooltips:
 - Use a shared Hyperion tooltip component instead of browser-native `title` tooltips
 - Tooltip treatment should stay compact: dark surface, fine border, uppercase micro-label, restrained shadow
 - Disabled controls that need explanation should expose that explanation through the same shared tooltip component
+- Tooltips that describe multi-state badges may use compact colored rows matching the badge colors, but should remain scannable and avoid paragraph-style copy
 
 ### Toasts
 

@@ -50,7 +50,7 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
         className="relative h-[38px] overflow-hidden border-b-[0.5px]"
         style={{
           background: appearance.rowTint,
-          borderColor: appearance.softBorder,
+          borderColor: '#1a1a1a',
         }}
       >
         <div
@@ -85,8 +85,8 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               <div
-                className="h-8 w-8 flex items-center justify-center rounded-sm border-[0.5px]"
-                style={{ borderColor: `${appearance.accent}22`, background: `${appearance.accent}08` }}
+                className="h-8 w-8 flex items-center justify-center rounded-sm border-0"
+                style={{ background: `${appearance.accent}18` }}
               >
                 <span className="material-symbols-outlined" style={{ color: appearance.accent }}>
                   progress_activity
@@ -103,11 +103,10 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
                 {displayName}
               </span>
               <span
-                className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                className="shrink-0 rounded-sm border-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
                 style={{
                   color: appearance.accent,
-                  borderColor: `${appearance.accent}55`,
-                  background: `${appearance.accent}12`,
+                  background: `${appearance.accent}18`,
                 }}
               >
                 {appearance.label}
@@ -125,11 +124,10 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
           </div>
           <div className="flex items-center">
             <span
-              className="px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm"
+              className="px-2.5 py-[3px] border-0 text-[10px] uppercase tracking-widest rounded-sm"
               style={{
                 color: appearance.accent,
-                borderColor: `${appearance.accent}40`,
-                background: '#0a0a0a',
+                background: `${appearance.accent}18`,
               }}
             >
               {appearance.label}
@@ -140,10 +138,10 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
           </div>
           <div className="flex items-center justify-start">
             <div
-              className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+              className="flex h-7 w-7 items-center justify-center rounded-sm border-0"
               style={{
-                borderColor: `${appearance.accent}44`,
                 color: appearance.accent,
+                background: `${appearance.accent}18`,
               }}
             >
               <span className="material-symbols-outlined animate-spin text-[15px]">progress_activity</span>
@@ -182,7 +180,7 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
         className="relative h-[38px] overflow-hidden border-b-[0.5px]"
         style={{
           background: appearance.rowTint,
-          borderColor: appearance.softBorder,
+          borderColor: '#1a1a1a',
         }}
       >
         <div
@@ -216,8 +214,8 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
         >
           <div className="flex items-center gap-2">
             <div
-              className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px]"
-              style={{ borderColor: `${appearance.accent}22`, background: `${appearance.accent}08` }}
+              className="flex h-7 w-7 items-center justify-center rounded-sm border-0"
+              style={{ background: `${appearance.accent}18` }}
             >
               <span
                 className="material-symbols-outlined animate-spin text-[15px]"
@@ -235,11 +233,10 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
               {mod.name}
             </span>
             <span
-              className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+              className="shrink-0 rounded-sm border-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
               style={{
                 color: appearance.accent,
-                borderColor: `${appearance.accent}55`,
-                background: `${appearance.accent}12`,
+                background: `${appearance.accent}18`,
               }}
             >
               {appearance.label}
@@ -250,11 +247,10 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
           </div>
           <div className="flex items-center">
             <span
-              className="px-2.5 py-[3px] border-[0.5px] text-[10px] uppercase tracking-widest rounded-sm truncate"
+              className="px-2.5 py-[3px] border-0 text-[10px] uppercase tracking-widest rounded-sm truncate"
               style={{
                 color: appearance.accent,
-                borderColor: `${appearance.accent}40`,
-                background: '#0a0a0a',
+                background: `${appearance.accent}18`,
               }}
             >
               {mod.kind === 'separator' ? 'Deleting' : 'Deleting mod'}
@@ -265,10 +261,10 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
           </div>
           <div className="flex items-center justify-start">
             <div
-              className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+              className="flex h-7 w-7 items-center justify-center rounded-sm border-0"
               style={{
-                borderColor: `${appearance.accent}44`,
                 color: appearance.accent,
+                background: `${appearance.accent}18`,
               }}
             >
               <span className="material-symbols-outlined animate-spin text-[15px]">delete</span>

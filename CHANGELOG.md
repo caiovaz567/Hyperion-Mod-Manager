@@ -10,6 +10,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.26.0] - 2026-06-27
+
+### Added
+- Library conflict badges now show `+N` for unique resources a mod overwrites, `-N` for unique resources overwritten by later-loading mods, and a yellow `!` marker when the mod is fully redundant.
+- Conflict badge tooltips now separate overwrite, overwritten-by, and redundant states into compact color-coded rows for faster scanning.
+
+### Changed
+- Conflict detection now counts unique resource ownership by load order and emits pairwise conflict relationships for every lower/higher owner on the same resource. A middle duplicate can now correctly show both the mods it overwrites and the mods that overwrite it, and selected-row highlighting shows both directions.
+- Fully redundant mods are detected only when every tracked deploy/archive resource is overwritten by later load-order owners.
+- The Library, Downloads, Settings, sidebar account block, progress rows, action buttons, badges, and status readouts now use cleaner filled/tinted surfaces instead of heavy colored outline boxes.
+- Settings tabs now attach visually to the active content panel, and Runtime Captures moved from Settings > Paths to Settings > General beside Install Behavior.
+- The Managed Mods status filter trigger now keeps a fixed width and fixed icon/label/chevron positions so selecting All/Enabled/Disabled no longer shifts adjacent toolbar buttons.
+
+### Fixed
+- Toolbar icons now preserve readable color on hover instead of disappearing or changing independently from their labels.
+- The Library status filter focus state no longer leaves small yellow artifacts on the trigger corners.
+
+---
+
 ## [0.25.0] - 2026-06-26
 
 ### Added

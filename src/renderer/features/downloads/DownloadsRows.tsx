@@ -90,7 +90,6 @@ const ActiveDownloadRow: React.FC<{
   const isError = download.status === 'error'
   const isPaused = download.status === 'paused'
   const accent = isDone ? '#34d399' : isError ? '#f87171' : isPaused ? '#60a5fa' : '#fcee09'
-  const rowBorder = isError ? '#3a1313' : isPaused ? '#19304f' : '#1e1a00'
   const rowTint = isError
     ? 'rgba(248,113,113,0.04)'
     : isPaused
@@ -122,7 +121,7 @@ const ActiveDownloadRow: React.FC<{
       data-download-row="true"
       onContextMenu={(event) => onContextMenu(event, row)}
       className="relative h-14 overflow-hidden border-b-[0.5px] border-[#1e1a00]"
-      style={{ background: rowTint, borderColor: rowBorder }}
+      style={{ background: rowTint, borderColor: '#1a1a1a' }}
     >
       <div
         aria-hidden="true"
@@ -172,8 +171,8 @@ const ActiveDownloadRow: React.FC<{
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden">
           <span
-            className="w-fit rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
-            style={{ color: accent, borderColor: `${accent}55`, background: `${accent}12` }}
+            className="w-fit rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
+            style={{ color: accent, background: `${accent}18` }}
           >
             {isError ? 'Error' : isDone ? 'Downloaded' : isPaused ? 'Paused' : 'Downloading'}
           </span>
@@ -202,7 +201,7 @@ const ActiveDownloadRow: React.FC<{
                 <Tooltip content="Resume download">
                   <button
                     onClick={() => void onResumeDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#1d3d63] bg-[#07111d]/95 text-[#60a5fa] hover:border-[#60a5fa]/70 hover:bg-[#0b1724] transition-all"
+                    className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[rgba(96,165,250,0.14)] text-[#8dbdff] transition-colors hover:bg-[#60a5fa] hover:text-[#051017]"
                   >
                     <span className="material-symbols-outlined text-[16px]">play_arrow</span>
                   </button>
@@ -211,7 +210,7 @@ const ActiveDownloadRow: React.FC<{
                 <Tooltip content="Pause download">
                   <button
                     onClick={() => void onPauseDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a]/90 text-[#c9c9c9] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
+                    className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#c9c9c9] transition-colors hover:bg-[#fcee09] hover:text-[#050505]"
                   >
                     <span className="material-symbols-outlined text-[16px]">pause</span>
                   </button>
@@ -220,7 +219,7 @@ const ActiveDownloadRow: React.FC<{
               <Tooltip content="Cancel download">
                 <button
                   onClick={() => void onCancelDownload(download.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a]/90 text-[#8a8a8a] hover:border-[#ff4d4f]/45 hover:text-[#ff4d4f] transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#8a8a8a] transition-colors hover:bg-[rgba(248,113,113,0.18)] hover:text-[#ff9b9b]"
                 >
                   <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
@@ -261,7 +260,7 @@ const InstallingDownloadRow: React.FC<{
       className="relative h-14 overflow-hidden border-b-[0.5px]"
       style={{
         background: installAppearance.rowTint,
-        borderColor: installAppearance.softBorder,
+        borderColor: '#1a1a1a',
       }}
     >
       <div
@@ -309,11 +308,10 @@ const InstallingDownloadRow: React.FC<{
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden">
           <span
-            className="w-fit rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
+            className="w-fit rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
             style={{
               color: installAppearance.accent,
-              borderColor: `${installAppearance.accent}55`,
-              background: `${installAppearance.accent}12`,
+              background: `${installAppearance.accent}18`,
             }}
           >
             {installAppearance.label}
@@ -338,10 +336,10 @@ const InstallingDownloadRow: React.FC<{
 
         <div className="flex items-center justify-end gap-2">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+            className="flex h-8 w-8 items-center justify-center rounded-sm border-0"
             style={{
-              borderColor: `${installAppearance.accent}44`,
               color: installAppearance.accent,
+              background: `${installAppearance.accent}18`,
             }}
           >
             <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
@@ -367,7 +365,7 @@ const DeletingDownloadRow: React.FC<{
       className="relative h-14 overflow-hidden border-b-[0.5px]"
       style={{
         background: deleteAppearance.rowTint,
-        borderColor: deleteAppearance.softBorder,
+        borderColor: '#1a1a1a',
       }}
     >
       <div
@@ -405,11 +403,10 @@ const DeletingDownloadRow: React.FC<{
               {entry.name}
             </span>
             <span
-              className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+              className="shrink-0 rounded-sm border-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
               style={{
                 color: deleteAppearance.accent,
-                borderColor: `${deleteAppearance.accent}55`,
-                background: `${deleteAppearance.accent}12`,
+                background: `${deleteAppearance.accent}18`,
               }}
             >
               {deleteAppearance.label}
@@ -419,11 +416,10 @@ const DeletingDownloadRow: React.FC<{
 
         <div className="flex items-center">
           <span
-            className="shrink-0 rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
+            className="shrink-0 rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
             style={{
               color: deleteAppearance.accent,
-              borderColor: `${deleteAppearance.accent}55`,
-              background: `${deleteAppearance.accent}12`,
+              background: `${deleteAppearance.accent}18`,
             }}
           >
             {deleteAppearance.label}
@@ -447,10 +443,10 @@ const DeletingDownloadRow: React.FC<{
 
         <div className="flex items-center justify-end gap-2">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] bg-[#0a0a0a]/90"
+            className="flex h-8 w-8 items-center justify-center rounded-sm border-0"
             style={{
-              borderColor: `${deleteAppearance.accent}44`,
               color: deleteAppearance.accent,
+              background: `${deleteAppearance.accent}18`,
             }}
           >
             <span className="material-symbols-outlined animate-spin text-[16px]">delete</span>
@@ -541,10 +537,10 @@ const LocalDownloadRow: React.FC<{
 
       <div className="flex items-center">
         <span
-          className={`shrink-0 rounded-sm border-[0.5px] px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest ${
+          className={`shrink-0 rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest ${
             installedMod
-              ? 'border-[#7a7a7a]/70 bg-[#101010] text-[#f0f0f0]'
-              : 'border-[#fcee09]/35 bg-[#0a0a0a] text-[#bdbdbd]'
+              ? 'bg-[#171717] text-[#f0f0f0]'
+              : 'bg-[rgba(252,238,9,0.10)] text-[#d8d19a]'
           }`}
         >
           {installedMod ? 'Installed' : 'Downloaded'}
@@ -571,11 +567,11 @@ const LocalDownloadRow: React.FC<{
               void onInstall(entry)
             }}
             disabled={isInstalling}
-            className={`flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] transition-all disabled:opacity-50 ${
+            className={`flex h-8 w-8 items-center justify-center rounded-sm border-0 transition-colors disabled:opacity-50 ${
               installedMod
-                ? 'border-[#7a7a7a] bg-[#0a0a0a] text-[#f0f0f0] hover:border-[#fcee09] hover:text-[#fcee09]'
-                : 'border-[#fcee09]/40 bg-[#0a0a0a] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
-            } disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#fcee09]`}
+                ? 'bg-[#151515] text-[#f0f0f0] hover:bg-[rgba(252,238,9,0.12)] hover:text-[#fcee09]'
+                : 'bg-[rgba(252,238,9,0.12)] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
+            } disabled:hover:bg-[#151515] disabled:hover:text-[#fcee09]`}
           >
             <span className="material-symbols-outlined text-[18px]">
               {installedMod ? 'restart_alt' : 'deployed_code'}
@@ -588,7 +584,7 @@ const LocalDownloadRow: React.FC<{
               event.stopPropagation()
               onDeleteRequest(entry)
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
+            className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[rgba(248,113,113,0.13)] text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505]"
           >
             <span className="material-symbols-outlined text-[16px]">delete</span>
           </button>

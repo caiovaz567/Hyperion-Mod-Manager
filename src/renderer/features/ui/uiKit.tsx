@@ -10,13 +10,13 @@ import React from 'react'
 /* -- Buttons -- */
 export const uiButton = {
   primary:
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-[0.5px] border-transparent bg-[#fcee09] px-5 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#050505] shadow-[0_0_20px_rgba(252,238,9,0.14)] transition-colors hover:bg-white active:bg-[#e7da08] disabled:cursor-not-allowed disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:shadow-none disabled:hover:bg-[#1c1b07] [&_.material-symbols-outlined]:leading-none',
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[#fcee09] px-5 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#050505] shadow-[0_10px_22px_rgba(252,238,9,0.12)] transition-colors hover:bg-[#fff45c] active:bg-[#e7da08] disabled:cursor-not-allowed disabled:bg-[#1c1b07] disabled:text-[#6b6830] disabled:shadow-none disabled:hover:bg-[#1c1b07] [&_.material-symbols-outlined]:leading-none',
   secondary:
-    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-[0.5px] border-[#242424] bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#9a9a9a] transition-colors hover:border-[#5d5d5d] hover:text-white disabled:cursor-not-allowed disabled:border-[#1a1a1a] disabled:text-[#555555] disabled:hover:border-[#1a1a1a] disabled:hover:text-[#555555] [&_.material-symbols-outlined]:leading-none',
+    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[#101010] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#a8a8a8] transition-colors hover:bg-[#1a1a1a] hover:text-white disabled:cursor-not-allowed disabled:bg-[#0b0b0b] disabled:text-[#555555] disabled:hover:bg-[#0b0b0b] disabled:hover:text-[#555555] [&_.material-symbols-outlined]:leading-none',
   accentOutline:
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-[0.5px] border-[#fcee09]/50 bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#cccccc] transition-colors hover:bg-[#fcee09] hover:text-[#050505] disabled:cursor-not-allowed disabled:border-[#303030] disabled:text-[#666666] disabled:hover:bg-[#0a0a0a] disabled:hover:text-[#666666] [&_.material-symbols-outlined]:text-current [&_.material-symbols-outlined]:leading-none [&_.material-symbols-outlined]:transition-colors',
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[rgba(252,238,9,0.10)] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#d8d19a] transition-colors hover:bg-[#fcee09] hover:text-[#050505] disabled:cursor-not-allowed disabled:bg-[#131313] disabled:text-[#666666] disabled:hover:bg-[#131313] disabled:hover:text-[#666666] [&_.material-symbols-outlined]:text-current [&_.material-symbols-outlined]:leading-none [&_.material-symbols-outlined]:transition-colors',
   ghost:
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-[0.5px] border-transparent bg-transparent px-3 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#777777] transition-colors hover:border-[#2a2a2a] hover:bg-[#0a0a0a] hover:text-white disabled:cursor-not-allowed disabled:text-[#4d4d4d] disabled:hover:border-transparent disabled:hover:bg-transparent [&_.material-symbols-outlined]:leading-none',
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-transparent px-3 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#777777] transition-colors hover:bg-[#101010] hover:text-white disabled:cursor-not-allowed disabled:text-[#4d4d4d] disabled:hover:bg-transparent [&_.material-symbols-outlined]:leading-none',
 } as const
 
 /* -- Icon tile -- */
@@ -24,7 +24,7 @@ export const IconTile: React.FC<{ icon: string; size?: 'sm' | 'md' }> = ({ icon,
   const isMd = size === 'md'
   return (
     <div
-      className={`flex flex-shrink-0 items-center justify-center rounded-sm border-[0.5px] border-[#3d3708] bg-[#090804] ${
+      className={`flex flex-shrink-0 items-center justify-center rounded-sm border-0 bg-[rgba(252,238,9,0.10)] ${
         isMd ? 'h-10 w-10' : 'h-8 w-8'
       }`}
     >
@@ -46,10 +46,9 @@ export const SettingCard: React.FC<{
   children: React.ReactNode
 }> = ({ icon, title, description, headerRight, className = '', style, children }) => (
   <div
-    className={`relative overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#070707] px-5 py-5 shadow-[0_6px_18px_rgba(0,0,0,0.24)] ${className}`}
+    className={`relative rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#070707] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_6px_18px_rgba(0,0,0,0.24)] ${className}`}
     style={style}
   >
-    <span className="absolute inset-x-0 top-0 h-px bg-[#fcee09]/35" />
     <div className="flex items-start gap-3">
       <IconTile icon={icon} size="sm" />
       <div className="min-w-0 flex-1 text-left">
@@ -68,11 +67,11 @@ export const SettingCard: React.FC<{
 export type StatusTone = 'good' | 'warn' | 'info' | 'error' | 'neutral'
 
 const readoutTone: Record<StatusTone, string> = {
-  good: 'border-[#1d3d2e] bg-[#07100c] text-[#34d399]',
-  warn: 'border-[#5e5514] bg-[#100f06] text-[#fcee09]',
-  info: 'border-[#1e3a5f] bg-[#07101a] text-[#60a5fa]',
-  error: 'border-[#5a2020] bg-[#140707] text-[#f87171]',
-  neutral: 'border-[#2a2a2a] bg-[#090909] text-[#a0a0a0]',
+  good: 'bg-[rgba(52,211,153,0.13)] text-[#55e0ad]',
+  warn: 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]',
+  info: 'bg-[rgba(96,165,250,0.13)] text-[#8dbdff]',
+  error: 'bg-[rgba(248,113,113,0.14)] text-[#ff9b9b]',
+  neutral: 'bg-[#151515] text-[#a0a0a0]',
 }
 
 export const StatusReadout: React.FC<{ tone: StatusTone; label: string; pulse?: boolean }> = ({
@@ -83,7 +82,7 @@ export const StatusReadout: React.FC<{ tone: StatusTone; label: string; pulse?: 
   const t = readoutTone[tone]
   return (
     <span
-      className={`inline-flex h-7 items-center rounded-sm border-[0.5px] px-2.5 text-[10px] brand-font font-bold uppercase leading-none tracking-[0.16em] ${t} ${pulse ? 'animate-pulse' : ''}`}
+      className={`inline-flex h-7 items-center rounded-sm border-0 px-2.5 text-[10px] brand-font font-bold uppercase leading-none tracking-[0.16em] ${t} ${pulse ? 'animate-pulse' : ''}`}
     >
       {label}
     </span>
@@ -97,8 +96,8 @@ export const PathBox: React.FC<{ value: string; placeholder: string; emphasize?:
   emphasize = false,
 }) => (
   <div
-    className={`allow-text-selection flex min-h-10 min-w-0 items-center rounded-sm border-[0.5px] bg-[#0a0a0a] px-4 py-3 font-mono text-[13px] leading-[1.35] text-[#e5e2e1] ${
-      emphasize ? 'border-[#6a5a10]' : 'border-[#1a1a1a]'
+    className={`allow-text-selection flex min-h-10 min-w-0 items-center rounded-sm border-[0.5px] px-4 py-3 font-mono text-[13px] leading-[1.35] text-[#e5e2e1] ${
+      emphasize ? 'border-[#242424] bg-[#100f08]' : 'border-[#1a1a1a] bg-[#0a0a0a]'
     }`}
   >
     <div className="break-all">{value || <span className="text-[#6b6b6b]">{placeholder}</span>}</div>

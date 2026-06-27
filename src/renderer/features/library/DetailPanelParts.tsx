@@ -4,7 +4,7 @@ import type { FileTreeNode } from './DetailPanelTypes'
 import { getArchiveConflictHash, isUnresolvedArchiveConflict } from '../../utils/archiveConflictDisplay'
 
 export const detailTitleClass = 'text-[1.12rem] font-bold leading-[1.08] tracking-[0.01em] text-[#f4f1ee] sm:text-[1.18rem]'
-export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-[0.5px] border-[#fcee09]/50 bg-[#0a0a0a] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#cccccc] transition-colors hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-[#fcee09] [&_.material-symbols-outlined]:transition-colors hover:[&_.material-symbols-outlined]:!text-[#050505]'
+export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-0 bg-[rgba(252,238,9,0.10)] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#d8d19a] transition-colors hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-current [&_.material-symbols-outlined]:transition-colors'
 
 export const TabButton: React.FC<{
   active: boolean
@@ -65,8 +65,7 @@ export const ConflictSection: React.FC<{
 
   return (
     <section
-      className={`flex min-h-0 flex-col overflow-hidden rounded-sm border-[0.5px] ${className ?? ''}`}
-      style={{ borderColor: `${accent}24` }}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] ${className ?? ''}`}
     >
       {/* Section header */}
       <button
@@ -88,8 +87,8 @@ export const ConflictSection: React.FC<{
         </span>
 
         <span
-          className="ml-auto shrink-0 text-[13px] font-semibold tabular-nums px-2.5 py-1 rounded-sm border-[0.5px]"
-          style={{ color: accent, borderColor: `${accent}30`, background: `${accent}10` }}
+          className="ml-auto shrink-0 text-[13px] font-semibold tabular-nums px-2.5 py-1 rounded-sm border-0"
+          style={{ color: accent, background: `${accent}18` }}
         >
           {count}
         </span>

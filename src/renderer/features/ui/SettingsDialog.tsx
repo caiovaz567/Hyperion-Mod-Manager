@@ -44,7 +44,7 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-[12.5px]">
       {/* Free */}
-      <div className={`rounded-sm border-[0.5px] p-3 space-y-2.5 ${isPremium === false ? 'border-[#60A5FA]/40 bg-[#060e18]' : 'border-[rgba(255,255,255,0.07)] bg-[#080808]'}`}>
+      <div className={`rounded-sm border-[0.5px] border-[#171717] p-3 space-y-2.5 ${isPremium === false ? 'bg-[rgba(96,165,250,0.10)]' : 'bg-[#080808]'}`}>
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#555]'}`}>Free</div>
         {NEXUS_FREE_FEATURES.map((f) => (
           <div key={f.text} className="flex items-start gap-2">
@@ -55,7 +55,7 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
       </div>
 
       {/* Premium */}
-      <div className={`rounded-sm border-[0.5px] p-3 space-y-2.5 ${isPremium === true ? 'border-[#f7d154]/40 bg-[#14110a]' : 'border-[rgba(255,255,255,0.07)] bg-[#080808]'}`}>
+      <div className={`rounded-sm border-[0.5px] border-[#171717] p-3 space-y-2.5 ${isPremium === true ? 'bg-[rgba(252,238,9,0.10)]' : 'bg-[#080808]'}`}>
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#555]'}`}>Premium</div>
         {NEXUS_PREMIUM_FEATURES.map((f) => (
           <div key={f.text} className="flex items-start gap-2">
@@ -130,7 +130,7 @@ export const SettingsPage: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'paths' || activeTab === 'about') void refreshRuntimeCaptures()
+    if (activeTab === 'general' || activeTab === 'about') void refreshRuntimeCaptures()
   }, [activeTab, refreshRuntimeCaptures])
 
   const handleOpenRuntimeCaptures = useCallback(async () => {
@@ -410,7 +410,7 @@ export const SettingsPage: React.FC = () => {
           </div>
         </header>
 
-        <div className="mb-5 inline-flex flex-wrap items-center gap-1 border-[0.5px] border-[#1a1a1a] bg-[#070707] p-1">
+        <div className="relative z-10 flex flex-wrap items-end gap-1 border-x-[0.5px] border-t-[0.5px] border-[#171717] bg-[#080808] px-2 pt-2">
           {tabMeta.map((tab) => {
             const active = activeTab === tab.id
             return (
@@ -418,10 +418,10 @@ export const SettingsPage: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex min-w-[124px] items-center justify-center gap-2 rounded-sm px-4 py-2.5 transition-colors ${
+                className={`inline-flex min-w-[124px] items-center justify-center gap-2 rounded-t-sm rounded-b-none px-4 py-3 transition-colors ${
                   active
-                    ? 'bg-[#120f03] text-[#fcee09]'
-                    : 'text-[#8f8f8f] hover:bg-[#0d0d0d] hover:text-[#d9d9d9]'
+                    ? '-mb-px bg-[#050505] text-[#fcee09] shadow-[inset_0_2px_0_rgba(252,238,9,0.28),inset_1px_0_0_rgba(255,255,255,0.04),inset_-1px_0_0_rgba(255,255,255,0.04)]'
+                    : 'mb-[3px] text-[#8f8f8f] hover:bg-[#101010] hover:text-[#d9d9d9]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[17px]" aria-hidden="true">
@@ -433,22 +433,23 @@ export const SettingsPage: React.FC = () => {
           })}
         </div>
 
-        <div className="border-[0.5px] border-[#171717] bg-[#050505] p-3 sm:p-4">
+        <div className="relative z-0 border-[0.5px] border-[#171717] bg-[#050505] p-3 sm:p-4">
           <div key={activeTab} className="grid gap-3">
             {activeTab === 'general' && (
-              <SettingCard
-                icon="deployed_code"
-                title="Install Behavior"
-                description="Default behavior for archives that finish downloading through Nexus links."
-                className="fade-up"
-                style={{ animationDelay: '0ms' }}
-              >
+              <>
+                <SettingCard
+                  icon="deployed_code"
+                  title="Install Behavior"
+                  description="Default behavior for archives that finish downloading through Nexus links."
+                  className="fade-up"
+                  style={{ animationDelay: '0ms' }}
+                >
                 <button
                   type="button"
                   onClick={() => {
                     void updateSettings({ autoInstallDownloads: !(settings?.autoInstallDownloads ?? true) })
                   }}
-                  className="flex w-full items-center justify-between gap-4 rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] px-4 py-3 text-left transition-colors hover:border-[#3a3a3a]"
+                  className="flex w-full items-center justify-between gap-4 rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] px-4 py-3 text-left transition-colors hover:bg-[#101010]"
                 >
                   <span className="min-w-0">
                     <span className="block text-[14px] font-semibold text-[#e5e2e1]">Auto-install completed downloads</span>
@@ -457,10 +458,10 @@ export const SettingsPage: React.FC = () => {
                     </span>
                   </span>
                   <span
-                    className={`relative h-5 w-10 shrink-0 rounded-full border-[0.5px] transition-colors ${
+                    className={`relative h-5 w-10 shrink-0 rounded-full border-0 transition-colors ${
                       (settings?.autoInstallDownloads ?? true)
-                        ? 'border-[#fcee09]/45 bg-[#2a2604]'
-                        : 'border-[#2a2a2a] bg-[#111]'
+                        ? 'bg-[rgba(252,238,9,0.28)]'
+                        : 'bg-[#1d1d1d]'
                     }`}
                   >
                     <span
@@ -473,6 +474,45 @@ export const SettingsPage: React.FC = () => {
                   </span>
                 </button>
               </SettingCard>
+
+              <SettingCard
+                icon="folder_special"
+                title="Runtime Captures"
+                description="Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions."
+                className="fade-up"
+                style={{ animationDelay: '60ms' }}
+              >
+                <ValidationRow
+                  state={runtimeCapturesInfo ? (runtimeCapturesInfo.fileCount > 0 ? 'info' : 'valid') : 'empty'}
+                  validText="No captured files - game folder is clean."
+                  infoText={runtimeCapturesInfo ? `${runtimeCapturesInfo.fileCount} file${runtimeCapturesInfo.fileCount === 1 ? '' : 's'} captured from previous sessions.` : ''}
+                  emptyText="Loading..."
+                />
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenRuntimeCaptures()}
+                    className={`${secondaryBtn} w-full sm:w-auto`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    Open folder
+                  </button>
+                  {runtimeCapturesInfo && runtimeCapturesInfo.fileCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => void handleClearRuntimeCaptures()}
+                      disabled={clearingCaptures}
+                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[rgba(248,113,113,0.13)] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[#0d0404] disabled:text-[#7c4a4a] sm:w-auto [&_.material-symbols-outlined]:leading-none"
+                    >
+                      <span className={`material-symbols-outlined ${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
+                        {clearingCaptures ? 'progress_activity' : 'delete_sweep'}
+                      </span>
+                      {clearingCaptures ? 'Clearing...' : 'Clear captures'}
+                    </button>
+                  )}
+                </div>
+              </SettingCard>
+              </>
             )}
 
             {activeTab === 'paths' && (
@@ -565,44 +605,6 @@ export const SettingsPage: React.FC = () => {
                   </button>
                 </div>
               </SettingCard>
-
-              <SettingCard
-                icon="folder_special"
-                title="Runtime Captures"
-                description="Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions."
-                className="fade-up"
-                style={{ animationDelay: '160ms' }}
-              >
-                <ValidationRow
-                  state={runtimeCapturesInfo ? (runtimeCapturesInfo.fileCount > 0 ? 'info' : 'valid') : 'empty'}
-                  validText="No captured files — game folder is clean."
-                  infoText={runtimeCapturesInfo ? `${runtimeCapturesInfo.fileCount} file${runtimeCapturesInfo.fileCount === 1 ? '' : 's'} captured from previous sessions.` : ''}
-                  emptyText="Loading..."
-                />
-                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => void handleOpenRuntimeCaptures()}
-                    className={`${secondaryBtn} w-full sm:w-auto`}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
-                    Open folder
-                  </button>
-                  {runtimeCapturesInfo && runtimeCapturesInfo.fileCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => void handleClearRuntimeCaptures()}
-                      disabled={clearingCaptures}
-                      className={`${secondaryBtn} w-full sm:w-auto text-[#f87171] border-[#f87171]/30 hover:border-[#f87171]/60`}
-                    >
-                      <span className={`material-symbols-outlined ${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
-                        {clearingCaptures ? 'progress_activity' : 'delete_sweep'}
-                      </span>
-                      {clearingCaptures ? 'Clearing...' : 'Clear captures'}
-                    </button>
-                  )}
-                </div>
-              </SettingCard>
             </>
           )}
 
@@ -623,7 +625,7 @@ export const SettingsPage: React.FC = () => {
                 style={{ animationDelay: '0ms' }}
               >
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
-                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#0a0a0a] transition-colors focus-within:border-[#6a5a10]">
+                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-sm border-0 bg-[#101010] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.26)]">
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}
@@ -655,7 +657,7 @@ export const SettingsPage: React.FC = () => {
                   </button>
                 </div>
                 {nexusStatus === 'error' && (
-                  <div className="mt-4 rounded-sm border-[0.5px] border-[#5a2020] bg-[#180707] px-4 py-3 text-[14px] leading-6 text-[#f87171]">
+                  <div className="mt-4 rounded-sm border-0 bg-[rgba(248,113,113,0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
                     {nexusAccount.error}
                   </div>
                 )}
@@ -729,7 +731,7 @@ export const SettingsPage: React.FC = () => {
             >
               <ValidationRow state={updateDownloaded || updateAvailable ? 'info' : 'valid'} validText={updateMessage} infoText={updateMessage} />
               {updateError ? (
-                <div className="mt-4 rounded-sm border-[0.5px] border-[#5a2020] bg-[#180707] px-4 py-3 text-[14px] leading-6 text-[#f87171]">
+                <div className="mt-4 rounded-sm border-0 bg-[rgba(248,113,113,0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
                   {updateError}
                 </div>
               ) : null}
@@ -796,10 +798,10 @@ export const SettingsPage: React.FC = () => {
                     <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">Project</div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <StatusReadout tone="neutral" label={`v${appVersion}`} />
-                      <span className="inline-flex h-7 items-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#090909] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
+                      <span className="inline-flex h-7 items-center rounded-sm border-0 bg-[#151515] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
                         GPL-3.0
                       </span>
-                      <span className="inline-flex h-7 items-center rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#090909] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
+                      <span className="inline-flex h-7 items-center rounded-sm border-0 bg-[#151515] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
                         Unofficial
                       </span>
                     </div>

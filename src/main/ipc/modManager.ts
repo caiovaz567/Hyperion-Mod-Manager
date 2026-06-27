@@ -1503,78 +1503,102 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         }
 
         const conflicts: ConflictInfo[] = []
-        const summaryMap = new Map<string, { overwrites: number; overwrittenBy: number }>()
-        for (const m of mods) summaryMap.set(m.uuid, { overwrites: 0, overwrittenBy: 0 })
+        const summaryMap = new Map<string, { overwrites: Set<string>; overwrittenBy: Set<string> }>()
+        for (const m of mods) summaryMap.set(m.uuid, { overwrites: new Set<string>(), overwrittenBy: new Set<string>() })
+        const resourceKeysByMod = new Map<string, Set<string>>()
+        for (const m of mods) resourceKeysByMod.set(m.uuid, new Set<string>())
+        const addResourceKeysForOwners = (
+          owners: Array<{ modId: string }>,
+          summaryResourceKey: string
+        ) => {
+          for (const owner of owners) {
+            resourceKeysByMod.get(owner.modId)?.add(summaryResourceKey)
+          }
+        }
+        const addSummaryByLoadOrder = (
+          owners: Array<{ modId: string; name: string; order: number }>,
+          summaryResourceKey: string
+        ) => {
+          owners.forEach((owner, index) => {
+            const summary = summaryMap.get(owner.modId)
+            if (!summary) return
+            if (index > 0) summary.overwrites.add(summaryResourceKey)
+            if (index < owners.length - 1) summary.overwrittenBy.add(summaryResourceKey)
+          })
+        }
 
         for (const [resourcePath, owners] of pathOwners.entries()) {
-          if (owners.length <= 1) continue
           const uniqueOwners = Array.from(new Map(owners.map((o) => [o.modId, o])).values())
+          const summaryResourceKey = `overwrite:${resourcePath}`
+          addResourceKeysForOwners(uniqueOwners, summaryResourceKey)
           if (uniqueOwners.length <= 1) continue
           const sorted = [...uniqueOwners].sort((a, b) => a.order - b.order)
-          const winner = sorted[sorted.length - 1]
+          addSummaryByLoadOrder(sorted, summaryResourceKey)
 
-          for (const owner of uniqueOwners) {
-            if (owner.modId === winner.modId) continue
-
-            conflicts.push({
-              kind: 'overwrite',
-              resourcePath: resourcePath.split(path.sep).join('/'),
-              existingModId: owner.modId,
-              existingModName: owner.name,
-              incomingModId: winner.modId,
-              incomingModName: winner.name,
-              existingOrder: owner.order,
-              incomingOrder: winner.order,
-              incomingWins: winner.order > owner.order,
-            })
-
-            const sWinner = summaryMap.get(winner.modId)
-            if (sWinner) sWinner.overwrites += 1
-            const sOwner = summaryMap.get(owner.modId)
-            if (sOwner) sOwner.overwrittenBy += 1
+          for (let lowerIndex = 0; lowerIndex < sorted.length - 1; lowerIndex += 1) {
+            const lowerOwner = sorted[lowerIndex]
+            for (let higherIndex = lowerIndex + 1; higherIndex < sorted.length; higherIndex += 1) {
+              const higherOwner = sorted[higherIndex]
+              conflicts.push({
+                kind: 'overwrite',
+                resourcePath: resourcePath.split(path.sep).join('/'),
+                existingModId: lowerOwner.modId,
+                existingModName: lowerOwner.name,
+                incomingModId: higherOwner.modId,
+                incomingModName: higherOwner.name,
+                existingOrder: lowerOwner.order,
+                incomingOrder: higherOwner.order,
+                incomingWins: higherOwner.order > lowerOwner.order,
+              })
+            }
           }
         }
 
         const seenArchiveConflicts = new Set<string>()
         for (const [resourceKey, owners] of archiveOwners.entries()) {
-          if (owners.length <= 1) continue
-
           const uniqueOwners = Array.from(new Map(owners.map((owner) => [owner.modId, owner])).values())
+          const displayResource = chooseArchiveResourceDisplay(uniqueOwners.map((owner) => owner.resource))
+          const conflictIdentity = getArchiveResourceIdentity(displayResource, resourceKey)
+          const summaryResourceKey = `archive:${conflictIdentity}`
+          addResourceKeysForOwners(uniqueOwners, summaryResourceKey)
           if (uniqueOwners.length <= 1) continue
 
           const sorted = [...uniqueOwners].sort((a, b) => a.order - b.order)
-          const winner = sorted[sorted.length - 1]
-          const displayResource = chooseArchiveResourceDisplay(uniqueOwners.map((owner) => owner.resource))
-          const conflictIdentity = getArchiveResourceIdentity(displayResource, resourceKey)
+          addSummaryByLoadOrder(sorted, summaryResourceKey)
 
-          for (const owner of uniqueOwners) {
-            if (owner.modId === winner.modId) continue
+          for (let lowerIndex = 0; lowerIndex < sorted.length - 1; lowerIndex += 1) {
+            const lowerOwner = sorted[lowerIndex]
+            for (let higherIndex = lowerIndex + 1; higherIndex < sorted.length; higherIndex += 1) {
+              const higherOwner = sorted[higherIndex]
+              const dedupeKey = `${lowerOwner.modId}:${higherOwner.modId}:${conflictIdentity}`
+              if (seenArchiveConflicts.has(dedupeKey)) continue
+              seenArchiveConflicts.add(dedupeKey)
 
-            const dedupeKey = `${owner.modId}:${winner.modId}:${conflictIdentity}`
-            if (seenArchiveConflicts.has(dedupeKey)) continue
-            seenArchiveConflicts.add(dedupeKey)
-
-            conflicts.push({
-              kind: 'archive-resource',
-              hash: displayResource.hash,
-              resourcePath: getArchiveResourceDisplayPath(displayResource),
-              existingModId: owner.modId,
-              existingModName: owner.name,
-              incomingModId: winner.modId,
-              incomingModName: winner.name,
-              existingOrder: owner.order,
-              incomingOrder: winner.order,
-              incomingWins: winner.order > owner.order,
-            })
-
-            const sWinner = summaryMap.get(winner.modId)
-            if (sWinner) sWinner.overwrites += 1
-            const sOwner = summaryMap.get(owner.modId)
-            if (sOwner) sOwner.overwrittenBy += 1
+              conflicts.push({
+                kind: 'archive-resource',
+                hash: displayResource.hash,
+                resourcePath: getArchiveResourceDisplayPath(displayResource),
+                existingModId: lowerOwner.modId,
+                existingModName: lowerOwner.name,
+                incomingModId: higherOwner.modId,
+                incomingModName: higherOwner.name,
+                existingOrder: lowerOwner.order,
+                incomingOrder: higherOwner.order,
+                incomingWins: higherOwner.order > lowerOwner.order,
+              })
+            }
           }
         }
 
-        const summaries: ModConflictSummary[] = Array.from(summaryMap.entries()).map(([modId, v]) => ({ modId, overwrites: v.overwrites, overwrittenBy: v.overwrittenBy }))
+        const summaries: ModConflictSummary[] = Array.from(summaryMap.entries()).map(([modId, v]) => {
+          const resourceCount = resourceKeysByMod.get(modId)?.size ?? 0
+          return {
+            modId,
+            overwrites: v.overwrites.size,
+            overwrittenBy: v.overwrittenBy.size,
+            redundant: resourceCount > 0 && v.overwrittenBy.size >= resourceCount,
+          }
+        })
         return { ok: true, data: { summaries, conflicts } }
       } catch (err: unknown) {
         return { ok: false, error: String(err) }

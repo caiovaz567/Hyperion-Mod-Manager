@@ -105,10 +105,10 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
     {showTopLevelHeaderDrop && (
       <div className="pointer-events-none absolute inset-y-0 right-6 z-20 flex items-center">
         <span
-          className={`rounded-sm border-[0.5px] px-2.5 py-[4px] text-[10px] brand-font font-bold uppercase tracking-[0.16em] transition-colors ${
+          className={`rounded-sm border-0 px-2.5 py-[4px] text-[10px] brand-font font-bold uppercase tracking-[0.16em] transition-colors ${
             topLevelDropActive
-              ? 'border-[#4fd8ff]/55 bg-[#04141b] text-[#4fd8ff]'
-              : 'border-[#2b2b2b] bg-[#0b0b0b] text-[#8a8a8a]'
+              ? 'bg-[rgba(79,216,255,0.13)] text-[#7fe6ff]'
+              : 'bg-[#151515] text-[#8a8a8a]'
           }`}
         >
           {topLevelDropActive ? 'Release For Top Level' : 'Drag Here For Top Level'}
@@ -122,14 +122,14 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
             type="button"
             onClick={onBulkToggle}
             disabled={bulkToggleDisabled || isBulkToggling}
-            className={`relative h-4 w-8 rounded-full border-[0.5px] transition-all duration-200 ${
+            className={`relative h-4 w-8 rounded-full border-0 transition-all duration-200 ${
               bulkToggleDisabled
-                ? 'cursor-not-allowed border-[#1a1a1a] bg-[#0a0a0a]'
+                ? 'cursor-not-allowed bg-[#101010]'
                 : isBulkToggling
-                  ? 'cursor-wait border-[#fcee09]/50 bg-[#2a2604]'
+                  ? 'cursor-wait bg-[rgba(252,238,9,0.22)]'
                   : allVisibleEnabled
-                    ? 'border-[#fcee09]/45 bg-[#2a2604] hover:border-[#fcee09]/65'
-                    : 'border-[#222] bg-[#111] hover:border-[#333]'
+                    ? 'bg-[rgba(252,238,9,0.28)]'
+                    : 'bg-[#1d1d1d] hover:bg-[#262626]'
             }`}
           >
             <div className={`absolute top-1/2 h-[12px] w-[12px] -translate-y-1/2 rounded-full transition-all duration-200 ${

@@ -26,7 +26,7 @@ export const PrimaryButton = styled(Button)(() => ({
 
 // Secondary — bordered, transparent
 export const SecondaryButton = styled(Button)(() => ({
-  background: 'transparent',
+  background: '#101010',
   color: '#F2F2F2',
   fontFamily: '"DM Sans", sans-serif',
   fontWeight: 500,
@@ -36,11 +36,11 @@ export const SecondaryButton = styled(Button)(() => ({
   borderRadius: 6,
   height: 32,
   padding: '0 16px',
-  border: '1px solid rgba(255,255,255,0.12)',
-  transition: 'background 100ms ease, border-color 100ms ease, transform 80ms ease',
+  border: 'none',
+  transition: 'background 100ms ease, color 100ms ease, transform 80ms ease',
   '&:hover': {
     background: '#1C1C1C',
-    borderColor: 'rgba(255,255,255,0.2)'
+    color: '#FFFFFF'
   },
   '&:active': {
     transform: 'scale(0.98)'
@@ -72,8 +72,8 @@ export const GhostButton = styled(Button)(() => ({
 
 // Destructive — red tinted
 export const DestructiveButton = styled(Button)(() => ({
-  background: 'transparent',
-  color: '#F87171',
+  background: 'rgba(248,113,113,0.13)',
+  color: '#FF9B9B',
   fontFamily: '"DM Sans", sans-serif',
   fontWeight: 500,
   fontSize: '0.8125rem',
@@ -82,11 +82,11 @@ export const DestructiveButton = styled(Button)(() => ({
   borderRadius: 6,
   height: 32,
   padding: '0 16px',
-  border: '1px solid rgba(248,113,113,0.25)',
-  transition: 'background 100ms ease, transform 80ms ease',
+  border: 'none',
+  transition: 'background 100ms ease, color 100ms ease, transform 80ms ease',
   '&:hover': {
-    background: 'rgba(248,113,113,0.08)',
-    borderColor: 'rgba(248,113,113,0.4)'
+    background: '#F87171',
+    color: '#190505'
   },
   '&:active': {
     transform: 'scale(0.98)'

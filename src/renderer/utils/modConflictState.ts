@@ -1,8 +1,99 @@
-import type { ConflictInfo, ModConflictSummary, ModMetadata } from '@shared/types'
+import type { ArchiveResourceEntry, ConflictInfo, ModConflictSummary, ModMetadata } from '@shared/types'
+import { getDeployRelativePath, normalizeRelativePath } from '../features/library/detailFileTreeUtils'
 
 export interface ConflictStateSnapshot {
   conflicts: ConflictInfo[]
   summaries: ModConflictSummary[]
+}
+
+const ARCHIVE_HASH_PATTERN = /^(?:0x)?[0-9a-f]{1,16}$/i
+const ARCHIVE_MOD_DEPLOY_DIR = 'archive/pc/mod'
+const LOAD_ORDERED_ARCHIVE_EXTENSION = '.archive'
+
+function isLoadOrderedArchiveDeployPath(relativeDeployPath: string): boolean {
+  const normalized = normalizeRelativePath(relativeDeployPath).toLowerCase()
+  return (
+    normalized.endsWith(LOAD_ORDERED_ARCHIVE_EXTENSION) &&
+    normalized.startsWith(`${ARCHIVE_MOD_DEPLOY_DIR}/`)
+  )
+}
+
+function normalizeArchiveHash(value?: string): string | null {
+  const normalized = value?.trim().replace(/^0x/i, '').toLowerCase()
+  if (!normalized || !ARCHIVE_HASH_PATTERN.test(normalized)) return null
+  return normalized.padStart(16, '0')
+}
+
+function normalizeArchiveResourcePath(value?: string): string | null {
+  const normalized = value
+    ?.trim()
+    .split(/[\\/]+/)
+    .filter((segment) => Boolean(segment) && segment !== '.' && segment !== '..')
+    .join('/')
+
+  return normalized || null
+}
+
+function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
+  if (Array.isArray(mod.deployedPaths) && mod.deployedPaths.length > 0) {
+    return mod.deployedPaths
+  }
+
+  if (!Array.isArray(mod.files)) return []
+  return mod.files
+    .filter((relFile) => relFile !== '_metadata.json')
+    .map((relFile) => getDeployRelativePath(mod, relFile))
+}
+
+function getArchiveResourceSummaryKey(resource: ArchiveResourceEntry): string | null {
+  const hash = normalizeArchiveHash(resource.hash)
+  if (hash) return `archive:${hash}`
+
+  const resourcePath = normalizeArchiveResourcePath(resource.resourcePath)
+  if (resourcePath) return `archive:${resourcePath}`
+
+  return null
+}
+
+function getArchiveResourceSummaryKeys(mod: ModMetadata): Set<string> {
+  const keys = new Set<string>()
+
+  if (Array.isArray(mod.archiveResources)) {
+    for (const resource of mod.archiveResources) {
+      const key = getArchiveResourceSummaryKey(resource)
+      if (key) keys.add(key)
+    }
+  }
+
+  if (Array.isArray(mod.hashes)) {
+    for (const value of mod.hashes) {
+      const hash = normalizeArchiveHash(value)
+      const key = hash
+        ? `archive:${hash}`
+        : getArchiveResourceSummaryKey({ resourcePath: value })
+      if (key) keys.add(key)
+    }
+  }
+
+  return keys
+}
+
+function getModResourceSummaryKeys(mod: ModMetadata): Set<string> {
+  const keys = new Set<string>()
+  if (mod.kind !== 'mod' || !mod.enabled) return keys
+
+  for (const rel of getTrackedDeploymentPaths(mod)) {
+    const normalized = normalizeRelativePath(rel)
+    if (!normalized) continue
+    if (isLoadOrderedArchiveDeployPath(normalized)) continue
+    keys.add(`overwrite:${normalized}`)
+  }
+
+  for (const key of getArchiveResourceSummaryKeys(mod)) {
+    keys.add(key)
+  }
+
+  return keys
 }
 
 export const recomputeConflictStateFromExistingConflicts = (
@@ -13,6 +104,7 @@ export const recomputeConflictStateFromExistingConflicts = (
   type ResourceGroup = {
     kind: ConflictInfo['kind']
     resourcePath: string
+    summaryKey: string
     hash?: string
     owners: Map<string, ResourceOwner>
   }
@@ -23,9 +115,11 @@ export const recomputeConflictStateFromExistingConflicts = (
       .map((mod) => [mod.uuid, mod] as const)
   )
 
-  const summaryMap = new Map<string, { overwrites: number; overwrittenBy: number }>()
+  const summaryMap = new Map<string, { overwrites: Set<string>; overwrittenBy: Set<string> }>()
+  const resourceKeysByMod = new Map<string, Set<string>>()
   for (const mod of mods) {
-    summaryMap.set(mod.uuid, { overwrites: 0, overwrittenBy: 0 })
+    summaryMap.set(mod.uuid, { overwrites: new Set<string>(), overwrittenBy: new Set<string>() })
+    resourceKeysByMod.set(mod.uuid, getModResourceSummaryKeys(mod))
   }
 
   const resourceGroups = new Map<string, ResourceGroup>()
@@ -37,6 +131,7 @@ export const recomputeConflictStateFromExistingConflicts = (
     const resourceGroup = resourceGroups.get(resourceKey) ?? {
       kind: conflict.kind,
       resourcePath: conflict.resourcePath,
+      summaryKey: resourceKey,
       hash: conflict.hash,
       owners: new Map<string, ResourceOwner>(),
     }
@@ -58,6 +153,18 @@ export const recomputeConflictStateFromExistingConflicts = (
 
   const recomputedConflicts: ConflictInfo[] = []
 
+  const addSummaryByLoadOrder = (
+    owners: Array<{ modId: string; name: string; order: number }>,
+    summaryKey: string
+  ) => {
+    owners.forEach((owner, index) => {
+      const summary = summaryMap.get(owner.modId)
+      if (!summary) return
+      if (index > 0) summary.overwrites.add(summaryKey)
+      if (index < owners.length - 1) summary.overwrittenBy.add(summaryKey)
+    })
+  }
+
   for (const resourceGroup of resourceGroups.values()) {
     const orderedOwners = Array.from(resourceGroup.owners.values())
       .map((owner) => {
@@ -74,38 +181,41 @@ export const recomputeConflictStateFromExistingConflicts = (
 
     if (orderedOwners.length <= 1) continue
 
-    const winner = orderedOwners[orderedOwners.length - 1]
-
     for (const owner of orderedOwners) {
-      if (owner.modId === winner.modId) continue
+      resourceKeysByMod.get(owner.modId)?.add(resourceGroup.summaryKey)
+    }
+    addSummaryByLoadOrder(orderedOwners, resourceGroup.summaryKey)
 
-      recomputedConflicts.push({
-        kind: resourceGroup.kind,
-        resourcePath: resourceGroup.resourcePath,
-        hash: resourceGroup.hash,
-        existingModId: owner.modId,
-        existingModName: owner.name,
-        incomingModId: winner.modId,
-        incomingModName: winner.name,
-        existingOrder: owner.order,
-        incomingOrder: winner.order,
-        incomingWins: winner.order > owner.order,
-      })
-
-      const winnerSummary = summaryMap.get(winner.modId)
-      if (winnerSummary) winnerSummary.overwrites += 1
-
-      const ownerSummary = summaryMap.get(owner.modId)
-      if (ownerSummary) ownerSummary.overwrittenBy += 1
+    for (let lowerIndex = 0; lowerIndex < orderedOwners.length - 1; lowerIndex += 1) {
+      const lowerOwner = orderedOwners[lowerIndex]
+      for (let higherIndex = lowerIndex + 1; higherIndex < orderedOwners.length; higherIndex += 1) {
+        const higherOwner = orderedOwners[higherIndex]
+        recomputedConflicts.push({
+          kind: resourceGroup.kind,
+          resourcePath: resourceGroup.resourcePath,
+          hash: resourceGroup.hash,
+          existingModId: lowerOwner.modId,
+          existingModName: lowerOwner.name,
+          incomingModId: higherOwner.modId,
+          incomingModName: higherOwner.name,
+          existingOrder: lowerOwner.order,
+          incomingOrder: higherOwner.order,
+          incomingWins: higherOwner.order > lowerOwner.order,
+        })
+      }
     }
   }
 
   return {
     conflicts: recomputedConflicts,
-    summaries: Array.from(summaryMap.entries()).map(([modId, summary]) => ({
-      modId,
-      overwrites: summary.overwrites,
-      overwrittenBy: summary.overwrittenBy,
-    })),
+    summaries: Array.from(summaryMap.entries()).map(([modId, summary]) => {
+      const resourceCount = resourceKeysByMod.get(modId)?.size ?? 0
+      return {
+        modId,
+        overwrites: summary.overwrites.size,
+        overwrittenBy: summary.overwrittenBy.size,
+        redundant: resourceCount > 0 && summary.overwrittenBy.size >= resourceCount,
+      }
+    }),
   }
 }

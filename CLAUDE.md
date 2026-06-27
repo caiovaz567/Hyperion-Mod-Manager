@@ -44,7 +44,7 @@
 - `cleanVfsOverwriteVolatileFiles` removes log files from Runtime Captures after migration (logs are regenerated on every launch and don't need to persist).
 - On the next launch, Runtime Captures files are mounted back as VFS read overlays via `buildVfsOverwriteReadLinks`, so CET keybindings and other settings persist across sessions.
 - **Close Game timing**: `IPC.KILL_GAME` waits 1.5 s after `taskkill` before running residue migration — `taskkill` completes the command before the OS fully releases file handles, so an immediate migration races against locks.
-- Exposed in **Settings > Paths** as a "Runtime Captures" card with file count and a "Clear captures" destructive action. Intentionally absent from the Library toolbar — the system is fully automatic.
+- Exposed in **Settings > General** as a "Runtime Captures" card with file count plus "Open folder" and "Clear captures" actions. It does not belong in Settings > Paths because it is automatic runtime output rather than a user-chosen path. Intentionally absent from the Library toolbar — the system is fully automatic.
 
 ## Archive Resource Sidecar
 - For mods containing `.archive` files, resource hashes are stored in a separate `_archive_resources.json` sidecar alongside `_metadata.json` — not inside the metadata file itself.
@@ -73,6 +73,10 @@
 - Conflicts are stored in the Zustand store and recomputed on every install/uninstall/enable/disable via `scheduleConflictRefresh` in `src/renderer/store/slices/librarySliceHelpers.ts`.
 - `src/renderer/utils/modConflictState.ts` handles recomputing the conflict snapshot from existing `ConflictInfo[]` without a full IPC round-trip (used after metadata-only state changes).
 - `src/renderer/utils/archiveConflictDisplay.ts` contains display helpers (`getArchiveConflictHash`, `isUnresolvedArchiveConflict`) used across conflict UI components.
+- Conflict summaries count **unique resource keys**, not pair rows. `overwrites` is the number of tracked resources where the mod has at least one lower-priority owner beneath it; `overwrittenBy` is the number of tracked resources where at least one later-loading owner wins over it. This is why three identical mods should show the middle copy as `+N` and `-N`, not double-count every pair.
+- `ModConflictSummary.redundant` is true only when an enabled mod has at least one tracked deploy/archive resource and every tracked resource is overwritten by a later load-order owner. Partially overwritten mods are not redundant.
+- `CALCULATE_MOD_CONFLICTS` emits pairwise `ConflictInfo` rows for every lower/higher owner pair on the same resource, not just loser -> final winner. The pairwise rows keep library selection highlighting and detail panels able to show both directions for a middle mod that wins over earlier mods and loses to later mods.
+- The renderer optimistic recompute in `modConflictState.ts` mirrors the main-process rules, including unique resource summary sets, redundant detection, load-order pairwise rows, archive-resource summary keys, and exclusion of load-ordered archive deploy files from loose path conflicts.
 - `hashes.csv.gz` is ~29 MB compressed and bundled in the installer resources; it is static per game version and does not contain CDPR game assets — only FNV1a hashes of internal resource paths.
 - The base game release archives do NOT contain LXRS path tables — `resolve-lxrs.ps1` only works on **mod archives** created with WolvenKit (which injects LXRS sections when packing). The bundled `hashes.csv.gz` was sourced from WolvenKit's community hash database and covers ~1.7 million entries including full EP1/Phantom Liberty coverage. Missing hashes degrade gracefully — conflicts are still detected, only the display name shows as `Unresolved`.
 
@@ -127,6 +131,8 @@
 ## UI Rules
 - Preserve the dark industrial Hyperion look: near-black surfaces, precise yellow accent, restrained shadows.
 - Do not introduce purple-heavy palettes, glassmorphism, neon Tron motifs, scanlines, or random gradients.
+- Routine buttons, badges, status readouts, progress icons, toggles, and row actions should use borderless filled/tinted surfaces instead of colored outline boxes. Keep borders for containers, tables, separators, and structural grouping.
+- Conflict badges on mod rows are `+N` green, `-N` red, and yellow `!` for redundant. Their tooltip is a compact JSX tooltip with color-separated rows; keep the full combined explanation in `aria-label` for accessibility.
 - Sidebar navigation is intentionally compact when collapsed and expands on hover.
 - Current sidebar nav items are Mod Library, Downloads, and Settings, plus the Launch Game CTA.
 - The terminal badge above navigation is decorative reference UI, hidden until sidebar hover. It is not a functional terminal.

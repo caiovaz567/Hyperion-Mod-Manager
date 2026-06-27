@@ -107,15 +107,15 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilterOpen((current) => !current)}
-              className={`group flex h-10 items-center gap-2 rounded-sm border-[0.5px] pl-3 pr-3 text-xs brand-font font-bold uppercase tracking-widest transition-colors ${
+              className={`hyperion-filter-button group relative h-10 w-[172px] rounded-sm border-0 text-xs brand-font font-bold uppercase tracking-widest shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-all ${
                 statusFilterOpen
-                  ? 'border-[#fcee09]/50 bg-[#0d0d0d] text-[#fcee09]'
-                  : 'border-[#fcee09]/50 bg-[#0a0a0a] text-[#cccccc] hover:border-[#fcee09]/70 hover:text-[#e8e8e8]'
+                  ? 'bg-[#121212] text-[#f0f0f0] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
+                  : 'bg-[#101010] text-[#cccccc] hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]'
               }`}
             >
-              <span className={`material-symbols-outlined text-[16px] transition-colors ${statusFilterOpen ? 'text-[#fcee09]' : 'text-[#6a6a6a] group-hover:text-[#e8e8e8]'}`}>filter_list</span>
-              {getStatusFilterLabel(statusFilter)}
-              <span className={`material-symbols-outlined text-[14px] transition-transform transition-colors duration-150 ${statusFilterOpen ? 'rotate-180 text-[#fcee09]' : 'text-[#6a6a6a] group-hover:text-[#e8e8e8]'}`}>expand_more</span>
+              <span className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[16px] transition-colors ${statusFilterOpen ? 'text-[#fcee09]' : 'text-[#8a8a8a] group-hover:text-[#e8e8e8]'}`}>filter_list</span>
+              <span className="absolute left-[48px] right-9 top-1/2 -translate-y-1/2 truncate text-left">{getStatusFilterLabel(statusFilter)}</span>
+              <span className={`material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[14px] transition-colors duration-150 ${statusFilterOpen ? 'text-[#fcee09]' : 'text-[#8a8a8a] group-hover:text-[#e8e8e8]'}`}>expand_more</span>
             </button>
             {statusFilterOpen && (
               <div className="absolute top-full left-0 mt-1 z-[200] min-w-[130px] rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] shadow-[0_8px_24px_rgba(0,0,0,0.6)] py-1">
@@ -140,7 +140,12 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             )}
           </div>
 
-          <HyperionButton onClick={onOpenModsFolder} variant="toolbar" icon="folder_open" className="px-5">
+          <HyperionButton
+            onClick={onOpenModsFolder}
+            variant="toolbar"
+            icon="folder_open"
+            className="px-5"
+          >
             Open Mods Folder
           </HyperionButton>
 

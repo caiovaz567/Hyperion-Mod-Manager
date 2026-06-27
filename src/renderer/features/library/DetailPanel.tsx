@@ -636,7 +636,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search files..."
-                    className="h-10 w-full rounded-sm border-[0.5px] border-[#fcee09]/50 bg-[#0a0a0a] py-1.5 pl-10 pr-[88px] text-sm text-[#e5e2e1] placeholder-[#6f6f6f] transition-all hover:border-[#fcee09]/70 hover:text-[#e8e8e8] focus:border-[#fcee09]/65 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.08)]"
+                    className="h-10 w-full rounded-sm border-0 bg-[#101010] py-1.5 pl-10 pr-[88px] text-sm text-[#e5e2e1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] placeholder-[#6f6f6f] transition-all hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] focus:bg-[#121212] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.28)]"
                   />
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c7c7c]">
                     Ctrl + F

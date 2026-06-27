@@ -47,6 +47,7 @@ export interface ModMetadata {
   conflictSummary?: {
     overwrites: number
     overwrittenBy: number
+    redundant?: boolean
   }
 }
 
@@ -300,6 +301,7 @@ export interface ModConflictSummary {
   modId: string
   overwrites: number
   overwrittenBy: number
+  redundant?: boolean
 }
 
 export interface DuplicateModInfo {

@@ -202,7 +202,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                 {mod.name}
               </span>
               {separatorChildCount > 0 ? (
-                <span className="shrink-0 rounded-sm border-[0.5px] border-[#202a2e] bg-[#0a0d0f] px-2 py-[3px] text-[11px] font-mono uppercase tracking-[0.12em] text-[#8aa6af] transition-colors duration-150 group-hover:border-[#29444e] group-hover:text-[#c6edf8]">
+                <span className="shrink-0 rounded-sm border-0 bg-[#101719] px-2 py-[3px] text-[11px] font-mono uppercase tracking-[0.12em] text-[#8aa6af] transition-colors duration-150 group-hover:bg-[#142024] group-hover:text-[#c6edf8]">
                   {separatorChildCount} {separatorChildCount === 1 ? 'mod' : 'mods'}
                 </span>
               ) : null}
@@ -211,10 +211,10 @@ export const ModRow: React.FC<ModRowProps> = ({
           <div className="flex shrink-0 items-center gap-3">
               {separatorMoveHint ? (
                 <span
-                  className={`rounded-sm border-[0.5px] px-2.5 py-[4px] text-[11px] brand-font font-bold uppercase tracking-[0.14em] ${
+                  className={`rounded-sm border-0 px-2.5 py-[4px] text-[11px] brand-font font-bold uppercase tracking-[0.14em] ${
                     separatorDropTarget
-                    ? 'border-[#4fd8ff]/45 bg-[#04131b] text-[#4fd8ff]'
-                    : 'border-[#2a2a2a] bg-[#0a0a0a] text-[#a4a4a4]'
+                    ? 'bg-[rgba(79,216,255,0.13)] text-[#7fe6ff]'
+                    : 'bg-[#151515] text-[#a4a4a4]'
                 }`}
               >
                 {separatorDropTarget ? 'Drop Selected Here' : separatorMoveHint}
@@ -228,10 +228,11 @@ export const ModRow: React.FC<ModRowProps> = ({
 
   const categoryLabel = getModCategoryLabel(mod)
   const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
-  const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0 }
+  const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0, redundant: false }
+  const isRedundant = mod.enabled && Boolean(conflictSummary.redundant)
   // Conflicts only exist between enabled mods in the active deployment stack — a disabled
   // mod deploys nothing, so its conflict icon would be misleading.
-  const hasConflictSummary = mod.enabled && (conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0)
+  const hasConflictSummary = mod.enabled && (conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0 || isRedundant)
   const hasModUpdate = modUpdate?.state === 'update-available'
   const updatingThisMod =
     activeDownloads.some((download) => download.intent?.kind === 'mod-update' && download.intent.targetModId === mod.uuid) ||
@@ -241,11 +242,43 @@ export const ModRow: React.FC<ModRowProps> = ({
     modUpdate?.latestVersion ? `Latest: ${modUpdate.latestVersion}` : null,
     updatingThisMod ? 'Updating in the library.' : 'New version on Nexus. Click to update.',
   ].filter(Boolean).join(' · ')
-  const conflictTooltipContent = [
-    conflictSummary.overwrites > 0 ? `Wins ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}` : null,
-    conflictSummary.overwrittenBy > 0 ? `Loses ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}` : null,
+  const conflictAriaLabel = [
+    conflictSummary.overwrites > 0 ? `Overwrites ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}` : null,
+    conflictSummary.overwrittenBy > 0 ? `Overwritten by ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}` : null,
+    isRedundant ? 'Redundant: every deployed file is overwritten.' : null,
     'Click to inspect conflicts.',
   ].filter(Boolean).join(' · ')
+  const conflictTooltipContent = (
+    <div className="flex min-w-[210px] flex-col gap-1.5">
+      {conflictSummary.overwrites > 0 ? (
+        <div className="flex items-center gap-2 text-[#34d399]">
+          <span className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm bg-[rgba(52,211,153,0.14)] px-1.5 font-mono text-[11px] font-bold leading-none">
+            +{conflictSummary.overwrites}
+          </span>
+          <span>Overwrites {conflictSummary.overwrites} file{conflictSummary.overwrites === 1 ? '' : 's'}</span>
+        </div>
+      ) : null}
+      {conflictSummary.overwrittenBy > 0 ? (
+        <div className="flex items-center gap-2 text-[#f87171]">
+          <span className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm bg-[rgba(248,113,113,0.14)] px-1.5 font-mono text-[11px] font-bold leading-none">
+            -{conflictSummary.overwrittenBy}
+          </span>
+          <span>Overwritten by {conflictSummary.overwrittenBy} file{conflictSummary.overwrittenBy === 1 ? '' : 's'}</span>
+        </div>
+      ) : null}
+      {isRedundant ? (
+        <div className="flex items-center gap-2 text-[#fcee09]">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.14)] font-mono text-[12px] font-bold leading-none">
+            !
+          </span>
+          <span>Redundant: fully overwritten</span>
+        </div>
+      ) : null}
+      <div className="border-t border-[#242424] pt-1 text-[#858585]">
+        Click to inspect conflicts
+      </div>
+    </div>
+  )
   const isConflictFocused = conflictHighlight.active && conflictHighlight.focusModId === mod.uuid
   const isWinHighlighted = conflictHighlight.active && conflictHighlight.wins.includes(mod.uuid)
   const isLossHighlighted = conflictHighlight.active && conflictHighlight.losses.includes(mod.uuid)
@@ -390,10 +423,10 @@ export const ModRow: React.FC<ModRowProps> = ({
 
         <div className="flex items-center pl-2" onClick={handleToggle}>
           <div
-            className={`relative h-4 w-8 rounded-full border-[0.5px] transition-all ${
+            className={`relative h-4 w-8 rounded-full border-0 transition-all ${
               mod.enabled
-                ? 'border-[#fcee09]/45 bg-[#2a2604] group-hover:border-[#fcee09]/65'
-                : 'border-[#222] bg-[#111] group-hover:border-[#333]'
+                ? 'bg-[rgba(252,238,9,0.28)]'
+                : 'bg-[#1d1d1d] group-hover:bg-[#262626]'
             }`}
           >
             <div
@@ -435,18 +468,13 @@ export const ModRow: React.FC<ModRowProps> = ({
               </div>
               {recentBadge ? (
                 <span
-                  className="shrink-0 rounded-sm border-[0.5px] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+                  className="shrink-0 rounded-sm border-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
                   style={{
                     color: recentBadge === 'downgraded'
                       ? '#f87171'
                       : recentBadge === 'updated'
                         ? '#60a5fa'
                         : '#34d399',
-                    borderColor: recentBadge === 'downgraded'
-                      ? 'rgba(248,113,113,0.35)'
-                      : recentBadge === 'updated'
-                        ? 'rgba(96,165,250,0.35)'
-                        : 'rgba(52,211,153,0.35)',
                     background: recentBadge === 'downgraded'
                       ? 'rgba(248,113,113,0.12)'
                       : recentBadge === 'updated'
@@ -465,20 +493,24 @@ export const ModRow: React.FC<ModRowProps> = ({
                       event.stopPropagation()
                       onOpenDetails(mod, 'conflicts')
                     }}
-                    className="inline-flex shrink-0 items-center justify-center"
+                    className="inline-flex shrink-0 items-center gap-1"
+                    aria-label={conflictAriaLabel}
                   >
-                    <span
-                      className="material-symbols-outlined text-[16px]"
-                      style={{
-                        color: conflictSummary.overwrittenBy > 0 && conflictSummary.overwrites > 0
-                          ? '#fcee09'
-                          : conflictSummary.overwrittenBy > 0
-                            ? '#f87171'
-                            : '#34d399',
-                      }}
-                    >
-                      warning
-                    </span>
+                    {conflictSummary.overwrites > 0 && (
+                      <span className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm bg-[rgba(52,211,153,0.12)] px-1.5 font-mono text-[11px] font-bold leading-none tracking-tight text-[#34d399]">
+                        +{conflictSummary.overwrites}
+                      </span>
+                    )}
+                    {conflictSummary.overwrittenBy > 0 && (
+                      <span className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm bg-[rgba(248,113,113,0.12)] px-1.5 font-mono text-[11px] font-bold leading-none tracking-tight text-[#f87171]">
+                        -{conflictSummary.overwrittenBy}
+                      </span>
+                    )}
+                    {isRedundant && (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.12)] text-[#fcee09]">
+                        <span className="material-symbols-outlined text-[15px] leading-none">priority_high</span>
+                      </span>
+                    )}
                   </button>
                 </Tooltip>
               ) : null}
@@ -535,7 +567,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onRenameSave()
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#2b4f2f] bg-[#0a0a0a] text-[#6fe3b1] hover:border-[#6fe3b1]/45 transition-all"
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(52,211,153,0.13)] text-[#6fe3b1] transition-colors hover:bg-[#34d399] hover:text-[#04120d]"
                 >
                   <span className="material-symbols-outlined text-[15px]">check</span>
                 </button>
@@ -550,7 +582,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onRenameCancel()
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] hover:border-[#8a8a8a] hover:text-white transition-all"
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#9a9a9a] transition-colors hover:bg-[#222] hover:text-white"
                 >
                   <span className="material-symbols-outlined text-[15px]">close</span>
                 </button>
@@ -564,7 +596,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onRename(mod)
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#8a8a8a] hover:border-[#fcee09]/45 hover:text-[#fcee09] transition-all"
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#8a8a8a] transition-colors hover:bg-[rgba(252,238,9,0.12)] hover:text-[#fcee09]"
                 >
                   <span className="material-symbols-outlined text-[15px]">edit</span>
                 </button>
@@ -575,7 +607,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onDelete(mod)
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(248,113,113,0.13)] text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505]"
                 >
                   <span className="material-symbols-outlined text-[15px]">delete</span>
                 </button>

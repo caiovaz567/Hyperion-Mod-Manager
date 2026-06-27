@@ -24,15 +24,19 @@ export const applyConflictState = (
   const summaryMap = new Map(summaries.map((summary) => [summary.modId, summary]))
 
   set((state) => ({
-    mods: state.mods.map((mod) => ({
-      ...mod,
-      conflictSummary: summaryMap.get(mod.uuid)
-        ? {
-            overwrites: summaryMap.get(mod.uuid)!.overwrites,
-            overwrittenBy: summaryMap.get(mod.uuid)!.overwrittenBy,
-          }
-        : { overwrites: 0, overwrittenBy: 0 },
-    })),
+    mods: state.mods.map((mod) => {
+      const summary = summaryMap.get(mod.uuid)
+      return {
+        ...mod,
+        conflictSummary: summary
+          ? {
+              overwrites: summary.overwrites,
+              overwrittenBy: summary.overwrittenBy,
+              redundant: Boolean(summary.redundant),
+            }
+          : { overwrites: 0, overwrittenBy: 0, redundant: false },
+      }
+    }),
     conflicts,
   }))
 }
@@ -41,7 +45,7 @@ const clearConflictState = (set: LibrarySet) => {
   set((state) => ({
     mods: state.mods.map((mod) => ({
       ...mod,
-      conflictSummary: { overwrites: 0, overwrittenBy: 0 },
+      conflictSummary: { overwrites: 0, overwrittenBy: 0, redundant: false },
     })),
     conflicts: [],
   }))

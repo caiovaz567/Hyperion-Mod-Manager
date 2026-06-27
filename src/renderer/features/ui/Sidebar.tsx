@@ -129,20 +129,20 @@ export const Sidebar: React.FC = () => {
   const subscriptionToneClass =
     nexusAccount.status === 'connected'
       ? nexusAccount.data.isPremium
-        ? 'border-[#6a5714] bg-[#151003] text-[#f7d154]'
-        : 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]'
+        ? 'bg-[rgba(252,238,9,0.12)] text-[#f7d154]'
+        : 'bg-[rgba(96,165,250,0.13)] text-[#8dbdff]'
       : nexusAccount.status === 'checking'
-        ? 'border-[#4a3f08] bg-[#0d0b00] text-[#fcee09]'
-        : 'border-[#2a2a2a] bg-[#111111] text-[#8a8a8a]'
+        ? 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]'
+        : 'bg-[#151515] text-[#8a8a8a]'
 
   const avatarToneClass =
     nexusAccount.status === 'connected'
       ? nexusAccount.data.isPremium
-        ? 'border-[#6a5714] bg-[#151003] text-[#f7d154]'
-        : 'border-[#1e3a5f] bg-[#071524] text-[#60a5fa]'
+        ? 'bg-[rgba(252,238,9,0.12)] text-[#f7d154]'
+        : 'bg-[rgba(96,165,250,0.13)] text-[#8dbdff]'
       : nexusAccount.status === 'checking'
-        ? 'border-[#4a3f08] bg-[#0d0b00] text-[#fcee09]'
-        : 'border-[#222] bg-[#111] text-[#e5e2e1]'
+        ? 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]'
+        : 'bg-[#151515] text-[#e5e2e1]'
 
   const accountLabel =
     nexusAccount.status === 'connected'
@@ -164,7 +164,7 @@ export const Sidebar: React.FC = () => {
     <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[#1a1a1a] bg-[#050505] py-8 text-sm tracking-tight text-[#fcee09] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
       <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-[0.5px] text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-0 text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
         >
           {nexusAccount.status === 'connected' ? (
             getAccountInitials(nexusAccount.data.name)
@@ -180,7 +180,7 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="mt-1 flex flex-col items-start gap-1">
             <span
-              className={`inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[9px] font-semibold tracking-[0.16em] ${subscriptionToneClass}`}
+              className={`inline-flex h-5 items-center rounded-sm border-0 px-2 text-[9px] font-semibold tracking-[0.16em] ${subscriptionToneClass}`}
             >
               {accountLabel}
             </span>
