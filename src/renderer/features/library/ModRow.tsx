@@ -19,6 +19,7 @@ interface ModRowProps {
   separatorDropTarget?: boolean
   separatorCollapsed?: boolean
   separatorChildCount?: number
+  separatorUpdateCount?: number
   separatorMoveHint?: string | null
   conflictSeparatorTone?: 'win' | 'loss' | 'mixed' | null
   rowDropPosition?: 'before' | 'after' | null
@@ -57,6 +58,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   separatorDropTarget = false,
   separatorCollapsed = false,
   separatorChildCount = 0,
+  separatorUpdateCount = 0,
   separatorMoveHint = null,
   conflictSeparatorTone = null,
   rowDropPosition = null,
@@ -216,6 +218,15 @@ export const ModRow: React.FC<ModRowProps> = ({
               {separatorChildCount > 0 ? (
                 <span className="shrink-0 rounded-sm border-0 bg-[#101719] px-2 py-[3px] text-[11px] font-mono uppercase tracking-[0.12em] text-[#8aa6af] transition-colors duration-150 group-hover:bg-[#142024] group-hover:text-[#c6edf8]">
                   {separatorChildCount} {separatorChildCount === 1 ? 'mod' : 'mods'}
+                </span>
+              ) : null}
+              {separatorCollapsed && separatorUpdateCount > 0 ? (
+                <span
+                  className="flex shrink-0 items-center gap-[3px] rounded-sm bg-[#061419] px-[6px] py-[3px] text-[11px] font-mono uppercase tracking-[0.1em] text-[#4fd8ff]"
+                  title={`${separatorUpdateCount} ${separatorUpdateCount === 1 ? 'mod has an update' : 'mods have updates'} available`}
+                >
+                  <span className="material-symbols-outlined text-[13px] leading-none">upgrade</span>
+                  {separatorUpdateCount}
                 </span>
               ) : null}
             </div>
@@ -659,6 +670,7 @@ function areModRowPropsEqual(prev: ModRowProps, next: ModRowProps): boolean {
     prev.separatorDropTarget === next.separatorDropTarget &&
     prev.separatorCollapsed === next.separatorCollapsed &&
     prev.separatorChildCount === next.separatorChildCount &&
+    prev.separatorUpdateCount === next.separatorUpdateCount &&
     prev.separatorMoveHint === next.separatorMoveHint &&
     prev.conflictSeparatorTone === next.conflictSeparatorTone &&
     prev.rowDropPosition === next.rowDropPosition &&

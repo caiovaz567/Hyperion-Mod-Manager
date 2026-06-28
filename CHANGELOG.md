@@ -10,6 +10,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.29.2] - 2026-06-28
+
+### Added
+- Collapsed separators now show a cyber-blue `upgrade N` badge when any child mod has an update available, so pending updates are visible without expanding every group.
+
+### Fixed
+- First-run setup can no longer be skipped silently. The welcome wizard now stays visible until the user explicitly clicks **Finish setup** (tracked by a new persisted `setupCompleted` flag), instead of disappearing the moment the game and library paths happen to validate. Previously, if a user ran "Detect automatically" before Cyberpunk 2077 was installed, the auto-detected game path was saved during boot and — once the game was later installed — the next launch went straight to the library, bypassing the wizard. Existing installs with a configured game path are treated as already onboarded, so they are not pushed back through setup.
+
+---
+
 ## [0.29.1] - 2026-06-28
 
 ### Fixed

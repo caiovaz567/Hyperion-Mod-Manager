@@ -262,6 +262,23 @@ export const ModList: React.FC = () => {
     sortKey,
     sortDirection,
   })
+
+  const separatorUpdateCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    let currentSeparatorId: string | null = null
+    for (const entry of orderedEntries) {
+      if (entry.kind === 'separator') {
+        currentSeparatorId = entry.uuid
+        continue
+      }
+      if (!currentSeparatorId) continue
+      if (modUpdates[entry.uuid]?.state === 'update-available') {
+        counts.set(currentSeparatorId, (counts.get(currentSeparatorId) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [orderedEntries, modUpdates])
+
   const {
     isBulkToggling,
     runBulkToggle,
@@ -410,7 +427,7 @@ export const ModList: React.FC = () => {
     return tones
   }, [conflictHighlight, separatorParentByModId])
 
-  const showCustomOrderBadge = sortKey === null && allSeparators.length > 0
+  const showCustomOrderBadge = sortKey === null
   const bulkToggleDisabled = libraryStatusFilter !== 'all'
   const bulkToggleTooltip = libraryStatusFilter === 'enabled'
     ? 'Unavailable while Enabled filter is active'
@@ -606,7 +623,7 @@ export const ModList: React.FC = () => {
     moveModsToTopLevel,
     installDroppedFile: handleInstallFile,
   })
-  const showTopLevelHeaderDrop = showCustomOrderBadge && draggedModIds.length > 0
+  const showTopLevelHeaderDrop = sortKey === null && allSeparators.length > 0 && draggedModIds.length > 0
 
   const {
     getContextTargetModIds,
@@ -806,6 +823,7 @@ export const ModList: React.FC = () => {
             dropSeparatorId={dropSeparatorId}
             collapsedSeparatorSet={collapsedSeparatorSet}
             separatorSummaryTotal={separatorSummary.total}
+            separatorUpdateCounts={separatorUpdateCounts}
             draggedModCount={draggedModCount}
             rowDropTarget={rowDropTarget}
             renamingModId={renamingModId}

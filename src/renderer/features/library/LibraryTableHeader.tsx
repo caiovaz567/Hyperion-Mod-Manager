@@ -87,9 +87,9 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
 }) => (
   <div
     className="sticky top-0 z-10 grid w-full gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
-    onDragOver={showCustomOrderBadge ? onTopLevelDragOver : undefined}
-    onDragLeave={showCustomOrderBadge ? onTopLevelDragLeave : undefined}
-    onDrop={showCustomOrderBadge ? onTopLevelDrop : undefined}
+    onDragOver={showTopLevelHeaderDrop ? onTopLevelDragOver : undefined}
+    onDragLeave={showTopLevelHeaderDrop ? onTopLevelDragLeave : undefined}
+    onDrop={showTopLevelHeaderDrop ? onTopLevelDrop : undefined}
     style={{ gridTemplateColumns: LIBRARY_GRID_TEMPLATE }}
   >
     {showTopLevelHeaderDrop && (

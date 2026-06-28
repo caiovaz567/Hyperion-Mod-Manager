@@ -359,7 +359,7 @@ export const WelcomeScreen: React.FC = () => {
         }
       }
 
-      const saveResult = await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim() })
+      const saveResult = await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim(), setupCompleted: true })
       if (!saveResult.ok) {
         addToast(saveResult.error ?? 'Could not save setup', 'error', 5000)
         return

@@ -75,6 +75,11 @@ export interface AppSettings {
   }
   collapsedLibrarySeparatorIds?: string[]
   autoInstallPerMod?: Record<string, 'replace' | 'copy' | 'none'>
+  // True only once the user has explicitly completed the first-run setup wizard
+  // (clicked "Finish setup"). The welcome wizard stays visible until this is set,
+  // even if paths happen to validate on their own — so an auto-detected game path
+  // can never silently skip onboarding once the game is installed.
+  setupCompleted?: boolean
 }
 
 // ─── Nexus / NXM ─────────────────────────────────────────────────────────────

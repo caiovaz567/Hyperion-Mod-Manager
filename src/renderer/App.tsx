@@ -223,8 +223,12 @@ export const App: React.FC = () => {
   }
 
   const missingRequiredPaths = !settings?.gamePath?.trim() || !settings?.libraryPath?.trim() || !gamePathValid || !libraryPathValid
-  const showSidebar = !missingRequiredPaths
-  const showHeader = !missingRequiredPaths
+  // Stay on the welcome wizard until the user has explicitly finished setup, even if
+  // every path happens to validate on its own. An auto-detected game path (saved
+  // silently during boot) must never skip onboarding once the game gets installed.
+  const needsOnboarding = missingRequiredPaths || !settings?.setupCompleted
+  const showSidebar = !needsOnboarding
+  const showHeader = !needsOnboarding
   const installAppearance = getInstallProgressAppearance(installStatus)
   const installOverlayName = getInstallOverlayName(installSourcePath, installCurrentFile)
   const clampedInstallProgress = Math.max(6, Math.min(installProgress || 8, 100))
@@ -237,10 +241,10 @@ export const App: React.FC = () => {
         <div className="flex flex-1 overflow-hidden relative">
           {showSidebar && <Sidebar />}
           <main className={`flex-1 h-full overflow-hidden bg-transparent transition-[margin] duration-300 ${showSidebar ? 'ml-20' : 'ml-0'}`}>
-            {missingRequiredPaths ? <WelcomeScreen /> : null}
-            {!missingRequiredPaths && activeView === 'settings' ? <SettingsPage /> : null}
-            {!missingRequiredPaths && activeView === 'library' && <ModList />}
-            {!missingRequiredPaths && activeView === 'downloads' && <DownloadsPane />}
+            {needsOnboarding ? <WelcomeScreen /> : null}
+            {!needsOnboarding && activeView === 'settings' ? <SettingsPage /> : null}
+            {!needsOnboarding && activeView === 'library' && <ModList />}
+            {!needsOnboarding && activeView === 'downloads' && <DownloadsPane />}
           </main>
         </div>
         <DuplicateDownloadDialog />

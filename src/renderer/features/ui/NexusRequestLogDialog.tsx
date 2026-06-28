@@ -647,7 +647,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             paddingRight: `${APP_LOGS_CONTENT_GUTTER_PX}px`,
           }}
         >
-          <div className="flex items-end justify-between gap-6">
+          <div className="flex items-center justify-between gap-6">
             <SurfaceTabRail
               items={logTabItems}
               activeId={activeTab}
@@ -656,23 +656,18 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
               className="min-w-0 flex-1"
               withBottomBorder={false}
             />
-            <div className="flex min-w-0 items-center justify-end gap-2">
-              <div className="ui-support-mono shrink-0 uppercase tracking-[0.14em]">
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="ui-support-mono uppercase tracking-[0.14em]">
                 {activeCount} entr{activeCount === 1 ? 'y' : 'ies'}
-              </div>
+              </span>
               <Tooltip content={clearTabLabel}>
                 <button
                   type="button"
                   aria-label={clearTabLabel}
                   onClick={() => void handleClearTab()}
-                  className="flex h-[46px] min-w-[50px] items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
+                  className="flex h-9 w-9 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: '24px', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
-                  >
-                    delete
-                  </span>
+                  <span className="material-symbols-outlined text-[20px] leading-none">delete</span>
                 </button>
               </Tooltip>
             </div>

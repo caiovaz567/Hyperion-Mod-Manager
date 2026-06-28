@@ -78,9 +78,16 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
   const defaults = getPathDefaults()
   const hasLibraryPath = Boolean(raw && Object.prototype.hasOwnProperty.call(raw, 'libraryPath'))
   const hasDownloadPath = Boolean(raw && Object.prototype.hasOwnProperty.call(raw, 'downloadPath'))
+  const hasSetupCompleted = Boolean(raw && Object.prototype.hasOwnProperty.call(raw, 'setupCompleted'))
   const libraryPath = hasLibraryPath ? (raw?.libraryPath?.trim() ?? '') : defaults.libraryPath
+  const gamePath = raw?.gamePath?.trim() ?? ''
+  // Migration: settings files written before the `setupCompleted` flag existed are
+  // treated as already-onboarded when they carry a game path, so existing users are
+  // never pushed back through the wizard. New writes always persist the flag, so a
+  // freshly auto-detected (but unconfirmed) game path keeps `setupCompleted: false`.
+  const setupCompleted = hasSetupCompleted ? Boolean(raw?.setupCompleted) : gamePath.length > 0
   return {
-    gamePath: raw?.gamePath?.trim() ?? '',
+    gamePath,
     libraryPath,
     downloadPath: hasDownloadPath
       ? (raw?.downloadPath?.trim() || getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath)
@@ -94,6 +101,7 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
       ? raw.collapsedLibrarySeparatorIds.filter((id): id is string => typeof id === 'string')
       : undefined,
     autoInstallPerMod: normalizePerModChoices(raw?.autoInstallPerMod),
+    setupCompleted,
   }
 }
 
