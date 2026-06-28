@@ -10,6 +10,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.29.1] - 2026-06-28
+
+### Fixed
+- `npm install` on Node 24 no longer fails to extract the Electron binary — added `overrides` for `yauzl@^3.0.0` (forces the `extract-zip` postinstall to use yauzl 3.x, which handles the Node 24 stream API correctly) and `cacache`→`glob@^13.0.0` (eliminates the deprecated glob@10 warning from node-gyp).
+- Upgraded `electron-builder` to `^26` and `electron-updater` to `^6.8.9` to remove transitive deprecated packages (`tar@6`, `glob@7`/`@10`, `inflight`, `rimraf@2`).
+- Bumped `node-gyp` to `^11` so native builds use `tar@7` and the modern `tinyglobby` resolver instead of the deprecated `glob@7`.
+
+---
+
 ## [0.29.0] - 2026-06-28
 
 ### Fixed

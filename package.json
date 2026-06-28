@@ -1,6 +1,6 @@
 {
   "name": "hyperion",
-  "version": "0.29.0",
+  "version": "0.29.1",
   "description": "Cyberpunk 2077 Mod Manager",
   "main": "out/main/index.js",
   "scripts": {
@@ -35,10 +35,10 @@
     "7zip-bin-full": "^26.0.1",
     "autoprefixer": "^10.4.19",
     "electron": "^30.0.2",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
     "node-addon-api": "^8.0.0",
-    "node-gyp": "^10.0.0",
+    "node-gyp": "^11.0.0",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4"
@@ -49,11 +49,17 @@
     "@mui/icons-material": "^5.16.1",
     "@mui/material": "^5.16.1",
     "adm-zip": "^0.5.16",
-    "electron-updater": "^6.3.0",
+    "electron-updater": "^6.8.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "uuid": "^10.0.0",
     "zustand": "^4.5.4"
+  },
+  "overrides": {
+    "cacache": {
+      "glob": "^13.0.0"
+    },
+    "yauzl": "^3.0.0"
   },
   "build": {
     "appId": "com.hyperion.modmanager",
