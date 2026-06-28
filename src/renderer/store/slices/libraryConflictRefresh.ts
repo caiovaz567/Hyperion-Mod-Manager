@@ -11,6 +11,10 @@ type ConflictCalculationResult = {
   conflicts: ConflictInfo[]
 }
 
+type ConflictCalculationOptions = {
+  refreshArchiveResources?: boolean
+}
+
 let conflictRefreshTimer: ReturnType<typeof setTimeout> | null = null
 let scheduledConflictRefresh: Promise<void> | null = null
 let resolveScheduledConflictRefresh: (() => void) | null = null
@@ -52,14 +56,42 @@ const clearConflictState = (set: LibrarySet) => {
 }
 
 const runConflictRefresh = async (set: LibrarySet): Promise<void> => {
-  try {
-    const conflictResult = await IpcService.invoke<IpcResult<ConflictCalculationResult>>(IPC.CALCULATE_MOD_CONFLICTS)
+  const requestConflictState = async (
+    options: ConflictCalculationOptions
+  ): Promise<ConflictCalculationResult | null> => {
+    const conflictResult = await IpcService.invoke<IpcResult<ConflictCalculationResult>>(
+      IPC.CALCULATE_MOD_CONFLICTS,
+      options
+    )
     if (conflictResult.ok && conflictResult.data) {
-      applyConflictState(set, conflictResult.data.summaries ?? [], conflictResult.data.conflicts ?? [])
+      return conflictResult.data
+    }
+    return null
+  }
+
+  try {
+    // First pass is intentionally cheap: use already-indexed sidecars so conflict
+    // badges/details show immediately after startup, reorder, enable/disable, etc.
+    const quickState = await requestConflictState({ refreshArchiveResources: false })
+    if (quickState) {
+      applyConflictState(set, quickState.summaries ?? [], quickState.conflicts ?? [])
+
+      // Second pass may parse .archive files and run external hash tooling. It refines
+      // paths/counts when ready, but a failure must not erase the visible quick result.
+      const deepState = await requestConflictState({ refreshArchiveResources: true })
+      if (deepState) {
+        applyConflictState(set, deepState.summaries ?? [], deepState.conflicts ?? [])
+      }
+      return
+    }
+
+    const deepState = await requestConflictState({ refreshArchiveResources: true })
+    if (deepState) {
+      applyConflictState(set, deepState.summaries ?? [], deepState.conflicts ?? [])
       return
     }
   } catch {
-    // Fall through to clear stale state.
+    // Fall through to clear stale state only when neither pass produced data.
   }
 
   clearConflictState(set)

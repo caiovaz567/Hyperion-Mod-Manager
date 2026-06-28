@@ -51,9 +51,10 @@ export const ConflictSection: React.FC<{
   // so every conflict against the same mod sits together.
   const sortedConflicts = React.useMemo(() => {
     const otherOf = (c: ConflictInfo) => ({
-      name: (isWin ? c.existingModName : c.incomingModName) || '',
+      name: (isWin ? c.existingModName : c.incomingModName) ?? '',
       order: (isWin ? c.existingOrder : c.incomingOrder) ?? Number.MAX_SAFE_INTEGER,
     })
+
     return [...conflicts].sort((a, b) => {
       const oa = otherOf(a)
       const ob = otherOf(b)
@@ -114,10 +115,14 @@ export const ConflictSection: React.FC<{
 
           {/* Rows */}
           {sortedConflicts.map((conflict, index) => {
-              const otherModName = isWin ? conflict.existingModName : conflict.incomingModName
-              const otherOrder = isWin ? conflict.existingOrder : conflict.incomingOrder
+              const opponentName = isWin ? conflict.existingModName : conflict.incomingModName
+              const opponentOrder = isWin ? conflict.existingOrder : conflict.incomingOrder
+              const opponentTitle = `${opponentName || 'Unknown mod'}${typeof opponentOrder === 'number' ? ` #${opponentOrder + 1}` : ''}`
               const archiveHash = getArchiveConflictHash(conflict)
               const unresolved = isUnresolvedArchiveConflict(conflict)
+              const displayPath = unresolved && archiveHash
+                ? `Archive hash - ${archiveHash}`
+                : conflict.resourcePath
               // Zebra striping helps the eye track a file across the gap to its mod.
               const zebra = index % 2 === 1
 
@@ -134,17 +139,20 @@ export const ConflictSection: React.FC<{
                       className="font-mono text-[13px] break-all"
                       style={{ color: unresolved ? '#777' : '#cfcbc7' }}
                     >
-                      {unresolved ? `Unresolved archive hash — ${archiveHash}` : conflict.resourcePath}
+                      {displayPath}
                     </span>
                   </div>
 
                   {/* Other mod — full name, wraps, never truncated */}
                   <div className="min-w-0 border-l border-[#141414] px-5 py-2 flex items-center gap-2">
-                    <span className="min-w-0 text-[13px] font-medium text-[#d2cec9] break-words leading-snug">
-                      {otherModName || 'Unknown mod'}
+                    <span
+                      className="min-w-0 text-[13px] font-medium text-[#d2cec9] break-words leading-snug"
+                      title={opponentTitle}
+                    >
+                      {opponentName || 'Unknown mod'}
                     </span>
-                    {typeof otherOrder === 'number' && (
-                      <span className="shrink-0 text-[12px] text-[#6f6b67]">#{otherOrder + 1}</span>
+                    {typeof opponentOrder === 'number' && (
+                      <span className="shrink-0 text-[12px] text-[#6f6b67]">#{opponentOrder + 1}</span>
                     )}
                   </div>
                 </div>

@@ -90,6 +90,9 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
     autoInstallDownloads: raw?.autoInstallDownloads ?? true,
     nexusApiKey: raw?.nexusApiKey ?? '',
     libraryColumnWidths: normalizeLibraryColumnWidths(raw?.libraryColumnWidths),
+    collapsedLibrarySeparatorIds: Array.isArray(raw?.collapsedLibrarySeparatorIds)
+      ? raw.collapsedLibrarySeparatorIds.filter((id): id is string => typeof id === 'string')
+      : undefined,
     autoInstallPerMod: normalizePerModChoices(raw?.autoInstallPerMod),
   }
 }

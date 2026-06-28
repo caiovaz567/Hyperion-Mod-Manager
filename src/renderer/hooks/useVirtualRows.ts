@@ -12,6 +12,8 @@ interface UseVirtualRowsOptions {
 interface VirtualRowsResult {
   startIndex: number
   endIndex: number
+  visibleStartIndex: number
+  visibleEndIndex: number
   paddingTop: number
   paddingBottom: number
 }
@@ -27,7 +29,7 @@ export function useVirtualRows({
 
   useEffect(() => {
     const element = containerRef.current
-    if (!element || !enabled) return
+    if (!element) return
 
     let frame = 0
     const measure = () => {
@@ -60,25 +62,43 @@ export function useVirtualRows({
       resizeObserver?.disconnect()
       window.removeEventListener('resize', scheduleMeasure)
     }
-  }, [containerRef, enabled])
+  }, [containerRef])
 
   return useMemo(() => {
-    if (!enabled || count === 0) {
+    if (count === 0) {
       return {
         startIndex: 0,
         endIndex: count,
+        visibleStartIndex: 0,
+        visibleEndIndex: count,
         paddingTop: 0,
         paddingBottom: 0,
       }
     }
 
     const visibleCount = Math.max(1, Math.ceil(viewport.height / rowHeight))
-    const startIndex = Math.max(0, Math.floor(viewport.scrollTop / rowHeight) - overscan)
+    const visibleStartIndex = Math.max(0, Math.floor(viewport.scrollTop / rowHeight))
+    const visibleEndIndex = Math.min(count, visibleStartIndex + visibleCount)
+
+    if (!enabled) {
+      return {
+        startIndex: 0,
+        endIndex: count,
+        visibleStartIndex,
+        visibleEndIndex,
+        paddingTop: 0,
+        paddingBottom: 0,
+      }
+    }
+
+    const startIndex = Math.max(0, visibleStartIndex - overscan)
     const endIndex = Math.min(count, startIndex + visibleCount + overscan * 2)
 
     return {
       startIndex,
       endIndex,
+      visibleStartIndex,
+      visibleEndIndex,
       paddingTop: startIndex * rowHeight,
       paddingBottom: Math.max(0, (count - endIndex) * rowHeight),
     }

@@ -96,29 +96,46 @@ export const HyperionIconButton: React.FC<HyperionIconButtonProps> = ({
 interface HyperionSearchFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   wrapperClassName?: string
   inputClassName?: string
+  onClear?: () => void
 }
 
 export const HyperionSearchField: React.FC<HyperionSearchFieldProps> = ({
   wrapperClassName,
   inputClassName,
   className,
+  onClear,
   ...props
-}) => (
-  <div className={cx('group relative min-w-[300px] flex-1 max-w-[460px]', wrapperClassName)}>
-    <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#777] transition-colors group-hover:text-[#d0d0d0] group-focus-within:text-[#fcee09]">
-      search
-    </span>
-    <input
-      {...props}
-      type="text"
-      className={cx(
-        'h-10 w-full rounded-sm border-0 bg-[#101010] py-1.5 pl-10 pr-4 text-sm text-[#e5e2e1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] placeholder-[#6f6f6f] transition-all hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] focus:bg-[#121212] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.28)]',
-        inputClassName,
-        className
-      )}
-    />
-  </div>
-)
+}) => {
+  const hasValue = Boolean(props.value)
+  return (
+    <div className={cx('group relative min-w-[300px] flex-1 max-w-[460px]', wrapperClassName)}>
+      <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#777] transition-colors group-hover:text-[#d0d0d0] group-focus-within:text-[#fcee09]">
+        search
+      </span>
+      <input
+        {...props}
+        type="text"
+        className={cx(
+          'h-10 w-full rounded-sm border-0 bg-[#101010] py-1.5 pl-10 text-sm text-[#e5e2e1] outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] placeholder-[#6f6f6f] transition-[background-color,box-shadow,color] hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] focus:bg-[#121212] focus:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.16)]',
+          hasValue ? 'pr-8' : 'pr-4',
+          inputClassName,
+          className
+        )}
+      />
+      {hasValue && onClear ? (
+        <button
+          type="button"
+          onClick={onClear}
+          tabIndex={-1}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-sm text-[#555] transition-colors hover:text-[#e5e2e1]"
+          aria-label="Clear search"
+        >
+          <span className="material-symbols-outlined text-[16px] leading-none">close</span>
+        </button>
+      ) : null}
+    </div>
+  )
+}
 
 interface HyperionPanelProps extends React.HTMLAttributes<HTMLDivElement> {
   tone?: 'base' | 'elevated'

@@ -154,7 +154,7 @@ export const App: React.FC = () => {
       void useAppStore.getState().checkModUpdates({ force: true })
 
       updateBootStatus('Checking mod conflicts...')
-      await useAppStore.getState().refreshConflicts({ immediate: true })
+      void useAppStore.getState().refreshConflicts({ immediate: true })
 
       const elapsed = Date.now() - bootStartedAt
       const remaining = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed)

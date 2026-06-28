@@ -5,6 +5,9 @@ import { useAppStore } from '../../store/useAppStore'
 import type { LibrarySortKey } from './LibraryTableHeader'
 
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
+type MoveModsToSeparatorOptions = {
+  reveal?: boolean
+}
 
 export interface SeparatorDialogState {
   mode: 'create' | 'rename'
@@ -168,7 +171,11 @@ export function useLibrarySeparatorActions({
     await useAppStore.getState().reorderMods(nextEntries.map((entry) => entry.uuid))
   }, [])
 
-  const moveModsToSeparator = useCallback(async (modIds: string[], separatorId: string) => {
+  const moveModsToSeparator = useCallback(async (
+    modIds: string[],
+    separatorId: string,
+    options: MoveModsToSeparatorOptions = {}
+  ) => {
     if (sortKey !== null) {
       addToast('Return to Custom Order to move mods between separators', 'warning')
       return
@@ -198,7 +205,9 @@ export function useLibrarySeparatorActions({
     ]
 
     await useAppStore.getState().reorderMods(reordered.map((entry) => entry.uuid))
-    revealSeparator(separatorId)
+    if (options.reveal !== false) {
+      revealSeparator(separatorId)
+    }
     addToast(
       `${movingIds.length} mod${movingIds.length === 1 ? '' : 's'} moved into ${orderedEntries.find((entry) => entry.uuid === separatorId)?.name ?? 'separator'}`,
       'success',

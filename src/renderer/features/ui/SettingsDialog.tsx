@@ -142,11 +142,18 @@ export const SettingsPage: React.FC = () => {
     setClearingCaptures(true)
     try {
       const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.CLEAR_VFS_OVERWRITE)
-      if (result.ok && result.data) setRuntimeCapturesInfo(result.data)
+      if (result.data) setRuntimeCapturesInfo(result.data)
+      if (result.ok) {
+        addToast('Runtime captures cleared', 'success', 1800)
+      } else {
+        addToast(result.error ?? 'Could not clear runtime captures', 'error', 3200)
+      }
+    } catch {
+      addToast('Could not clear runtime captures', 'error', 3200)
     } finally {
       setClearingCaptures(false)
     }
-  }, [])
+  }, [addToast])
 
   const handleOpenExternal = useCallback(async (url: string) => {
     await IpcService.invoke(IPC.OPEN_EXTERNAL, url)

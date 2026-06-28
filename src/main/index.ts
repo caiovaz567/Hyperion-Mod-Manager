@@ -10,6 +10,7 @@ import {
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { spawn, exec, execFile } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings } from './settings'
 import { createSplashWindow } from './splash'
@@ -376,19 +377,96 @@ function cleanVfsOverwriteVolatileFiles(overwritePath: string): VfsOverwriteClea
 function buildVfsOverwriteReadLinks(gameRoot: string, overwritePath: string): VfsLink[] {
   if (!fs.existsSync(overwritePath)) return []
 
+  // usvfsVirtualLinkFile requires the destination's parent directory to exist at
+  // least virtually (see usvfs.h). Many runtime captures live in directories that
+  // are created at runtime and exist in NO enabled mod's source tree — e.g.
+  // bin/x64/plugins/address_library, r6/storages/RedscriptConfigFramework,
+  // red4ext/plugins/Codeware/Persistent. usvfsVirtualLinkDirectoryStatic only
+  // materializes directories that exist in the source, so nothing materializes
+  // those parents and the file link fails ("Some VFS links failed"), silently
+  // dropping the captured file. Materialize each missing parent from an empty real
+  // directory first, exactly like buildEnabledModLinks does for loose files.
+  const emptyDir = path.join(os.tmpdir(), 'hyperion-vfs-empty')
+  try { fs.mkdirSync(emptyDir, { recursive: true }) } catch { /* ignore */ }
+
+  const resolvedGameRoot = path.resolve(gameRoot)
   const links: VfsLink[] = []
+  const materializedDirs = new Set<string>()
+
+  // Ensure every ancestor directory of `destDir` (up to the first one that exists
+  // physically in the game tree) is materialized virtually, shallow-to-deep, so each
+  // emptyDir link's own parent already exists when usvfs links it. Materializing only
+  // the immediate parent is not enough when several levels are runtime-created (e.g.
+  // r6/storages/RedscriptConfigFramework — both `storages` and the framework folder
+  // are missing). usvfsVirtualLinkDirectoryStatic on an empty dir only ensures the
+  // node exists; it never hides existing files because usvfs merges directory links.
+  const materializeChain = (destDir: string): void => {
+    const chain: string[] = []
+    let cur = path.resolve(destDir)
+    while (cur.length > resolvedGameRoot.length && cur.toLowerCase().startsWith(resolvedGameRoot.toLowerCase())) {
+      if (fs.existsSync(cur)) break
+      chain.push(cur)
+      const parent = path.dirname(cur)
+      if (parent === cur) break
+      cur = parent
+    }
+    for (let i = chain.length - 1; i >= 0; i -= 1) {
+      const dir = chain[i]
+      const dirKey = dir.toLowerCase()
+      if (materializedDirs.has(dirKey)) continue
+      materializedDirs.add(dirKey)
+      links.push({ source: emptyDir, dest: dir, dir: true })
+    }
+  }
+
   for (const filePath of collectFilesRecursive(overwritePath)) {
     const relFile = normalizeRelativePath(path.relative(overwritePath, filePath))
     if (!relFile || isVolatileOverwriteFile(relFile)) continue
 
-    links.push({
-      source: filePath,
-      dest: path.join(gameRoot, relFile),
-      dir: false,
-    })
+    const dest = path.join(gameRoot, relFile)
+    materializeChain(path.dirname(dest))
+    links.push({ source: filePath, dest, dir: false })
   }
 
   return links
+}
+
+// Removes ALL captured files inside the overwrite folder (keeping the folder
+// itself). This backs the manual "Clear captures" action and is intentionally a
+// full wipe — unlike cleanVfsOverwriteVolatileFiles, which only prunes volatile
+// logs/tmp during automatic post-run cleanup and must not touch user settings.
+function removeAllVfsOverwriteFiles(overwritePath: string): VfsOverwriteCleanResult {
+  const result: VfsOverwriteCleanResult = { removed: 0, removedBytes: 0, errors: [] }
+  if (!fs.existsSync(overwritePath)) {
+    fs.mkdirSync(overwritePath, { recursive: true })
+    return result
+  }
+
+  for (const filePath of collectFilesRecursive(overwritePath)) {
+    try {
+      result.removedBytes += fs.statSync(filePath).size
+      result.removed += 1
+    } catch {
+      // Best-effort byte/count accounting; the re-scan below is the source of truth.
+    }
+  }
+
+  let entries: fs.Dirent[] = []
+  try { entries = fs.readdirSync(overwritePath, { withFileTypes: true }) } catch { /* ignore */ }
+  for (const entry of entries) {
+    const entryPath = path.join(overwritePath, entry.name)
+    try {
+      fs.rmSync(entryPath, { recursive: true, force: true })
+    } catch (error) {
+      result.errors.push({
+        path: entryPath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  fs.mkdirSync(overwritePath, { recursive: true })
+  return result
 }
 
 function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: string } {
@@ -406,9 +484,17 @@ function clearVfsOverwrite(): { ok: boolean; data?: VfsOverwriteInfo; error?: st
       return { ok: true, data: collectVfsOverwriteInfo() }
     }
 
-    const cleanResult = cleanVfsOverwriteVolatileFiles(overwritePath)
-    appendVfsLaunchLog('vfs overwrite cleaned', { overwritePath, ...cleanResult })
-    return { ok: true, data: collectVfsOverwriteInfo() }
+    const cleanResult = removeAllVfsOverwriteFiles(overwritePath)
+    appendVfsLaunchLog('vfs overwrite cleared', { overwritePath, ...cleanResult })
+    const info = collectVfsOverwriteInfo()
+    if (info.fileCount > 0 && cleanResult.errors.length > 0) {
+      return {
+        ok: false,
+        data: info,
+        error: `Could not remove ${cleanResult.errors.length} item(s). Close Cyberpunk 2077 if it is running and try again.`,
+      }
+    }
+    return { ok: true, data: info }
   } catch (error) {
     return {
       ok: false,
@@ -582,7 +668,7 @@ function getEnabledDeployFiles(libraryPath: string, enabledMods: ModMetadata[]):
     const modDir = path.join(libraryPath, mod.folderName ?? mod.uuid)
     const modFiles = (Array.isArray(mod.files) ? mod.files : [])
       .map((relFile) => normalizeRelativePath(relFile))
-      .filter((relFile) => Boolean(relFile) && relFile !== '_metadata.json')
+      .filter((relFile) => Boolean(relFile) && relFile !== '_metadata.json' && relFile !== '_archive_resources.json')
 
     for (const relFile of modFiles) {
       entries.push({
@@ -987,7 +1073,7 @@ function stageVfsBootstrapFiles(
     const modDir = path.join(libraryPath, mod.folderName ?? mod.uuid)
     const modFiles = (Array.isArray(mod.files) ? mod.files : [])
       .map((relFile) => normalizeRelativePath(relFile))
-      .filter((relFile) => Boolean(relFile) && relFile !== '_metadata.json')
+      .filter((relFile) => Boolean(relFile) && relFile !== '_metadata.json' && relFile !== '_archive_resources.json')
 
     const deployFiles = modFiles.map((relFile) => ({
       relFile,
@@ -2164,6 +2250,19 @@ function registerGlobalHandlers(): void {
           error: err instanceof Error ? err.message : String(err),
         })
       }
+
+      // Final guard: usvfs fails repeated identical links, so collapse any exact
+      // duplicates across every builder (mod plan, bootstrap overrides, overwrite
+      // layer, read overlays) before mounting. Keyed on the full link identity —
+      // dir/createTarget flags matter, so an overwrite createTarget dir link and a
+      // read overlay file link to the same dest are correctly kept distinct.
+      const dedupedSeen = new Set<string>()
+      links = links.filter((link) => {
+        const key = `${link.source} ${link.dest} ${link.dir ? 1 : 0} ${link.createTarget ? 1 : 0}`
+        if (dedupedSeen.has(key)) return false
+        dedupedSeen.add(key)
+        return true
+      })
 
       emitLaunchProgress({
         step: 'Mounting usvfs',

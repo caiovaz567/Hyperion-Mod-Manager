@@ -2,6 +2,8 @@ import type { StateCreator } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import type { Toast, ToastSeverity } from '../../../shared/types'
 
+type StringListUpdater = string[] | ((current: string[]) => string[])
+
 export interface DialogState {
   settings: boolean
   about: boolean
@@ -16,6 +18,7 @@ export interface UISlice {
   activeView: 'library' | 'downloads' | 'settings'
   viewHistory: Array<'library' | 'downloads' | 'settings'>
   recentLibraryBadges: Record<string, 'installed' | 'updated' | 'downgraded'>
+  collapsedLibrarySeparatorIds: string[]
   conflictHighlight: {
     active: boolean
     focusModId?: string | null
@@ -32,6 +35,7 @@ export interface UISlice {
   goBack: () => void
   setRecentLibraryBadge: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
   clearRecentLibraryBadge: (modId: string) => void
+  setCollapsedLibrarySeparatorIds: (next: StringListUpdater) => void
   setConflictHighlight: (focusModId: string, wins: string[], losses: string[]) => void
   clearConflictHighlight: () => void
 }
@@ -48,6 +52,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   activeView: 'library',
   viewHistory: [],
   recentLibraryBadges: {},
+  collapsedLibrarySeparatorIds: [],
   conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] },
 
   setStatus: (message) => set({ statusMessage: message }),
@@ -122,8 +127,13 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
       const next = { ...state.recentLibraryBadges }
       delete next[modId]
       return { recentLibraryBadges: next }
-    })
-,
+    }),
+
+  setCollapsedLibrarySeparatorIds: (next) =>
+    set((state) => ({
+      collapsedLibrarySeparatorIds:
+        typeof next === 'function' ? next(state.collapsedLibrarySeparatorIds) : next,
+    })),
 
   setConflictHighlight: (focusModId, wins, losses) =>
     set(() => ({ conflictHighlight: { active: true, focusModId, wins, losses } })),

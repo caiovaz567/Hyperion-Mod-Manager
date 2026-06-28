@@ -68,6 +68,7 @@ export function useLibrarySelection({
       if (target?.closest('[data-mod-row="true"]')) return
       if (target?.closest('[data-bulk-actions="true"]')) return
       if (target?.closest('[data-action-prompt="true"]')) return
+      if (target?.closest('[data-conflict-floating-row="true"]')) return
 
         clearSelection()
       }

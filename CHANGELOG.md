@@ -10,6 +10,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.29.0] - 2026-06-28
+
+### Fixed
+- Settings > General "Clear captures" now removes all captured runtime files instead of only volatile logs, so the capture count actually drops to zero; it reports a clear error (and refreshes the count) if a file is still locked by a running game.
+- Runtime captures whose folder is created at runtime (e.g. `red4ext/plugins/Codeware/Persistent`, `r6/storages/RedscriptConfigFramework`, `bin/x64/plugins/address_library`) now restore correctly on launch — the captured file's full missing parent-directory chain is materialized virtually before the read overlay link, eliminating the recurring "Some VFS links failed" warning and the silent loss of those captured settings between sessions. A final dedup pass before mounting also collapses any duplicate links from every builder so identical links can no longer be reported as failures.
+- Library separator expanded/collapsed state now survives view changes and auto-install rescans, so completed Nexus downloads no longer reopen separators the user left closed.
+- Conflict detail archive counts now group by unique resource identity, matching the `+N` / `-N` library badges while still indicating when multiple mods share the same resource.
+- Archive-resource conflicts with no resolvable path now display as archive hashes instead of noisy "unresolved" rows, and `.archive` conflicts no longer leak into the regular Files subtab.
+- Archive hash resolution now discovers `.kark` databases inside the configured library instead of relying on hard-coded mod folder names, while keeping startup hash-list loading limited to known direct paths so the splash screen is not held by broad library scans.
+- Startup no longer waits for the full conflict refresh before showing the main window; conflict badges and details continue updating in the background after the library opens.
+- Conflict refresh now applies a fast indexed pass before the deep `.archive` hash pass, so badges and conflict rows remain visible while resource paths are being resolved.
+- Conflict detail tables now list every opposing mod row instead of compacting extras behind `+N`.
+- Nexus auto-install now opens the duplicate mod decision dialog before extraction for already-installed mods instead of silently choosing replace for same-version downloads.
+- Move to Separator now moves selected mods without revealing the destination separator, so the library viewport does not jump away from the user's current scroll position.
+- Selecting a single conflicted mod now shows floating related-mod rows at the top or bottom of the library when conflict partners are off-screen or hidden inside collapsed separators, without resizing the main mod rows.
+- Floating related-mod rows now jump to the referenced mod instead of opening details, with shorter status labels that do not truncate into unreadable text.
+- Clicking a floating conflict row Go button now scrolls and highlights the target mod correctly instead of silently dismissing the rows; the mousedown on the button no longer cleared the selection before the click could fire.
+- Hyperion internal sidecars such as `_archive_resources.json` are excluded from file metadata, deployment paths, and conflict detection so deleting a file in the Files tab no longer creates fake `+1` / `-1` conflicts across the library.
+- New Nexus installs now prefer the Nexus mod page name for the library display name, and scans preserve saved names instead of renormalizing them from archive-style text.
+- Reinstall and replace flows now preserve the target mod's existing load-order position, including FOMOD and conflict retry paths.
+- Conflict badges refresh immediately after reinstall/update activation so a replaced mod keeps showing its `+N` / `-N` state without waiting for a later library refresh.
+- Rename inputs now save on blur, ignore unchanged names, and allow the native Cut/Copy/Paste/Select All context menu inside the text field.
+
+---
+
 ## [0.28.0] - 2026-06-27
 
 ### Changed

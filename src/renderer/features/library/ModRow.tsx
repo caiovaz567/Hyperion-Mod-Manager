@@ -13,12 +13,14 @@ interface ModRowProps {
   selected: boolean
   nested?: boolean
   animateOnEnter?: boolean
+  navigationHighlight?: boolean
   dragging?: boolean
   dragEnabled?: boolean
   separatorDropTarget?: boolean
   separatorCollapsed?: boolean
   separatorChildCount?: number
   separatorMoveHint?: string | null
+  conflictSeparatorTone?: 'win' | 'loss' | 'mixed' | null
   rowDropPosition?: 'before' | 'after' | null
   onSelect: (event: React.MouseEvent) => void
   onContextMenu: (event: React.MouseEvent, mod: ModMetadata) => void
@@ -49,12 +51,14 @@ export const ModRow: React.FC<ModRowProps> = ({
   selected,
   nested = false,
   animateOnEnter = false,
+  navigationHighlight = false,
   dragging = false,
   dragEnabled = false,
   separatorDropTarget = false,
   separatorCollapsed = false,
   separatorChildCount = 0,
   separatorMoveHint = null,
+  conflictSeparatorTone = null,
   rowDropPosition = null,
   onSelect,
   onContextMenu,
@@ -105,6 +109,7 @@ export const ModRow: React.FC<ModRowProps> = ({
     return (
       <div
         data-mod-row="true"
+        data-mod-id={mod.uuid}
         draggable={dragEnabled && !isRenaming}
         onDragStart={(event) => onDragStart?.(event, mod)}
         onDragEnd={(event) => onDragEnd?.(event, mod)}
@@ -118,7 +123,13 @@ export const ModRow: React.FC<ModRowProps> = ({
             ? 'bg-[#04141b] shadow-[inset_0_0_0_1px_rgba(79,216,255,0.34)]'
             : selected
               ? 'bg-[#0b0f11]'
-              : 'bg-[#070707] hover:border-[#19333c] hover:bg-[#0c1114] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(79,216,255,0.14)]'
+              : conflictSeparatorTone === 'win'
+                ? 'bg-[rgba(52,211,153,0.05)] hover:bg-[rgba(52,211,153,0.08)] shadow-[inset_0_0_0_1px_rgba(52,211,153,0.13)] hover:shadow-[inset_0_0_0_1px_rgba(52,211,153,0.22)]'
+                : conflictSeparatorTone === 'loss'
+                  ? 'bg-[rgba(248,113,113,0.05)] hover:bg-[rgba(248,113,113,0.08)] shadow-[inset_0_0_0_1px_rgba(248,113,113,0.13)] hover:shadow-[inset_0_0_0_1px_rgba(248,113,113,0.22)]'
+                  : conflictSeparatorTone === 'mixed'
+                    ? 'bg-[rgba(252,238,9,0.04)] hover:bg-[rgba(252,238,9,0.07)] shadow-[inset_0_0_0_1px_rgba(252,238,9,0.11)] hover:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.19)]'
+                    : 'bg-[#070707] hover:border-[#19333c] hover:bg-[#0c1114] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(79,216,255,0.14)]'
         } ${dragEnabled ? 'cursor-default active:cursor-grabbing' : ''} ${dragging ? 'opacity-45 translate-x-1' : ''}`}
       >
         {rowDropPosition ? (
@@ -168,6 +179,7 @@ export const ModRow: React.FC<ModRowProps> = ({
               onChange={(event) => onRenameChange(event.target.value)}
               onClick={(event) => event.stopPropagation()}
               onDoubleClick={(event) => event.stopPropagation()}
+              onContextMenu={(event) => event.stopPropagation()}
               onBlur={onRenameSave}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') onRenameSave()
@@ -323,6 +335,8 @@ export const ModRow: React.FC<ModRowProps> = ({
             : 'hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
   const selectedRingClass = conflictTone === 'focus'
     ? 'ring-1 ring-inset ring-[#fcee09]/42'
+    : navigationHighlight
+      ? 'ring-1 ring-inset ring-[#fcee09]/70'
     : selected
       ? 'ring-1 ring-inset ring-[#fcee09]/50'
       : ''
@@ -381,6 +395,7 @@ export const ModRow: React.FC<ModRowProps> = ({
     <div className={`relative ${animateOnEnter ? 'fade-up' : ''}`}>
       <div
         data-mod-row="true"
+        data-mod-id={mod.uuid}
         draggable={dragEnabled && !isRenaming}
         onDragStart={(event) => onDragStart?.(event, mod)}
         onDragEnd={(event) => onDragEnd?.(event, mod)}
@@ -391,6 +406,8 @@ export const ModRow: React.FC<ModRowProps> = ({
         onDoubleClick={() => onOpenDetails(mod)}
         onContextMenu={(event) => onContextMenu(event, mod)}
         className={`library-mod-row grid h-[38px] w-full gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${rowHoverClass} ${selectedRingClass} ${
+          navigationHighlight ? 'hyperion-row-attention' : ''
+        } ${
           dragEnabled ? 'active:cursor-grabbing' : ''
         } ${dragging ? 'opacity-45 translate-x-1' : ''}`}
         style={{
@@ -451,6 +468,8 @@ export const ModRow: React.FC<ModRowProps> = ({
               onChange={(event) => onRenameChange(event.target.value)}
               onClick={(event) => event.stopPropagation()}
               onDoubleClick={(event) => event.stopPropagation()}
+              onContextMenu={(event) => event.stopPropagation()}
+              onBlur={onRenameSave}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') onRenameSave()
                 if (event.key === 'Escape') onRenameCancel()
@@ -634,12 +653,14 @@ function areModRowPropsEqual(prev: ModRowProps, next: ModRowProps): boolean {
     prev.selected === next.selected &&
     prev.nested === next.nested &&
     prev.animateOnEnter === next.animateOnEnter &&
+    prev.navigationHighlight === next.navigationHighlight &&
     prev.dragging === next.dragging &&
     prev.dragEnabled === next.dragEnabled &&
     prev.separatorDropTarget === next.separatorDropTarget &&
     prev.separatorCollapsed === next.separatorCollapsed &&
     prev.separatorChildCount === next.separatorChildCount &&
     prev.separatorMoveHint === next.separatorMoveHint &&
+    prev.conflictSeparatorTone === next.conflictSeparatorTone &&
     prev.rowDropPosition === next.rowDropPosition &&
     prev.isRenaming === next.isRenaming &&
     prev.renameValue === next.renameValue

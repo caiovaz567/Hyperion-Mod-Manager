@@ -339,8 +339,7 @@ async function fetchFileInfo(
   const fileName = typeof result.data.file_name === 'string' && result.data.file_name.trim()
     ? result.data.file_name.trim()
     : undefined
-  // `name` is the human display name (e.g. "Weird Glass Begone"); `file_name` is
-  // the raw upload (may carry tokens like "Weird_Glass_Begone_1_sHIUHDmOO.zip").
+  // File display name fallback; the mod page name is preferred when available.
   const displayName = typeof result.data.name === 'string' && result.data.name.trim()
     ? result.data.name.trim()
     : undefined
@@ -348,6 +347,7 @@ async function fetchFileInfo(
 }
 
 interface RawNexusModInfo {
+  name?: string | null
   category_id?: number | string | null
   category_name?: string | null
   category?: {
@@ -413,7 +413,7 @@ async function fetchModCategoryInfo(
   modId: number,
   apiKey: string,
   mainWindow: BrowserWindow | null,
-): Promise<{ categoryId?: number; categoryName?: string }> {
+): Promise<{ categoryId?: number; categoryName?: string; modName?: string }> {
   const [result, categoryMap] = await Promise.all([
     nexusGet<RawNexusModInfo>(
       `/games/${GAME_DOMAIN}/mods/${modId}.json`,
@@ -445,8 +445,11 @@ async function fetchModCategoryInfo(
   const categoryName = typeof rawCategoryName === 'string' && rawCategoryName.trim()
     ? rawCategoryName.trim()
     : undefined
+  const modName = typeof result.data.name === 'string' && result.data.name.trim()
+    ? result.data.name.trim()
+    : undefined
 
-  return { categoryId, categoryName }
+  return { categoryId, categoryName, modName }
 }
 
 // ─── MD5 lookup (identify a manually-added archive on Nexus) ────────────────────
@@ -471,6 +474,7 @@ export interface NexusMd5Match {
   version?: string
   categoryId?: number
   categoryName?: string
+  modName?: string
 }
 
 function computeFileMd5(filePath: string): Promise<string> {
@@ -538,7 +542,11 @@ export async function lookupNexusModByMd5(
     }
   }
 
-  return { modId, fileId, version, categoryId, categoryName }
+  const modName = typeof match.mod.name === 'string' && match.mod.name.trim()
+    ? match.mod.name.trim()
+    : undefined
+
+  return { modId, fileId, version, categoryId, categoryName, modName }
 }
 
 function normalizeVersionString(value?: string): string | undefined {
@@ -1425,7 +1433,7 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       version: detectedVersion,
       categoryId: modCategoryInfo.categoryId,
       categoryName: modCategoryInfo.categoryName,
-      displayName: fileInfo.displayName,
+      displayName: modCategoryInfo.modName ?? fileInfo.displayName,
     })
 
     beginDownload(id, mainWindow, cdnUrl)

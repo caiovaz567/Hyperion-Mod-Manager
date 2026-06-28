@@ -51,8 +51,9 @@ export const DuplicateInstallDialog: React.FC = () => {
       }
 
       if (result.data.status === 'installed' && result.data.mod) {
-        await scanMods()
+        await scanMods({ refreshConflicts: false, refreshModUpdates: false })
         const enableResult = await enableMod(result.data.mod.uuid)
+        await scanMods({ immediateConflicts: true, refreshModUpdates: false })
         if (!enableResult.ok) {
           addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
         } else {

@@ -955,8 +955,11 @@ async function installMod(
     const existingMods = await scanMods(settings.libraryPath)
     const duplicateMod = findDuplicateMod(existingMods, normalizedName, folderBase, targetModMatchId)
     const nextInstallOrder = getNextInstallOrder(existingMods)
+    const preservedOrder = typeof request.preserveOrder === 'number' && Number.isFinite(request.preserveOrder)
+      ? request.preserveOrder
+      : undefined
     const installOrder = duplicateAction === 'replace'
-      ? (duplicateMod?.order ?? existingMods.length)
+      ? (preservedOrder ?? duplicateMod?.order ?? existingMods.length)
       : duplicateAction === 'copy' && duplicateMod
         ? getInstallOrderForCopy(existingMods, duplicateMod)
         : nextInstallOrder
@@ -1082,7 +1085,7 @@ async function installMod(
 
     const meta: ModMetadata = {
       uuid: modUuid,
-      name: modName,
+      name: md5Info?.modName ?? modName,
       type: modType,
       kind: 'mod',
       order: installOrder,
@@ -1354,8 +1357,11 @@ async function installFromFomod(
     const existingMods = await scanMods(settings.libraryPath)
     const duplicateMod = findDuplicateMod(existingMods, normalizedName, sanitizeFolderName(rawName), targetModId)
     const nextInstallOrder = getNextInstallOrder(existingMods)
+    const preservedOrder = typeof request.preserveOrder === 'number' && Number.isFinite(request.preserveOrder)
+      ? request.preserveOrder
+      : undefined
     const installOrder = duplicateAction === 'replace'
-      ? (duplicateMod?.order ?? existingMods.length)
+      ? (preservedOrder ?? duplicateMod?.order ?? existingMods.length)
       : duplicateAction === 'copy' && duplicateMod
         ? getInstallOrderForCopy(existingMods, duplicateMod)
         : nextInstallOrder
@@ -1581,6 +1587,7 @@ export function registerInstallerHandlers(getMainWindow: GetMainWindow): void {
           filePath: mod.sourcePath,
           duplicateAction: 'replace',
           targetModId: mod.uuid,
+          preserveOrder: mod.order,
           reinstall: true,
         },
         settings,

@@ -8,6 +8,16 @@ function normalizeArchiveHash(value?: string): string | null {
   return normalized.padStart(16, '0')
 }
 
+function normalizeResourcePath(value?: string): string | null {
+  const normalized = value
+    ?.trim()
+    .split(/[\\/]+/)
+    .filter((segment) => Boolean(segment) && segment !== '.' && segment !== '..')
+    .join('/')
+
+  return normalized || null
+}
+
 export function getArchiveConflictHash(conflict: ConflictInfo): string | null {
   if (conflict.kind !== 'archive-resource') return null
   return normalizeArchiveHash(conflict.hash) ?? normalizeArchiveHash(conflict.resourcePath)
@@ -17,4 +27,13 @@ export function isUnresolvedArchiveConflict(conflict: ConflictInfo): boolean {
   if (conflict.kind !== 'archive-resource') return false
   const hash = getArchiveConflictHash(conflict)
   return Boolean(hash && normalizeArchiveHash(conflict.resourcePath) === hash)
+}
+
+export function getConflictResourceIdentity(conflict: ConflictInfo): string {
+  if (conflict.kind === 'archive-resource') {
+    const hash = getArchiveConflictHash(conflict)
+    if (hash) return `archive:${hash}`
+  }
+
+  return `${conflict.kind}:${normalizeResourcePath(conflict.resourcePath)?.toLowerCase() ?? conflict.resourcePath}`
 }

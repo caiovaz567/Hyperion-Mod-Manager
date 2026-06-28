@@ -44,11 +44,18 @@ export function useLibraryRenameActions({
       return
     }
 
+    const renamedMod = orderedEntries.find((mod) => mod.uuid === renamingModId)
+    if (renamedMod && trimmed === renamedMod.name) {
+      setRenamingModId(null)
+      setRenameValue('')
+      return
+    }
+
     await updateModMetadata(renamingModId, { name: trimmed })
     addToast('Mod name updated', 'success', 1800)
     setRenamingModId(null)
     setRenameValue('')
-  }, [addToast, renameValue, renamingModId, updateModMetadata])
+  }, [addToast, orderedEntries, renameValue, renamingModId, updateModMetadata])
 
   const handleCancelRename = useCallback(() => {
     setRenamingModId(null)

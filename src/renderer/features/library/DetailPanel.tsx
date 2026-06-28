@@ -76,17 +76,6 @@ function isIncomingConflictForMod(conflict: ConflictInfo, mod: ModMetadata): boo
   )
 }
 
-function dedupeConflicts(conflicts: ConflictInfo[]): ConflictInfo[] {
-  const seen = new Set<string>()
-
-  return conflicts.filter((conflict) => {
-    const key = `${conflict.kind}:${conflict.resourcePath}:${conflict.existingModId}:${conflict.incomingModId ?? conflict.incomingModName}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
-}
-
 const treeMenuButtonClass = 'flex w-full items-center gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e5e2e1] transition-colors hover:bg-[#111] hover:text-[#fcee09]'
 const treeMenuDangerButtonClass = 'flex w-full items-center gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ffb4ab] transition-colors hover:bg-[#93000a]/10'
 
@@ -328,12 +317,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   )
 
   const winConflicts = useMemo(
-    () => mod ? dedupeConflicts(conflicts.filter((conflict) => isIncomingConflictForMod(conflict, mod))) : [],
+    () => mod ? conflicts.filter((conflict) => isIncomingConflictForMod(conflict, mod)) : [],
     [conflicts, mod]
   )
 
   const lossConflicts = useMemo(
-    () => mod ? dedupeConflicts(conflicts.filter((conflict) => conflict.existingModId === mod.uuid)) : [],
+    () => mod ? conflicts.filter((conflict) => conflict.existingModId === mod.uuid) : [],
     [conflicts, mod]
   )
 
@@ -341,7 +330,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const [conflictSubTab, setConflictSubTab] = useState<'files' | 'archives'>('files')
 
   const winFileConflicts = useMemo(
-    () => winConflicts.filter((c) => c.kind !== 'archive-resource' || String(c.resourcePath).toLowerCase().endsWith('.archive')),
+    () => winConflicts.filter((c) => c.kind !== 'archive-resource'),
     [winConflicts]
   )
   const winArchiveConflicts = useMemo(
@@ -349,7 +338,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     [winConflicts]
   )
   const lossFileConflicts = useMemo(
-    () => lossConflicts.filter((c) => c.kind !== 'archive-resource' || String(c.resourcePath).toLowerCase().endsWith('.archive')),
+    () => lossConflicts.filter((c) => c.kind !== 'archive-resource'),
     [lossConflicts]
   )
   const lossArchiveConflicts = useMemo(

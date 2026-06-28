@@ -32,28 +32,8 @@ import {
   getPathSizeSafe,
 } from '../fileUtils'
 
-function normalizeModName(rawName: string): string {
-  const cleaned = rawName
-    .replace(/\[[^\]]*\]/g, ' ')
-    .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
-    .replace(/[_]+/g, ' ')
-    .trim()
-
-  const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)
-  if (dashParts.length > 1) {
-    for (let index = 1; index < dashParts.length; index += 1) {
-      const trailing = dashParts.slice(index)
-      const versionLike = trailing.every((part) => /^v?\d+[a-z0-9.]*$/i.test(part))
-      if (versionLike) {
-        return dashParts.slice(0, index).join(' - ').trim()
-      }
-    }
-  }
-
-  return cleaned
-    .replace(/[-_]?v?\d+(?:[._-]\d+)+(?:[._-]\d+)*$/i, '')
-    .replace(/[-_ ]+$/g, '')
-    .trim() || rawName
+type ConflictCalculationOptions = {
+  refreshArchiveResources?: boolean
 }
 
 function sanitizeSeparatorFolderName(rawName: string): string {
@@ -183,6 +163,16 @@ const LOAD_ORDERED_ARCHIVE_EXTENSION = '.archive'
 const ARCHIVE_MOD_DEPLOY_DIR = path.join('archive', 'pc', 'mod')
 export const ARCHIVE_RESOURCE_INDEX_VERSION = 3
 const ARCHIVE_SIDECAR_FILE = '_archive_resources.json'
+const METADATA_FILE = '_metadata.json'
+
+function isHyperionInternalFile(relFile: string): boolean {
+  const normalized = normalizeRelativePath(relFile).toLowerCase()
+  return normalized === METADATA_FILE || normalized === ARCHIVE_SIDECAR_FILE
+}
+
+function getScannedModFiles(modDir: string): string[] {
+  return listFilesRecursive(modDir).filter((relFile) => !isHyperionInternalFile(relFile))
+}
 
 export function isLoadOrderedArchiveDeployPath(relativeDeployPath: string): boolean {
   const normalized = normalizeRelativePath(relativeDeployPath)
@@ -392,12 +382,12 @@ export function getDeployRelativePath(mod: ModMetadata, relFile: string): string
 
 export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
   if (Array.isArray(mod.deployedPaths) && mod.deployedPaths.length > 0) {
-    return mod.deployedPaths
+    return mod.deployedPaths.filter((relFile) => !isHyperionInternalFile(relFile))
   }
 
   if (!Array.isArray(mod.files)) return []
   return mod.files
-    .filter((relFile) => relFile !== '_metadata.json')
+    .filter((relFile) => !isHyperionInternalFile(relFile))
     .map((relFile) => getDeployRelativePath(mod, relFile))
 }
 
@@ -591,7 +581,7 @@ export async function buildEnabledModLinks(
     const seen = new Set<string>()
 
     for (const relFile of modFiles) {
-      if (relFile === '_metadata.json') continue
+      if (isHyperionInternalFile(relFile)) continue
 
       const normalizedRelativePath = normalizeRelativePath(relFile)
       const src = path.join(modDir, normalizedRelativePath)
@@ -660,7 +650,16 @@ export async function buildEnabledModLinks(
     }
   }
 
-  return links
+  // Deduplicate across mods: the per-mod seen set only prevents duplicates within
+  // one mod, but multiple mods can produce the same link (e.g. emptyDir → archive/pc/mod
+  // for each mod that has load-ordered archives). usvfs fails repeated identical links.
+  const globalSeen = new Set<string>()
+  return links.filter((link) => {
+    const key = `${link.source}\0${link.dest}`
+    if (globalSeen.has(key)) return false
+    globalSeen.add(key)
+    return true
+  })
 }
 
 // ─── Metadata helpers ─────────────────────────────────────────────────────────
@@ -779,7 +778,7 @@ async function createSeparator(libraryPath: string, rawName: string): Promise<Ip
     enabled: false,
     installedAt,
     fileSize: 0,
-    files: ['_metadata.json'],
+    files: [METADATA_FILE],
     folderName,
     deployedPaths: [],
   }
@@ -842,7 +841,7 @@ async function createModTreeEntry(
 
   const targetInfo = resolvePathInsideModDir(found.dir, path.join(parentInfo.normalized, entryName))
   if (!targetInfo) return { ok: false, error: 'Invalid entry path' }
-  if (path.basename(targetInfo.absolute) === '_metadata.json') {
+  if (isHyperionInternalFile(targetInfo.normalized)) {
     return { ok: false, error: 'Reserved file name' }
   }
   if (fs.existsSync(targetInfo.absolute)) {
@@ -881,14 +880,14 @@ async function renameModTreeEntry(
 
   const sourceInfo = resolvePathInsideModDir(found.dir, request.relativePath)
   if (!sourceInfo || !sourceInfo.normalized) return { ok: false, error: 'Invalid entry path' }
-  if (path.basename(sourceInfo.absolute) === '_metadata.json') {
+  if (isHyperionInternalFile(sourceInfo.normalized)) {
     return { ok: false, error: 'Reserved file cannot be renamed' }
   }
   if (!fs.existsSync(sourceInfo.absolute)) return { ok: false, error: 'Entry not found' }
 
   const targetInfo = resolvePathInsideModDir(found.dir, path.join(path.dirname(sourceInfo.normalized), nextName))
   if (!targetInfo) return { ok: false, error: 'Invalid destination path' }
-  if (path.basename(targetInfo.absolute) === '_metadata.json') {
+  if (isHyperionInternalFile(targetInfo.normalized)) {
     return { ok: false, error: 'Reserved file name' }
   }
   if (sourceInfo.absolute === targetInfo.absolute) {
@@ -926,7 +925,7 @@ async function deleteModTreeEntry(
 
   const targetInfo = resolvePathInsideModDir(found.dir, request.relativePath)
   if (!targetInfo || !targetInfo.normalized) return { ok: false, error: 'Invalid entry path' }
-  if (path.basename(targetInfo.absolute) === '_metadata.json') {
+  if (isHyperionInternalFile(targetInfo.normalized)) {
     return { ok: false, error: 'Reserved file cannot be deleted' }
   }
   if (!fs.existsSync(targetInfo.absolute)) return { ok: false, error: 'Entry not found' }
@@ -993,9 +992,9 @@ export async function scanMods(
 
         if (meta.kind === 'mod') {
           const shouldRefreshFileMetadata = Boolean(options.refreshFileMetadata)
-          const normalizedFiles = shouldRefreshFileMetadata || !Array.isArray(meta.files)
-            ? listFilesRecursive(modDir)
-            : meta.files
+          const normalizedFiles = (shouldRefreshFileMetadata || !Array.isArray(meta.files)
+            ? getScannedModFiles(modDir)
+            : meta.files.filter((relFile) => !isHyperionInternalFile(relFile)))
           if (!Array.isArray(meta.files) || meta.files.length !== normalizedFiles.length || meta.files.some((file, index) => file !== normalizedFiles[index])) {
             meta.files = normalizedFiles
             shouldWrite = true
@@ -1040,12 +1039,6 @@ export async function scanMods(
               }
               shouldWrite = true
             }
-          }
-
-          const normalizedName = normalizeModName(meta.name)
-          if (normalizedName !== meta.name) {
-            meta.name = normalizedName
-            shouldWrite = true
           }
 
           if (shouldRefreshFileMetadata || !meta.type || meta.type === 'unknown') {
@@ -1492,10 +1485,15 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
 
   ipcMain.handle(
     IPC.CALCULATE_MOD_CONFLICTS,
-    async (): Promise<IpcResult<{ summaries: ModConflictSummary[]; conflicts: ConflictInfo[] }>> => {
+    async (
+      _event,
+      options?: ConflictCalculationOptions
+    ): Promise<IpcResult<{ summaries: ModConflictSummary[]; conflicts: ConflictInfo[] }>> => {
       try {
         const settings = loadSettings()
-        const mods = await scanMods(settings.libraryPath, { refreshArchiveResources: true })
+        const mods = await scanMods(settings.libraryPath, {
+          refreshArchiveResources: options?.refreshArchiveResources === true,
+        })
 
         const pathOwners = new Map<string, Array<{ modId: string; name: string; order: number }>>()
         const archiveOwners = new Map<string, Array<{ modId: string; name: string; order: number; resource: ArchiveResourceEntry }>>()

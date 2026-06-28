@@ -76,12 +76,46 @@ function normalizeSourceIdentity(rawName: string): string {
     .toLowerCase()
 }
 
+function getInstallPromptName(filePath: string, sourceFileName?: string): string {
+  const rawName = sourceFileName?.trim()
+    || filePath.replace(/\\/g, '/').split('/').pop()
+    || filePath
+
+  const cleaned = stripArchiveExtension(rawName)
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
+    .replace(/[_]+/g, ' ')
+    .trim()
+
+  const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)
+  if (dashParts.length > 1) {
+    for (let index = 1; index < dashParts.length; index += 1) {
+      const trailing = dashParts.slice(index)
+      const versionLike = trailing.every((part) => /^v?\d+[a-z0-9.]*$/i.test(part))
+      if (versionLike) {
+        return dashParts.slice(0, index).join(' - ').trim() || cleaned
+      }
+    }
+  }
+
+  return cleaned
+    .replace(/[-_]?v?\d+(?:[._-]\d+)+(?:[._-]\d+)*$/i, '')
+    .replace(/[-_ ]+$/g, '')
+    .trim() || rawName
+}
+
 function getInstalledSourceIdentity(mod: ModMetadata): string | undefined {
   const rawSourceName = mod.sourcePath
     ? mod.sourcePath.replace(/\\/g, '/').split('/').pop()
     : mod.name
   if (!rawSourceName?.trim()) return undefined
   return normalizeSourceIdentity(rawSourceName)
+}
+
+function getModOrder(mods: ModMetadata[] | undefined, modId?: string): number | undefined {
+  if (!modId) return undefined
+  const order = mods?.find((mod) => mod.uuid === modId)?.order
+  return typeof order === 'number' && Number.isFinite(order) ? order : undefined
 }
 
 function normalizeVersion(value?: string): string | undefined {
@@ -210,6 +244,7 @@ function shouldPromptForVersionDecision(existingVersion?: string, incomingVersio
 
 type DownloadsStoreBridge = DownloadsSlice & {
   settings?: AppSettings | null
+  mods?: ModMetadata[]
   addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
   scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
   enableMod?: (modId: string) => Promise<IpcResult>
@@ -233,6 +268,7 @@ async function installCompletedDownload(
     nexusFileId: payload.fileId,
     sourceFileName: details.fileName,
     sourceVersion: details.version,
+    preferDuplicatePrompt: true,
   })
 
   if (!result.ok) {
@@ -240,10 +276,15 @@ async function installCompletedDownload(
     return
   }
 
+  if (result.data?.status === 'duplicate' || result.data?.status === 'version-mismatch' || result.data?.status === 'fomod') {
+    return
+  }
+
   if (result.data?.status === 'installed' && result.data.mod) {
     const mod = result.data.mod
-    await state.scanMods?.()
+    await state.scanMods?.({ refreshConflicts: false, refreshModUpdates: false })
     const enableResult = await state.enableMod?.(mod.uuid)
+    await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
     if (enableResult && !enableResult.ok) {
       state.addToast?.(`${mod.name} installed — couldn't activate: ${enableResult.error}`, 'warning', 3000)
     } else {
@@ -265,9 +306,11 @@ async function installCompletedModUpdate(
 ): Promise<void> {
   const state = get() as DownloadsStoreBridge
   const intent = details.intent
+  const preserveOrder = getModOrder(state.mods, intent.targetModId)
   const result = await state.installMod(filePath, {
     duplicateAction: 'replace',
     targetModId: intent.targetModId,
+    preserveOrder,
     nexusModId: payload.modId,
     nexusFileId: payload.fileId,
     sourceFileName: details.fileName,
@@ -281,8 +324,9 @@ async function installCompletedModUpdate(
   }
 
   if (result.data.status === 'installed' && result.data.mod) {
-    await state.scanMods?.({ refreshModUpdates: false })
+    await state.scanMods?.({ refreshConflicts: false, refreshModUpdates: false })
     const enableResult = await state.enableMod?.(result.data.mod.uuid)
+    await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
     if (enableResult && !enableResult.ok) {
       state.addToast?.(`Updated but couldn't activate: ${enableResult.error}`, 'warning')
     } else {
@@ -312,6 +356,7 @@ export interface VersionMismatchPromptInfo {
   nexusModId: number
   existingModId: string
   existingModName: string
+  existingOrder?: number
   existingSourceFileName?: string
   matchedSourceIdentity?: string
   existingVersion?: string
@@ -445,6 +490,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           nexusModId,
           existingModId: existingMod.uuid,
           existingModName: existingMod.name,
+          existingOrder: existingMod.order,
           existingSourceFileName: existingMod.sourcePath
             ? existingMod.sourcePath.replace(/\\/g, '/').split('/').pop()
             : undefined,
@@ -459,11 +505,41 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       return { ok: true, data: { status: 'version-mismatch' } }
     }
 
-    if (!request.skipVersionMismatchPrompt && nexusModId && existingMod && !request.duplicateAction) {
+    if (request.preferDuplicatePrompt && nexusModId && existingMod && !request.duplicateAction) {
+      const nextNewFiles = removeNewFilePath(get().newFiles, filePath)
+      if (nextNewFiles.length !== get().newFiles.length) {
+        persistNewFiles(nextNewFiles)
+      }
+
+      set({
+        installPrompt: {
+          mode: 'duplicate',
+          existingModId: existingMod.uuid,
+          existingModName: existingMod.name,
+          incomingModName: getInstallPromptName(filePath, request.sourceFileName),
+          sourcePath: filePath,
+        },
+        pendingInstallRequest: {
+          filePath,
+          ...request,
+          targetModId: existingMod.uuid,
+          preserveOrder: existingMod.order,
+          duplicateAction: 'prompt',
+          preferDuplicatePrompt: false,
+        },
+        overwriteConflictPrompt: null,
+        newFiles: nextNewFiles,
+      })
+
+      return { ok: true, data: { status: 'duplicate' } }
+    }
+
+    if (!request.skipVersionMismatchPrompt && nexusModId && existingMod && !request.duplicateAction && !request.preferDuplicatePrompt) {
       request = {
         ...request,
         duplicateAction: 'replace',
         targetModId: existingMod.uuid,
+        preserveOrder: existingMod.order,
       }
     }
 
@@ -514,6 +590,12 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           },
         })
       } else if (resultData.status === 'duplicate' && resultData.duplicate) {
+        const nextNewFiles = request.preferDuplicatePrompt
+          ? removeNewFilePath(get().newFiles, filePath)
+          : get().newFiles
+        if (nextNewFiles.length !== get().newFiles.length) {
+          persistNewFiles(nextNewFiles)
+        }
         set({
           installPrompt: {
             mode: 'duplicate',
@@ -527,8 +609,11 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             targetModId: resultData.duplicate.existingModId,
             ...request,
             duplicateAction: 'prompt',
+            preserveOrder: request.preserveOrder ?? getModOrder(state.mods, resultData.duplicate.existingModId),
+            preferDuplicatePrompt: false,
           },
           overwriteConflictPrompt: null,
+          newFiles: nextNewFiles,
         })
       } else if (resultData.status === 'conflict' && resultData.mod && resultData.conflicts?.length) {
         return await get().installMod(filePath, {
@@ -597,7 +682,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       installPlacement: 'append',
     })
 
-    if (result.ok && result.data?.status === 'installed') {
+    if (result.ok && result.data?.status === 'installed' && result.data.mod) {
       set((state) => {
         const sourcePath = targetMod?.sourcePath
         if (!sourcePath) {
@@ -614,6 +699,20 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           newFiles: nextNewFiles,
         }
       })
+      if (targetMod?.enabled) {
+        const enableResult = await (get() as DownloadsSlice & {
+          enableMod?: (modId: string) => Promise<IpcResult>
+          addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+        }).enableMod?.(result.data.mod.uuid)
+        if (enableResult && !enableResult.ok) {
+          ;(get() as DownloadsSlice & {
+            addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+          }).addToast?.(`Reinstalled but couldn't reactivate: ${enableResult.error}`, 'warning')
+        }
+      }
+      await (get() as DownloadsSlice & {
+        scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
+      }).scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
     }
 
     return result
@@ -649,6 +748,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       pendingInstallRequest: {
         filePath: mod.sourcePath,
         targetModId: mod.uuid,
+        preserveOrder: mod.order,
         duplicateAction: 'prompt',
         reinstall: true,
       },
@@ -678,9 +778,10 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     const prompt = get().versionMismatchPrompt
     const state = get() as DownloadsSlice & {
       addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
-      scanMods?: () => Promise<unknown>
+      scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
       enableMod?: (modId: string) => Promise<IpcResult>
       setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
+      mods?: ModMetadata[]
     }
 
     if (!prompt) return
@@ -692,6 +793,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     const result = await get().installMod(prompt.sourcePath, {
       duplicateAction: action,
       targetModId: action === 'replace' ? prompt.existingModId : undefined,
+      preserveOrder: action === 'replace' ? (prompt.existingOrder ?? getModOrder(state.mods, prompt.existingModId)) : undefined,
       nexusModId: prompt.nexusModId,
       sourceFileName: prompt.sourceFileName,
       sourceVersion: prompt.sourceVersion,
@@ -704,8 +806,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     }
 
     if (result.data.status === 'installed' && result.data.mod) {
-      await state.scanMods?.()
+      await state.scanMods?.({ refreshConflicts: false, refreshModUpdates: false })
       const enableResult = await state.enableMod?.(result.data.mod.uuid)
+      await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
       if (enableResult && !enableResult.ok) {
         state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
       } else {
@@ -729,7 +832,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     const prompt = get().overwriteConflictPrompt
     const state = get() as DownloadsSlice & {
       addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
-      scanMods?: () => Promise<unknown>
+      scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
       enableMod?: (modId: string) => Promise<IpcResult>
       setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
     }
@@ -763,8 +866,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     }
 
     if (result.data.status === 'installed' && result.data.mod) {
-      await state.scanMods?.()
+      await state.scanMods?.({ refreshConflicts: false, refreshModUpdates: false })
       const enableResult = await state.enableMod?.(result.data.mod.uuid)
+      await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
       if (enableResult && !enableResult.ok) {
         state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
       } else {
@@ -782,7 +886,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   fomodInstall: async (fomodRequest) => {
     const state = get() as DownloadsSlice & {
       addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
-      scanMods?: () => Promise<unknown>
+      scanMods?: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<unknown>
       enableMod?: (modId: string) => Promise<IpcResult>
       setRecentLibraryBadge?: (modId: string, badge: 'installed' | 'updated' | 'downgraded', duration?: number) => void
     }
@@ -830,6 +934,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           pendingInstallRequest: {
             filePath: fomodRequest.originalFilePath,
             targetModId: data.duplicate.existingModId,
+            preserveOrder: fomodRequest.preserveOrder ?? getModOrder((get() as DownloadsSlice & { mods?: ModMetadata[] }).mods, data.duplicate.existingModId),
             duplicateAction: 'prompt',
           },
         })
@@ -857,8 +962,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             newFiles: nextNewFiles,
           }
         })
-        await state.scanMods?.()
+        await state.scanMods?.({ refreshConflicts: false, refreshModUpdates: false })
         const enableResult = await state.enableMod?.(data.mod.uuid)
+        await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
         if (enableResult && !enableResult.ok) {
           state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
         } else {

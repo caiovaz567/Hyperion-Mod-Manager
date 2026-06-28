@@ -22,7 +22,7 @@ interface UseLibraryDragDropOptions {
   setSelection: (nextIds: string[], anchorId?: string | null) => void
   selectMod: (modId: string | null) => void
   addToast: AddToast
-  moveModsToSeparator: (modIds: string[], separatorId: string) => Promise<void>
+  moveModsToSeparator: (modIds: string[], separatorId: string, options?: { reveal?: boolean }) => Promise<void>
   moveModsToTopLevel: (modIds: string[]) => Promise<void>
   installDroppedFile: (filePath: string) => Promise<void>
 }

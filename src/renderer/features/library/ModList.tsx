@@ -5,6 +5,7 @@ import { IPC, type IpcResult, type ModMetadata } from '@shared/types'
 import { IpcService } from '../../services/IpcService'
 import { DetailPanel } from './DetailPanel'
 import { LibraryBulkSelectionBar } from './LibraryBulkSelectionBar'
+import { LibraryConflictFloatingRows } from './LibraryConflictFloatingRows'
 import { LibraryContextMenu } from './LibraryContextMenu'
 import { LibraryDeleteDialogs } from './LibraryDeleteDialogs'
 import type { LibraryPendingActionState } from './LibraryDeleteDialogs'
@@ -53,7 +54,8 @@ export const ModList: React.FC = () => {
   const [pendingDeleteMod, setPendingDeleteMod] = useState<ModMetadata | null>(null)
   const [pendingAction, setPendingAction] = useState<LibraryPendingActionState | null>(null)
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null)
-  const [collapsedSeparatorIds, setCollapsedSeparatorIds] = useState<string[]>([])
+  const [pendingConflictGoToModId, setPendingConflictGoToModId] = useState<string | null>(null)
+  const [navigationHighlightModId, setNavigationHighlightModId] = useState<string | null>(null)
   const [moveSeparatorTargets, setMoveSeparatorTargets] = useState<string[] | null>(null)
   const [columnWidths, setColumnWidths] = useState(readLibraryColumnWidths)
   const listScrollRef = useRef<HTMLDivElement>(null)
@@ -62,6 +64,7 @@ export const ModList: React.FC = () => {
   const {
     filter,
     setFilter,
+    setTypeFilter,
     selectMod,
     installMod,
     enableMod,
@@ -93,14 +96,18 @@ export const ModList: React.FC = () => {
     installStatus,
     installCurrentFile,
     conflicts,
+    conflictHighlight,
     setConflictHighlight,
     clearConflictHighlight,
     checkModUpdates,
     checkingModUpdates,
     modUpdates,
+    collapsedSeparatorIds,
+    setCollapsedSeparatorIds,
   } = useAppStore((state) => ({
     filter: state.filter,
     setFilter: state.setFilter,
+    setTypeFilter: state.setTypeFilter,
     selectMod: state.selectMod,
     installMod: state.installMod,
     enableMod: state.enableMod,
@@ -132,15 +139,19 @@ export const ModList: React.FC = () => {
     installStatus: state.installStatus,
     installCurrentFile: state.installCurrentFile,
     conflicts: state.conflicts,
+    conflictHighlight: state.conflictHighlight,
     setConflictHighlight: state.setConflictHighlight,
     clearConflictHighlight: state.clearConflictHighlight,
     checkModUpdates: state.checkModUpdates,
     checkingModUpdates: state.checkingModUpdates,
     modUpdates: state.modUpdates,
+    collapsedSeparatorIds: state.collapsedLibrarySeparatorIds,
+    setCollapsedSeparatorIds: state.setCollapsedLibrarySeparatorIds,
   }), shallow)
 
   const updateCount = Object.values(modUpdates).filter((status) => status.state === 'update-available').length
   const columnWidthsHydratedRef = useRef(false)
+  const collapsedSepsHydratedRef = useRef(false)
 
   const handleColumnResize = useCallback((key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => {
     const next = applyColumnResize(start, key, deltaPx)
@@ -172,6 +183,31 @@ export const ModList: React.FC = () => {
     }, 250)
     return () => window.clearTimeout(timer)
   }, [columnWidths, settings, updateSettings])
+
+  // Hydrate collapsed separator state from persisted settings on first load.
+  useEffect(() => {
+    if (!settings || collapsedSepsHydratedRef.current) return
+    const stored = settings.collapsedLibrarySeparatorIds
+    if (Array.isArray(stored) && stored.length > 0) {
+      setCollapsedSeparatorIds(stored)
+    }
+    collapsedSepsHydratedRef.current = true
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings])
+
+  // Persist collapsed separator state back to settings when it changes (after hydration).
+  useEffect(() => {
+    if (!settings || !collapsedSepsHydratedRef.current) return
+    const stored = settings.collapsedLibrarySeparatorIds ?? []
+    if (
+      stored.length === collapsedSeparatorIds.length &&
+      collapsedSeparatorIds.every((id) => stored.includes(id))
+    ) return
+    const timer = window.setTimeout(() => {
+      void updateSettings({ collapsedLibrarySeparatorIds: collapsedSeparatorIds })
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [collapsedSeparatorIds, settings, updateSettings])
 
   const libraryGridTemplate = useMemo(() => buildLibraryGridTemplate(columnWidths), [columnWidths])
 
@@ -358,6 +394,22 @@ export const ModList: React.FC = () => {
     setSelection,
   })
 
+  const conflictSeparatorTones = useMemo(() => {
+    const tones = new Map<string, 'win' | 'loss' | 'mixed'>()
+    if (!conflictHighlight.active) return tones
+    for (const modId of conflictHighlight.wins) {
+      const parentId = separatorParentByModId.get(modId)
+      if (!parentId) continue
+      tones.set(parentId, tones.get(parentId) === 'loss' ? 'mixed' : 'win')
+    }
+    for (const modId of conflictHighlight.losses) {
+      const parentId = separatorParentByModId.get(modId)
+      if (!parentId) continue
+      tones.set(parentId, tones.get(parentId) === 'win' ? 'mixed' : 'loss')
+    }
+    return tones
+  }, [conflictHighlight, separatorParentByModId])
+
   const showCustomOrderBadge = sortKey === null && allSeparators.length > 0
   const bulkToggleDisabled = libraryStatusFilter !== 'all'
   const bulkToggleTooltip = libraryStatusFilter === 'enabled'
@@ -388,6 +440,77 @@ export const ModList: React.FC = () => {
   const showAppendInstallRow = hasAppendInstallRow &&
     virtualizedMods.startIndex <= displayedMods.length &&
     virtualizedMods.endIndex > displayedMods.length
+  const selectedConflictMod = selectedIds.length === 1
+    ? allMods.find((mod) => mod.uuid === selectedIds[0]) ?? null
+    : null
+
+  const scrollToDisplayedMod = useCallback((modId: string) => {
+    const scrollElement = listScrollRef.current
+    if (!scrollElement) return false
+
+    const targetIndex = displayedMods.findIndex((entry) => entry.uuid === modId)
+    if (targetIndex < 0) return false
+
+    const row = Array.from(scrollElement.querySelectorAll<HTMLElement>('[data-mod-id]'))
+      .find((element) => element.dataset.modId === modId)
+
+    let targetScrollTop: number
+    if (row) {
+      const containerRect = scrollElement.getBoundingClientRect()
+      const rowRect = row.getBoundingClientRect()
+      targetScrollTop = scrollElement.scrollTop + rowRect.top - containerRect.top - (scrollElement.clientHeight - rowRect.height) / 2
+    } else {
+      targetScrollTop = targetIndex * MOD_ROW_HEIGHT - scrollElement.clientHeight * 0.42
+    }
+    targetScrollTop = Math.max(0, Math.min(targetScrollTop, scrollElement.scrollHeight - scrollElement.clientHeight))
+
+    const startTop = scrollElement.scrollTop
+    const distance = targetScrollTop - startTop
+    const duration = 200
+    const startTime = performance.now()
+    const step = (now: number) => {
+      const t = Math.min((now - startTime) / duration, 1)
+      const eased = 1 - (1 - t) * (1 - t) * (1 - t)
+      scrollElement.scrollTop = startTop + distance * eased
+      if (t < 1) window.requestAnimationFrame(step)
+    }
+    window.requestAnimationFrame(step)
+
+    return true
+  }, [displayedMods])
+
+  useEffect(() => {
+    if (!pendingConflictGoToModId) return
+
+    let attempts = 0
+    let frame = 0
+    const targetModId = pendingConflictGoToModId
+
+    const attemptScroll = () => {
+      if (scrollToDisplayedMod(targetModId)) {
+        setSelection([targetModId], targetModId)
+        selectMod(targetModId)
+        setNavigationHighlightModId(targetModId)
+        window.setTimeout(() => {
+          setNavigationHighlightModId((current) => (current === targetModId ? null : current))
+        }, 1600)
+        setPendingConflictGoToModId(null)
+        return
+      }
+
+      attempts += 1
+      if (attempts < 6) {
+        frame = window.requestAnimationFrame(attemptScroll)
+        return
+      }
+
+      setPendingConflictGoToModId(null)
+      addToast('Could not reveal that mod with the current filters', 'warning', 2600)
+    }
+
+    frame = window.requestAnimationFrame(attemptScroll)
+    return () => window.cancelAnimationFrame(frame)
+  }, [addToast, pendingConflictGoToModId, scrollToDisplayedMod, selectMod, setSelection])
 
   const handleOpenModsFolder = useCallback(async () => {
     const libraryPath = settings?.libraryPath?.trim()
@@ -401,6 +524,38 @@ export const ModList: React.FC = () => {
       addToast(result.error ?? 'Could not open mods folder', 'error')
     }
   }, [addToast, settings?.libraryPath])
+
+  const handleGoToConflictMod = useCallback((modId: string) => {
+    const targetMod = allMods.find((mod) => mod.uuid === modId)
+
+    if (filter) setFilter('')
+    if (typeFilter) setTypeFilter('')
+    if (
+      targetMod &&
+      ((libraryStatusFilter === 'enabled' && !targetMod.enabled) ||
+        (libraryStatusFilter === 'disabled' && targetMod.enabled))
+    ) {
+      setLibraryStatusFilter('all')
+    }
+
+    const parentId = separatorParentByModId.get(modId)
+    if (parentId && collapsedSeparatorSet.has(parentId)) {
+      revealSeparator(parentId)
+    }
+
+    setPendingConflictGoToModId(modId)
+  }, [
+    allMods,
+    collapsedSeparatorSet,
+    filter,
+    libraryStatusFilter,
+    revealSeparator,
+    separatorParentByModId,
+    setFilter,
+    setLibraryStatusFilter,
+    setTypeFilter,
+    typeFilter,
+  ])
 
   useEffect(() => {
     if (!libraryDeleteAllRequestedAt) return
@@ -491,8 +646,23 @@ export const ModList: React.FC = () => {
 
   const handleMoveTargetsToSeparator = useCallback(async (separatorId: string) => {
     if (!moveSeparatorTargets) return
-    await moveModsToSeparator(moveSeparatorTargets, separatorId)
+    const scrollElement = listScrollRef.current
+    const previousScrollTop = scrollElement?.scrollTop ?? null
     setMoveSeparatorTargets(null)
+
+    const movePromise = moveModsToSeparator(moveSeparatorTargets, separatorId, { reveal: false })
+
+    if (scrollElement && previousScrollTop !== null) {
+      scrollElement.scrollTop = previousScrollTop
+      window.requestAnimationFrame(() => {
+        scrollElement.scrollTop = previousScrollTop
+        window.requestAnimationFrame(() => {
+          scrollElement.scrollTop = previousScrollTop
+        })
+      })
+    }
+
+    await movePromise
   }, [moveModsToSeparator, moveSeparatorTargets])
 
   const handleContextCreateSeparator = useCallback(() => {
@@ -562,6 +732,7 @@ export const ModList: React.FC = () => {
         statusFilter={libraryStatusFilter}
         showCustomOrderBadge={showCustomOrderBadge}
         onFilterChange={handleFilterChange}
+        onClearFilter={() => setFilter('')}
         onStatusFilterChange={setLibraryStatusFilter}
         onOpenModsFolder={() => void handleOpenModsFolder()}
         onDeleteAll={() => requestLibraryDeleteAll()}
@@ -573,11 +744,14 @@ export const ModList: React.FC = () => {
 
         {/* Table — has its own scroll, toolbar stays fixed above */}
       <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
-        <HyperionPanel className="h-full overflow-hidden">
+        <HyperionPanel
+          className="relative h-full overflow-hidden"
+          style={{ '--library-grid': libraryGridTemplate } as React.CSSProperties}
+        >
           <div
             ref={listScrollRef}
             className="hyperion-scrollbar managed-mods-scroll h-full overflow-auto"
-            style={{ '--library-grid': libraryGridTemplate } as React.CSSProperties}
+            style={{ overflowAnchor: 'none' } as React.CSSProperties}
           >
 
           <LibraryTableHeader
@@ -625,6 +799,8 @@ export const ModList: React.FC = () => {
             nestedModIds={nestedModIds}
             separatorParentByModId={separatorParentByModId}
             recentlyRevealedSeparatorId={recentlyRevealedSeparatorId}
+            navigationHighlightModId={navigationHighlightModId}
+            conflictSeparatorTones={conflictSeparatorTones}
             draggedModIds={draggedModIds}
             sortKey={sortKey}
             dropSeparatorId={dropSeparatorId}
@@ -660,6 +836,19 @@ export const ModList: React.FC = () => {
           />
 
           </div>
+          <LibraryConflictFloatingRows
+            selectedMod={selectedConflictMod}
+            conflicts={conflicts}
+            allMods={allMods}
+            allSeparators={allSeparators}
+            displayedMods={displayedMods}
+            visibleStartIndex={virtualizedMods.visibleStartIndex}
+            visibleEndIndex={virtualizedMods.visibleEndIndex}
+            loadOrderMap={loadOrderMap}
+            separatorParentByModId={separatorParentByModId}
+            collapsedSeparatorSet={collapsedSeparatorSet}
+            onGoToMod={handleGoToConflictMod}
+          />
         </HyperionPanel>
       </div>
 

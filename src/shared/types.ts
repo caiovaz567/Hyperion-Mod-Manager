@@ -73,6 +73,7 @@ export interface AppSettings {
     category?: number
     date?: number
   }
+  collapsedLibrarySeparatorIds?: string[]
   autoInstallPerMod?: Record<string, 'replace' | 'copy' | 'none'>
 }
 
@@ -262,6 +263,8 @@ export interface FomodInstallRequest {
   sourceFileName?: string
   sourceVersion?: string
   skipVersionMismatchPrompt?: boolean
+  preferDuplicatePrompt?: boolean
+  preserveOrder?: number
   allowOverwriteConflicts?: boolean
 }
 
@@ -340,6 +343,8 @@ export interface InstallModRequest {
   sourceFileName?: string
   sourceVersion?: string
   skipVersionMismatchPrompt?: boolean
+  preferDuplicatePrompt?: boolean
+  preserveOrder?: number
   allowOverwriteConflicts?: boolean
   // When true, resolve filePath against the currently configured Downloads
   // folder (by file name) before installing, so reinstalls keep working after

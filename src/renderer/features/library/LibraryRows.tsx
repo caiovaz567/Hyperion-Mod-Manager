@@ -28,6 +28,8 @@ interface LibraryRowsProps {
   nestedModIds: Set<string>
   separatorParentByModId: Map<string, string>
   recentlyRevealedSeparatorId: string | null
+  navigationHighlightModId: string | null
+  conflictSeparatorTones: Map<string, 'win' | 'loss' | 'mixed'>
   draggedModIds: string[]
   sortKey: LibrarySortKey | null
   dropSeparatorId: string | null
@@ -86,6 +88,8 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
   nestedModIds,
   separatorParentByModId,
   recentlyRevealedSeparatorId,
+  navigationHighlightModId,
+  conflictSeparatorTones,
   draggedModIds,
   sortKey,
   dropSeparatorId,
@@ -173,6 +177,8 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
                 selected={selectedSet.has(mod.uuid)}
                 nested={nestedModIds.has(mod.uuid)}
                 animateOnEnter={mod.kind === 'mod' && separatorParentByModId.get(mod.uuid) === recentlyRevealedSeparatorId}
+                navigationHighlight={mod.uuid === navigationHighlightModId}
+                conflictSeparatorTone={mod.kind === 'separator' ? (conflictSeparatorTones.get(mod.uuid) ?? null) : null}
                 dragging={draggedModIds.includes(mod.uuid)}
                 dragEnabled={sortKey === null}
                 separatorDropTarget={mod.kind === 'separator' && dropSeparatorId === mod.uuid}

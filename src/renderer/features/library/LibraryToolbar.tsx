@@ -10,6 +10,7 @@ interface LibraryToolbarProps {
   statusFilter: LibraryStatusFilter
   showCustomOrderBadge: boolean
   onFilterChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onClearFilter: () => void
   onStatusFilterChange: (filter: LibraryStatusFilter) => void
   onOpenModsFolder: () => void
   onDeleteAll: () => void
@@ -26,6 +27,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   statusFilter,
   showCustomOrderBadge,
   onFilterChange,
+  onClearFilter,
   onStatusFilterChange,
   onOpenModsFolder,
   onDeleteAll,
@@ -129,6 +131,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           placeholder="Search managed mods..."
           value={filter}
           onChange={onFilterChange}
+          onClear={onClearFilter}
         />
 
         {activeStatusNotice ? (

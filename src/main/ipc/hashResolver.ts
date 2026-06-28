@@ -20,6 +20,66 @@ const FNV1A64_OFFSET = 0xcbf29ce484222325n
 const FNV1A64_PRIME = 0x100000001b3n
 const EXTERNAL_HASH_CHUNK_SIZE = 250
 const HASH_DB_MAX_COMPRESSED_BYTES = 64 * 1024 * 1024
+const HASH_SOURCE_SCAN_MAX_DEPTH = 10
+const HASH_SOURCE_SCAN_MAX_FILES = 256
+
+function addIfFile(paths: Set<string>, candidate: string): void {
+  if (!candidate) return
+  try {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      paths.add(candidate)
+    }
+  } catch {
+    // Optional hash sources should never block conflict detection.
+  }
+}
+
+function findFilesRecursive(
+  root: string | undefined,
+  predicate: (fileName: string) => boolean,
+  maxDepth = HASH_SOURCE_SCAN_MAX_DEPTH
+): string[] {
+  const results: string[] = []
+  const visited = new Set<string>()
+
+  const visit = (dir: string, depth: number): void => {
+    if (results.length >= HASH_SOURCE_SCAN_MAX_FILES || depth > maxDepth) return
+
+    let resolvedDir: string
+    try {
+      resolvedDir = fs.realpathSync(dir)
+    } catch {
+      return
+    }
+    if (visited.has(resolvedDir)) return
+    visited.add(resolvedDir)
+
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+
+    for (const entry of entries) {
+      if (results.length >= HASH_SOURCE_SCAN_MAX_FILES) return
+      const fullPath = path.join(dir, entry.name)
+      if (entry.isFile()) {
+        if (predicate(entry.name)) results.push(fullPath)
+        continue
+      }
+
+      if (entry.isDirectory()) {
+        visit(fullPath, depth + 1)
+      }
+    }
+  }
+
+  const normalizedRoot = root?.trim()
+  if (!normalizedRoot) return results
+  visit(normalizedRoot, 0)
+  return results
+}
 
 export function normalizeArchiveHash(value?: string): string | null {
   const normalized = value?.trim().replace(/^0x/i, '').toLowerCase()
@@ -187,11 +247,11 @@ function getOptionalHashPathLists(): string[] {
   const candidates = new Set<string>()
 
   if (settings.gamePath) {
-    candidates.add(path.join(settings.gamePath, 'red4ext', 'plugins', 'Codeware', 'Data', 'KnownHashes.txt'))
+    addIfFile(candidates, path.join(settings.gamePath, 'red4ext', 'plugins', 'Codeware', 'Data', 'KnownHashes.txt'))
   }
 
   if (settings.libraryPath) {
-    candidates.add(path.join(settings.libraryPath, 'Codeware', 'red4ext', 'plugins', 'Codeware', 'Data', 'KnownHashes.txt'))
+    addIfFile(candidates, path.join(settings.libraryPath, 'Codeware', 'red4ext', 'plugins', 'Codeware', 'Data', 'KnownHashes.txt'))
   }
 
   const paths = Array.from(candidates)
@@ -388,19 +448,24 @@ function getKarkDatabaseCandidates(): string[] {
   const candidates = new Set<string>()
 
   if (settings.gamePath) {
-    candidates.add(path.join(settings.gamePath, 'tools', 'wolvenkit', 'wolvenkit-resources', 'red.kark'))
-    candidates.add(path.join(settings.gamePath, 'bin', 'x64', 'plugins', 'cyber_engine_tweaks', 'tweakdb', 'usedhashes.kark'))
+    addIfFile(candidates, path.join(settings.gamePath, 'tools', 'wolvenkit', 'wolvenkit-resources', 'red.kark'))
+    addIfFile(candidates, path.join(settings.gamePath, 'bin', 'x64', 'plugins', 'cyber_engine_tweaks', 'tweakdb', 'usedhashes.kark'))
   }
 
   const wolvenKitRoaming = path.join(app.getPath('appData'), 'REDModding', 'WolvenKit')
-  candidates.add(path.join(wolvenKitRoaming, 'red.kark'))
+  addIfFile(candidates, path.join(wolvenKitRoaming, 'red.kark'))
 
   if (settings.libraryPath) {
-    candidates.add(path.join(settings.libraryPath, 'CET_1.37.1_-_Scripting_fixes', 'bin', 'x64', 'plugins', 'cyber_engine_tweaks', 'tweakdb', 'usedhashes.kark'))
-    candidates.add(path.join(settings.libraryPath, 'Codeware', 'red.kark'))
+    addIfFile(candidates, path.join(settings.libraryPath, 'Codeware', 'red.kark'))
+    for (const karkPath of findFilesRecursive(
+      settings.libraryPath,
+      (fileName) => fileName.toLowerCase().endsWith('.kark')
+    )) {
+      addIfFile(candidates, karkPath)
+    }
   }
 
-  const paths = Array.from(candidates).filter((candidate) => fs.existsSync(candidate))
+  const paths = Array.from(candidates)
   karkDatabaseCandidatesCache = { key: cacheKey, paths }
   return paths
 }
