@@ -48,7 +48,7 @@ async function waitForCriticalFonts(): Promise<void> {
 
 function getInstallOverlayName(sourcePath: string, currentFile: string): string {
   const raw = currentFile || sourcePath
-  if (!raw) return 'Preparing installation'
+  if (!raw) return ''
   const normalized = raw.replace(/\//g, '\\')
   const parts = normalized.split('\\').filter(Boolean)
   return parts[parts.length - 1] ?? raw
@@ -232,7 +232,7 @@ export const App: React.FC = () => {
   const showSidebar = !needsOnboarding
   const showHeader = !needsOnboarding
   const installAppearance = getInstallProgressAppearance(installStatus)
-  const installOverlayName = getInstallOverlayName(installSourcePath, installCurrentFile)
+  const installOverlayName = getInstallOverlayName(installSourcePath, installCurrentFile) || t('downloads.overlay.preparing')
   const clampedInstallProgress = Math.max(6, Math.min(installProgress || 8, 100))
 
   return (
@@ -281,7 +281,7 @@ export const App: React.FC = () => {
                   className="brand-font text-[0.72rem] font-bold uppercase tracking-[0.2em] whitespace-nowrap"
                   style={{ color: installing ? installAppearance.accent : '#fcee09' }}
                 >
-                  {installing ? (installAppearance.label || 'Installing') : 'Analyzing'}
+                  {installing ? installAppearance.label : t('downloads.overlay.analyzing')}
                 </span>
               </div>
 
@@ -302,7 +302,7 @@ export const App: React.FC = () => {
 
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-[11px] text-[#555]">
-                  {installStatus || (detecting ? 'Detecting format...' : '')}
+                  {installStatus || (detecting ? t('downloads.overlay.detectingFormat') : '')}
                 </span>
                 <span className="text-[11px] font-mono text-[#444]">{Math.round(clampedInstallProgress)}%</span>
               </div>

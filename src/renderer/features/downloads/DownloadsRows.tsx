@@ -4,6 +4,7 @@ import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { DELETE_PROGRESS_APPEARANCE, getTransientDeleteProgress } from '../../utils/deleteProgressAppearance'
 import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
 import { Tooltip } from '../ui/Tooltip'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export type DownloadListRow =
   | { kind: 'active'; key: string; orderTs: number; active: ActiveDownload }
@@ -85,6 +86,7 @@ const ActiveDownloadRow: React.FC<{
   onResumeDownload,
   onCancelDownload,
 }) => {
+  const { t } = useTranslation()
   const pct = download.totalBytes > 0 ? Math.round((download.downloadedBytes / download.totalBytes) * 100) : 0
   const isDone = download.status === 'done'
   const isError = download.status === 'error'
@@ -97,24 +99,24 @@ const ActiveDownloadRow: React.FC<{
       : 'rgba(252,238,9,0.035)'
   const eta = isDone || isError || isPaused ? null : formatETA(download.downloadedBytes, download.totalBytes, download.speedBps)
   const progressSummary = isError
-    ? download.error ?? 'Download failed'
+    ? download.error ?? t('downloads.active.downloadFailed')
     : isDone
-      ? 'Ready to install'
+      ? t('downloads.active.readyToInstall')
       : isPaused
-        ? `Paused at ${pct}%`
-        : `${pct}% complete`
+        ? t('downloads.active.pausedAt', { pct })
+        : t('downloads.active.percentComplete', { pct })
   const transferSummary = isError
-    ? 'Transfer interrupted'
+    ? t('downloads.active.interrupted')
     : isDone
-      ? `${formatSize(download.totalBytes)} downloaded`
+      ? t('downloads.active.downloaded', { size: formatSize(download.totalBytes) })
       : `${formatSize(download.downloadedBytes)} / ${formatSize(download.totalBytes)}`
   const speedSummary = isError
-    ? 'Try again'
+    ? t('downloads.active.tryAgain')
     : isDone
-      ? 'Waiting for scan'
+      ? t('downloads.active.waitingForScan')
       : isPaused
-        ? 'Resume to continue'
-        : `${formatSpeed(download.speedBps)}${eta ? ` · ETA ${eta}` : ''}`
+        ? t('downloads.active.resumeToContinue')
+        : `${formatSpeed(download.speedBps)}${eta ? ` · ${t('downloads.active.eta')} ${eta}` : ''}`
 
   return (
     <div
@@ -174,7 +176,7 @@ const ActiveDownloadRow: React.FC<{
             className="w-fit rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
             style={{ color: accent, background: `${accent}18` }}
           >
-            {isError ? 'Error' : isDone ? 'Downloaded' : isPaused ? 'Paused' : 'Downloading'}
+            {isError ? t('downloads.status.error') : isDone ? t('downloads.status.downloaded') : isPaused ? t('downloads.status.paused') : t('downloads.status.downloading')}
           </span>
           <span className={`truncate text-sm font-mono tracking-tight ${isPaused ? 'text-[#93a8c8]' : 'text-[#9a9a9a]'}`}>
             {progressSummary}
@@ -198,7 +200,7 @@ const ActiveDownloadRow: React.FC<{
           {!isDone && !isError && (
             <>
               {isPaused ? (
-                <Tooltip content="Resume download">
+                <Tooltip content={t('downloads.tooltip.resume')}>
                   <button
                     onClick={() => void onResumeDownload(download.id)}
                     className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[rgba(96,165,250,0.14)] text-[#8dbdff] transition-colors hover:bg-[#60a5fa] hover:text-[#051017]"
@@ -207,7 +209,7 @@ const ActiveDownloadRow: React.FC<{
                   </button>
                 </Tooltip>
               ) : (
-                <Tooltip content="Pause download">
+                <Tooltip content={t('downloads.tooltip.pause')}>
                   <button
                     onClick={() => void onPauseDownload(download.id)}
                     className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#c9c9c9] transition-colors hover:bg-[#fcee09] hover:text-[#050505]"
@@ -216,7 +218,7 @@ const ActiveDownloadRow: React.FC<{
                   </button>
                 </Tooltip>
               )}
-              <Tooltip content="Cancel download">
+              <Tooltip content={t('downloads.tooltip.cancel')}>
                 <button
                   onClick={() => void onCancelDownload(download.id)}
                   className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#8a8a8a] transition-colors hover:bg-[rgba(248,113,113,0.18)] hover:text-[#ff9b9b]"
@@ -356,7 +358,10 @@ const DeletingDownloadRow: React.FC<{
   deleteStartedAt?: number
   deleteProgressTick: number
 }> = ({ entry, gridTemplate, deleteStartedAt, deleteProgressTick }) => {
+  const { t } = useTranslation()
   const deleteAppearance = DELETE_PROGRESS_APPEARANCE
+  const deleteLabel = t('downloads.delete.label')
+  const deleteSummary = t('downloads.delete.summary')
   const deleteProgress = getTransientDeleteProgress(deleteStartedAt ?? deleteProgressTick, deleteProgressTick)
 
   return (
@@ -409,7 +414,7 @@ const DeletingDownloadRow: React.FC<{
                 background: `${deleteAppearance.accent}18`,
               }}
             >
-              {deleteAppearance.label}
+              {deleteLabel}
             </span>
           </div>
         </div>
@@ -437,7 +442,7 @@ const DeletingDownloadRow: React.FC<{
         <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
           <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
           <span className="truncate text-[#ffb4ab]">
-            {deleteProgress > 0 ? `${deleteProgress}% · ${deleteAppearance.summary}` : deleteAppearance.summary}
+            {deleteProgress > 0 ? `${deleteProgress}% · ${deleteSummary}` : deleteSummary}
           </span>
         </div>
 
@@ -482,6 +487,7 @@ const LocalDownloadRow: React.FC<{
   onDeleteRequest,
   onMarkOld,
 }) => {
+  const { t } = useTranslation()
   const rowBg = rowIndex % 2 === 0
     ? 'bg-[#050505] hover:bg-[#141414]'
     : 'bg-[#0a0a0a] hover:bg-[#161616]'
@@ -529,7 +535,7 @@ const LocalDownloadRow: React.FC<{
           </span>
           {isNew && (
             <span className="shrink-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest bg-[#fcee09] text-[#050505] rounded-sm">
-              NEW
+              {t('downloads.badge.new')}
             </span>
           )}
         </div>
@@ -543,7 +549,7 @@ const LocalDownloadRow: React.FC<{
               : 'bg-[rgba(252,238,9,0.10)] text-[#d8d19a]'
           }`}
         >
-          {installedMod ? 'Installed' : 'Downloaded'}
+          {installedMod ? t('downloads.status.installed') : t('downloads.status.downloaded')}
         </span>
       </div>
 
@@ -560,7 +566,7 @@ const LocalDownloadRow: React.FC<{
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <Tooltip content={installedMod ? 'Reinstall archive' : 'Install archive'}>
+        <Tooltip content={installedMod ? t('downloads.tooltip.reinstallArchive') : t('downloads.tooltip.installArchive')}>
           <button
             onClick={(event) => {
               event.stopPropagation()
@@ -578,7 +584,7 @@ const LocalDownloadRow: React.FC<{
             </span>
           </button>
         </Tooltip>
-        <Tooltip content="Delete download">
+        <Tooltip content={t('downloads.tooltip.delete')}>
           <button
             onClick={(event) => {
               event.stopPropagation()

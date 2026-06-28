@@ -13,7 +13,11 @@
     "close": "Close",
     "selectedFolder": "Selected folder",
     "premium": "Premium",
-    "free": "Free"
+    "free": "Free",
+    "refresh": "Refresh",
+    "install": "Install",
+    "reinstall": "Reinstall",
+    "delete": "Delete"
   },
   "language": {
     "label": "Language",
@@ -60,6 +64,141 @@
     },
     "toast": {
       "gameAutoDetected": "Game path auto-detected"
+    }
+  },
+  "downloads": {
+    "title": "Downloads",
+    "searchPlaceholder": "Search downloads...",
+    "openFolder": "Open Folder",
+    "deleteAllTooltip": "Delete every file in the downloads folder",
+    "summary": {
+      "local": "LOCAL",
+      "active": "ACTIVE",
+      "shown": "SHOWN"
+    },
+    "columns": {
+      "name": "Archive Name",
+      "status": "Status",
+      "version": "Version",
+      "size": "Size",
+      "downloaded": "Downloaded",
+      "actions": "Actions"
+    },
+    "sort": {
+      "name": "Sort by archive name",
+      "status": "Sort by status",
+      "version": "Sort by version",
+      "size": "Sort by size",
+      "downloaded": "Sort by downloaded date"
+    },
+    "status": {
+      "downloading": "Downloading",
+      "downloaded": "Downloaded",
+      "paused": "Paused",
+      "error": "Error",
+      "installed": "Installed"
+    },
+    "badge": {
+      "new": "NEW"
+    },
+    "active": {
+      "downloadFailed": "Download failed",
+      "readyToInstall": "Ready to install",
+      "pausedAt": "Paused at {pct}%",
+      "percentComplete": "{pct}% complete",
+      "interrupted": "Transfer interrupted",
+      "downloaded": "{size} downloaded",
+      "tryAgain": "Try again",
+      "waitingForScan": "Waiting for scan",
+      "resumeToContinue": "Resume to continue",
+      "eta": "ETA"
+    },
+    "tooltip": {
+      "resume": "Resume download",
+      "pause": "Pause download",
+      "cancel": "Cancel download",
+      "reinstallArchive": "Reinstall archive",
+      "installArchive": "Install archive",
+      "delete": "Delete download"
+    },
+    "install": {
+      "preparing": {
+        "label": "Preparing",
+        "summary": "Preparing install workspace",
+        "detail": "Opening the archive and preparing the install session"
+      },
+      "extracting": {
+        "label": "Extracting",
+        "summary": "Extracting package contents",
+        "detail": "Reading files directly from the archive"
+      },
+      "analyzing": {
+        "label": "Analyzing",
+        "summary": "Inspecting extracted payload",
+        "detail": "Detecting mod structure and checking for conflicts"
+      },
+      "installing": {
+        "label": "Installing",
+        "summary": "Writing files into the mod library",
+        "detail": "Copying extracted content and finalizing metadata"
+      },
+      "done": {
+        "label": "Done",
+        "summary": "Installation completed",
+        "detail": "Finalizing the installed mod"
+      }
+    },
+    "delete": {
+      "label": "Deleting",
+      "summary": "Removing files from disk"
+    },
+    "overlay": {
+      "preparing": "Preparing installation",
+      "analyzing": "Analyzing",
+      "detectingFormat": "Detecting format..."
+    },
+    "empty": {
+      "scanning": "Scanning downloads...",
+      "noMatch": "No downloads match this search",
+      "noArchives": "No archives found in the downloads folder",
+      "noPath": "Set a downloads path in Configuration first",
+      "configuration": "Configuration"
+    },
+    "menu": {
+      "refreshDownloads": "Refresh Downloads",
+      "openFolder": "Open Downloads Folder",
+      "deleteAll": "Delete All Downloads",
+      "openLocation": "Open File Location",
+      "resume": "Resume",
+      "removeFromList": "Remove from List",
+      "pause": "Pause",
+      "cancel": "Cancel Download",
+      "deleteDownload": "Delete Download"
+    },
+    "deleteDialog": {
+      "title": "Delete Download",
+      "description": "You are about to permanently delete {name} from your downloads path.",
+      "detailLabel": "File to delete"
+    },
+    "deleteAllDialog": {
+      "title": "Delete All Downloads",
+      "description": "This permanently deletes every archive currently listed in your downloads folder. Files already installed as mods will not be affected.",
+      "detailLabel": "Files to delete",
+      "primary": "Delete Everything"
+    },
+    "toast": {
+      "setPathsFirst": "Set Game Path and Mod Library before installing mods",
+      "installFailed": "Install failed",
+      "installedNotActivated": "Installed but couldn't activate: {error}",
+      "installedActivated": "{name} installed & activated",
+      "deleteFailed": "Could not delete download",
+      "deleted": "{name} deleted",
+      "deleteAllFailed": "Could not delete downloads",
+      "deletedCount_one": "{count} download deleted",
+      "deletedCount_other": "{count} downloads deleted",
+      "deleteFailedCount_one": "{count} download could not be deleted",
+      "deleteFailedCount_other": "{count} downloads could not be deleted",
+      "fileNotAvailable": "Download file is not available yet"
     }
   },
   "welcome": {

@@ -22,6 +22,7 @@ import { DownloadsToolbar } from './DownloadsToolbar'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
+import { useTranslation } from '../../i18n/I18nContext'
 
 const DOWNLOAD_ROW_HEIGHT = 56
 const DOWNLOAD_VIRTUALIZATION_THRESHOLD = 120
@@ -127,6 +128,7 @@ export const DownloadsPane: React.FC = () => {
     newFiles: state.newFiles,
     markFileAsOld: state.markFileAsOld,
   }), shallow)
+  const { t, tn } = useTranslation()
 
   const hasRequiredPaths = Boolean(
     settings?.gamePath?.trim() && settings?.libraryPath?.trim() && gamePathValid && libraryPathValid
@@ -263,7 +265,7 @@ export const DownloadsPane: React.FC = () => {
 
   const handleInstall = async (entry: DownloadEntry) => {
     if (!hasRequiredPaths) {
-      addToast('Set Game Path and Mod Library before installing mods', 'warning')
+      addToast(t('downloads.toast.setPathsFirst'), 'warning')
       setActiveView('settings')
       return
     }
@@ -281,7 +283,7 @@ export const DownloadsPane: React.FC = () => {
       sourceVersion: entry.version,
     })
     if (!installResult.ok || !installResult.data) {
-      addToast(installResult.error ?? 'Install failed', 'error')
+      addToast(installResult.error ?? t('downloads.toast.installFailed'), 'error')
       return
     }
 
@@ -289,10 +291,10 @@ export const DownloadsPane: React.FC = () => {
       await scanMods()
       const enableResult = await enableMod(installResult.data.mod.uuid)
       if (!enableResult.ok) {
-        addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+        addToast(t('downloads.toast.installedNotActivated', { error: String(enableResult.error) }), 'warning')
         return
       }
-      addToast(`${installResult.data.mod.name} installed & activated`, 'success')
+      addToast(t('downloads.toast.installedActivated', { name: installResult.data.mod.name }), 'success')
       return
     }
 
@@ -326,11 +328,11 @@ export const DownloadsPane: React.FC = () => {
       return next
     })
     if (!result.ok) {
-      addToast(result.error ?? 'Could not delete download', 'error')
+      addToast(result.error ?? t('downloads.toast.deleteFailed'), 'error')
       return
     }
     markFileAsOld(target.path)
-    addToast(`${target.name} deleted`, 'success')
+    addToast(t('downloads.toast.deleted', { name: target.name }), 'success')
     await doRefresh()
   }
 
@@ -342,17 +344,17 @@ export const DownloadsPane: React.FC = () => {
     setDeletingAll(false)
     setDeleteAllOpen(false)
     if (!result.ok) {
-      addToast(result.error ?? 'Could not delete downloads', 'error')
+      addToast(result.error ?? t('downloads.toast.deleteAllFailed'), 'error')
       return
     }
     for (const entry of localFiles) markFileAsOld(entry.path)
     const removed = result.data?.removed ?? 0
     const failed = result.data?.failed ?? 0
     if (removed > 0) {
-      addToast(`${removed} download${removed === 1 ? '' : 's'} deleted`, 'success')
+      addToast(tn('downloads.toast.deletedCount', removed), 'success')
     }
     if (failed > 0) {
-      addToast(`${failed} download${failed === 1 ? '' : 's'} could not be deleted`, 'warning')
+      addToast(tn('downloads.toast.deleteFailedCount', failed), 'warning')
     }
     await doRefresh()
   }
@@ -390,7 +392,7 @@ export const DownloadsPane: React.FC = () => {
 
     const filePath = getDownloadRowPath(contextMenu.row)
     if (!filePath) {
-      addToast('Download file is not available yet', 'warning')
+      addToast(t('downloads.toast.fileNotAvailable'), 'warning')
       return
     }
 
@@ -658,7 +660,7 @@ export const DownloadsPane: React.FC = () => {
               <div className="relative" onContextMenu={handleDownloadsBlankContextMenu}>
                 {loading ? (
                   <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
-                    Scanning downloads...
+                    {t('downloads.empty.scanning')}
                   </div>
                 ) : totalRows === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -667,10 +669,10 @@ export const DownloadsPane: React.FC = () => {
                     </span>
                     <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
                       {searchQuery.trim()
-                        ? 'No downloads match this search'
+                        ? t('downloads.empty.noMatch')
                         : settings?.downloadPath
-                        ? 'No archives found in the downloads folder'
-                        : 'Set a downloads path in Configuration first'}
+                        ? t('downloads.empty.noArchives')
+                        : t('downloads.empty.noPath')}
                     </span>
                     {!settings?.downloadPath && (
                       <button
@@ -678,7 +680,7 @@ export const DownloadsPane: React.FC = () => {
                         className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
                       >
                         <span className="material-symbols-outlined text-[16px]">settings</span>
-                        Configuration
+                        {t('downloads.empty.configuration')}
                       </button>
                     )}
                   </div>
@@ -740,7 +742,7 @@ export const DownloadsPane: React.FC = () => {
                 className={downloadMenuButtonClass}
               >
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
-                <span>Refresh Downloads</span>
+                <span>{t('downloads.menu.refreshDownloads')}</span>
               </button>
               <button
                 onClick={() => {
@@ -751,7 +753,7 @@ export const DownloadsPane: React.FC = () => {
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">folder_open</span>
-                <span>Open Downloads Folder</span>
+                <span>{t('downloads.menu.openFolder')}</span>
               </button>
               <div className="my-1 border-t-[0.5px] border-[#222]" />
               <button
@@ -763,7 +765,7 @@ export const DownloadsPane: React.FC = () => {
                 className={`${downloadMenuDangerButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-                <span>Delete All Downloads</span>
+                <span>{t('downloads.menu.deleteAll')}</span>
               </button>
             </>
           ) : contextMenu.row.kind === 'active' ? (
@@ -774,14 +776,14 @@ export const DownloadsPane: React.FC = () => {
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">folder_open</span>
-                <span>Open File Location</span>
+                <span>{t('downloads.menu.openLocation')}</span>
               </button>
               <button
                 onClick={() => void handleRefreshDownloads()}
                 className={downloadMenuButtonClass}
               >
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
-                <span>Refresh</span>
+                <span>{t('common.refresh')}</span>
               </button>
               <div className="my-1 border-t-[0.5px] border-[#222]" />
               <button
@@ -801,10 +803,10 @@ export const DownloadsPane: React.FC = () => {
                 </span>
                 <span>
                   {contextMenuActiveDownload?.status === 'paused'
-                    ? 'Resume'
+                    ? t('downloads.menu.resume')
                     : contextMenuActiveDownload?.status === 'error'
-                      ? 'Remove from List'
-                      : 'Pause'}
+                      ? t('downloads.menu.removeFromList')
+                      : t('downloads.menu.pause')}
                 </span>
               </button>
               {contextMenuActiveDownload?.status !== 'error' && (
@@ -813,7 +815,7 @@ export const DownloadsPane: React.FC = () => {
                   className={downloadMenuDangerButtonClass}
                 >
                   <span className="material-symbols-outlined text-[16px]">close</span>
-                  <span>Cancel Download</span>
+                  <span>{t('downloads.menu.cancel')}</span>
                 </button>
               )}
             </>
@@ -825,7 +827,7 @@ export const DownloadsPane: React.FC = () => {
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">{contextMenuInstalledMod ? 'restart_alt' : 'deployed_code'}</span>
-                <span>{contextMenuInstalledMod ? 'Reinstall' : 'Install'}</span>
+                <span>{contextMenuInstalledMod ? t('common.reinstall') : t('common.install')}</span>
               </button>
               <div className="my-1 border-t-[0.5px] border-[#222]" />
               <button
@@ -834,14 +836,14 @@ export const DownloadsPane: React.FC = () => {
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">folder_open</span>
-                <span>Open File Location</span>
+                <span>{t('downloads.menu.openLocation')}</span>
               </button>
               <button
                 onClick={() => void handleRefreshDownloads()}
                 className={downloadMenuButtonClass}
               >
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
-                <span>Refresh</span>
+                <span>{t('common.refresh')}</span>
               </button>
               <div className="my-1 border-t-[0.5px] border-[#222]" />
               <button
@@ -853,7 +855,7 @@ export const DownloadsPane: React.FC = () => {
                 className={downloadMenuDangerButtonClass}
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
-                <span>Delete Download</span>
+                <span>{t('downloads.menu.deleteDownload')}</span>
               </button>
             </>
           )}
@@ -865,12 +867,12 @@ export const DownloadsPane: React.FC = () => {
         <ActionPromptDialog
           accentColor="#ff4d4f"
           accentGlow="rgba(255,77,79,0.45)"
-          title="Delete Download"
-          description={`You are about to permanently delete ${pendingDeleteDownload.name} from your downloads path.`}
-          detailLabel="File to delete"
+          title={t('downloads.deleteDialog.title')}
+          description={t('downloads.deleteDialog.description', { name: pendingDeleteDownload.name })}
+          detailLabel={t('downloads.deleteDialog.detailLabel')}
           detailValue={pendingDeleteDownload.name}
           icon="delete"
-          primaryLabel="Delete"
+          primaryLabel={t('common.delete')}
           onPrimary={() => void handleDeleteDownload()}
           onCancel={() => setPendingDeleteDownload(null)}
           primaryTextColor="#ffffff"
@@ -881,12 +883,12 @@ export const DownloadsPane: React.FC = () => {
         <ActionPromptDialog
           accentColor="#ff4d4f"
           accentGlow="rgba(255,77,79,0.4)"
-          title="Delete All Downloads"
-          description="This permanently deletes every archive currently listed in your downloads folder. Files already installed as mods will not be affected."
-          detailLabel="Files to delete"
+          title={t('downloads.deleteAllDialog.title')}
+          description={t('downloads.deleteAllDialog.description')}
+          detailLabel={t('downloads.deleteAllDialog.detailLabel')}
           detailValue={String(localFiles.length)}
           icon="delete_sweep"
-          primaryLabel="Delete Everything"
+          primaryLabel={t('downloads.deleteAllDialog.primary')}
           primaryTextColor="#ffffff"
           onPrimary={() => void handleDeleteAllDownloads()}
           onCancel={() => setDeleteAllOpen(false)}
