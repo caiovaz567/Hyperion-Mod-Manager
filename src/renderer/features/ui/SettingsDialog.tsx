@@ -86,7 +86,7 @@ function getDownloadsStatus(downloadPath: string, defaultDownloadPath: string) {
 }
 
 export const SettingsPage: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, tn } = useTranslation()
   const appVersion = useAppVersion()
   const {
     settings,
@@ -481,7 +481,7 @@ export const SettingsPage: React.FC = () => {
                 <ValidationRow
                   state={runtimeCapturesInfo ? (runtimeCapturesInfo.fileCount > 0 ? 'info' : 'valid') : 'empty'}
                   validText={t('settings.general.runtimeCaptures.clean')}
-                  infoText={runtimeCapturesInfo ? t(runtimeCapturesInfo.fileCount === 1 ? 'settings.general.runtimeCaptures.capturedOne' : 'settings.general.runtimeCaptures.capturedMany', { count: runtimeCapturesInfo.fileCount }) : ''}
+                  infoText={runtimeCapturesInfo ? tn('settings.general.runtimeCaptures.captured', runtimeCapturesInfo.fileCount) : ''}
                   emptyText={t('settings.general.runtimeCaptures.loading')}
                 />
                 <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">

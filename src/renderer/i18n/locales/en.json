@@ -19,6 +19,49 @@
     "label": "Language",
     "select": "Select language"
   },
+  "shell": {
+    "nav": {
+      "library": "Mod Library",
+      "downloads": "Downloads",
+      "settings": "Settings"
+    },
+    "game": {
+      "launch": "LAUNCH GAME",
+      "launching": "LAUNCHING...",
+      "inGame": "IN GAME",
+      "close": "CLOSE GAME",
+      "notConfigured": "Game path not configured — check Settings",
+      "launchFailed": "Could not launch game",
+      "closeFailed": "Could not close game"
+    },
+    "account": {
+      "name": "NEXUS ACCOUNT",
+      "premium": "PREMIUM",
+      "free": "FREE",
+      "checking": "CHECKING",
+      "offline": "OFFLINE",
+      "connected": "NEXUS CONNECTED",
+      "validating": "VALIDATING",
+      "notConnected": "NOT CONNECTED"
+    },
+    "header": {
+      "appLogs": "App Logs",
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "updateCheckFailed": "Update check failed"
+    },
+    "update": {
+      "downloading": "Downloading {progress}%",
+      "installing": "Installing update...",
+      "install": "Install update",
+      "installVersion": "Install update {version}",
+      "downloaded": "Update downloaded. Restarting Hyperion...",
+      "downloadFailed": "Could not download update"
+    },
+    "toast": {
+      "gameAutoDetected": "Game path auto-detected"
+    }
+  },
   "welcome": {
     "headline": "Let's set up your workspace",
     "subtitle": "A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods live — it takes less than a minute.",
@@ -118,8 +161,8 @@
         "title": "Runtime Captures",
         "description": "Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions.",
         "clean": "No captured files - game folder is clean.",
-        "capturedOne": "{count} file captured from previous sessions.",
-        "capturedMany": "{count} files captured from previous sessions.",
+        "captured_one": "{count} file captured from previous sessions.",
+        "captured_other": "{count} files captured from previous sessions.",
         "loading": "Loading...",
         "clearing": "Clearing...",
         "clear": "Clear captures"

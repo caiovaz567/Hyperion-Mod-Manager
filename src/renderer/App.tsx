@@ -16,6 +16,7 @@ import { DownloadsPane } from './features/downloads/DownloadsPane'
 import { SettingsPage } from './features/ui/SettingsDialog'
 import { AppLogsDialog } from './features/ui/NexusRequestLogDialog'
 import { getInstallProgressAppearance } from './utils/installProgressAppearance'
+import { useTranslation } from './i18n/I18nContext'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
@@ -99,6 +100,7 @@ export const App: React.FC = () => {
     dialogs: state.dialogs,
     closeDialog: state.closeDialog,
   }), shallow)
+  const { t } = useTranslation()
 
   const [booting, setBooting] = useState(true)
 
@@ -123,7 +125,7 @@ export const App: React.FC = () => {
         if (detectedGame.ok && detectedGame.data) {
           await updateSettings({ gamePath: detectedGame.data })
           currentSettings = { ...currentSettings, gamePath: detectedGame.data }
-          addToast('Game path auto-detected', 'success', 2200)
+          addToast(t('shell.toast.gameAutoDetected'), 'success', 2200)
         }
       }
 

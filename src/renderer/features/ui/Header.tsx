@@ -3,8 +3,10 @@ import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
 import { Tooltip } from './Tooltip'
 import { useAppVersion } from '../../hooks/useAppVersion'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export const Header: React.FC = () => {
+  const { t } = useTranslation()
   const appVersion = useAppVersion()
   const {
     updateAvailable,
@@ -25,7 +27,7 @@ export const Header: React.FC = () => {
   useEffect(() => {
     if (!updateDownloaded || !autoApplyUpdate) return
 
-    addToast('Update downloaded. Restarting Hyperion...', 'info', 1800)
+    addToast(t('shell.update.downloaded'), 'info', 1800)
     const timeoutId = window.setTimeout(() => {
       installUpdate()
     }, 700)
@@ -54,7 +56,7 @@ export const Header: React.FC = () => {
       await downloadUpdate()
     } catch {
       setAutoApplyUpdate(false)
-      addToast('Could not download update', 'error')
+      addToast(t('shell.update.downloadFailed'), 'error')
     }
   }
 
@@ -66,10 +68,12 @@ export const Header: React.FC = () => {
 
   const showUpdateTrigger = updateAvailable || updateDownloading || updateDownloaded
   const updateActionLabel = updateDownloading
-    ? `Downloading ${updateProgress}%`
+    ? t('shell.update.downloading', { progress: updateProgress })
     : updateDownloaded
-      ? 'Installing update...'
-      : `Install update${updateInfo?.version ? ` ${updateInfo.version}` : ''}`
+      ? t('shell.update.installing')
+      : updateInfo?.version
+        ? t('shell.update.installVersion', { version: updateInfo.version })
+        : t('shell.update.install')
   const updateProgressWidth = `${Math.min(Math.max(updateProgress, 0), 100)}%`
   const updateIcon = updateDownloading
     ? 'downloading'
@@ -137,11 +141,11 @@ export const Header: React.FC = () => {
 
         {updateError && !updateAvailable && (
           <div className="ui-support-mono uppercase tracking-[0.14em]">
-            Update check failed
+            {t('shell.header.updateCheckFailed')}
           </div>
         )}
 
-        <Tooltip content="App Logs">
+        <Tooltip content={t('shell.header.appLogs')}>
           <button
             className={chromeButtonClass}
             onClick={() => openDialog('appLogs')}
@@ -153,7 +157,7 @@ export const Header: React.FC = () => {
         <div className="h-6 w-px bg-[#1a1a1a]" />
 
         <div className="flex items-center gap-0.5">
-          <Tooltip content="Minimize">
+          <Tooltip content={t('shell.header.minimize')}>
             <button
               className={chromeButtonClass}
               onClick={() => IpcService.send('window:minimize')}
@@ -161,7 +165,7 @@ export const Header: React.FC = () => {
               <span className="material-symbols-outlined text-[18px]">remove</span>
             </button>
           </Tooltip>
-          <Tooltip content="Maximize">
+          <Tooltip content={t('shell.header.maximize')}>
             <button
               className={chromeButtonClass}
               onClick={() => IpcService.send('window:maximize')}
@@ -169,7 +173,7 @@ export const Header: React.FC = () => {
               <span className="material-symbols-outlined text-[18px]">check_box_outline_blank</span>
             </button>
           </Tooltip>
-          <Tooltip content="Close">
+          <Tooltip content={t('common.close')}>
             <button
               className="flex h-8 w-8 items-center justify-center rounded-sm text-[#7f7f7f] transition-colors hover:bg-[#111] hover:text-[#F87171]"
               onClick={() => IpcService.send('window:close')}

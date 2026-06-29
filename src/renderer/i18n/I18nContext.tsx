@@ -1,44 +1,22 @@
 import React, { createContext, useCallback, useContext, useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
-import { LOCALES, DEFAULT_LOCALE, type LocaleCode, type Messages } from './locales'
+import { LOCALES, DEFAULT_LOCALE, type LocaleCode } from './locales'
+import {
+  resolveTranslation,
+  resolveTranslationN,
+  isSupportedLanguage,
+  type TranslationKey,
+  type TranslationVars,
+  type PluralKey,
+} from './translate'
 
-/**
- * Recursively flattens the nested message object into the union of its dot-path
- * leaf keys (e.g. `welcome.steps.game.heading`), derived from `en.json` so the
- * `t()` helper autocompletes and rejects typos. English is the source of truth.
- */
-type FlattenKeys<T, Prefix extends string = ''> = {
-  [K in keyof T & string]: T[K] extends string
-    ? `${Prefix}${K}`
-    : FlattenKeys<T[K], `${Prefix}${K}.`>
-}[keyof T & string]
-
-export type TranslationKey = FlattenKeys<Messages>
-
-type Vars = Record<string, string | number>
-
-const CATALOGS: Record<string, Record<string, unknown>> = Object.fromEntries(
-  LOCALES.map((locale) => [locale.code, locale.messages as Record<string, unknown>])
-)
-
-function lookup(messages: Record<string, unknown>, key: string): string | undefined {
-  const value = key.split('.').reduce<unknown>((acc, part) => {
-    if (acc && typeof acc === 'object') return (acc as Record<string, unknown>)[part]
-    return undefined
-  }, messages)
-  return typeof value === 'string' ? value : undefined
-}
-
-function interpolate(template: string, vars?: Vars): string {
-  if (!vars) return template
-  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : match
-  )
-}
+export type { TranslationKey, PluralKey, TranslationVars } from './translate'
 
 interface I18nValue {
   /** Resolve a translation key in the active language, falling back to English. */
-  t: (key: TranslationKey, vars?: Vars) => string
+  t: (key: TranslationKey, vars?: TranslationVars) => string
+  /** Plural-aware translate: picks `${key}_one` / `${key}_other` based on `count`. */
+  tn: (key: PluralKey, count: number, vars?: TranslationVars) => string
   language: LocaleCode
   setLanguage: (code: string) => void
   languages: typeof LOCALES
@@ -50,14 +28,18 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const settingsLanguage = useAppStore((state) => state.settings?.language)
   const updateSettings = useAppStore((state) => state.updateSettings)
 
-  const language: LocaleCode =
-    settingsLanguage && CATALOGS[settingsLanguage] ? (settingsLanguage as LocaleCode) : DEFAULT_LOCALE
+  const language: LocaleCode = isSupportedLanguage(settingsLanguage)
+    ? (settingsLanguage as LocaleCode)
+    : DEFAULT_LOCALE
 
   const t = useCallback(
-    (key: TranslationKey, vars?: Vars): string => {
-      const template = lookup(CATALOGS[language], key) ?? lookup(CATALOGS[DEFAULT_LOCALE], key) ?? key
-      return interpolate(template, vars)
-    },
+    (key: TranslationKey, vars?: TranslationVars): string => resolveTranslation(language, key, vars),
+    [language]
+  )
+
+  const tn = useCallback(
+    (key: PluralKey, count: number, vars?: TranslationVars): string =>
+      resolveTranslationN(language, key, count, vars),
     [language]
   )
 
@@ -69,8 +51,8 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
   )
 
   const value = useMemo<I18nValue>(
-    () => ({ t, language, setLanguage, languages: LOCALES }),
-    [t, language, setLanguage]
+    () => ({ t, tn, language, setLanguage, languages: LOCALES }),
+    [t, tn, language, setLanguage]
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>

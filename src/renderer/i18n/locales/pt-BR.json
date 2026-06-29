@@ -19,6 +19,49 @@
     "label": "Idioma",
     "select": "Selecionar idioma"
   },
+  "shell": {
+    "nav": {
+      "library": "Biblioteca de Mods",
+      "downloads": "Downloads",
+      "settings": "Configurações"
+    },
+    "game": {
+      "launch": "INICIAR JOGO",
+      "launching": "INICIANDO...",
+      "inGame": "EM JOGO",
+      "close": "FECHAR JOGO",
+      "notConfigured": "Caminho do jogo não configurado — verifique as Configurações",
+      "launchFailed": "Não foi possível iniciar o jogo",
+      "closeFailed": "Não foi possível fechar o jogo"
+    },
+    "account": {
+      "name": "CONTA NEXUS",
+      "premium": "PREMIUM",
+      "free": "GRATUITA",
+      "checking": "VERIFICANDO",
+      "offline": "OFFLINE",
+      "connected": "NEXUS CONECTADO",
+      "validating": "VALIDANDO",
+      "notConnected": "NÃO CONECTADO"
+    },
+    "header": {
+      "appLogs": "Registros do App",
+      "minimize": "Minimizar",
+      "maximize": "Maximizar",
+      "updateCheckFailed": "Falha ao verificar atualizações"
+    },
+    "update": {
+      "downloading": "Baixando {progress}%",
+      "installing": "Instalando atualização...",
+      "install": "Instalar atualização",
+      "installVersion": "Instalar atualização {version}",
+      "downloaded": "Atualização baixada. Reiniciando o Hyperion...",
+      "downloadFailed": "Não foi possível baixar a atualização"
+    },
+    "toast": {
+      "gameAutoDetected": "Caminho do jogo detectado automaticamente"
+    }
+  },
   "welcome": {
     "headline": "Vamos configurar seu espaço de trabalho",
     "subtitle": "Uma configuração rápida e única. Indique ao Hyperion onde o Cyberpunk 2077 está e escolha onde seus mods ficam — leva menos de um minuto.",
@@ -118,8 +161,8 @@
         "title": "Capturas de Execução",
         "description": "Arquivos escritos por ferramentas de mod (CET, plugins RED4ext) durante o jogo são capturados aqui e mantidos fora da pasta do jogo entre sessões.",
         "clean": "Nenhum arquivo capturado - a pasta do jogo está limpa.",
-        "capturedOne": "{count} arquivo capturado de sessões anteriores.",
-        "capturedMany": "{count} arquivos capturados de sessões anteriores.",
+        "captured_one": "{count} arquivo capturado de sessões anteriores.",
+        "captured_other": "{count} arquivos capturados de sessões anteriores.",
         "loading": "Carregando...",
         "clearing": "Limpando...",
         "clear": "Limpar capturas"

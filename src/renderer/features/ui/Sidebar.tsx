@@ -4,6 +4,7 @@ import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface NavItem {
   icon: string
@@ -40,6 +41,7 @@ export const Sidebar: React.FC = () => {
     killGame: state.killGame,
   }), shallow)
   const nexusAccount = useNexusAccount(settings?.nexusApiKey, 250)
+  const { t } = useTranslation()
 
   useEffect(() => {
     checkGameRunning()
@@ -49,7 +51,7 @@ export const Sidebar: React.FC = () => {
 
   const handleKillGame = async () => {
     const ok = await killGame()
-    if (!ok) addToast('Could not close game', 'error')
+    if (!ok) addToast(t('shell.game.closeFailed'), 'error')
   }
 
   const activeDownloadCount = activeDownloads.filter((download) =>
@@ -62,10 +64,10 @@ export const Sidebar: React.FC = () => {
       : undefined
 
   const navItems: NavItem[] = [
-    { icon: 'inventory_2', label: 'Mod Library', action: () => setActiveView('library'), active: activeView === 'library' },
+    { icon: 'inventory_2', label: t('shell.nav.library'), action: () => setActiveView('library'), active: activeView === 'library' },
     {
       icon: 'download',
-      label: 'Downloads',
+      label: t('shell.nav.downloads'),
       action: () => setActiveView('downloads'),
       active: activeView === 'downloads',
       badge: downloadsBadge,
@@ -75,7 +77,7 @@ export const Sidebar: React.FC = () => {
 
   const settingsItem: NavItem = {
     icon: 'settings',
-    label: 'Settings',
+    label: t('shell.nav.settings'),
     action: () => setActiveView('settings'),
     active: activeView === 'settings',
   }
@@ -104,7 +106,7 @@ export const Sidebar: React.FC = () => {
 
   const handleLaunchGame = async () => {
     if (!settings?.gamePath || !gamePathValid) {
-      addToast('Game path not configured — check Settings', 'warning')
+      addToast(t('shell.game.notConfigured'), 'warning')
       return
     }
     if (launchTimeoutRef.current) clearTimeout(launchTimeoutRef.current)
@@ -114,13 +116,13 @@ export const Sidebar: React.FC = () => {
       const result = await IpcService.invoke<{ ok: boolean; error?: string; cancelled?: boolean }>(IPC.LAUNCH_GAME)
       if (!result.ok && !result.cancelled) {
         setLaunching(false)
-        addToast(result.error ?? 'Could not launch game', 'error')
+        addToast(result.error ?? t('shell.game.launchFailed'), 'error')
         return
       }
       launchTimeoutRef.current = setTimeout(() => setLaunching(false), 30000)
     } catch (error) {
       setLaunching(false)
-      addToast(error instanceof Error ? error.message : 'Could not launch game', 'error')
+      addToast(error instanceof Error ? error.message : t('shell.game.launchFailed'), 'error')
     }
   }
 
@@ -147,18 +149,18 @@ export const Sidebar: React.FC = () => {
   const accountLabel =
     nexusAccount.status === 'connected'
       ? nexusAccount.data.isPremium
-        ? 'PREMIUM'
-        : 'FREE'
+        ? t('shell.account.premium')
+        : t('shell.account.free')
       : nexusAccount.status === 'checking'
-        ? 'CHECKING'
-        : 'OFFLINE'
+        ? t('shell.account.checking')
+        : t('shell.account.offline')
 
   const accountSubLabel =
     nexusAccount.status === 'connected'
-      ? 'NEXUS CONNECTED'
+      ? t('shell.account.connected')
       : nexusAccount.status === 'checking'
-        ? 'VALIDATING'
-        : 'NOT CONNECTED'
+        ? t('shell.account.validating')
+        : t('shell.account.notConnected')
 
   return (
     <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[#1a1a1a] bg-[#050505] py-8 text-sm tracking-tight text-[#fcee09] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
@@ -176,7 +178,7 @@ export const Sidebar: React.FC = () => {
         </div>
         <div className="pointer-events-none min-w-0 overflow-hidden opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
           <div className="truncate text-xs font-bold tracking-wider text-[#e5e2e1]">
-            {nexusAccount.status === 'connected' ? nexusAccount.data.name : 'NEXUS ACCOUNT'}
+            {nexusAccount.status === 'connected' ? nexusAccount.data.name : t('shell.account.name')}
           </div>
           <div className="mt-1 flex flex-col items-start gap-1">
             <span
@@ -192,7 +194,7 @@ export const Sidebar: React.FC = () => {
       <div className="mt-4 flex w-full flex-1 flex-col gap-2">
         {navItems.map((item) => (
           <button
-            key={item.label}
+            key={item.icon}
             onClick={item.action}
             disabled={item.disabled}
             className={itemClass(item.active, item.disabled)}
@@ -257,7 +259,7 @@ export const Sidebar: React.FC = () => {
             )}
             <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
               <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
-                {gameRunning ? 'IN GAME' : launching ? 'LAUNCHING...' : 'LAUNCH GAME'}
+                {gameRunning ? t('shell.game.inGame') : launching ? t('shell.game.launching') : t('shell.game.launch')}
               </span>
             </span>
           </span>
@@ -271,7 +273,7 @@ export const Sidebar: React.FC = () => {
               <span className="material-symbols-outlined shrink-0 text-[18px]">power_settings_new</span>
               <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
                 <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
-                  CLOSE GAME
+                  {t('shell.game.close')}
                 </span>
               </span>
             </span>
