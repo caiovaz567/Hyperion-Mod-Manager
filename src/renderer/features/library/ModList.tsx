@@ -27,6 +27,7 @@ import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
 import { MoveToSeparatorDialog } from '../ui/MoveToSeparatorDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
+import { useTranslation } from '../../i18n/I18nContext'
 import { useLibraryBulkToggle } from './useLibraryBulkToggle'
 import { useLibraryContextMenuActions } from './useLibraryContextMenuActions'
 import { useLibraryContextMenuState } from './useLibraryContextMenuState'
@@ -51,6 +52,7 @@ const MOD_ROW_HEIGHT = 38
 const MOD_VIRTUALIZATION_THRESHOLD = 120
 
 export const ModList: React.FC = () => {
+  const { t } = useTranslation()
   const [pendingDeleteMod, setPendingDeleteMod] = useState<ModMetadata | null>(null)
   const [pendingAction, setPendingAction] = useState<LibraryPendingActionState | null>(null)
   const [detailOverlay, setDetailOverlay] = useState<DetailOverlayState | null>(null)
@@ -430,8 +432,8 @@ export const ModList: React.FC = () => {
   const showCustomOrderBadge = sortKey === null
   const bulkToggleDisabled = libraryStatusFilter !== 'all'
   const bulkToggleTooltip = libraryStatusFilter === 'enabled'
-    ? 'Unavailable while Enabled filter is active'
-    : 'Unavailable while Disabled filter is active'
+    ? t('library.header.bulkUnavailableEnabled')
+    : t('library.header.bulkUnavailableDisabled')
   const installTargetMod = installTargetModId
     ? allMods.find((mod) => mod.uuid === installTargetModId) ?? null
     : null
@@ -522,7 +524,7 @@ export const ModList: React.FC = () => {
       }
 
       setPendingConflictGoToModId(null)
-      addToast('Could not reveal that mod with the current filters', 'warning', 2600)
+      addToast(t('library.toast.revealFailed'), 'warning', 2600)
     }
 
     frame = window.requestAnimationFrame(attemptScroll)
@@ -532,13 +534,13 @@ export const ModList: React.FC = () => {
   const handleOpenModsFolder = useCallback(async () => {
     const libraryPath = settings?.libraryPath?.trim()
     if (!libraryPath) {
-      addToast('Mods folder is not configured yet', 'warning')
+      addToast(t('library.toast.modsFolderNotConfigured'), 'warning')
       return
     }
 
     const result = await IpcService.invoke<IpcResult>(IPC.OPEN_PATH, libraryPath)
     if (!result.ok) {
-      addToast(result.error ?? 'Could not open mods folder', 'error')
+      addToast(result.error ?? t('library.toast.openModsFolderFailed'), 'error')
     }
   }, [addToast, settings?.libraryPath])
 
@@ -699,7 +701,7 @@ export const ModList: React.FC = () => {
   const handleRefreshLibrary = useCallback(async () => {
     closeContextMenu()
     await scanMods()
-    addToast('Library refreshed', 'success', 1200)
+    addToast(t('library.toast.refreshed'), 'success', 1200)
   }, [addToast, closeContextMenu, scanMods])
 
   const handleFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -738,7 +740,7 @@ export const ModList: React.FC = () => {
       {isDragging && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/90 border-[1px] border-[#fcee09]/40 pointer-events-none">
           <span className="material-symbols-outlined text-[48px] text-[#fcee09] mb-4">file_download</span>
-          <span className="brand-font text-sm text-[#fcee09] tracking-widest uppercase">Drop to install mod</span>
+          <span className="brand-font text-sm text-[#fcee09] tracking-widest uppercase">{t('library.dnd.dropToInstall')}</span>
         </div>
       )}
 
@@ -881,12 +883,12 @@ export const ModList: React.FC = () => {
 
       {separatorDialog && (
         <SeparatorNameDialog
-          title={separatorDialog.mode === 'create' ? 'Create Separator' : 'Rename Separator'}
+          title={separatorDialog.mode === 'create' ? t('library.separatorDialog.createTitle') : t('library.separatorDialog.renameTitle')}
           description={separatorDialog.mode === 'create'
-            ? 'Create a library divider for custom order. You can drag mods into it later or use Move to Separator from the selection bar.'
-            : 'Update the label shown for this separator in Custom Order.'}
+            ? t('library.separatorDialog.createDescription')
+            : t('library.separatorDialog.renameDescription')}
           value={separatorDialog.value}
-          submitLabel={separatorDialog.mode === 'create' ? 'Create Separator' : 'Save Name'}
+          submitLabel={separatorDialog.mode === 'create' ? t('library.separatorDialog.createSubmit') : t('library.separatorDialog.renameSubmit')}
           onChange={handleSeparatorDialogValueChange}
           onSubmit={() => void handleSubmitSeparatorDialog()}
           onCancel={handleCancelSeparatorDialog}

@@ -146,6 +146,7 @@ Setup wizard:
 - Step transitions use `.slide-in-right` when advancing and `.slide-in-left` when going back, keyed by step index so the animation replays every change; the valid-state validation row replays a `.scale-in` pop
 - Footer holds a ghost `Back` button (returns to the welcome screen from step 1) plus either `Continue` (non-final steps, gated on that step's path validating, with a tooltip explaining why it's disabled) or `Finish setup` (final step, with a loading-spinner state while applying)
 - All buttons share a hover lift (`-translate-y-px`) plus glow/border feedback and a press scale-down (`active:scale-[0.98]`) for tactile feedback; controls use soft `rounded-md`/`rounded-lg` corners rather than the squared industrial chrome used elsewhere, to keep onboarding approachable
+- A **language selector** sits in the top-right corner of the onboarding surface (beside the Close button), visible in both the welcome panel and the step wizard, so the user can localize Hyperion before completing setup. It is the shared squared `LanguageSelect` combo box used in Settings (see Internationalization)
 
 ### Library
 
@@ -347,6 +348,15 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Keep library maintenance tools in the main library workflow instead of duplicating them inside Settings
 - The third Settings section should focus on Hyperion application updates only; diagnostics and app logs remain available from the shell header
 - About links such as GitHub, Releases, issue reporting, usvfs, MO2, and REDmodding must look like real secondary buttons when placed inside dark cards: use a filled dark surface, subtle inset boundary, clear hover tint, and icon/text color that changes together
+- The **General** tab also hosts the interface **Language** selector (a `SettingCard` with the shared `LanguageSelect` combo box) — language is a runtime/behavior preference, so it belongs in General beside Install Behavior and Runtime Captures, not in Paths
+
+### Internationalization
+
+- Hyperion supports multiple interface languages. English is the source of truth; **Brazilian Portuguese (`Português (Brasil)`)** is the first translation. The selector is exposed in two places: the first-run setup wizard (top-right) and Settings > General
+- The selector is a compact, dark, squared **combo box** (`LanguageSelect`) in the standard Hyperion control language — a filled `#101010` trigger with an inset boundary, a `language` icon, the current language's native name, and an `expand_more` chevron; the popover lists each language by its native name (with the English label as a muted secondary line) and marks the active one in yellow with a check. No pills, no soft rounding beyond `rounded-sm`
+- Changing the language applies **live** (no restart) and persists across sessions in `settings.language`
+- Translation coverage now spans the whole renderer UI: the setup wizard, app shell, Downloads, Library (including mod details, conflicts, and dialogs), all Settings tabs, the shared install/conflict/version/duplicate/move-to-separator dialogs, the FOMOD installer, App Logs, and toasts. Only main-process error strings remain English. Untranslated strings still fall back to English rather than showing missing-key placeholders, so the app stays readable; `en.json` is the source of truth and `pt-BR.json` is now a complete translation at full key parity with it (712/712 keys)
+- Engine/implementation details (JSON catalogs, the `LOCALES` registry, the `t()` fallback, how to add a language) live in CLAUDE.md → Internationalization
 
 ### App Logs
 
@@ -448,5 +458,7 @@ Release expectations:
 - Downloads: src/renderer/features/downloads/DownloadsPane.tsx
 - Settings: src/renderer/features/ui/SettingsDialog.tsx
 - Toasts: src/renderer/features/ui/ToastContainer.tsx
+- Language selector: src/renderer/features/ui/LanguageSelect.tsx
+- i18n engine + catalogs: src/renderer/i18n/ (I18nContext.tsx, locales.ts, locales/*.json)
 - Main-process splash: src/main/resources/splash.html
 - Theme tokens: src/renderer/styles/globals.css

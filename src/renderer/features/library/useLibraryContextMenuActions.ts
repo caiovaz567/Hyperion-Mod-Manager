@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import type { ModMetadata, AppSettings } from '@shared/types'
 import { IPC } from '@shared/types'
 import { IpcService } from '../../services/IpcService'
+import { translate } from '../../i18n/translate'
 import type { LibraryContextMenuState } from './LibraryContextMenu'
 
 type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
@@ -51,7 +52,7 @@ export function useLibraryContextMenuActions({
     const mod = contextMenu.mod
     const modId = mod.nexusModId ?? mod.nexusFileId
     if (!modId) {
-      addToast('No Nexus link stored for this mod', 'warning')
+      addToast(translate('library.toast.noNexusLink'), 'warning')
       closeContextMenu()
       return
     }
@@ -82,7 +83,7 @@ export function useLibraryContextMenuActions({
   const handleContextReinstall = useCallback(() => {
     if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.mod.kind !== 'mod') return
     if (!contextMenu.mod.sourcePath) {
-      addToast('Original source is not stored for this mod', 'warning')
+      addToast(translate('library.toast.noOriginalSource'), 'warning')
       closeContextMenu()
       return
     }

@@ -1,0 +1,904 @@
+{
+  "common": {
+    "back": "Back",
+    "continue": "Continue",
+    "finishSetup": "Finish setup",
+    "getStarted": "Get started",
+    "optional": "Optional",
+    "chooseFolder": "Choose folder",
+    "useSuggested": "Use suggested",
+    "detectAutomatically": "Detect automatically",
+    "detecting": "Detecting…",
+    "openFolder": "Open folder",
+    "close": "Close",
+    "selectedFolder": "Selected folder",
+    "premium": "Premium",
+    "free": "Free",
+    "refresh": "Refresh",
+    "install": "Install",
+    "reinstall": "Reinstall",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "next": "Next",
+    "clearSearch": "Clear search",
+    "noFolderSelected": "No folder selected yet",
+    "settingsNotLoaded": "Settings not loaded yet"
+  },
+  "language": {
+    "label": "Language",
+    "select": "Select language"
+  },
+  "shell": {
+    "nav": {
+      "library": "Mod Library",
+      "downloads": "Downloads",
+      "settings": "Settings"
+    },
+    "game": {
+      "launch": "LAUNCH GAME",
+      "launching": "LAUNCHING...",
+      "inGame": "IN GAME",
+      "close": "CLOSE GAME",
+      "notConfigured": "Game path not configured — check Settings",
+      "launchFailed": "Could not launch game",
+      "closeFailed": "Could not close game"
+    },
+    "account": {
+      "name": "NEXUS ACCOUNT",
+      "premium": "PREMIUM",
+      "free": "FREE",
+      "checking": "CHECKING",
+      "offline": "OFFLINE",
+      "connected": "NEXUS CONNECTED",
+      "validating": "VALIDATING",
+      "notConnected": "NOT CONNECTED",
+      "validateFailed": "Could not validate Nexus account"
+    },
+    "header": {
+      "appLogs": "App Logs",
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "updateCheckFailed": "Update check failed"
+    },
+    "update": {
+      "downloading": "Downloading {progress}%",
+      "installing": "Installing update...",
+      "install": "Install update",
+      "installVersion": "Install update {version}",
+      "downloaded": "Update downloaded. Restarting Hyperion...",
+      "downloadFailed": "Could not download update"
+    },
+    "toast": {
+      "gameAutoDetected": "Game path auto-detected"
+    }
+  },
+  "downloads": {
+    "title": "Downloads",
+    "searchPlaceholder": "Search downloads...",
+    "openFolder": "Open Folder",
+    "deleteAllTooltip": "Delete every file in the downloads folder",
+    "summary": {
+      "local": "LOCAL",
+      "active": "ACTIVE",
+      "shown": "SHOWN"
+    },
+    "columns": {
+      "name": "Archive Name",
+      "status": "Status",
+      "version": "Version",
+      "size": "Size",
+      "downloaded": "Downloaded",
+      "actions": "Actions"
+    },
+    "sort": {
+      "name": "Sort by archive name",
+      "status": "Sort by status",
+      "version": "Sort by version",
+      "size": "Sort by size",
+      "downloaded": "Sort by downloaded date"
+    },
+    "status": {
+      "downloading": "Downloading",
+      "downloaded": "Downloaded",
+      "paused": "Paused",
+      "error": "Error",
+      "installed": "Installed"
+    },
+    "badge": {
+      "new": "NEW"
+    },
+    "active": {
+      "downloadFailed": "Download failed",
+      "readyToInstall": "Ready to install",
+      "pausedAt": "Paused at {pct}%",
+      "percentComplete": "{pct}% complete",
+      "interrupted": "Transfer interrupted",
+      "downloaded": "{size} downloaded",
+      "tryAgain": "Try again",
+      "waitingForScan": "Waiting for scan",
+      "resumeToContinue": "Resume to continue",
+      "eta": "ETA"
+    },
+    "tooltip": {
+      "resume": "Resume download",
+      "pause": "Pause download",
+      "cancel": "Cancel download",
+      "reinstallArchive": "Reinstall archive",
+      "installArchive": "Install archive",
+      "delete": "Delete download"
+    },
+    "install": {
+      "preparing": {
+        "label": "Preparing",
+        "summary": "Preparing install workspace",
+        "detail": "Opening the archive and preparing the install session"
+      },
+      "extracting": {
+        "label": "Extracting",
+        "summary": "Extracting package contents",
+        "detail": "Reading files directly from the archive"
+      },
+      "analyzing": {
+        "label": "Analyzing",
+        "summary": "Inspecting extracted payload",
+        "detail": "Detecting mod structure and checking for conflicts"
+      },
+      "installing": {
+        "label": "Installing",
+        "summary": "Writing files into the mod library",
+        "detail": "Copying extracted content and finalizing metadata"
+      },
+      "done": {
+        "label": "Done",
+        "summary": "Installation completed",
+        "detail": "Finalizing the installed mod"
+      }
+    },
+    "installStatus": {
+      "preparingInstaller": "Preparing installer...",
+      "reinstalling": "Reinstalling...",
+      "installingFomod": "Installing FOMOD selection..."
+    },
+    "delete": {
+      "label": "Deleting",
+      "summary": "Removing files from disk"
+    },
+    "overlay": {
+      "preparing": "Preparing installation",
+      "analyzing": "Analyzing",
+      "detectingFormat": "Detecting format..."
+    },
+    "empty": {
+      "scanning": "Scanning downloads...",
+      "noMatch": "No downloads match this search",
+      "noArchives": "No archives found in the downloads folder",
+      "noPath": "Set a downloads path in Configuration first",
+      "configuration": "Configuration"
+    },
+    "menu": {
+      "refreshDownloads": "Refresh Downloads",
+      "openFolder": "Open Downloads Folder",
+      "deleteAll": "Delete All Downloads",
+      "openLocation": "Open File Location",
+      "resume": "Resume",
+      "removeFromList": "Remove from List",
+      "pause": "Pause",
+      "cancel": "Cancel Download",
+      "deleteDownload": "Delete Download"
+    },
+    "deleteDialog": {
+      "title": "Delete Download",
+      "description": "You are about to permanently delete {name} from your downloads path.",
+      "detailLabel": "File to delete"
+    },
+    "deleteAllDialog": {
+      "title": "Delete All Downloads",
+      "description": "This permanently deletes every archive currently listed in your downloads folder. Files already installed as mods will not be affected.",
+      "detailLabel": "Files to delete",
+      "primary": "Delete Everything"
+    },
+    "toast": {
+      "setPathsFirst": "Set Game Path and Mod Library before installing mods",
+      "installFailed": "Install failed",
+      "installedNotActivated": "Installed but couldn't activate: {error}",
+      "installedActivated": "{name} installed & activated",
+      "deleteFailed": "Could not delete download",
+      "deleted": "{name} deleted",
+      "deleteAllFailed": "Could not delete downloads",
+      "deletedCount_one": "{count} download deleted",
+      "deletedCount_other": "{count} downloads deleted",
+      "deleteFailedCount_one": "{count} download could not be deleted",
+      "deleteFailedCount_other": "{count} downloads could not be deleted",
+      "fileNotAvailable": "Download file is not available yet",
+      "autoInstallFailed": "Auto-install failed",
+      "installedNotActivatedNamed": "{name} installed — couldn't activate: {error}",
+      "updateFailed": "Could not update {name}",
+      "updatedNotActivated": "Updated but couldn't activate: {error}",
+      "updatedActivated": "{name} updated & activated",
+      "reinstalledNotActivated": "Reinstalled but couldn't reactivate: {error}",
+      "noOriginalSource": "Original source is not stored for this mod",
+      "originalSourceUnavailable": "Original source is no longer available",
+      "fomodInstallFailed": "FOMOD install failed",
+      "nexusDownloadStartFailed": "Could not start Nexus download",
+      "nexusLinkReadFailed": "Could not read Nexus download link"
+    }
+  },
+  "welcome": {
+    "headline": "Let's set up your workspace",
+    "subtitle": "A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods live — it takes less than a minute.",
+    "version": "Hyperion {version}",
+    "stepCounter": "Step {current} of {total}",
+    "settingUp": "Setting things up…",
+    "closeAria": "Close Hyperion",
+    "stepsAria": "Setup steps",
+    "steps": {
+      "game": {
+        "label": "Game",
+        "heading": "Where is Cyberpunk 2077 installed?",
+        "description": "Point Hyperion to your game folder. We use it to verify the install and deploy your mods safely.",
+        "preview": "Where Cyberpunk 2077 is installed"
+      },
+      "library": {
+        "label": "Mod library",
+        "heading": "Where should your mods live?",
+        "description": "Every mod you add is kept here — organized, staged, and ready to enable whenever you want.",
+        "preview": "Where your managed mods are stored"
+      },
+      "downloads": {
+        "label": "Downloads",
+        "heading": "Where do new downloads land?",
+        "description": "Hyperion picks up new mod archives from this folder. We've suggested one next to your library — change it anytime.",
+        "preview": "Where new mod archives are picked up"
+      },
+      "nexus": {
+        "label": "Nexus",
+        "heading": "Connect your Nexus account",
+        "description": "Paste your personal Nexus Mods API key to enable downloads and update checks. You can skip this and add it later in Settings > Nexus.",
+        "preview": "Enable Nexus downloads & update checks"
+      }
+    },
+    "game": {
+      "placeholder": "No folder selected — detect or browse below",
+      "valid": "Cyberpunk 2077 found — you're good to go.",
+      "invalid": "We couldn't find Cyberpunk 2077 in this folder.",
+      "continueTooltip": "Select a valid Cyberpunk 2077 folder to continue"
+    },
+    "library": {
+      "placeholder": "No folder selected — use the suggestion or browse",
+      "valid": "This folder is ready to use.",
+      "invalid": "This folder can't be used as a mod library.",
+      "continueTooltip": "Select a valid mod library folder to continue"
+    },
+    "downloads": {
+      "placeholder": "No folder selected yet",
+      "info": "New mod downloads will be saved here."
+    },
+    "nexus": {
+      "instruction1": "Log in to Nexus Mods and open the API Key Settings page.",
+      "instruction2": "Scroll to the bottom and find Personal API Key.",
+      "instruction3": "Copy your personal API key and paste it below.",
+      "openApiPage": "Open API Key page",
+      "apiKeyLabel": "Personal API key",
+      "apiKeyPlaceholder": "Paste your Nexus Mods API key",
+      "showKey": "Show API key",
+      "hideKey": "Hide API key",
+      "optionalInfo": "Optional — you can add this later in Settings > Nexus.",
+      "validating": "Validating your API key…",
+      "connectedAs": "Connected as",
+      "error": "We couldn't validate this key. Double-check you copied the Personal API Key."
+    },
+    "finishTooltip": "Select a valid game folder and mod library to finish",
+    "dialog": {
+      "game": "Select Cyberpunk 2077 folder",
+      "library": "Select Mod Library folder",
+      "downloads": "Select Downloads folder"
+    },
+    "label": {
+      "library": "suggested mod library",
+      "downloads": "suggested downloads folder"
+    },
+    "toast": {
+      "detectFailed": "Could not auto-detect Cyberpunk 2077",
+      "gameDetected": "Game path detected",
+      "createDirFailed": "Could not create {label}",
+      "libraryLoaded": "Suggested mod library loaded",
+      "downloadsLoaded": "Suggested downloads folder loaded",
+      "finishInvalid": "Select a valid game folder and mod library before finishing",
+      "purged": "Purged {count} active mod(s) from the previous deployment",
+      "purgeFailed": "Could not fully purge {count} mod(s) from the previous deployment",
+      "saveFailed": "Could not save setup",
+      "restorePartial": "Loaded library, but {count} active mod(s) could not be restored",
+      "complete": "Setup complete"
+    }
+  },
+  "library": {
+    "toolbar": {
+      "title": "Managed Mods",
+      "titleTooltip": "Managed Mods: list of mods managed by the Hyperion library.\nUse the 'Install Mod' button to add a mod. Use 'Reinstall' to reinstall from the original source file.",
+      "quickSelectTooltip": "QUICK SELECTION:\nClick in a mod and then select another mod while holding shift to select multiple mods.\nCtrl+A to select all mods.",
+      "customOrderTooltip": "Custom Order active.\nDrag a mod onto a separator to group it.\nDrag before/after a row to reorder.\nDrag to the header to move a mod to top-level.",
+      "customOrder": "Custom Order",
+      "searchPlaceholder": "Search managed mods...",
+      "openModsFolder": "Open Mods Folder",
+      "checkUpdatesTooltip": "Check installed Nexus mods for newer versions",
+      "checking": "Checking…",
+      "updatesCount": "Updates ({count})",
+      "checkUpdates": "Check Updates",
+      "deleteAllLabel": "Delete all mods",
+      "deleteAllTooltip": "Delete all mods from the current library",
+      "installMod": "Install Mod",
+      "clearStatusFilter": "Clear status filter",
+      "statusFilterAria": "Mod status filter"
+    },
+    "install": {
+      "dialogTitle": "Select Mod Archive",
+      "archiveFilterName": "Mod Archives"
+    },
+    "status": {
+      "all": "All",
+      "on": "On",
+      "off": "Off",
+      "showAll": "Show all mods",
+      "showEnabled": "Show enabled mods",
+      "showDisabled": "Show disabled mods",
+      "viewingEnabled": "Viewing enabled",
+      "viewingDisabled": "Viewing disabled"
+    },
+    "bulk": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "moveToSeparator": "Move to Separator",
+      "topLevel": "Top Level",
+      "uninstall": "Uninstall",
+      "clearSelection": "Clear selection"
+    },
+    "header": {
+      "resizeColumn": "Resize {column} column",
+      "releaseTopLevel": "Release For Top Level",
+      "dragTopLevel": "Drag Here For Top Level",
+      "applying": "Applying...",
+      "disableAllVisible": "Disable all visible mods",
+      "enableAllVisible": "Enable all visible mods",
+      "columnName": "Mod Name",
+      "columnVersion": "Version",
+      "columnCategory": "Category",
+      "columnDate": "Date",
+      "columnActions": "Actions",
+      "sortByName": "Sort by mod name",
+      "sortByCategory": "Sort by category",
+      "sortByDate": "Sort by installed date",
+      "bulkUnavailableEnabled": "Unavailable while Enabled filter is active",
+      "bulkUnavailableDisabled": "Unavailable while Disabled filter is active"
+    },
+    "empty": {
+      "noMatch": "No mods match the search",
+      "noneInstalled": "No mods installed",
+      "noneDisabled": "No disabled mods",
+      "noneEnabled": "No enabled mods",
+      "noneAvailable": "No mods available",
+      "downloads": "Downloads"
+    },
+    "menu": {
+      "refreshLibrary": "Refresh Library",
+      "createSeparatorHere": "Create Separator Here",
+      "moveSelectedTopLevel": "Move Selected to Top Level",
+      "expandAll": "Expand All Separators",
+      "collapseAll": "Collapse All Separators",
+      "renameSeparator": "Rename Separator",
+      "createSeparatorBefore": "Create Separator Before",
+      "openInExplorer": "Open in File Explorer",
+      "deleteSeparator": "Delete Separator",
+      "details": "Details",
+      "rename": "Rename",
+      "moveToSeparator": "Move to Separator",
+      "moveToTopLevel": "Move to Top Level",
+      "checkForUpdate": "Check for Update",
+      "openOnNexus": "Open on Nexus"
+    },
+    "dnd": {
+      "dropToInstall": "Drop to install mod"
+    },
+    "separator": {
+      "dropHint_one": "Drop {count} mod here",
+      "dropHint_other": "Drop {count} mods here"
+    },
+    "toast": {
+      "revealFailed": "Could not reveal that mod with the current filters",
+      "modsFolderNotConfigured": "Mods folder is not configured yet",
+      "openModsFolderFailed": "Could not open mods folder",
+      "refreshed": "Library refreshed",
+      "noNexusMods": "No Nexus-sourced mods to check.",
+      "addApiKey": "Add a Nexus API key in Settings to check for updates.",
+      "updateAvailableSingle": "Update available on Nexus.",
+      "modUpToDate": "This mod is up to date.",
+      "updatesAvailable_one": "{count} mod update available.",
+      "updatesAvailable_other": "{count} mod updates available.",
+      "allUpToDate": "All Nexus mods are up to date.",
+      "checkUpdatesError": "Could not check for mod updates.",
+      "openedOnNexus": "Opened on Nexus — use \"Mod Manager Download\" to update this mod.",
+      "noNexusLink": "No Nexus link stored for this mod",
+      "noOriginalSource": "Original source is not stored for this mod",
+      "noEntriesToDelete": "No library entries to delete",
+      "noSelectedToDelete": "No selected mods to delete",
+      "entriesDeleted_one": "{count} library entry deleted",
+      "entriesDeleted_other": "{count} library entries deleted",
+      "entriesDeleteFailed_one": "{count} library entry could not be deleted",
+      "entriesDeleteFailed_other": "{count} library entries could not be deleted",
+      "selectionDeleted_one": "{count} mod deleted from selection",
+      "selectionDeleted_other": "{count} mods deleted from selection",
+      "selectionDeleteFailed_one": "{count} mod could not be deleted",
+      "selectionDeleteFailed_other": "{count} mods could not be deleted",
+      "deleteFailed": "Delete failed",
+      "modDeleted": "{name} deleted",
+      "returnToCustomOrderReorder": "Return to Custom Order to reorder mods manually",
+      "dropArchiveToInstall": "Drop a .zip, .rar, or .7z mod archive to install",
+      "dropPathUnreadable": "Could not read the dropped file path. Use Install Mod to select it manually.",
+      "closeGameBeforeInstall": "Close Cyberpunk 2077 before installing mods",
+      "setPathsBeforeInstall": "Set Game Path and Mod Library before installing mods",
+      "installFailed": "Install failed",
+      "installedNotActivated": "Installed but couldn't activate: {error}",
+      "installedActivated": "{name} installed & activated",
+      "returnToCustomOrderMoveBetween": "Return to Custom Order to move mods between separators",
+      "returnToCustomOrderMoveOut": "Return to Custom Order to move mods out of separators",
+      "movedIntoSeparator_one": "{count} mod moved into {name}",
+      "movedIntoSeparator_other": "{count} mods moved into {name}",
+      "movedToTopLevel_one": "{count} mod moved back to top level",
+      "movedToTopLevel_other": "{count} mods moved back to top level",
+      "separatorNameEmpty": "Separator name cannot be empty",
+      "separatorCreateFailed": "Could not create separator",
+      "separatorCreated": "Separator created",
+      "separatorNameUpdated": "Separator name updated",
+      "separatorFallbackName": "separator",
+      "noModsToEnable": "No mods to enable",
+      "noModsToDisable": "No mods to disable",
+      "bulkEnabled_one": "{count} mod enabled",
+      "bulkEnabled_other": "{count} mods enabled",
+      "bulkDisabled_one": "{count} mod disabled",
+      "bulkDisabled_other": "{count} mods disabled",
+      "bulkEnableFailed_one": "{count} mod failed to enable",
+      "bulkEnableFailed_other": "{count} mods failed to enable",
+      "bulkDisableFailed_one": "{count} mod failed to disable",
+      "bulkDisableFailed_other": "{count} mods failed to disable"
+    },
+    "separatorDialog": {
+      "createTitle": "Create Separator",
+      "renameTitle": "Rename Separator",
+      "createDescription": "Create a library divider for custom order. You can drag mods into it later or use Move to Separator from the selection bar.",
+      "renameDescription": "Update the label shown for this separator in Custom Order.",
+      "createSubmit": "Create Separator",
+      "renameSubmit": "Save Name",
+      "nameLabel": "Separator Name"
+    },
+    "row": {
+      "modCount_one": "{count} mod",
+      "modCount_other": "{count} mods",
+      "separatorUpdateTitle_one": "{count} mod has an update available",
+      "separatorUpdateTitle_other": "{count} mods have updates available",
+      "dropSelectedHere": "Drop Selected Here",
+      "recentInstalled": "Installed",
+      "recentUpdated": "Updated",
+      "recentDowngraded": "Downgraded",
+      "toggleFailed": "Operation failed",
+      "categoryTooltip": "Category: {category}",
+      "saveName": "Save name",
+      "cancelRename": "Cancel rename",
+      "renameMod": "Rename mod",
+      "removeMod": "Remove mod"
+    },
+    "conflict": {
+      "overwrites_one": "Overwrites {count} file",
+      "overwrites_other": "Overwrites {count} files",
+      "overwrittenBy_one": "Overwritten by {count} file",
+      "overwrittenBy_other": "Overwritten by {count} files",
+      "redundantFull": "Redundant: fully overwritten",
+      "redundantAria": "Redundant: every deployed file is overwritten.",
+      "clickToInspect": "Click to inspect conflicts",
+      "clickToInspectAria": "Click to inspect conflicts.",
+      "goTo": "Go to {name}",
+      "moreAbove": "{count} more above",
+      "moreBelow": "{count} more below",
+      "losesToSelected": "Loses to selected",
+      "winsOverSelected": "Wins over selected",
+      "go": "GO"
+    },
+    "update": {
+      "installed": "Installed: {version}",
+      "latest": "Latest: {version}",
+      "updatingInLibrary": "Updating in the library.",
+      "newVersion": "New version on Nexus. Click to update."
+    },
+    "progress": {
+      "installingMod": "Installing mod",
+      "removingSeparator": "Removing separator from library",
+      "removingFiles": "Removing files from disk",
+      "deleting": "Deleting",
+      "deletingMod": "Deleting mod"
+    },
+    "delete": {
+      "modTitle": "Delete Mod",
+      "separatorTitle": "Delete Separator",
+      "modDescription": "You are about to permanently delete {name} from your mod library.",
+      "separatorDescription": "You are about to permanently delete the separator {name} from your mod library.",
+      "modDetailLabel": "Mod being deleted",
+      "separatorDetailLabel": "Separator being deleted",
+      "allTitle": "Delete Entire Library",
+      "allDescription": "This permanently deletes every visible library entry, including separators. Enabled mods are removed from the game first, then erased from the library itself.",
+      "allDetailLabelEntries": "Library entries",
+      "allDetailLabelInstalled": "Installed mods",
+      "everything": "Delete Everything",
+      "selectedTitle": "Delete Selected Mods",
+      "selectedDescription": "This permanently deletes every selected mod from the current library. Enabled mods are removed from the game first, then erased from disk.",
+      "selectedDetailLabel": "Selected mods",
+      "modsBeingUninstalled": "Mods being uninstalled",
+      "selectedCount": "{count} selected",
+      "deleteSelected": "Delete Selected"
+    },
+    "detail": {
+      "tabFiles": "Files",
+      "tabConflicts": "Conflicts",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "renameMod": "Rename mod",
+      "closeDetails": "Close details",
+      "openModFolder": "Open Mod Folder",
+      "searchFiles": "Search files...",
+      "columnName": "Name",
+      "columnScope": "Scope",
+      "treeModeDeployed": "Showing the last known deployment structure relative to the game root.",
+      "treeModeInferred": "Showing the inferred deployment structure based on indexed files and mod type.",
+      "noFilesMatched": "No files matched this search.",
+      "pathsTab": "Paths ({count})",
+      "archivesTab": ".archive ({count})",
+      "winsEmpty": "This mod is not currently overwriting files from other mods.",
+      "lossEmpty": "No other mod is currently overwriting files from this mod.",
+      "winsTitle": "This Mod Wins",
+      "lossTitle": "Other Mods Win",
+      "conflictModColumn": "Mod",
+      "conflictFileColumn": "File",
+      "conflictWinsSubtitle": "This mod loads over these.",
+      "conflictLossSubtitle": "These load over this mod.",
+      "conflictUnknownMod": "Unknown mod",
+      "conflictArchiveHash": "Archive hash - {hash}",
+      "treeFileCount_one": "{count} file",
+      "treeFileCount_other": "{count} files",
+      "treeFile": "file",
+      "menuOpenFileLocation": "Open File Location",
+      "menuOpenExactLocation": "Open Exact Location",
+      "menuCreateFolder": "Create Folder",
+      "menuRename": "Rename",
+      "dialogRenameEntryTitle": "Rename Entry",
+      "dialogCreateFolderTitle": "Create Folder",
+      "dialogRenameEntryDescription": "Choose the new name for this entry inside the mod package.",
+      "dialogCreateFolderDescription": "Create a new folder in the currently targeted location of this mod.",
+      "dialogEntryNameLabel": "Entry Name",
+      "dialogFolderNameLabel": "Folder Name",
+      "dialogSaveName": "Save Name",
+      "dialogRenameModTitle": "Rename Mod",
+      "dialogRenameModDescription": "Update the label shown for this mod in the library.",
+      "dialogModNameLabel": "Mod Name",
+      "dialogSaving": "Saving...",
+      "dialogDeleteEntryTitle": "Delete Entry",
+      "dialogDeleteEntryDescription": "This will permanently remove the selected file or folder from the mod package.",
+      "dialogDeleteEntryTarget": "Target",
+      "dialogUnknownEntry": "Unknown entry",
+      "toastNameEmpty": "Mod name cannot be empty",
+      "toastNameUpdated": "Mod name updated",
+      "toastLibraryPathNotConfigured": "Library path is not configured",
+      "toastSelectFirst": "Select a file or folder first",
+      "toastNoExactSource": "This inferred folder has no exact source location in the mod package",
+      "toastFolderCreated": "Folder created",
+      "toastCannotRename": "This entry cannot be renamed from the deploy tree view",
+      "toastEntryRenamed": "Entry renamed",
+      "toastCannotDelete": "This entry cannot be deleted from the deploy tree view",
+      "toastEntryDeleted": "Entry deleted",
+      "toastTreeUpdated": "Tree updated",
+      "toastTreeActionFailed": "File tree action failed"
+    }
+  },
+  "settings": {
+    "general": {
+      "installBehavior": {
+        "title": "Install Behavior",
+        "description": "Default behavior for archives that finish downloading through Nexus links.",
+        "toggleTitle": "Auto-install completed downloads",
+        "toggleDescription": "Nexus downloads install automatically when the archive is ready. Disable this if you prefer staging files in Downloads first."
+      },
+      "runtimeCaptures": {
+        "title": "Runtime Captures",
+        "description": "Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions.",
+        "clean": "No captured files - game folder is clean.",
+        "captured_one": "{count} file captured from previous sessions.",
+        "captured_other": "{count} files captured from previous sessions.",
+        "loading": "Loading...",
+        "clearing": "Clearing...",
+        "clear": "Clear captures"
+      },
+      "language": {
+        "title": "Language",
+        "description": "Choose the language Hyperion's interface is displayed in."
+      }
+    },
+    "header": {
+      "eyebrow": "Control panel",
+      "title": "Settings",
+      "subtitle": "Configure paths, Nexus access, and Hyperion updates without leaving the manager.",
+      "sectionsAria": "Settings sections"
+    },
+    "tabs": {
+      "general": "General",
+      "paths": "Paths",
+      "nexus": "Nexus",
+      "updates": "Updates",
+      "about": "About"
+    },
+    "paths": {
+      "game": {
+        "title": "Game Path",
+        "description": "Cyberpunk 2077 installation root used for launch validation and deployment.",
+        "placeholder": "No folder selected - detect or browse",
+        "valid": "Cyberpunk 2077 found. Launch and deployment validation are ready.",
+        "invalid": "We couldn't find Cyberpunk 2077 in this folder. Launch stays blocked until it's fixed.",
+        "dialogTitle": "Select Cyberpunk 2077 folder"
+      },
+      "library": {
+        "title": "Mod Library",
+        "description": "Managed archive repository for metadata, reinstalls, staged recovery, and deploy rebuilds.",
+        "placeholder": "No folder selected - use suggested or browse",
+        "valid": "Installs, rescans, and recovery can use this library.",
+        "invalid": "This folder can't be used as a mod library. Installs stay blocked until it's fixed.",
+        "dialogTitle": "Select Mod Library folder"
+      },
+      "downloads": {
+        "title": "Downloads Intake",
+        "description": "Optional source folder for incoming archives before install.",
+        "placeholder": "Waiting for a library path...",
+        "defaultDescription": "Using the default folder next to your library.",
+        "activeDescription": "New mod archives are picked up from here.",
+        "dialogTitle": "Select Downloads folder"
+      }
+    },
+    "nexus": {
+      "status": {
+        "connected": "Connected",
+        "checking": "Checking...",
+        "invalidKey": "Invalid key",
+        "notConnected": "Not connected"
+      },
+      "connection": {
+        "title": "Nexus Connection",
+        "description": "Paste your personal Nexus API key. Hyperion saves it automatically and validates it in the background.",
+        "placeholder": "Paste your Nexus API key here...",
+        "clearKey": "Clear key"
+      },
+      "account": {
+        "title": "Account",
+        "description": "Linked Nexus identity and subscription tier.",
+        "userLine": "{email} · User #{id}",
+        "empty": "Add a valid API key to show your account and unlock Nexus-aware flows."
+      },
+      "tiers": {
+        "free": {
+          "feat1": "Mod updates open Nexus in the browser",
+          "feat2": "Downloads via nxm:// link from the site",
+          "feat3": "Completed downloads auto-install by default"
+        },
+        "premium": {
+          "feat1": "Mod updates download directly, no browser",
+          "feat2": "Direct CDN links resolved via Nexus API",
+          "feat3": "One-click inline install, stays in the Library"
+        }
+      },
+      "downloadFlow": {
+        "title": "Download Flow",
+        "description": "Keep Nexus installs predictable.",
+        "bullet1": "Nexus links land in Downloads and install automatically unless disabled in General.",
+        "bullet2": "Hyperion still asks when a duplicate, FOMOD, or overwrite decision needs your input."
+      }
+    },
+    "updates": {
+      "title": "Application Updates",
+      "description": "Check for, download, and install new Hyperion builds.",
+      "status": {
+        "ready": "Ready to install",
+        "available": "Update available"
+      },
+      "message": {
+        "ready": "Update {version} is ready to install.",
+        "available": "Update {version} is available to download.",
+        "upToDate": "Current build is up to date."
+      },
+      "checking": "Checking...",
+      "checkButton": "Check for updates",
+      "downloading": "Downloading...",
+      "downloadButton": "Download update",
+      "installButton": "Install & restart"
+    },
+    "about": {
+      "title": "About Hyperion",
+      "description": "Cyberpunk 2077 mod manager focused on virtual deployment, conflict visibility, and a predictable load order.",
+      "projectLabel": "Project",
+      "unofficial": "Unofficial",
+      "projectBody": "Built for a clean Cyberpunk 2077 modding workflow: install, inspect, reorder, and launch without turning the game folder into the source of truth.",
+      "releases": "Releases",
+      "supportLabel": "Support",
+      "supportBody": "For bug reports, include your Hyperion version and diagnostics summary so launch, VFS, and path issues are easier to trace.",
+      "reportIssue": "Report issue",
+      "copyDiagnostics": "Copy diagnostics",
+      "creditsTitle": "Credits",
+      "creditsDescription": "Acknowledgements for the tools, APIs, and modding references that make Hyperion possible.",
+      "credits": {
+        "coreVfsLabel": "Core VFS",
+        "coreVfsBody": "Hyperion's virtual deployment is powered by usvfs, the User-Space VFS used by Mod Organizer 2.",
+        "serviceApiLabel": "Service API",
+        "serviceApiBody": "Account validation, update checks, nxm links, and Premium-aware download handling.",
+        "referenceLabel": "Reference",
+        "referenceBody": "Archive behavior, load-order details, and public Cyberpunk modding documentation."
+      },
+      "disclaimer": "Hyperion is not affiliated with CD PROJEKT RED, Nexus Mods, Mod Organizer 2, or the usvfs maintainers."
+    },
+    "toast": {
+      "capturesCleared": "Runtime captures cleared",
+      "capturesClearError": "Could not clear runtime captures",
+      "diagnosticsCopied": "Diagnostics summary copied",
+      "diagnosticsCopyError": "Could not copy diagnostics summary",
+      "purged_one": "Purged {count} active mod from the previous deployment",
+      "purged_other": "Purged {count} active mods from the previous deployment",
+      "purgeFailed_one": "Could not fully purge {count} mod from the previous deployment",
+      "purgeFailed_other": "Could not fully purge {count} mods from the previous deployment",
+      "saveConfigError": "Could not save configuration",
+      "restoreFailed_one": "Loaded library, but {count} active mod could not be restored",
+      "restoreFailed_other": "Loaded library, but {count} active mods could not be restored",
+      "changesSaved": "Changes saved",
+      "nexusKeySaved": "Nexus API key saved",
+      "nexusKeyCleared": "Nexus API key cleared",
+      "nexusKeyError": "Could not save Nexus API key",
+      "gameDetectError": "Could not auto-detect Cyberpunk 2077",
+      "gameDetected": "Game path detected",
+      "createDirError": "Could not create {label}",
+      "libraryLabel": "suggested mod library",
+      "downloadsLabel": "suggested downloads folder",
+      "libraryLoaded": "Suggested mod library loaded",
+      "downloadsLoaded": "Suggested downloads folder loaded",
+      "updateRefreshed": "Update status refreshed",
+      "updateChecked": "Checked for Hyperion updates",
+      "updateCheckError": "Could not check for updates",
+      "updateDownloaded": "Update downloaded",
+      "updateDownloadError": "Could not download update"
+    }
+  },
+  "dialogs": {
+    "fomod": {
+      "label": "FOMOD Installer",
+      "stepCounter": "Step {pos} / {total}",
+      "noOptions": "No options to configure",
+      "preview": "Preview",
+      "clickToExpand": "Click to expand",
+      "required": "required",
+      "allSelected": "all selected",
+      "fallbackModuleName": "Mod Installation",
+      "fallbackStepName": "Installation Options",
+      "fallbackGroupName": "Options",
+      "fallbackPluginName": "Unknown"
+    },
+    "duplicateDownload": {
+      "titleDownloading": "File Already Downloading",
+      "titleExists": "File Already Exists",
+      "descriptionDownloading": "Hyperion is already downloading this archive right now. If you continue, the new request will be saved as a separate copy so both downloads can finish without colliding.",
+      "descriptionExists": "Hyperion found this file in your downloads folder already. If you continue, the new download will be saved as a separate copy with a clear duplicate label.",
+      "downloadAgain": "Download Again",
+      "labelDownloading": "Archive downloading now",
+      "labelExisting": "Existing archive",
+      "newName": "New archive name"
+    },
+    "duplicateInstall": {
+      "installFailed": "Install failed",
+      "installedNotActivated": "Installed but couldn't activate: {error}",
+      "installedActivated": "{name} installed & activated",
+      "reinstallTitle": "Reinstall Mod",
+      "existsTitle": "Mod Already Installed",
+      "reinstallDescription": "You are about to reinstall {name} from the original source archive or folder.",
+      "existsDescription": "You are installing {name}, but Hyperion found an existing module with the same identity in your library.",
+      "reinstallDetailLabel": "Target mod",
+      "existsDetailLabel": "Existing mod",
+      "replace": "Replace",
+      "installAsCopy": "Install as Copy"
+    },
+    "overwrite": {
+      "title": "Overwrite Preview",
+      "descriptionLosing": "This install shares game-target paths with enabled mods. Hyperion will respect library order, so files from mods below this position still win over the incoming mod.",
+      "descriptionWinning": "This install shares game-target paths with enabled mods. Hyperion will deploy it using library order, so the incoming mod will take priority where it lands later in the stack.",
+      "descriptionArchive": "This install also touches archive resources already present in enabled mods. Review the overlap before continuing.",
+      "incomingPriority": "Incoming Priority",
+      "wins": "Wins",
+      "stillOverridden": "Still Overridden",
+      "affectedMods": "Affected Mods",
+      "archiveConflictNote_one": "{count} archive resource conflict detected. These are not simple file overwrites and may still depend on archive load behavior.",
+      "archiveConflictNote_other": "{count} archive resource conflicts detected. These are not simple file overwrites and may still depend on archive load behavior.",
+      "priorityNote": "Mods with a higher `#` position than this install will keep priority on those shared paths.",
+      "outcome": "Outcome",
+      "gameTarget": "Game Target",
+      "existingMod": "Existing Mod",
+      "tagArchive": "Archive",
+      "tagIncomingWins": "Incoming Wins",
+      "tagExistingWins": "Existing Wins",
+      "archiveResource": "Archive resource: {hash}",
+      "moreOverlaps_one": "+{count} more overlap in this install.",
+      "moreOverlaps_other": "+{count} more overlaps in this install.",
+      "primary": "Install With Current Priority",
+      "cancel": "Cancel Install"
+    },
+    "version": {
+      "title": "Version Mismatch",
+      "unknown": "Unknown",
+      "badgeNewer": "Newer",
+      "badgeOlder": "Older",
+      "badgeDifferent": "Different",
+      "badgeReview": "Review",
+      "summaryUpgrade": "A newer version of this mod is already in your library.",
+      "summaryDowngrade": "The selected archive is older than what you have installed.",
+      "summaryDifferent": "The selected archive is a different version of an installed mod.",
+      "summaryUnknown": "This archive matches an installed mod but the versions could not be compared.",
+      "recommended": "Recommended",
+      "installed": "Installed",
+      "selected": "Selected",
+      "keep": "Keep {version}",
+      "keepHelper": "Keep the current install and ignore this older archive.",
+      "addToLibrary": "Add to Library",
+      "addToLibraryHelper": "Keep both — add this version as a separate entry.",
+      "updateTo": "Update to {version}",
+      "switchTo": "Switch to {version}",
+      "replaceHelper": "Replace the installed mod with this version.",
+      "replaceOlder": "Replace with older {version}",
+      "notNow": "Not now"
+    },
+    "moveToSeparator": {
+      "title": "Move to Separator",
+      "descriptionOne": "Choose a separator to move this mod into.",
+      "descriptionMany": "Choose a separator to move {count} selected mods into.",
+      "searchPlaceholder": "Search separators...",
+      "noMatch": "No separators match your search."
+    }
+  },
+  "logs": {
+    "title": "App Logs",
+    "live": "live",
+    "description": "Diagnostic events and Nexus API requests are grouped here. Click a row to inspect structured details or request payloads.",
+    "closeLogs": "Close logs",
+    "sectionsAria": "App log sections",
+    "tabGeneral": "General",
+    "tabRequests": "Requests",
+    "clearGeneral": "Clear General logs",
+    "clearRequests": "Clear Request logs",
+    "entries_one": "{count} entry",
+    "entries_other": "{count} entries",
+    "loading": "Loading logs...",
+    "emptyGeneral": "No general app logs recorded yet",
+    "emptyRequests": "No request logs recorded yet",
+    "emptyRequestsLive": "No live request logs recorded yet",
+    "hideSecrets": "Hide secrets",
+    "revealSecrets": "Reveal secrets",
+    "copyTitle": "Copy {title}",
+    "emptyNode": "empty",
+    "payload": "Payload",
+    "copiedWithSecrets": "{label} copied with secrets shown",
+    "copied": "{label} copied",
+    "copyError": "Could not copy {label}",
+    "preview": "Preview",
+    "previewMock": "Mock POST example to preview how sent payload and received response are rendered in the inspector.",
+    "method": "Method",
+    "endpoint": "Endpoint",
+    "status": "Status",
+    "apiTime": "API Time",
+    "requestUrl": "Request URL",
+    "error": "Error",
+    "requestBody": "Request Body",
+    "noRequestBody": "No request body",
+    "responseBody": "Response Body",
+    "noResponseBody": "No response body captured",
+    "source": "Source",
+    "level": "Level",
+    "occurred": "Occurred",
+    "details": "Details",
+    "noDetails": "No structured details"
+  }
+}

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
+import { translate, translateN } from '../../i18n/translate'
 
 type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -25,7 +26,7 @@ export function useLibraryBulkToggle({
     })
 
     if (actionableIds.length === 0) {
-      addToast(target === 'enable' ? 'No mods to enable' : 'No mods to disable', 'info')
+      addToast(translate(target === 'enable' ? 'library.toast.noModsToEnable' : 'library.toast.noModsToDisable'), 'info')
       return
     }
 
@@ -62,10 +63,10 @@ export function useLibraryBulkToggle({
 
     const changed = actionableIds.length - failed.length
     if (changed > 0) {
-      addToast(`${changed} mod${changed === 1 ? '' : 's'} ${target === 'enable' ? 'enabled' : 'disabled'}`, 'success')
+      addToast(translateN(target === 'enable' ? 'library.toast.bulkEnabled' : 'library.toast.bulkDisabled', changed), 'success')
     }
     if (failed.length > 0) {
-      addToast(`${failed.length} mod${failed.length === 1 ? '' : 's'} failed to ${target}`, 'warning')
+      addToast(translateN(target === 'enable' ? 'library.toast.bulkEnableFailed' : 'library.toast.bulkDisableFailed', failed.length), 'warning')
     }
   }, [addToast, allMods])
 

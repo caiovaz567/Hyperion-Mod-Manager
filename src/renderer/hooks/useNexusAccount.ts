@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { IpcService } from '../services/IpcService'
 import { IPC } from '@shared/types'
 import type { IpcResult, NexusValidateResult } from '@shared/types'
+import { translate } from '../i18n/translate'
 
 export type NexusAccountState =
   | { status: 'not-configured'; isLoading: false; data: null; error: null }
@@ -45,7 +46,7 @@ export function useNexusAccount(apiKey?: string, debounceMs = 450): NexusAccount
             status: 'error',
             isLoading: false,
             data: null,
-            error: result.error ?? 'Could not validate Nexus account',
+            error: result.error ?? translate('shell.account.validateFailed'),
           })
         }
       } catch {
@@ -54,7 +55,7 @@ export function useNexusAccount(apiKey?: string, debounceMs = 450): NexusAccount
           status: 'error',
           isLoading: false,
           data: null,
-          error: 'Could not validate Nexus account',
+          error: translate('shell.account.validateFailed'),
         })
       }
     }, debounceMs)

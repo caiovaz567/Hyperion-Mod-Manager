@@ -6,6 +6,8 @@ import { Tooltip } from './Tooltip'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, ValidationRow, uiButton } from './uiKit'
+import { LanguageSelect } from './LanguageSelect'
+import { useTranslation } from '../../i18n/I18nContext'
 
 function getParentDirectory(targetPath: string): string {
   const normalizedPath = targetPath.trim().replace(/[\\/]+$/, '')
@@ -17,52 +19,15 @@ function getParentDirectory(targetPath: string): string {
   return normalizedPath.slice(0, separatorIndex)
 }
 
-interface SetupStepDef {
-  key: string
-  label: string
-  icon: string
-  heading: string
-  description: string
-  preview: string
-  optional?: boolean
-}
-
-const SETUP_STEPS: SetupStepDef[] = [
-  {
-    key: 'game',
-    label: 'Game',
-    icon: 'sports_esports',
-    heading: 'Where is Cyberpunk 2077 installed?',
-    description: 'Point Hyperion to your game folder. We use it to verify the install and deploy your mods safely.',
-    preview: 'Where Cyberpunk 2077 is installed',
-  },
-  {
-    key: 'library',
-    label: 'Mod library',
-    icon: 'folder_open',
-    heading: 'Where should your mods live?',
-    description: 'Every mod you add is kept here — organized, staged, and ready to enable whenever you want.',
-    preview: 'Where your managed mods are stored',
-  },
-  {
-    key: 'downloads',
-    label: 'Downloads',
-    icon: 'download',
-    heading: 'Where do new downloads land?',
-    description: "Hyperion picks up new mod archives from this folder. We've suggested one next to your library — change it anytime.",
-    preview: 'Where new mod archives are picked up',
-    optional: true,
-  },
-  {
-    key: 'nexus',
-    label: 'Nexus',
-    icon: 'vpn_key',
-    heading: 'Connect your Nexus account',
-    description: 'Paste your personal Nexus Mods API key to enable downloads and update checks. You can skip this and add it later in Settings > Nexus.',
-    preview: 'Enable Nexus downloads & update checks',
-    optional: true,
-  },
-]
+// Step labels/headings/descriptions/previews are resolved from the translation
+// catalog at render time via `welcome.steps.<key>.*`, so they re-translate when
+// the language changes. Only structural fields live here.
+const SETUP_STEPS = [
+  { key: 'game', icon: 'sports_esports', optional: false },
+  { key: 'library', icon: 'folder_open', optional: false },
+  { key: 'downloads', icon: 'download', optional: true },
+  { key: 'nexus', icon: 'vpn_key', optional: true },
+] as const
 
 const NEXUS_API_KEYS_URL = 'https://www.nexusmods.com/settings/api-keys'
 
@@ -89,8 +54,10 @@ const BrandMark: React.FC<{ size?: 'sm' | 'lg' }> = ({ size = 'sm' }) => {
 const StepProgress: React.FC<{
   currentStep: number
   onStepSelect: (index: number) => void
-}> = ({ currentStep, onStepSelect }) => (
-  <div className="flex items-center" role="list" aria-label="Setup steps">
+}> = ({ currentStep, onStepSelect }) => {
+  const { t } = useTranslation()
+  return (
+  <div className="flex items-center" role="list" aria-label={t('welcome.stepsAria')}>
     {SETUP_STEPS.map((step, index) => {
       const isActive = index === currentStep
       const isCompleted = index < currentStep
@@ -125,7 +92,7 @@ const StepProgress: React.FC<{
                 isActive ? 'text-white' : isCompleted ? 'text-[#9a9a9a] group-hover:text-white' : 'text-[#5a5a5a]'
               }`}
             >
-              {step.label}
+              {t(`welcome.steps.${step.key}.label`)}
             </span>
           </button>
           {index < SETUP_STEPS.length - 1 && (
@@ -140,9 +107,11 @@ const StepProgress: React.FC<{
       )
     })}
   </div>
-)
+  )
+}
 
 export const WelcomeScreen: React.FC = () => {
+  const { t } = useTranslation()
   const appVersion = useAppVersion()
   const {
     settings,
@@ -251,7 +220,7 @@ export const WelcomeScreen: React.FC = () => {
   const browseGame = async () => {
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(
       IPC.OPEN_FOLDER_DIALOG,
-      { title: 'Select Cyberpunk 2077 folder' }
+      { title: t('welcome.dialog.game') }
     )
     if (!result.canceled && result.filePaths.length) {
       setGamePath(result.filePaths[0])
@@ -261,7 +230,7 @@ export const WelcomeScreen: React.FC = () => {
   const browseLibrary = async () => {
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(
       IPC.OPEN_FOLDER_DIALOG,
-      { title: 'Select Mod Library folder' }
+      { title: t('welcome.dialog.library') }
     )
     if (!result.canceled && result.filePaths.length) {
       setLibraryPath(result.filePaths[0])
@@ -271,7 +240,7 @@ export const WelcomeScreen: React.FC = () => {
   const browseDownloads = async () => {
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(
       IPC.OPEN_FOLDER_DIALOG,
-      { title: 'Select Downloads folder' }
+      { title: t('welcome.dialog.downloads') }
     )
     if (!result.canceled && result.filePaths.length) {
       setDownloadPath(result.filePaths[0])
@@ -286,7 +255,7 @@ export const WelcomeScreen: React.FC = () => {
     if (!result.ok || !result.data) {
       console.error(`[WelcomeScreen] detectGamePath failed:`, result.error)
       if (!silent) {
-        addToast(result.error ?? 'Could not auto-detect Cyberpunk 2077', 'warning', 2600)
+        addToast(result.error ?? t('welcome.toast.detectFailed'), 'warning', 2600)
       }
       return
     }
@@ -302,14 +271,14 @@ export const WelcomeScreen: React.FC = () => {
       setGamePathValid(false)
     }
     if (!silent) {
-      addToast('Game path detected', 'success', 1800)
+      addToast(t('welcome.toast.gameDetected'), 'success', 1800)
     }
   }
 
   const ensureDirectory = async (targetPath: string, label: string): Promise<boolean> => {
     const result = await IpcService.invoke<IpcResult<void>>(IPC.ENSURE_DIRECTORY, targetPath)
     if (!result.ok) {
-      addToast(result.error ?? `Could not create ${label}`, 'warning', 2600)
+      addToast(result.error ?? t('welcome.toast.createDirFailed', { label }), 'warning', 2600)
       return false
     }
     return true
@@ -319,8 +288,8 @@ export const WelcomeScreen: React.FC = () => {
     if (!defaultPaths) return
     const nextPath = defaultPaths.libraryPath
     setLibraryPath(nextPath)
-    if (await ensureDirectory(nextPath, 'suggested mod library')) {
-      addToast('Suggested mod library loaded', 'info', 1800)
+    if (await ensureDirectory(nextPath, t('welcome.label.library'))) {
+      addToast(t('welcome.toast.libraryLoaded'), 'info', 1800)
     }
   }
 
@@ -330,14 +299,14 @@ export const WelcomeScreen: React.FC = () => {
     const nextDownloadPath =
       defaultPaths?.downloadPath?.trim() || resolveDownloadPath(defaultPaths?.libraryPath || '')
     setDownloadPath(nextDownloadPath)
-    if (await ensureDirectory(nextDownloadPath, 'suggested downloads folder')) {
-      addToast('Suggested downloads folder loaded', 'info', 1800)
+    if (await ensureDirectory(nextDownloadPath, t('welcome.label.downloads'))) {
+      addToast(t('welcome.toast.downloadsLoaded'), 'info', 1800)
     }
   }
 
   const applyPaths = async () => {
     if (!gamePathValid || !libraryPathValid) {
-      addToast('Select a valid game folder and mod library before finishing', 'warning', 2400)
+      addToast(t('welcome.toast.finishInvalid'), 'warning', 2400)
       return
     }
 
@@ -352,16 +321,16 @@ export const WelcomeScreen: React.FC = () => {
       if ((libraryChanged || gameChanged) && settings?.gamePath?.trim() && settings?.libraryPath?.trim()) {
         const purgeResult = await purgeMods()
         if (purgeResult.data?.purged) {
-          addToast(`Purged ${purgeResult.data.purged} active mod(s) from the previous deployment`, 'info', 2600)
+          addToast(t('welcome.toast.purged', { count: purgeResult.data.purged }), 'info', 2600)
         }
         if (purgeResult.data?.failed) {
-          addToast(`Could not fully purge ${purgeResult.data.failed} mod(s) from the previous deployment`, 'warning', 3200)
+          addToast(t('welcome.toast.purgeFailed', { count: purgeResult.data.failed }), 'warning', 3200)
         }
       }
 
       const saveResult = await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim(), setupCompleted: true })
       if (!saveResult.ok) {
-        addToast(saveResult.error ?? 'Could not save setup', 'error', 5000)
+        addToast(saveResult.error ?? t('welcome.toast.saveFailed'), 'error', 5000)
         return
       }
       const scannedMods = await scanMods()
@@ -370,9 +339,9 @@ export const WelcomeScreen: React.FC = () => {
         const restoreResults = await restoreEnabledMods(scannedMods)
         const failedRestoreCount = restoreResults.filter((result) => !result.ok).length
         if (failedRestoreCount > 0) {
-          addToast(`Loaded library, but ${failedRestoreCount} active mod(s) could not be restored`, 'warning', 3200)
+          addToast(t('welcome.toast.restorePartial', { count: failedRestoreCount }), 'warning', 3200)
         }
-        addToast(downloadChanged ? 'Setup complete' : 'Setup complete', 'success', 1800)
+        addToast(t('welcome.toast.complete'), 'success', 1800)
         setActiveView('library')
       }
     } finally {
@@ -392,8 +361,8 @@ export const WelcomeScreen: React.FC = () => {
 
   const stepReady = currentStep === 0 ? gamePathValid : currentStep === 1 ? libraryPathValid : true
   const continueTooltip = currentStep === 0
-    ? 'Select a valid Cyberpunk 2077 folder to continue'
-    : 'Select a valid mod library folder to continue'
+    ? t('welcome.game.continueTooltip')
+    : t('welcome.library.continueTooltip')
 
   const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn, ghost: ghostBtn } = uiButton
   const centeredEndIconButton = `${primaryBtn} !grid grid-cols-[1fr_auto_1fr] gap-x-3`
@@ -409,13 +378,14 @@ export const WelcomeScreen: React.FC = () => {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       />
       <div
-        className="absolute right-4 top-4 z-20"
+        className="absolute right-4 top-4 z-20 flex items-center gap-2"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <Tooltip content="Close">
+        <LanguageSelect />
+        <Tooltip content={t('common.close')}>
           <button
             type="button"
-            aria-label="Close Hyperion"
+            aria-label={t('welcome.closeAria')}
             onClick={() => IpcService.send('window:close')}
             className="flex h-8 w-8 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[#111111] hover:text-[#f87171]"
           >
@@ -437,14 +407,13 @@ export const WelcomeScreen: React.FC = () => {
                 className="fade-up brand-font text-[28px] font-bold leading-tight text-white sm:text-[34px]"
                 style={{ animationDelay: '50ms' }}
               >
-                Let's set up your workspace
+                {t('welcome.headline')}
               </h1>
               <p
                 className="fade-up mt-3 max-w-md text-[15px] leading-relaxed text-[#9a9a9a]"
                 style={{ animationDelay: '100ms' }}
               >
-                A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods
-                live — it takes less than a minute.
+                {t('welcome.subtitle')}
               </p>
 
               <div className="fade-up mt-9 grid w-full gap-2.5 text-left" style={{ animationDelay: '150ms' }}>
@@ -460,11 +429,11 @@ export const WelcomeScreen: React.FC = () => {
                       {s.icon}
                     </span>
                     <div className="min-w-0">
-                      <div className="text-[13.5px] font-semibold text-white">{s.label}</div>
-                      <div className="truncate text-[12.5px] text-[#8a8a8a]">{s.preview}</div>
+                      <div className="text-[13.5px] font-semibold text-white">{t(`welcome.steps.${s.key}.label`)}</div>
+                      <div className="truncate text-[12.5px] text-[#8a8a8a]">{t(`welcome.steps.${s.key}.preview`)}</div>
                     </div>
                     {s.optional && (
-                      <span className="ml-auto flex-shrink-0 text-[11px] font-medium text-[#6a6a6a]">Optional</span>
+                      <span className="ml-auto flex-shrink-0 text-[11px] font-medium text-[#6a6a6a]">{t('common.optional')}</span>
                     )}
                   </div>
                 ))}
@@ -475,14 +444,14 @@ export const WelcomeScreen: React.FC = () => {
                 className={`fade-up mt-9 min-w-[184px] ${centeredEndIconButton}`}
                 style={{ animationDelay: '200ms' }}
               >
-                <span className={centeredButtonLabel}>Get started</span>
+                <span className={centeredButtonLabel}>{t('common.getStarted')}</span>
                 <span className={centeredEndIcon} style={{ fontSize: 18 }}>
                   arrow_forward
                 </span>
               </button>
 
               <div className="fade-up mt-7 text-[11.5px] text-[#5a5a5a]" style={{ animationDelay: '250ms' }}>
-                Hyperion {appVersion}
+                {t('welcome.version', { version: appVersion })}
               </div>
             </div>
           </div>
@@ -495,7 +464,7 @@ export const WelcomeScreen: React.FC = () => {
             <div className="fade-up mb-7 flex items-center justify-between">
               <BrandMark />
               <span className="text-[12.5px] font-medium text-[#6a6a6a]">
-                Step {currentStep + 1} of {SETUP_STEPS.length}
+                {t('welcome.stepCounter', { current: currentStep + 1, total: SETUP_STEPS.length })}
               </span>
             </div>
 
@@ -516,39 +485,39 @@ export const WelcomeScreen: React.FC = () => {
                   <span className="material-symbols-outlined text-[#fcee09]" style={{ fontSize: 22 }}>{step.icon}</span>
                 </div>
                 <h2 className="brand-font text-[18px] font-bold leading-snug text-white sm:text-[19px]">
-                  {step.heading}
+                  {t(`welcome.steps.${step.key}.heading`)}
                 </h2>
               </div>
 
-              <p className="mb-5 text-[14px] leading-relaxed text-[#9a9a9a]">{step.description}</p>
+              <p className="mb-5 text-[14px] leading-relaxed text-[#9a9a9a]">{t(`welcome.steps.${step.key}.description`)}</p>
 
-              <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">Selected folder</div>
+              <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">{t('common.selectedFolder')}</div>
 
               {currentStep === 0 && (
                 <>
-                  <PathBox value={gamePath} placeholder="No folder selected — detect or browse below" emphasize={gameState !== 'valid'} />
+                  <PathBox value={gamePath} placeholder={t('welcome.game.placeholder')} emphasize={gameState !== 'valid'} />
                   <ValidationRow
                     state={gameState}
-                    validText="Cyberpunk 2077 found — you're good to go."
-                    invalidText="We couldn't find Cyberpunk 2077 in this folder."
+                    validText={t('welcome.game.valid')}
+                    invalidText={t('welcome.game.invalid')}
                   />
                   <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                     <button onClick={() => void applyGameDefault()} disabled={detectingGame} className={`${secondaryBtn} w-full sm:w-auto`}>
                       {detectingGame ? (
                         <>
                           <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
-                          Detecting…
+                          {t('common.detecting')}
                         </>
                       ) : (
                         <>
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
-                          Detect automatically
+                          {t('common.detectAutomatically')}
                         </>
                       )}
                     </button>
                     <button onClick={browseGame} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
-                      Choose folder
+                      {t('common.chooseFolder')}
                     </button>
                   </div>
                 </>
@@ -556,20 +525,20 @@ export const WelcomeScreen: React.FC = () => {
 
               {currentStep === 1 && (
                 <>
-                  <PathBox value={libraryPath} placeholder="No folder selected — use the suggestion or browse" emphasize={libraryState === 'invalid'} />
+                  <PathBox value={libraryPath} placeholder={t('welcome.library.placeholder')} emphasize={libraryState === 'invalid'} />
                   <ValidationRow
                     state={libraryState}
-                    validText="This folder is ready to use."
-                    invalidText="This folder can't be used as a mod library."
+                    validText={t('welcome.library.valid')}
+                    invalidText={t('welcome.library.invalid')}
                   />
                   <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                     <button onClick={applyLibraryDefault} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
-                      Use suggested
+                      {t('common.useSuggested')}
                     </button>
                     <button onClick={browseLibrary} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
-                      Choose folder
+                      {t('common.chooseFolder')}
                     </button>
                   </div>
                 </>
@@ -577,16 +546,16 @@ export const WelcomeScreen: React.FC = () => {
 
               {currentStep === 2 && (
                 <>
-                  <PathBox value={effectiveDownloadPath} placeholder="No folder selected yet" />
-                  <ValidationRow state="info" infoText="New mod downloads will be saved here." />
+                  <PathBox value={effectiveDownloadPath} placeholder={t('welcome.downloads.placeholder')} />
+                  <ValidationRow state="info" infoText={t('welcome.downloads.info')} />
                   <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                     <button onClick={applyDownloadsDefault} className={`${secondaryBtn} w-full sm:w-auto`}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
-                      Use suggested
+                      {t('common.useSuggested')}
                     </button>
                     <button onClick={browseDownloads} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
-                      Choose folder
+                      {t('common.chooseFolder')}
                     </button>
                   </div>
                 </>
@@ -597,9 +566,9 @@ export const WelcomeScreen: React.FC = () => {
                   {/* How to get the key — mirrors the README */}
                   <ol className="mb-5 space-y-2.5">
                     {[
-                      <>Log in to Nexus Mods and open the <span className="text-[#e5e2e1]">API Key Settings</span> page.</>,
-                      <>Scroll to the bottom and find <span className="text-[#e5e2e1]">Personal API Key</span>.</>,
-                      <>Copy your personal API key and paste it below.</>,
+                      t('welcome.nexus.instruction1'),
+                      t('welcome.nexus.instruction2'),
+                      t('welcome.nexus.instruction3'),
                     ].map((text, index) => (
                       <li key={index} className="flex items-start gap-3 text-[13.5px] leading-relaxed text-[#9a9a9a]">
                         <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#141414] text-[11px] font-semibold text-[#8a8a8a]">
@@ -612,16 +581,16 @@ export const WelcomeScreen: React.FC = () => {
 
                   <button onClick={openNexusApiKeysPage} className={`${secondaryBtn} mb-5 w-full sm:w-auto`}>
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
-                    Open API Key page
+                    {t('welcome.nexus.openApiPage')}
                   </button>
 
-                  <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">Personal API key</div>
+                  <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">{t('welcome.nexus.apiKeyLabel')}</div>
                   <div className="relative">
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}
                       onChange={(event) => setNexusApiKey(event.target.value)}
-                      placeholder="Paste your Nexus Mods API key"
+                      placeholder={t('welcome.nexus.apiKeyPlaceholder')}
                       spellCheck={false}
                       autoComplete="off"
                       className="h-11 w-full rounded-md border-[0.5px] border-[#2d2d2d] bg-[#050505] px-3 pr-11 text-[13.5px] text-white outline-none transition-colors focus:border-[#fcee09]/55 focus-visible:outline-none"
@@ -631,7 +600,7 @@ export const WelcomeScreen: React.FC = () => {
                         type="button"
                         onClick={() => setShowApiKey((value) => !value)}
                         className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[#111111] hover:text-[#cfcfcf]"
-                        aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                        aria-label={showApiKey ? t('welcome.nexus.hideKey') : t('welcome.nexus.showKey')}
                       >
                         <span className="material-symbols-outlined text-[17px] leading-none">{showApiKey ? 'visibility_off' : 'visibility'}</span>
                       </button>
@@ -643,28 +612,28 @@ export const WelcomeScreen: React.FC = () => {
                     {nexusAccount.status === 'not-configured' && (
                       <>
                         <span className="material-symbols-outlined mt-px text-[#60A5FA]" style={{ fontSize: 16 }}>info</span>
-                        <span className="text-[#9a9a9a]">Optional — you can add this later in Settings &gt; Nexus.</span>
+                        <span className="text-[#9a9a9a]">{t('welcome.nexus.optionalInfo')}</span>
                       </>
                     )}
                     {nexusAccount.status === 'checking' && (
                       <>
                         <span className="material-symbols-outlined mt-px animate-spin text-[#9a9a9a]" style={{ fontSize: 16 }}>progress_activity</span>
-                        <span className="text-[#9a9a9a]">Validating your API key…</span>
+                        <span className="text-[#9a9a9a]">{t('welcome.nexus.validating')}</span>
                       </>
                     )}
                     {nexusAccount.status === 'connected' && (
                       <>
                         <span className="material-symbols-outlined mt-px text-[#34d399]" style={{ fontSize: 16 }}>check_circle</span>
                         <span className="text-[#cfe9dc]">
-                          Connected as <span className="font-semibold text-white">{nexusAccount.data.name}</span>
-                          {' '}({nexusAccount.data.isPremium ? 'Premium' : 'Free'})
+                          {t('welcome.nexus.connectedAs')} <span className="font-semibold text-white">{nexusAccount.data.name}</span>
+                          {' '}({nexusAccount.data.isPremium ? t('common.premium') : t('common.free')})
                         </span>
                       </>
                     )}
                     {nexusAccount.status === 'error' && (
                       <>
                         <span className="material-symbols-outlined mt-px text-[#fcee09]" style={{ fontSize: 16 }}>error</span>
-                        <span className="text-[#d8c98a]">We couldn't validate this key. Double-check you copied the Personal API Key.</span>
+                        <span className="text-[#d8c98a]">{t('welcome.nexus.error')}</span>
                       </>
                     )}
                   </div>
@@ -676,19 +645,19 @@ export const WelcomeScreen: React.FC = () => {
             <div className="mt-6 flex items-center justify-between">
               <button onClick={goBack} className={`min-w-[108px] ${centeredStartIconButton}`}>
                 <span className={centeredStartIcon} style={{ fontSize: 18 }}>arrow_back</span>
-                <span className={centeredButtonLabel}>Back</span>
+                <span className={centeredButtonLabel}>{t('common.back')}</span>
               </button>
 
               {!isLastStep ? (
                 stepReady ? (
                   <button onClick={goNext} className={`min-w-[148px] ${centeredEndIconButton}`}>
-                    <span className={centeredButtonLabel}>Continue</span>
+                    <span className={centeredButtonLabel}>{t('common.continue')}</span>
                     <span className={centeredEndIcon} style={{ fontSize: 18 }}>arrow_forward</span>
                   </button>
                 ) : (
                   <Tooltip content={continueTooltip} side="top" wrapperClassName="inline-flex">
                     <button disabled className={`min-w-[148px] ${centeredEndIconButton}`}>
-                      <span className={centeredButtonLabel}>Continue</span>
+                      <span className={centeredButtonLabel}>{t('common.continue')}</span>
                       <span className="material-symbols-outlined col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }}>arrow_forward</span>
                     </button>
                   </Tooltip>
@@ -702,19 +671,19 @@ export const WelcomeScreen: React.FC = () => {
                   {isInitializing ? (
                     <>
                       <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
-                      Setting things up…
+                      {t('welcome.settingUp')}
                     </>
                   ) : (
                     <>
-                      <span className={centeredButtonLabel}>Finish setup</span>
+                      <span className={centeredButtonLabel}>{t('common.finishSetup')}</span>
                       <span className="material-symbols-outlined col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }}>check</span>
                     </>
                   )}
                 </button>
               ) : (
-                <Tooltip content="Select a valid game folder and mod library to finish" side="top" wrapperClassName="inline-flex">
+                <Tooltip content={t('welcome.finishTooltip')} side="top" wrapperClassName="inline-flex">
                   <button disabled className={`min-w-[164px] ${centeredEndIconButton}`}>
-                    <span className={centeredButtonLabel}>Finish setup</span>
+                    <span className={centeredButtonLabel}>{t('common.finishSetup')}</span>
                     <span className="material-symbols-outlined col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }}>check</span>
                   </button>
                 </Tooltip>

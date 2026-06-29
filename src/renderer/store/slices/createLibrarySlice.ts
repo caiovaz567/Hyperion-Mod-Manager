@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
 import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo, ModUpdateStatus, ModUpdateCheckResult, ModUpdateCheckInput, ModUpdateCache, NxmLinkPayload, NexusValidateResult } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
+import { translate, translateN } from '../../i18n/translate'
 import { recomputeConflictStateFromExistingConflicts } from '../../utils/modConflictState'
 import { applyConflictState, scheduleConflictRefresh } from './libraryConflictRefresh'
 import {
@@ -285,7 +286,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         set({ modUpdates: {}, modUpdatesCheckedAt: clearedAt })
         persistModUpdates({}, clearedAt)
       }
-      if (announce) notify('No Nexus-sourced mods to check.', 'info')
+      if (announce) notify(translate('library.toast.noNexusMods'), 'info')
       return
     }
     // A bulk "check all" derives its window from the last check; full and scoped
@@ -324,12 +325,12 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         }
         if (announce) {
           if (result.data.skippedReason === 'no-api-key') {
-            notify('Add a Nexus API key in Settings to check for updates.', 'warning')
+            notify(translate('library.toast.addApiKey'), 'warning')
           } else {
             if (modIds && modIds.length === 1) {
               const single = result.data.statuses.some((status) => status.state === 'update-available')
               notify(
-                single ? 'Update available on Nexus.' : 'This mod is up to date.',
+                single ? translate('library.toast.updateAvailableSingle') : translate('library.toast.modUpToDate'),
                 single ? 'info' : 'success'
               )
             } else {
@@ -338,15 +339,15 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
               const count = Object.values(map).filter((status) => status.state === 'update-available').length
               notify(
                 count > 0
-                  ? `${count} mod update${count === 1 ? '' : 's'} available.`
-                  : 'All Nexus mods are up to date.',
+                  ? translateN('library.toast.updatesAvailable', count)
+                  : translate('library.toast.allUpToDate'),
                 count > 0 ? 'info' : 'success'
               )
             }
           }
         }
       } else if (announce) {
-        notify(result.error || 'Could not check for mod updates.', 'error')
+        notify(result.error || translate('library.toast.checkUpdatesError'), 'error')
       }
     } finally {
       set({ checkingModUpdates: false })
@@ -446,7 +447,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       }
       const url = `${status.modPageUrl ?? `https://www.nexusmods.com/cyberpunk2077/mods/${nexusModId}`}?tab=files`
       await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
-      ext.addToast?.('Opened on Nexus — use "Mod Manager Download" to update this mod.', 'info', 3600)
+      ext.addToast?.(translate('library.toast.openedOnNexus'), 'info', 3600)
     }
   },
   setFilter: (filter) => set({ filter }),

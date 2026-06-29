@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { IpcResult, ModMetadata } from '@shared/types'
+import { translate, translateN } from '../../i18n/translate'
 
 type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -64,7 +65,7 @@ export function useLibraryDeleteActions({
   const handleDeleteAll = useCallback(async () => {
     const targets = [...orderedEntries]
     if (targets.length === 0) {
-      addToast('No library entries to delete', 'info')
+      addToast(translate('library.toast.noEntriesToDelete'), 'info')
       return
     }
 
@@ -88,10 +89,10 @@ export function useLibraryDeleteActions({
     resetSelection()
 
     if (removed > 0) {
-      addToast(`${removed} librar${removed === 1 ? 'y entry' : 'y entries'} deleted`, 'success')
+      addToast(translateN('library.toast.entriesDeleted', removed), 'success')
     }
     if (failed > 0) {
-      addToast(`${failed} librar${failed === 1 ? 'y entry' : 'y entries'} could not be deleted`, 'warning')
+      addToast(translateN('library.toast.entriesDeleteFailed', failed), 'warning')
     }
   }, [addToast, clearDeletingRows, clearPendingAction, deleteMod, markRowsDeleting, orderedEntries, resetSelection])
 
@@ -99,7 +100,7 @@ export function useLibraryDeleteActions({
     const targets = allMods.filter((mod) => modIds.includes(mod.uuid))
     if (targets.length === 0) {
       clearPendingAction()
-      addToast('No selected mods to delete', 'info')
+      addToast(translate('library.toast.noSelectedToDelete'), 'info')
       return
     }
 
@@ -123,10 +124,10 @@ export function useLibraryDeleteActions({
     resetSelection()
 
     if (removed > 0) {
-      addToast(`${removed} mod${removed === 1 ? '' : 's'} deleted from selection`, 'success')
+      addToast(translateN('library.toast.selectionDeleted', removed), 'success')
     }
     if (failed > 0) {
-      addToast(`${failed} mod${failed === 1 ? '' : 's'} could not be deleted`, 'warning')
+      addToast(translateN('library.toast.selectionDeleteFailed', failed), 'warning')
     }
   }, [addToast, allMods, clearDeletingRows, clearPendingAction, deleteMod, markRowsDeleting, resetSelection])
 
@@ -135,9 +136,9 @@ export function useLibraryDeleteActions({
     const result = await deleteMod(mod.uuid)
     clearDeletingRows([mod.uuid])
     if (!result.ok) {
-      addToast(result.error ?? 'Delete failed', 'error')
+      addToast(result.error ?? translate('library.toast.deleteFailed'), 'error')
     } else {
-      addToast(`${mod.name} deleted`, 'success')
+      addToast(translate('library.toast.modDeleted', { name: mod.name }), 'success')
     }
   }, [addToast, clearDeletingRows, deleteMod, markRowsDeleting])
 

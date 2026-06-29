@@ -1,4 +1,5 @@
 import React from 'react'
+import { translate } from '../../i18n/translate'
 
 /**
  * Shared controls for first-run and settings surfaces.
@@ -177,7 +178,8 @@ export const ValidationRow: React.FC<{
   invalidText?: string
   infoText?: string
   emptyText?: string
-}> = ({ state, validText, invalidText, infoText, emptyText = 'No folder selected yet' }) => {
+}> = ({ state, validText, invalidText, infoText, emptyText }) => {
+  const emptyLabel = emptyText ?? translate('common.noFolderSelected')
   if (state === 'valid') {
     return (
       <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
@@ -213,7 +215,7 @@ export const ValidationRow: React.FC<{
       <span className="material-symbols-outlined mt-[1px] text-[#5f5f5f]" style={{ fontSize: 17 }}>
         radio_button_unchecked
       </span>
-      <span className="text-[#777777]">{emptyText}</span>
+      <span className="text-[#777777]">{emptyLabel}</span>
     </div>
   )
 }

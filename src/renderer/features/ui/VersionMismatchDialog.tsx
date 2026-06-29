@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/useAppStore'
+import { useTranslation } from '../../i18n/I18nContext'
 
 type VersionRelation = 'upgrade' | 'downgrade' | 'different' | 'unknown'
 type MismatchAction = 'replace' | 'copy' | 'skip'
@@ -48,8 +49,8 @@ function getVersionRelation(existingVersion?: string, incomingVersion?: string):
   return 'different'
 }
 
-function formatVersionLabel(version?: string): string {
-  return version ? `v${version}` : 'Unknown'
+function formatVersionLabel(version: string | undefined, unknownLabel: string): string {
+  return version ? `v${version}` : unknownLabel
 }
 
 const ACCENT_STYLES: Record<OptionAccent, { text: string; card: string; badge: string }> = {
@@ -94,6 +95,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
   disabled,
   onSelect,
 }) => {
+  const { t } = useTranslation()
   const style = ACCENT_STYLES[accent]
   return (
     <button
@@ -113,7 +115,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
             <span
               className={`shrink-0 rounded-sm border-[0.5px] bg-black/20 px-2 py-[2px] text-[9px] brand-font font-bold uppercase tracking-[0.16em] ${style.badge}`}
             >
-              Recommended
+              {t('dialogs.version.recommended')}
             </span>
           ) : null}
         </span>
@@ -126,6 +128,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
 }
 
 export const VersionMismatchDialog: React.FC = () => {
+  const { t } = useTranslation()
   const {
     versionMismatchPrompt,
     confirmVersionMismatch,
@@ -151,15 +154,16 @@ export const VersionMismatchDialog: React.FC = () => {
 
   if (!versionMismatchPrompt) return null
 
-  const existingLabel = formatVersionLabel(versionMismatchPrompt.existingVersion)
-  const incomingLabel = formatVersionLabel(versionMismatchPrompt.incomingVersion)
+  const unknownLabel = t('dialogs.version.unknown')
+  const existingLabel = formatVersionLabel(versionMismatchPrompt.existingVersion, unknownLabel)
+  const incomingLabel = formatVersionLabel(versionMismatchPrompt.incomingVersion, unknownLabel)
   const isDowngrade = relation === 'downgrade'
 
   const headerMeta = {
-    upgrade: { badge: 'Newer', summary: 'A newer version of this mod is already in your library.' },
-    downgrade: { badge: 'Older', summary: 'The selected archive is older than what you have installed.' },
-    different: { badge: 'Different', summary: 'The selected archive is a different version of an installed mod.' },
-    unknown: { badge: 'Review', summary: 'This archive matches an installed mod but the versions could not be compared.' },
+    upgrade: { badge: t('dialogs.version.badgeNewer'), summary: t('dialogs.version.summaryUpgrade') },
+    downgrade: { badge: t('dialogs.version.badgeOlder'), summary: t('dialogs.version.summaryDowngrade') },
+    different: { badge: t('dialogs.version.badgeDifferent'), summary: t('dialogs.version.summaryDifferent') },
+    unknown: { badge: t('dialogs.version.badgeReview'), summary: t('dialogs.version.summaryUnknown') },
   }[relation]
 
   const accentColor = isDowngrade ? 'var(--status-error)' : 'var(--accent-cyber-blue)'
@@ -176,16 +180,16 @@ export const VersionMismatchDialog: React.FC = () => {
         {
           action: 'skip',
           icon: 'check_circle',
-          title: `Keep ${existingLabel}`,
-          helper: 'Keep the current install and ignore this older archive.',
+          title: t('dialogs.version.keep', { version: existingLabel }),
+          helper: t('dialogs.version.keepHelper'),
           accent: 'yellow',
           recommended: true,
         },
         {
           action: 'copy',
           icon: 'library_add',
-          title: 'Add to Library',
-          helper: 'Keep both — add this version as a separate entry.',
+          title: t('dialogs.version.addToLibrary'),
+          helper: t('dialogs.version.addToLibraryHelper'),
           accent: 'neutral',
         },
       ]
@@ -193,23 +197,23 @@ export const VersionMismatchDialog: React.FC = () => {
         {
           action: 'replace',
           icon: 'upgrade',
-          title: relation === 'upgrade' ? `Update to ${incomingLabel}` : `Switch to ${incomingLabel}`,
-          helper: 'Replace the installed mod with this version.',
+          title: relation === 'upgrade' ? t('dialogs.version.updateTo', { version: incomingLabel }) : t('dialogs.version.switchTo', { version: incomingLabel }),
+          helper: t('dialogs.version.replaceHelper'),
           accent: 'cyan',
           recommended: relation === 'upgrade',
         },
         {
           action: 'copy',
           icon: 'library_add',
-          title: 'Add to Library',
-          helper: 'Keep both — add this version as a separate entry.',
+          title: t('dialogs.version.addToLibrary'),
+          helper: t('dialogs.version.addToLibraryHelper'),
           accent: 'neutral',
         },
       ]
 
   const footer = isDowngrade
-    ? { action: 'replace' as const, label: `Replace with older ${incomingLabel}`, danger: true }
-    : { action: 'skip' as const, label: 'Not now', danger: false }
+    ? { action: 'replace' as const, label: t('dialogs.version.replaceOlder', { version: incomingLabel }), danger: true }
+    : { action: 'skip' as const, label: t('dialogs.version.notNow'), danger: false }
 
   const doAction = async (action: MismatchAction) => {
     setSubmitting(true)
@@ -237,7 +241,7 @@ export const VersionMismatchDialog: React.FC = () => {
               className="brand-font text-[1.05rem] font-bold uppercase tracking-[0.06em]"
               style={{ color: 'var(--text-primary)' }}
             >
-              Version Mismatch
+              {t('dialogs.version.title')}
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -253,7 +257,7 @@ export const VersionMismatchDialog: React.FC = () => {
                 clearVersionMismatchPrompt()
               }}
               disabled={submitting}
-              aria-label="Close"
+              aria-label={t('common.close')}
               className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[var(--border-default)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] disabled:opacity-60"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
@@ -275,7 +279,7 @@ export const VersionMismatchDialog: React.FC = () => {
                 {existingLabel}
               </div>
               <div className="ui-support-mono mt-1.5 uppercase tracking-[0.14em] text-[var(--text-support)]">
-                Installed
+                {t('dialogs.version.installed')}
               </div>
             </div>
             <span className="material-symbols-outlined pb-[18px] text-[20px] text-[var(--text-muted)]">
@@ -286,7 +290,7 @@ export const VersionMismatchDialog: React.FC = () => {
                 {incomingLabel}
               </div>
               <div className="ui-support-mono mt-1.5 uppercase tracking-[0.14em] text-[var(--text-support)]">
-                Selected
+                {t('dialogs.version.selected')}
               </div>
             </div>
           </div>

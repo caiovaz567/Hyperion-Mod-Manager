@@ -1,5 +1,6 @@
 import React from 'react'
 import { Tooltip } from './Tooltip'
+import { translate } from '../../i18n/translate'
 
 type ClassValue = string | false | null | undefined
 
@@ -128,7 +129,7 @@ export const HyperionSearchField: React.FC<HyperionSearchFieldProps> = ({
           onClick={onClear}
           tabIndex={-1}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-sm text-[#555] transition-colors hover:text-[#e5e2e1]"
-          aria-label="Clear search"
+          aria-label={translate('common.clearSearch')}
         >
           <span className="material-symbols-outlined text-[16px] leading-none">close</span>
         </button>

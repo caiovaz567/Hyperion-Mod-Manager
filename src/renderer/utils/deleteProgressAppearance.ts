@@ -3,9 +3,6 @@ export interface DeleteProgressAppearance {
   softBorder: string
   fill: string
   rowTint: string
-  label: string
-  summary: string
-  detailFallback: string
 }
 
 export const DELETE_PROGRESS_APPEARANCE: DeleteProgressAppearance = {
@@ -13,9 +10,6 @@ export const DELETE_PROGRESS_APPEARANCE: DeleteProgressAppearance = {
   softBorder: '#4a191a',
   fill: 'linear-gradient(90deg, rgba(255,77,79,0.24) 0%, rgba(255,77,79,0.08) 100%)',
   rowTint: 'rgba(255,77,79,0.05)',
-  label: 'Deleting',
-  summary: 'Removing files from disk',
-  detailFallback: 'Removing deployed files and deleting the library entry',
 }
 
 export function getTransientDeleteProgress(startedAt: number, now = Date.now()): number {

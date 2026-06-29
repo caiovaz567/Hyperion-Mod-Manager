@@ -3,6 +3,7 @@ import type { ModMetadata } from '@shared/types'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { MemoModRow } from './ModRow'
 import type { LibrarySortKey } from './LibraryTableHeader'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface LibraryRowsProps {
   rowsRef: React.RefObject<HTMLDivElement>
@@ -124,7 +125,9 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
   onSeparatorDrop,
   renderInstallRow,
   renderDeleteRow,
-}) => (
+}) => {
+  const { t, tn } = useTranslation()
+  return (
   <div
     ref={rowsRef}
     onContextMenu={onContextMenu}
@@ -139,14 +142,14 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
         <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">inventory_2</span>
         <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
           {filter
-            ? 'No mods match the search'
+            ? t('library.empty.noMatch')
             : totalCount === 0
-              ? 'No mods installed'
+              ? t('library.empty.noneInstalled')
               : libraryStatusFilter === 'disabled' && disabledVisibleCount === 0
-                ? 'No disabled mods'
+                ? t('library.empty.noneDisabled')
                 : libraryStatusFilter === 'enabled' && enabledVisibleCount === 0
-                  ? 'No enabled mods'
-                  : 'No mods available'}
+                  ? t('library.empty.noneEnabled')
+                  : t('library.empty.noneAvailable')}
         </span>
         {totalCount === 0 && !filter && (
           <button
@@ -154,7 +157,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
-            Downloads
+            {t('library.empty.downloads')}
           </button>
         )}
       </div>
@@ -188,7 +191,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
                 separatorChildCount={mod.kind === 'separator' ? (separatorSummaryTotal.get(mod.uuid) ?? 0) : 0}
                 separatorUpdateCount={mod.kind === 'separator' ? (separatorUpdateCounts.get(mod.uuid) ?? 0) : 0}
                 separatorMoveHint={mod.kind === 'separator' && sortKey === null && draggedModCount > 0
-                  ? `Drop ${draggedModCount} ${draggedModCount === 1 ? 'mod' : 'mods'} here`
+                  ? tn('library.separator.dropHint', draggedModCount)
                   : null}
                 rowDropPosition={rowDropTarget?.targetId === mod.uuid ? rowDropTarget.position : null}
                 onSelect={(event) => onRowSelect(event, mod, index)}
@@ -218,4 +221,5 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
       </div>
     )}
   </div>
-)
+  )
+}

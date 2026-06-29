@@ -1,5 +1,6 @@
 import React from 'react'
 import { HyperionButton, HyperionIconButton } from '../ui/HyperionPrimitives'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface LibraryBulkSelectionBarProps {
   canMove: boolean
@@ -21,7 +22,9 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
   onMoveToTopLevel,
   onDeleteSelected,
   onClearSelection,
-}) => (
+}) => {
+  const { t } = useTranslation()
+  return (
   <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[120] flex justify-center px-6">
     <div data-bulk-actions="true" className="pointer-events-auto flex items-stretch gap-4 rounded-sm border-[0.5px] border-[#2e2e2e] bg-[#080808] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
       <HyperionButton
@@ -31,7 +34,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
         icon="check_circle"
         iconClassName="text-[15px]"
       >
-        Enable
+        {t('library.bulk.enable')}
       </HyperionButton>
       <HyperionButton
         onClick={() => void onDisableSelected()}
@@ -40,7 +43,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
         icon="do_not_disturb_on"
         iconClassName="text-[15px]"
       >
-        Disable
+        {t('library.bulk.disable')}
       </HyperionButton>
       {canMove && (
         <>
@@ -52,7 +55,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
               icon="move_item"
               iconClassName="text-[15px]"
             >
-              Move to Separator
+              {t('library.bulk.moveToSeparator')}
             </HyperionButton>
           )}
           <HyperionButton
@@ -62,7 +65,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
             icon="vertical_align_top"
             iconClassName="text-[15px]"
           >
-            Top Level
+            {t('library.bulk.topLevel')}
           </HyperionButton>
         </>
       )}
@@ -73,16 +76,17 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
         icon="delete"
         iconClassName="text-[15px]"
       >
-        Uninstall
+        {t('library.bulk.uninstall')}
       </HyperionButton>
       <div className="mx-1.5 h-5 self-center w-px bg-[#2a2a2a] shadow-[0_0_6px_rgba(255,255,255,0.06)]" />
       <HyperionIconButton
         icon="close"
-        label="Clear selection"
+        label={t('library.bulk.clearSelection')}
         variant="ghost"
         iconClassName="text-[15px]"
         onClick={onClearSelection}
       />
     </div>
   </div>
-)
+  )
+}

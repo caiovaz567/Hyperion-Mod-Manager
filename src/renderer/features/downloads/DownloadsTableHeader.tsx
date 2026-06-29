@@ -1,5 +1,6 @@
 import React from 'react'
 import { HyperionSortHeader } from '../ui/HyperionPrimitives'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export const DOWNLOADS_GRID_TEMPLATE =
   'minmax(580px, 4.3fr) minmax(118px, 0.74fr) minmax(112px, 0.58fr) minmax(108px, 0.52fr) minmax(140px, 0.70fr) minmax(72px, 0.28fr)'
@@ -23,54 +24,57 @@ export const DownloadsTableHeader: React.FC<DownloadsTableHeaderProps> = ({
   sortKey,
   sortDirection,
   onSort,
-}) => (
+}) => {
+  const { t } = useTranslation()
+  return (
   <div
     className="sticky top-0 z-10 grid gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
     style={{ gridTemplateColumns: gridTemplate }}
   >
     <HyperionSortHeader
       columnKey="name"
-      label="Archive Name"
+      label={t('downloads.columns.name')}
       sortKey={sortKey}
       sortDirection={sortDirection}
       onSort={onSort}
-      ariaLabel="Sort by archive name"
+      ariaLabel={t('downloads.sort.name')}
     />
     <HyperionSortHeader
       columnKey="status"
-      label="Status"
+      label={t('downloads.columns.status')}
       sortKey={sortKey}
       sortDirection={sortDirection}
       onSort={onSort}
-      ariaLabel="Sort by status"
+      ariaLabel={t('downloads.sort.status')}
     />
     <HyperionSortHeader
       columnKey="version"
-      label="Version"
+      label={t('downloads.columns.version')}
       sortKey={sortKey}
       sortDirection={sortDirection}
       onSort={onSort}
-      ariaLabel="Sort by version"
+      ariaLabel={t('downloads.sort.version')}
     />
     <HyperionSortHeader
       columnKey="size"
-      label="Size"
+      label={t('downloads.columns.size')}
       sortKey={sortKey}
       sortDirection={sortDirection}
       onSort={onSort}
-      ariaLabel="Sort by size"
+      ariaLabel={t('downloads.sort.size')}
       className="pl-4"
     />
     <HyperionSortHeader
       columnKey="downloadedAt"
-      label="Downloaded"
+      label={t('downloads.columns.downloaded')}
       sortKey={sortKey}
       sortDirection={sortDirection}
       onSort={onSort}
-      ariaLabel="Sort by downloaded date"
+      ariaLabel={t('downloads.sort.downloaded')}
     />
     <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-      Actions
+      {t('downloads.columns.actions')}
     </div>
   </div>
-)
+  )
+}

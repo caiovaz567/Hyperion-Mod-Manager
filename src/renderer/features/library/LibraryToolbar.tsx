@@ -2,6 +2,7 @@ import React from 'react'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { HyperionBadge, HyperionButton, HyperionIconButton, HyperionSearchField } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface LibraryToolbarProps {
   totalCount: number
@@ -36,6 +37,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   checkingUpdates,
   updateCount,
 }) => {
+  const { t } = useTranslation()
   const disabledCount = Math.max(0, totalCount - enabledCount)
   const statusReadouts: Array<{
     filter: LibraryStatusFilter
@@ -43,30 +45,30 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
     count: number
     tooltip: string
   }> = [
-    { filter: 'all', label: 'All', count: totalCount, tooltip: 'Show all mods' },
-    { filter: 'enabled', label: 'On', count: enabledCount, tooltip: 'Show enabled mods' },
-    { filter: 'disabled', label: 'Off', count: disabledCount, tooltip: 'Show disabled mods' },
+    { filter: 'all', label: t('library.status.all'), count: totalCount, tooltip: t('library.status.showAll') },
+    { filter: 'enabled', label: t('library.status.on'), count: enabledCount, tooltip: t('library.status.showEnabled') },
+    { filter: 'disabled', label: t('library.status.off'), count: disabledCount, tooltip: t('library.status.showDisabled') },
   ]
   const activeStatusNotice = statusFilter === 'enabled'
-    ? { icon: 'toggle_on', label: 'Viewing enabled' }
+    ? { icon: 'toggle_on', label: t('library.status.viewingEnabled') }
     : statusFilter === 'disabled'
-      ? { icon: 'visibility_off', label: 'Viewing disabled' }
+      ? { icon: 'visibility_off', label: t('library.status.viewingDisabled') }
       : null
 
   return (
     <div className="shrink-0 px-8 pt-6 pb-3 w-full">
       <div className="flex items-center gap-2">
         <Tooltip
-          content={"Managed Mods: list of mods managed by the Hyperion library.\nUse the 'Install Mod' button to add a mod. Use 'Reinstall' to reinstall from the original source file."}
+          content={t('library.toolbar.titleTooltip')}
           side="bottom"
           variant="help"
         >
           <h1 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
-            Managed Mods
+            {t('library.toolbar.title')}
           </h1>
         </Tooltip>
         <Tooltip
-          content={"QUICK SELECTION:\nClick in a mod and then select another mod while holding shift to select multiple mods.\nCtrl+A to select all mods."}
+          content={t('library.toolbar.quickSelectTooltip')}
           side="bottom"
           variant="help"
         >
@@ -74,11 +76,11 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
         </Tooltip>
         {showCustomOrderBadge && (
           <Tooltip
-            content={"Custom Order active.\nDrag a mod onto a separator to group it.\nDrag before/after a row to reorder.\nDrag to the header to move a mod to top-level."}
+            content={t('library.toolbar.customOrderTooltip')}
             side="bottom"
             variant="help"
           >
-            <HyperionBadge tone="accent">Custom Order</HyperionBadge>
+            <HyperionBadge tone="accent">{t('library.toolbar.customOrder')}</HyperionBadge>
           </Tooltip>
         )}
       </div>
@@ -87,7 +89,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
         className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em]"
         style={{ fontFamily: '"DM Sans", sans-serif' }}
         role="group"
-        aria-label="Mod status filter"
+        aria-label={t('library.toolbar.statusFilterAria')}
       >
         {statusReadouts.map((option, index) => {
           const active = statusFilter === option.filter
@@ -128,14 +130,14 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <HyperionSearchField
-          placeholder="Search managed mods..."
+          placeholder={t('library.toolbar.searchPlaceholder')}
           value={filter}
           onChange={onFilterChange}
           onClear={onClearFilter}
         />
 
         {activeStatusNotice ? (
-          <Tooltip content="Clear status filter" side="bottom" variant="help">
+          <Tooltip content={t('library.toolbar.clearStatusFilter')} side="bottom" variant="help">
             <button
               type="button"
               onClick={() => onStatusFilterChange('all')}
@@ -159,10 +161,10 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             icon="folder_open"
             className="px-5"
           >
-            Open Mods Folder
+            {t('library.toolbar.openModsFolder')}
           </HyperionButton>
 
-          <Tooltip content="Check installed Nexus mods for newer versions" side="bottom" variant="help">
+          <Tooltip content={t('library.toolbar.checkUpdatesTooltip')} side="bottom" variant="help">
             <HyperionButton
               onClick={onCheckUpdates}
               variant="cyan"
@@ -171,7 +173,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
               disabled={checkingUpdates}
               className="px-5"
             >
-              {checkingUpdates ? 'Checking…' : updateCount > 0 ? `Updates (${updateCount})` : 'Check Updates'}
+              {checkingUpdates ? t('library.toolbar.checking') : updateCount > 0 ? t('library.toolbar.updatesCount', { count: updateCount }) : t('library.toolbar.checkUpdates')}
             </HyperionButton>
           </Tooltip>
 
@@ -180,15 +182,15 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
         <div className="ml-auto flex items-center gap-2">
           <HyperionIconButton
             icon="delete_forever"
-            label="Delete all mods"
-            tooltip="Delete all mods from the current library"
+            label={t('library.toolbar.deleteAllLabel')}
+            tooltip={t('library.toolbar.deleteAllTooltip')}
             variant="danger"
             iconClassName="text-[22px]"
             onClick={onDeleteAll}
           />
 
           <HyperionButton onClick={onInstallMod} variant="primary" className="px-5 text-xs">
-            Install Mod
+            {t('library.toolbar.installMod')}
           </HyperionButton>
         </div>
       </div>
