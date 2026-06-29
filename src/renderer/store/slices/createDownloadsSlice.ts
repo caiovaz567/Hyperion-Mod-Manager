@@ -547,7 +547,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     set({
       detecting: true,
       installProgress: 0,
-      installStatus: 'Preparing installer...',
+      installStatus: translate('downloads.installStatus.preparingInstaller'),
       installCurrentFile: '',
       installSourcePath: filePath,
       installTargetModId: request.targetModId ?? '',
@@ -657,7 +657,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     set({
       installing: true,
       installProgress: 0,
-      installStatus: 'Reinstalling...',
+      installStatus: translate('downloads.installStatus.reinstalling'),
       installCurrentFile: '',
       installSourcePath: targetMod?.sourcePath ?? '',
       installTargetModId: modId,
@@ -895,7 +895,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     set({
       installing: true,
       installProgress: 0,
-      installStatus: 'Installing FOMOD selection...',
+      installStatus: translate('downloads.installStatus.installingFomod'),
       installCurrentFile: '',
       installSourcePath: fomodRequest.originalFilePath,
       installTargetModId: fomodRequest.targetModId ?? '',

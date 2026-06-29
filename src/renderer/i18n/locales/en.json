@@ -19,7 +19,10 @@
     "reinstall": "Reinstall",
     "delete": "Delete",
     "cancel": "Cancel",
-    "next": "Next"
+    "next": "Next",
+    "clearSearch": "Clear search",
+    "noFolderSelected": "No folder selected yet",
+    "settingsNotLoaded": "Settings not loaded yet"
   },
   "language": {
     "label": "Language",
@@ -151,6 +154,11 @@
         "detail": "Finalizing the installed mod"
       }
     },
+    "installStatus": {
+      "preparingInstaller": "Preparing installer...",
+      "reinstalling": "Reinstalling...",
+      "installingFomod": "Installing FOMOD selection..."
+    },
     "delete": {
       "label": "Deleting",
       "summary": "Removing files from disk"
@@ -222,6 +230,7 @@
     "stepCounter": "Step {current} of {total}",
     "settingUp": "Setting things up…",
     "closeAria": "Close Hyperion",
+    "stepsAria": "Setup steps",
     "steps": {
       "game": {
         "label": "Game",
@@ -318,7 +327,12 @@
       "deleteAllLabel": "Delete all mods",
       "deleteAllTooltip": "Delete all mods from the current library",
       "installMod": "Install Mod",
-      "clearStatusFilter": "Clear status filter"
+      "clearStatusFilter": "Clear status filter",
+      "statusFilterAria": "Mod status filter"
+    },
+    "install": {
+      "dialogTitle": "Select Mod Archive",
+      "archiveFilterName": "Mod Archives"
     },
     "status": {
       "all": "All",
@@ -401,7 +415,50 @@
       "updatesAvailable_other": "{count} mod updates available.",
       "allUpToDate": "All Nexus mods are up to date.",
       "checkUpdatesError": "Could not check for mod updates.",
-      "openedOnNexus": "Opened on Nexus — use \"Mod Manager Download\" to update this mod."
+      "openedOnNexus": "Opened on Nexus — use \"Mod Manager Download\" to update this mod.",
+      "noNexusLink": "No Nexus link stored for this mod",
+      "noOriginalSource": "Original source is not stored for this mod",
+      "noEntriesToDelete": "No library entries to delete",
+      "noSelectedToDelete": "No selected mods to delete",
+      "entriesDeleted_one": "{count} library entry deleted",
+      "entriesDeleted_other": "{count} library entries deleted",
+      "entriesDeleteFailed_one": "{count} library entry could not be deleted",
+      "entriesDeleteFailed_other": "{count} library entries could not be deleted",
+      "selectionDeleted_one": "{count} mod deleted from selection",
+      "selectionDeleted_other": "{count} mods deleted from selection",
+      "selectionDeleteFailed_one": "{count} mod could not be deleted",
+      "selectionDeleteFailed_other": "{count} mods could not be deleted",
+      "deleteFailed": "Delete failed",
+      "modDeleted": "{name} deleted",
+      "returnToCustomOrderReorder": "Return to Custom Order to reorder mods manually",
+      "dropArchiveToInstall": "Drop a .zip, .rar, or .7z mod archive to install",
+      "dropPathUnreadable": "Could not read the dropped file path. Use Install Mod to select it manually.",
+      "closeGameBeforeInstall": "Close Cyberpunk 2077 before installing mods",
+      "setPathsBeforeInstall": "Set Game Path and Mod Library before installing mods",
+      "installFailed": "Install failed",
+      "installedNotActivated": "Installed but couldn't activate: {error}",
+      "installedActivated": "{name} installed & activated",
+      "returnToCustomOrderMoveBetween": "Return to Custom Order to move mods between separators",
+      "returnToCustomOrderMoveOut": "Return to Custom Order to move mods out of separators",
+      "movedIntoSeparator_one": "{count} mod moved into {name}",
+      "movedIntoSeparator_other": "{count} mods moved into {name}",
+      "movedToTopLevel_one": "{count} mod moved back to top level",
+      "movedToTopLevel_other": "{count} mods moved back to top level",
+      "separatorNameEmpty": "Separator name cannot be empty",
+      "separatorCreateFailed": "Could not create separator",
+      "separatorCreated": "Separator created",
+      "separatorNameUpdated": "Separator name updated",
+      "separatorFallbackName": "separator",
+      "noModsToEnable": "No mods to enable",
+      "noModsToDisable": "No mods to disable",
+      "bulkEnabled_one": "{count} mod enabled",
+      "bulkEnabled_other": "{count} mods enabled",
+      "bulkDisabled_one": "{count} mod disabled",
+      "bulkDisabled_other": "{count} mods disabled",
+      "bulkEnableFailed_one": "{count} mod failed to enable",
+      "bulkEnableFailed_other": "{count} mods failed to enable",
+      "bulkDisableFailed_one": "{count} mod failed to disable",
+      "bulkDisableFailed_other": "{count} mods failed to disable"
     },
     "separatorDialog": {
       "createTitle": "Create Separator",
@@ -717,7 +774,11 @@
       "preview": "Preview",
       "clickToExpand": "Click to expand",
       "required": "required",
-      "allSelected": "all selected"
+      "allSelected": "all selected",
+      "fallbackModuleName": "Mod Installation",
+      "fallbackStepName": "Installation Options",
+      "fallbackGroupName": "Options",
+      "fallbackPluginName": "Unknown"
     },
     "duplicateDownload": {
       "titleDownloading": "File Already Downloading",

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ModMetadata, ToastSeverity } from '@shared/types'
+import { translate } from '../../i18n/translate'
 
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
 
@@ -40,7 +41,7 @@ export function useLibraryRenameActions({
 
     const trimmed = renameValue.trim()
     if (!trimmed) {
-      addToast('Mod name cannot be empty', 'warning')
+      addToast(translate('library.detail.toastNameEmpty'), 'warning')
       return
     }
 
@@ -52,7 +53,7 @@ export function useLibraryRenameActions({
     }
 
     await updateModMetadata(renamingModId, { name: trimmed })
-    addToast('Mod name updated', 'success', 1800)
+    addToast(translate('library.detail.toastNameUpdated'), 'success', 1800)
     setRenamingModId(null)
     setRenameValue('')
   }, [addToast, orderedEntries, renameValue, renamingModId, updateModMetadata])

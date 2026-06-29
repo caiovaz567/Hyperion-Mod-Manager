@@ -3,6 +3,7 @@ import type { DragEvent, MutableRefObject } from 'react'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
+import { translate } from '../../i18n/translate'
 import type { LibrarySortKey } from './LibraryTableHeader'
 
 const INTERNAL_MOD_DRAG_TYPE = 'application/x-hyperion-mod-ids'
@@ -113,7 +114,7 @@ export function useLibraryDragDrop({
     position: RowDropPosition
   ) => {
     if (sortKey !== null) {
-      addToast('Return to Custom Order to reorder mods manually', 'warning')
+      addToast(translate('library.toast.returnToCustomOrderReorder'), 'warning')
       return
     }
 
@@ -336,13 +337,13 @@ export function useLibraryDragDrop({
     const files = Array.from(event.dataTransfer.files)
     const archiveFile = files.find(isSupportedArchive)
     if (!archiveFile) {
-      addToast('Drop a .zip, .rar, or .7z mod archive to install', 'warning')
+      addToast(translate('library.toast.dropArchiveToInstall'), 'warning')
       return
     }
 
     const filePath = IpcService.getPathForFile(archiveFile)
     if (!filePath) {
-      addToast('Could not read the dropped file path. Use Install Mod to select it manually.', 'error')
+      addToast(translate('library.toast.dropPathUnreadable'), 'error')
       return
     }
 

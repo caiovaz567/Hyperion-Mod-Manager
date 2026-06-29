@@ -89,7 +89,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
         className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em]"
         style={{ fontFamily: '"DM Sans", sans-serif' }}
         role="group"
-        aria-label="Mod status filter"
+        aria-label={t('library.toolbar.statusFilterAria')}
       >
         {statusReadouts.map((option, index) => {
           const active = statusFilter === option.filter

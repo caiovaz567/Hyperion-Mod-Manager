@@ -57,7 +57,7 @@ const StepProgress: React.FC<{
 }> = ({ currentStep, onStepSelect }) => {
   const { t } = useTranslation()
   return (
-  <div className="flex items-center" role="list" aria-label="Setup steps">
+  <div className="flex items-center" role="list" aria-label={t('welcome.stepsAria')}>
     {SETUP_STEPS.map((step, index) => {
       const isActive = index === currentStep
       const isCompleted = index < currentStep

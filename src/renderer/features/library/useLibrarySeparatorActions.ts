@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { ModMetadata, ToastSeverity } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
+import { translate, translateN } from '../../i18n/translate'
 import type { LibrarySortKey } from './LibraryTableHeader'
 
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -177,7 +178,7 @@ export function useLibrarySeparatorActions({
     options: MoveModsToSeparatorOptions = {}
   ) => {
     if (sortKey !== null) {
-      addToast('Return to Custom Order to move mods between separators', 'warning')
+      addToast(translate('library.toast.returnToCustomOrderMoveBetween'), 'warning')
       return
     }
 
@@ -209,7 +210,9 @@ export function useLibrarySeparatorActions({
       revealSeparator(separatorId)
     }
     addToast(
-      `${movingIds.length} mod${movingIds.length === 1 ? '' : 's'} moved into ${orderedEntries.find((entry) => entry.uuid === separatorId)?.name ?? 'separator'}`,
+      translateN('library.toast.movedIntoSeparator', movingIds.length, {
+        name: orderedEntries.find((entry) => entry.uuid === separatorId)?.name ?? translate('library.toast.separatorFallbackName'),
+      }),
       'success',
       1800
     )
@@ -217,7 +220,7 @@ export function useLibrarySeparatorActions({
 
   const moveModsToTopLevel = useCallback(async (modIds: string[]) => {
     if (sortKey !== null) {
-      addToast('Return to Custom Order to move mods out of separators', 'warning')
+      addToast(translate('library.toast.returnToCustomOrderMoveOut'), 'warning')
       return
     }
 
@@ -240,7 +243,7 @@ export function useLibrarySeparatorActions({
 
     await useAppStore.getState().reorderMods(reordered.map((entry) => entry.uuid))
     addToast(
-      `${movingIds.length} mod${movingIds.length === 1 ? '' : 's'} moved back to top level`,
+      translateN('library.toast.movedToTopLevel', movingIds.length),
       'success',
       1800
     )
@@ -278,7 +281,7 @@ export function useLibrarySeparatorActions({
 
     const trimmed = separatorDialog.value.trim()
     if (!trimmed) {
-      addToast('Separator name cannot be empty', 'warning')
+      addToast(translate('library.toast.separatorNameEmpty'), 'warning')
       return
     }
 
@@ -288,7 +291,7 @@ export function useLibrarySeparatorActions({
       const created = await createSeparator(trimmed)
       if (!created) {
         setSeparatorDialogSubmitting(false)
-        addToast('Could not create separator', 'error')
+        addToast(translate('library.toast.separatorCreateFailed'), 'error')
         return
       }
 
@@ -302,7 +305,7 @@ export function useLibrarySeparatorActions({
       setSeparatorDialog(null)
       resetSelection()
       selectMod(created.uuid)
-      addToast('Separator created', 'success', 1600)
+      addToast(translate('library.toast.separatorCreated'), 'success', 1600)
       return
     }
 
@@ -314,7 +317,7 @@ export function useLibrarySeparatorActions({
     await updateModMetadata(separatorDialog.separatorId, { name: trimmed })
     setSeparatorDialogSubmitting(false)
     setSeparatorDialog(null)
-    addToast('Separator name updated', 'success', 1600)
+    addToast(translate('library.toast.separatorNameUpdated'), 'success', 1600)
   }, [
     addToast,
     createSeparator,

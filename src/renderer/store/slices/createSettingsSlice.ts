@@ -3,6 +3,7 @@ import { IPC } from '../../../shared/types'
 import type { AppSettings, IpcResult } from '../../../shared/types'
 import type { PathDefaults } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
+import { translate } from '../../i18n/translate'
 
 export interface SettingsSlice {
   settings: AppSettings | null
@@ -52,7 +53,7 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
 
   updateSettings: async (partial) => {
     const current = get().settings
-    if (!current) return { ok: false, error: 'Settings not loaded yet' }
+    if (!current) return { ok: false, error: translate('common.settingsNotLoaded') }
     const merged = { ...current, ...partial }
     const saveResult = await IpcService.invoke<IpcResult<void>>(IPC.SET_SETTINGS, merged)
     if (!saveResult.ok) {

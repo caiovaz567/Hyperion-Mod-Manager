@@ -64,7 +64,6 @@ export const App: React.FC = () => {
     setupUpdateListeners,
     setupNxmListeners,
     activeView,
-    setStatus,
     settings,
     addToast,
     gamePathValid,
@@ -86,7 +85,6 @@ export const App: React.FC = () => {
     setupUpdateListeners: state.setupUpdateListeners,
     setupNxmListeners: state.setupNxmListeners,
     activeView: state.activeView,
-    setStatus: state.setStatus,
     settings: state.settings,
     addToast: state.addToast,
     gamePathValid: state.gamePathValid,
@@ -112,7 +110,6 @@ export const App: React.FC = () => {
       const bootStartedAt = Date.now()
       const fontsReadyPromise = waitForCriticalFonts()
       const updateBootStatus = (message: string) => {
-        setStatus(message)
         IpcService.send(IPC.APP_BOOT_STATUS, message)
       }
 
@@ -192,7 +189,6 @@ export const App: React.FC = () => {
       if (disposed) return
       console.error(error)
       IpcService.send(IPC.APP_BOOT_STATUS, 'Starting interface...')
-      setStatus('Ready')
       setBooting(false)
       void waitForFirstPaint().then(() => {
         if (disposed) return

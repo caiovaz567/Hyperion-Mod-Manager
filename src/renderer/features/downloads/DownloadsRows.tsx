@@ -427,7 +427,7 @@ const DeletingDownloadRow: React.FC<{
               background: `${deleteAppearance.accent}18`,
             }}
           >
-            {deleteAppearance.label}
+            {t('downloads.delete.label')}
           </span>
         </div>
 
