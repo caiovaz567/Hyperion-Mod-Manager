@@ -55,6 +55,26 @@
 - Non-archive mods that previously had a sidecar get it deleted during `refreshArchiveResourceMetadata`.
 
 ## Internationalization (i18n)
+
+> [!IMPORTANT]
+> **🚨 HARD RULE — EVERY user-facing string MUST go through i18n. NO EXCEPTIONS. 🚨**
+>
+> Whenever you write, add, or change ANY text that a user can read in the renderer UI — labels, buttons, headings, placeholders, tooltips, toasts, validation copy, empty states, dialog text, menu items, badges, error fallbacks, ANYTHING — you do NOT hardcode the English string in the `.tsx`/`.ts` file. You:
+> 1. Add the key to **`src/renderer/i18n/locales/en.json`** (the source of truth).
+> 2. Add the matching translated key to **`src/renderer/i18n/locales/pt-BR.json`** (keep it at full parity — currently 712/712 keys). A missing key falls back to English at runtime, so a gap is *safe* but you must still fill it.
+> 3. Render it via the translator: `t('your.key')` / `tn('your.key', count)` inside React components/hooks (`useTranslation()`), or `translate('your.key')` / `translateN(...)` from `src/renderer/i18n/translate.ts` outside React (store slices, async callbacks).
+>
+> A raw English literal sitting in renderer JSX/TSX is a BUG, not a shortcut — it will never translate and breaks the pt-BR build's parity. If you catch yourself typing a visible string directly into a component, STOP and route it through the JSON catalogs instead. The ONLY strings exempt are **main-process** (`src/main/**`) error strings surfaced via `IpcResult.error`; even then, prefer giving the renderer a translated `t(...)` fallback (`result.error ?? t('...')`).
+>
+> **Agreed exceptions (do NOT route through i18n):**
+> - **`src/main/**` error strings** — main process has no i18n layer; use `result.error ?? t('...')` fallback in the renderer.
+> - **Boot-status strings** (`App.tsx` `updateBootStatus(...)`) — sent via `IPC.APP_BOOT_STATUS` to the splash process, not renderer UI; the renderer never displays them.
+> - **"Copy diagnostics" block** (`SettingsDialog`) — technical support output copied to clipboard, read by the maintainer, not the end user; intentionally stays English.
+> - **Technical type labels** (`TYPE_LABEL` in `modCategoryDisplay.ts`: REDmod, CET, TweakXL, etc.) — these are proper names / technical identifiers that don't change between languages.
+> - **Zustand devtools name** (`'HyperionStore'`) — developer tooling, never shown in the UI.
+>
+> When in doubt: if a human will read it on screen, it lives in `en.json` + `pt-BR.json`, never inline.
+
 - Hyperion uses a **lightweight custom i18n layer** (no external library) under `src/renderer/i18n/`. JSON catalogs were chosen specifically so future translators can contribute without touching TypeScript.
 - **Catalogs**: `src/renderer/i18n/locales/<code>.json` — `en.json` is the **source of truth** for the available keys; `pt-BR.json` is the first translation. Keys are nested by area (`common.*`, `welcome.*`, `settings.general.*`). Missing keys in a non-English catalog **fall back to English** at runtime, so partial translations are safe.
 - **Registry**: `src/renderer/i18n/locales.ts` exports `LOCALES` (the single list to edit when adding a language: `{ code, label, nativeLabel, messages }`), `DEFAULT_LOCALE` (`'en'`), and the `Messages` type. **Adding a language = drop a `<code>.json` next to `en.json`, import it, add one `LOCALES` entry.** No other code changes.
@@ -98,7 +118,7 @@
 - The Downloads folder is watched by the main process (`startDownloadsWatcher` in `index.ts`, non-recursive `fs.watch`) so externally-added/removed archives surface in the Downloads view without a manual refresh; it emits `IPC.DOWNLOADS_CHANGED` (debounced) and the renderer (`setupNxmListeners`) re-runs `refreshLocalFiles`. The watcher re-points on `SET_SETTINGS` and tears down on `before-quit`. Watcher-surfaced files do NOT get a `NEW` badge — that marker stays tied to in-app Nexus downloads.
 - The Nexus API key can be set in two places: the `Nexus` step of the first-run onboarding wizard (`WelcomeScreen.tsx`, optional, validated live via `useNexusAccount`) and Settings > Nexus. Both persist to `settings.nexusApiKey`. Key validation goes through `IPC.NEXUS_VALIDATE_KEY` / the `useNexusAccount` hook.
 - **Nexus update checking never does a full per-mod pass automatically.** It runs the cheap bulk pass once on launch and otherwise only on explicit user action; install/scan/reinstall/delete never trigger a check. Update statuses are persisted across sessions in the **main process** (`src/main/modUpdateCache.ts`, a JSON file in `userData`, exposed via `IPC.MOD_UPDATE_CACHE_GET`/`MOD_UPDATE_CACHE_SET`) — NOT renderer `localStorage`, which is wiped on every dev restart because dev `sessionData` is namespaced per process id (`index.ts`). The renderer hydrates the store from it asynchronously on boot via `hydrateModUpdates()` (called in `App.tsx` before the library scan) and writes through `persistModUpdates` (which fires `MOD_UPDATE_CACHE_SET`). Cached indicators show instantly without any request. Three triggers feed `checkModUpdates`:
-  - **On launch** → fires `checkModUpdates({ force: true })` (bulk, silent, non-blocking) in `App.tsx` after hydrate+scan. Because the cache supplies the last-check timestamp, the adaptive window is usually `1d`, so this is ≈ 1 request (`updated.json`) plus a deep check only for the few mods changed since the last open — never one request per mod. The window opens immediately on the cached indicators; the refresh lands shortly after.
+  - **On launch** → fires `checkModUpdates({ force: true, staleAfterMs: MOD_UPDATE_LAUNCH_MAX_AGE_MS })` (bulk, silent, non-blocking) in `App.tsx` after hydrate+scan. A **recency gate** (`staleAfterMs`, currently 1 h) short-circuits the whole call when the persisted `checkedAt` is newer than the window, so rapid relaunches don't each hit Nexus — the hydrated cache is just shown as-is. When the gate passes, the cache's last-check timestamp makes the adaptive window usually `1d`, so this is ≈ 1 request (`updated.json`) plus a deep check only for the few mods changed since the last open — never one request per mod. The window opens immediately on the cached indicators; the refresh lands shortly after. The `staleAfterMs` gate is launch-only; the manual toolbar/per-mod checks omit it so they always run. A `no-api-key` result no longer advances `checkedAt`/the cache (so adding a key later isn't suppressed by the gate).
   - **Check Updates** toolbar button → same bulk pass but `notify:true` (toasts the result).
   - Per-mod **Check for Update** context-menu action → scoped (`modIds:[uuid]`, one `files.json`).
   - The bulk pass: one `updated.json?period=…` request lists every mod in the game changed within the window, and only the installed mods in that set get a `files.json` deep-check. The window is **adaptive**: `pickUpdatedPeriod(modUpdatesCheckedAt)` returns `1d`/`1w`/`1m` based on time since the last check. It scales to thousands of mods (≈ 1 + number-changed) because each mod's baseline (`nexusFileId`/`version`) is captured at install time, so detection only needs changes *since then*.

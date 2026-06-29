@@ -613,6 +613,7 @@ export const ModList: React.FC = () => {
     handleListRowsDrop,
   } = useLibraryDragDrop({
     orderedEntries,
+    displayedMods,
     sortKey,
     scrollContainerRef: listScrollRef,
     selectedIdsRef,

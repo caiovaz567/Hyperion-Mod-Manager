@@ -32,6 +32,11 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
   const { t } = useTranslation()
   const resolvedInputLabel = inputLabel ?? t('library.separatorDialog.nameLabel')
   const inputRef = useRef<HTMLInputElement>(null)
+  // Track whether the mousedown that initiated a click actually started on the
+  // backdrop itself. If the user dragged from inside the input to outside (text
+  // selection), mouseup lands on the backdrop and triggers onClick — but since
+  // mousedown started inside we must NOT close the dialog.
+  const backdropMouseDownRef = useRef(false)
 
   useLayoutEffect(() => {
     const focusInput = () => {
@@ -74,9 +79,15 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
     <div
       data-action-prompt="true"
       className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        backdropMouseDownRef.current = event.target === event.currentTarget
+      }}
       onClick={(event) => {
         event.stopPropagation()
-        onCancel()
+        if (backdropMouseDownRef.current) {
+          onCancel()
+        }
+        backdropMouseDownRef.current = false
       }}
     >
       <div

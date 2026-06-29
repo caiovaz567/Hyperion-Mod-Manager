@@ -1615,6 +1615,33 @@ function getInitialMainWindowBounds(): {
   }
 }
 
+// Resolution-proportional UI scaling.
+//
+// The window already opens at a percentage of the display work area
+// (getInitialMainWindowBounds), but the renderer is laid out in fixed pixels.
+// Without scaling the content, a 1080p screen gets a smaller window holding the
+// same-size UI (columns truncate to "Down…", controls cramp) while a 4K screen
+// gets a huge window holding a tiny, sparse UI. We apply a single zoom factor to
+// the whole page so 1080p / 1440p / 4K all render the SAME logical layout, just
+// physically larger or smaller.
+//
+// The factor is derived from the display work area relative to a 1440p baseline
+// (the design target). Electron reports the work area in DIPs, so OS display
+// scaling (e.g. 150% on a 4K laptop) is already folded in. Because both the
+// window size and this zoom scale by the same ratio off the baseline, every
+// resolution ends up with an identical amount of logical layout space.
+const ZOOM_BASELINE_WIDTH = 2560
+const ZOOM_BASELINE_HEIGHT = 1440
+const ZOOM_MIN = 0.7
+const ZOOM_MAX = 2.0
+
+function computeResolutionZoom(win: BrowserWindow): number {
+  const display = screen.getDisplayMatching(win.getBounds())
+  const { width, height } = display.workArea
+  const ratio = Math.min(width / ZOOM_BASELINE_WIDTH, height / ZOOM_BASELINE_HEIGHT)
+  return clampNumber(Math.round(ratio * 100) / 100, ZOOM_MIN, ZOOM_MAX)
+}
+
 function createMainWindow(): BrowserWindow {
   const bounds = getInitialMainWindowBounds()
   const win = new BrowserWindow({
@@ -1643,6 +1670,25 @@ function createMainWindow(): BrowserWindow {
   } else {
     win.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  // Keep the whole UI scaled to the display the window currently lives on.
+  let appliedZoom = 0
+  const syncZoom = (force = false): void => {
+    if (win.isDestroyed()) return
+    const factor = computeResolutionZoom(win)
+    if (!force && factor === appliedZoom) return
+    appliedZoom = factor
+    win.webContents.setVisualZoomLevelLimits(1, 1)
+    win.webContents.setZoomFactor(factor)
+  }
+  // A (re)load resets the zoom factor to 1, so force-reapply after every load.
+  win.webContents.on('did-finish-load', () => syncZoom(true))
+  // Re-derive the factor when the window is dragged onto another monitor or the
+  // display configuration changes (resolution / scaling updates at runtime).
+  win.on('moved', () => syncZoom())
+  const onDisplayMetricsChanged = (): void => syncZoom(true)
+  screen.on('display-metrics-changed', onDisplayMetricsChanged)
+  win.on('closed', () => screen.removeListener('display-metrics-changed', onDisplayMetricsChanged))
 
   attachEditContextMenu(win)
 

@@ -10,6 +10,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.30.2] - 2026-06-29
+
+### Changed
+- **Launch no longer re-checks Nexus for mod updates if it already did so within the last hour.** The cached update indicators are shown instantly on every launch regardless; previously the app also fired a fresh `updated.json` request on *every* launch, so rapid relaunches each hit Nexus needlessly. A recency gate now reuses the still-fresh cache for quick relaunches, while a normal session gap (closed earlier, reopened later) still gets a fresh check. The manual "Check Updates" button and per-mod checks are unaffected — they always run. Additionally, a launch check that's skipped for a missing API key no longer advances the cache timestamp, so adding a key later isn't suppressed by the gate.
+
+### Fixed
+- **The mouse no longer flickers to the "no-drop" block cursor while dragging mods/separators in the library.** Allowing a drop requires cancelling **both** `dragenter` and `dragover`; only `dragover` was being cancelled. `dragenter` fires every time the cursor crosses into a new element — and a row is full of small ones (cells, icons, text) — so the block cursor flashed on every micro-movement before `dragover` restored the move cursor, producing a constant flicker. While an internal drag is active, a single document-level listener now cancels both events for the whole window, giving a steady "move" cursor for the duration of the drag.
+- **Dragging a separator now shows a single, concise section-boundary indicator instead of a flickering bar.** When you drag a separator over another section, the cyan bar snaps to a whole-section boundary and flips exactly once, at the section's mid-point: while the cursor is in the top half of the section the bar sits above the section header (the separator will land before it); once past the mid-point it jumps to below the section's last mod (the separator will land after the entire block). Previously the bar teleported between the header and the group's far edge every time the cursor crossed any row's midpoint, making it flash rapidly up and down. The indicator and the actual drop result are now always the same, and the decision respects collapsed/filtered sections (it uses the visible mods you actually see).
+- **Dragging a separator onto a mod inside another separator no longer nests it there.** Separators cannot live inside other separators, so a dragged separator always lands at a whole-section boundary (before the header or after the entire block) rather than splitting the group or stealing its mods.
+- **Selecting text in the separator name dialog no longer closes it.** Clicking and dragging inside the name input to select text could land the mouse release on the backdrop overlay, triggering the close handler. The backdrop now only closes the dialog when both the press and the release happened on the backdrop itself — not when a drag originated inside the input. Same fix applied to the Move to Separator search dialog.
+- **Moving a separator below another separator no longer steals its mods.** Dragging an empty separator (e.g., "Teste") and dropping it below another separator (e.g., "CHAR APPEARANCE") with 20 mods used to splice "Teste" between CHAR APPEARANCE's header and its mods, making all 20 mods appear to belong to "Teste". The drag-and-drop now correctly inserts after the target separator's last child mod, keeping each separator's mod group intact. The drop indicator line is also now shown at the correct position (after the last child).
+- **The interface now scales uniformly to your monitor's resolution.** Previously the window grew/shrank with the display but the UI itself stayed at fixed pixel sizes, so 1080p screens got a cramped layout with truncated table columns (`Down…`) while 4K screens got a tiny, sparse UI. Hyperion now applies a single resolution-proportional zoom (relative to a 1440p baseline) so 1080p, 1440p, and 4K all render the same logical layout — just physically larger or smaller. It accounts for OS display scaling and re-applies when the window moves to another monitor or the display configuration changes.
+
+---
+
 ## [0.30.1] - 2026-06-29
 
 ### Changed

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent, MutableRefObject } from 'react'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
@@ -13,8 +13,18 @@ type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
 type RowDropPosition = 'before' | 'after'
 
+// A dragged separator always lands at a whole-section boundary, never between a
+// header and its mods. 'top' = before the target section's header; 'bottom' =
+// after the target section's entire block; 'local' = a plain before/after on an
+// ungrouped (top-level) row.
+type SeparatorBoundary =
+  | { kind: 'top'; headerId: string }
+  | { kind: 'bottom'; headerId: string }
+  | { kind: 'local'; targetId: string; position: RowDropPosition }
+
 interface UseLibraryDragDropOptions {
   orderedEntries: ModMetadata[]
+  displayedMods: ModMetadata[]
   sortKey: LibrarySortKey | null
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>
   selectedIdsRef: MutableRefObject<string[]>
@@ -43,6 +53,7 @@ function isSupportedArchive(file: File): boolean {
 
 export function useLibraryDragDrop({
   orderedEntries,
+  displayedMods,
   sortKey,
   scrollContainerRef,
   selectedIdsRef,
@@ -94,6 +105,31 @@ export function useLibraryDragDrop({
     setTopLevelDropActive(false)
   }, [])
 
+  // While an internal mod/separator drag is active, mark the WHOLE document a
+  // valid drop target. The browser paints the "no-drop" block cursor on any
+  // dragenter/dragover that isn't cancelled. The KEY culprit behind the constant
+  // flicker is `dragenter`: it fires every time the cursor crosses into a new
+  // element (and a row is full of small ones — cells, icons, spans), so leaving
+  // it uncancelled flashes the block cursor on every micro-movement, even though
+  // `dragover` is cancelled a moment later. Per MDN, allowing a drop requires
+  // cancelling BOTH events. We do it once at the document level so every element
+  // is covered without wiring handlers onto each one, giving a steady "move"
+  // cursor for the whole drag.
+  const isInternalDragging = draggedModIds.length > 0
+  useEffect(() => {
+    if (!isInternalDragging) return
+    const allowDrop = (event: DocumentEventMap['dragover']) => {
+      event.preventDefault()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+    }
+    document.addEventListener('dragenter', allowDrop)
+    document.addEventListener('dragover', allowDrop)
+    return () => {
+      document.removeEventListener('dragenter', allowDrop)
+      document.removeEventListener('dragover', allowDrop)
+    }
+  }, [isInternalDragging])
+
   const getDraggedIdsFromEvent = useCallback((event: DragEvent): string[] => {
     const rawIds = event.dataTransfer.getData(INTERNAL_MOD_DRAG_TYPE)
     if (rawIds) {
@@ -107,6 +143,81 @@ export function useLibraryDragDrop({
 
     return draggedModIdsRef.current
   }, [])
+
+  // Visible grouping derived from what is actually rendered (respects collapsed
+  // separators and active filters). For each visible row it records the section
+  // it belongs to, its index among that section's visible mods, the section's
+  // visible-mod count, and the section's last visible mod — everything needed to
+  // snap a dragged separator to a whole-section boundary.
+  const visibleGroups = useMemo(() => {
+    const sections: { headerId: string | null; childIds: string[] }[] = [{ headerId: null, childIds: [] }]
+    for (const entry of displayedMods) {
+      if (entry.kind === 'separator') {
+        sections.push({ headerId: entry.uuid, childIds: [] })
+      } else {
+        sections[sections.length - 1].childIds.push(entry.uuid)
+      }
+    }
+
+    const info = new Map<string, {
+      headerId: string | null
+      childIndex: number
+      visibleChildCount: number
+      lastVisibleChildId: string | null
+    }>()
+    for (const section of sections) {
+      const lastVisibleChildId = section.childIds.at(-1) ?? null
+      if (section.headerId) {
+        info.set(section.headerId, { headerId: section.headerId, childIndex: -1, visibleChildCount: section.childIds.length, lastVisibleChildId })
+      }
+      section.childIds.forEach((id, idx) => {
+        info.set(id, { headerId: section.headerId, childIndex: idx, visibleChildCount: section.childIds.length, lastVisibleChildId })
+      })
+    }
+    return info
+  }, [displayedMods])
+
+  // Resolve where a dragged separator should land relative to the row under the
+  // cursor. The decision flips ONCE at the section's mid-point (monotonic), so
+  // the indicator never flickers, and it always resolves to a whole-section
+  // boundary (top = before the header, bottom = after the whole block) so a
+  // separator never nests inside another or steals its mods. Ungrouped rows fall
+  // back to a plain local before/after.
+  const resolveSeparatorBoundary = useCallback((
+    hoveredId: string,
+    cursorInBottomHalf: boolean
+  ): SeparatorBoundary => {
+    const grp = visibleGroups.get(hoveredId)
+    if (!grp || grp.headerId === null) {
+      return { kind: 'local', targetId: hoveredId, position: cursorInBottomHalf ? 'after' : 'before' }
+    }
+
+    const count = grp.visibleChildCount
+    if (grp.childIndex === -1) {
+      // Hovering the section header. With visible mods the header is the top edge
+      // (before). A collapsed/empty section behaves like a single row (before/after).
+      if (count === 0) return { kind: cursorInBottomHalf ? 'bottom' : 'top', headerId: grp.headerId }
+      return { kind: 'top', headerId: grp.headerId }
+    }
+
+    // Hovering a mod: continuous position within the section's visible mods.
+    const continuous = grp.childIndex + (cursorInBottomHalf ? 0.5 : 0)
+    return continuous < count / 2
+      ? { kind: 'top', headerId: grp.headerId }
+      : { kind: 'bottom', headerId: grp.headerId }
+  }, [visibleGroups])
+
+  // Visual indicator target for a resolved boundary (lands on a rendered row).
+  const boundaryToRowDropTarget = useCallback((
+    boundary: SeparatorBoundary
+  ): { targetId: string; position: RowDropPosition } => {
+    if (boundary.kind === 'local') return { targetId: boundary.targetId, position: boundary.position }
+    if (boundary.kind === 'top') return { targetId: boundary.headerId, position: 'before' }
+    const lastVisible = visibleGroups.get(boundary.headerId)?.lastVisibleChildId ?? null
+    return lastVisible
+      ? { targetId: lastVisible, position: 'after' }
+      : { targetId: boundary.headerId, position: 'after' }
+  }, [visibleGroups])
 
   const reorderModsAroundTarget = useCallback(async (
     modIds: string[],
@@ -126,6 +237,7 @@ export function useLibraryDragDrop({
     const movingSet = new Set(movingIds)
     const movingEntries = orderedEntries.filter((entry) => movingSet.has(entry.uuid))
     const remainingEntries = orderedEntries.filter((entry) => !movingSet.has(entry.uuid))
+
     const targetIndex = remainingEntries.findIndex((entry) => entry.uuid === targetId)
     if (targetIndex < 0) return
 
@@ -138,6 +250,25 @@ export function useLibraryDragDrop({
 
     await useAppStore.getState().reorderMods(reordered.map((entry) => entry.uuid))
   }, [addToast, orderedEntries, sortKey])
+
+  // Commit a dragged separator at a resolved section boundary. 'bottom' inserts
+  // after the section's LAST child in the real (full) order via getSeparatorBlockIds,
+  // which correctly handles collapsed sections whose mods aren't in displayedMods.
+  const applySeparatorBoundaryDrop = useCallback(async (
+    movingIds: string[],
+    boundary: SeparatorBoundary
+  ) => {
+    if (boundary.kind === 'local') {
+      await reorderModsAroundTarget(movingIds, boundary.targetId, boundary.position)
+      return
+    }
+    if (boundary.kind === 'top') {
+      await reorderModsAroundTarget(movingIds, boundary.headerId, 'before')
+      return
+    }
+    const lastBlockChild = getSeparatorBlockIds(boundary.headerId).at(-1) ?? boundary.headerId
+    await reorderModsAroundTarget(movingIds, lastBlockChild, 'after')
+  }, [getSeparatorBlockIds, reorderModsAroundTarget])
 
   const handleRowDragStart = useCallback((event: DragEvent, mod: ModMetadata) => {
     if (sortKey !== null) {
@@ -168,22 +299,40 @@ export function useLibraryDragDrop({
     if (targetMod.kind !== 'mod' || sortKey !== null) return
 
     const movingIds = getDraggedIdsFromEvent(event)
-    if (movingIds.length === 0 || movingIds.includes(targetMod.uuid)) return
+    if (movingIds.length === 0) return
 
+    // Any internal drag over a row is a valid drop zone — preventDefault here so
+    // the cursor stays "move" instead of the browser's no-drop icon. This must
+    // run BEFORE the own-row check below, otherwise hovering the dragged
+    // separator's own (dimmed) child mods would skip preventDefault and flicker
+    // to the block cursor.
     event.preventDefault()
     event.stopPropagation()
     event.dataTransfer.dropEffect = 'move'
     maybeAutoScroll(event)
 
-    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
-    const position: RowDropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+    // Don't move the indicator when hovering one of the rows being dragged.
+    if (movingIds.includes(targetMod.uuid)) return
 
-    if (!rowDropTarget || rowDropTarget.targetId !== targetMod.uuid || rowDropTarget.position !== position) {
-      setRowDropTarget({ targetId: targetMod.uuid, position })
+    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
+    const cursorInBottomHalf = event.clientY >= rect.top + rect.height / 2
+
+    // When dragging a separator, snap the indicator to a whole-section boundary
+    // (single flip at the section mid-point → no flicker, no nesting). For plain
+    // mod drags keep a local before/after on the hovered row.
+    const draggingSeparator = movingIds.some(
+      (id) => orderedEntries.find((entry) => entry.uuid === id)?.kind === 'separator'
+    )
+    const next = draggingSeparator
+      ? boundaryToRowDropTarget(resolveSeparatorBoundary(targetMod.uuid, cursorInBottomHalf))
+      : { targetId: targetMod.uuid, position: (cursorInBottomHalf ? 'after' : 'before') as RowDropPosition }
+
+    if (!rowDropTarget || rowDropTarget.targetId !== next.targetId || rowDropTarget.position !== next.position) {
+      setRowDropTarget(next)
     }
     if (dropSeparatorId !== null) setDropSeparatorId(null)
     if (topLevelDropActive) setTopLevelDropActive(false)
-  }, [dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, rowDropTarget, sortKey, topLevelDropActive])
+  }, [boundaryToRowDropTarget, dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, orderedEntries, resolveSeparatorBoundary, rowDropTarget, sortKey, topLevelDropActive])
 
   const handleModRowDragLeave = useCallback((event: DragEvent, targetMod: ModMetadata) => {
     if (!rowDropTarget || rowDropTarget.targetId !== targetMod.uuid) return
@@ -201,11 +350,18 @@ export function useLibraryDragDrop({
 
     const movingIds = getDraggedIdsFromEvent(event)
     const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
-    const position: RowDropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+    const cursorInBottomHalf = event.clientY >= rect.top + rect.height / 2
 
-    await reorderModsAroundTarget(movingIds, targetMod.uuid, position)
+    const draggingSeparator = movingIds.some(
+      (id) => orderedEntries.find((entry) => entry.uuid === id)?.kind === 'separator'
+    )
+    if (draggingSeparator) {
+      await applySeparatorBoundaryDrop(movingIds, resolveSeparatorBoundary(targetMod.uuid, cursorInBottomHalf))
+    } else {
+      await reorderModsAroundTarget(movingIds, targetMod.uuid, cursorInBottomHalf ? 'after' : 'before')
+    }
     clearInternalDragState()
-  }, [clearInternalDragState, getDraggedIdsFromEvent, reorderModsAroundTarget])
+  }, [applySeparatorBoundaryDrop, clearInternalDragState, getDraggedIdsFromEvent, orderedEntries, reorderModsAroundTarget, resolveSeparatorBoundary])
 
   const handleSeparatorDragOver = useCallback((event: DragEvent, separator: ModMetadata) => {
     if (separator.kind !== 'separator' || sortKey !== null) return
@@ -224,10 +380,14 @@ export function useLibraryDragDrop({
 
     if (draggingSeparatorBlock) {
       const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
-      const position: RowDropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+      const cursorInBottomHalf = event.clientY >= rect.top + rect.height / 2
 
-      if (!rowDropTarget || rowDropTarget.targetId !== separator.uuid || rowDropTarget.position !== position) {
-        setRowDropTarget({ targetId: separator.uuid, position })
+      // Snap to the section boundary so the bar reads as "above this section"
+      // (top half) or "below this whole section" (bottom half) — concise, and
+      // consistent with where the drop will land.
+      const next = boundaryToRowDropTarget(resolveSeparatorBoundary(separator.uuid, cursorInBottomHalf))
+      if (!rowDropTarget || rowDropTarget.targetId !== next.targetId || rowDropTarget.position !== next.position) {
+        setRowDropTarget(next)
       }
       if (dropSeparatorId !== null) setDropSeparatorId(null)
       if (topLevelDropActive) setTopLevelDropActive(false)
@@ -239,7 +399,7 @@ export function useLibraryDragDrop({
     }
     if (rowDropTarget !== null) setRowDropTarget(null)
     if (topLevelDropActive) setTopLevelDropActive(false)
-  }, [dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, orderedEntries, rowDropTarget, sortKey, topLevelDropActive])
+  }, [boundaryToRowDropTarget, dropSeparatorId, getDraggedIdsFromEvent, maybeAutoScroll, orderedEntries, resolveSeparatorBoundary, rowDropTarget, sortKey, topLevelDropActive])
 
   const handleSeparatorDragLeave = useCallback((event: DragEvent, separator: ModMetadata) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -266,13 +426,13 @@ export function useLibraryDragDrop({
 
     if (draggingSeparatorBlock) {
       const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect()
-      const position: RowDropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-      await reorderModsAroundTarget(parsedIds, separator.uuid, position)
+      const cursorInBottomHalf = event.clientY >= rect.top + rect.height / 2
+      await applySeparatorBoundaryDrop(parsedIds, resolveSeparatorBoundary(separator.uuid, cursorInBottomHalf))
     } else {
       await moveModsToSeparator(parsedIds, separator.uuid)
     }
     clearInternalDragState()
-  }, [clearInternalDragState, getDraggedIdsFromEvent, moveModsToSeparator, orderedEntries, reorderModsAroundTarget])
+  }, [applySeparatorBoundaryDrop, clearInternalDragState, getDraggedIdsFromEvent, moveModsToSeparator, orderedEntries, resolveSeparatorBoundary])
 
   const handleTopLevelDragOver = useCallback((event: DragEvent) => {
     if (sortKey !== null) return
@@ -307,11 +467,26 @@ export function useLibraryDragDrop({
   }, [clearInternalDragState, getDraggedIdsFromEvent, moveModsToTopLevel])
 
   const handleDragOver = useCallback((event: DragEvent) => {
-    if (!hasFileTransfer(event)) return
-    event.preventDefault()
-    event.stopPropagation()
-    event.dataTransfer.dropEffect = 'copy'
-    if (!isDragging) setIsDragging(true)
+    if (hasFileTransfer(event)) {
+      event.preventDefault()
+      event.stopPropagation()
+      event.dataTransfer.dropEffect = 'copy'
+      if (!isDragging) setIsDragging(true)
+      return
+    }
+
+    // Catch-all for internal mod/separator drags: this outer container is the
+    // ancestor of every row, so any dragover the more specific row/separator/
+    // top-level handlers didn't claim (e.g. over a dragged row, row gaps, the
+    // toolbar/header, or panel padding) bubbles here. We gate on our own drag
+    // ref rather than dataTransfer.types because the protected drag-data store
+    // doesn't reliably expose custom types during dragover — so the type check
+    // could miss and leave the area marked invalid (the browser's no-drop block
+    // cursor). Marking it a valid drop target keeps the cursor "move" throughout.
+    if (draggedModIdsRef.current.length > 0) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+    }
   }, [isDragging])
 
   const handleDragLeave = useCallback((event: DragEvent) => {

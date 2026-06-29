@@ -19,6 +19,7 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const backdropMouseDownRef = useRef(false)
 
   useEffect(() => {
     const timer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 40)
@@ -42,9 +43,15 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
     <div
       data-action-prompt="true"
       className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        backdropMouseDownRef.current = event.target === event.currentTarget
+      }}
       onClick={(event) => {
         event.stopPropagation()
-        onCancel()
+        if (backdropMouseDownRef.current) {
+          onCancel()
+        }
+        backdropMouseDownRef.current = false
       }}
     >
       <div

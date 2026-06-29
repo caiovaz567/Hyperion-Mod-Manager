@@ -20,6 +20,10 @@ import { useTranslation } from './i18n/I18nContext'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
+// On launch, only re-check Nexus mod updates if the persisted cache is older than
+// this. Within the window the hydrated cache is shown as-is (no request), so rapid
+// relaunches don't spam Nexus; a normal session gap still refreshes.
+const MOD_UPDATE_LAUNCH_MAX_AGE_MS = 60 * 60 * 1000
 
 async function waitForFirstPaint(): Promise<void> {
   await new Promise<void>((resolve) => {
@@ -150,7 +154,11 @@ export const App: React.FC = () => {
       // request per mod. Cached indicators already show instantly (hydrated above);
       // this runs in the background (non-blocking, silent) and refreshes them shortly
       // after the window opens. The toolbar button still does an on-demand re-check.
-      void useAppStore.getState().checkModUpdates({ force: true })
+      //
+      // Recency gate: skip the request entirely if the cache was refreshed within
+      // the last hour, so quick relaunches don't each hit Nexus. A normal session
+      // gap (closed earlier, reopened later) still gets a fresh check.
+      void useAppStore.getState().checkModUpdates({ force: true, staleAfterMs: MOD_UPDATE_LAUNCH_MAX_AGE_MS })
 
       updateBootStatus('Checking mod conflicts...')
       void useAppStore.getState().refreshConflicts({ immediate: true })

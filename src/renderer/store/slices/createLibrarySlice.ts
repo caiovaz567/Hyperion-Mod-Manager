@@ -66,7 +66,7 @@ export interface LibrarySlice {
   reorderMods: (orderedIds: string[]) => Promise<void>
   updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
   refreshConflicts: (options?: { immediate?: boolean }) => Promise<void>
-  checkModUpdates: (options?: { force?: boolean; notify?: boolean; full?: boolean; modIds?: string[] }) => Promise<void>
+  checkModUpdates: (options?: { force?: boolean; notify?: boolean; full?: boolean; modIds?: string[]; staleAfterMs?: number }) => Promise<void>
   hydrateModUpdates: () => Promise<void>
   clearModUpdate: (uuid: string) => void
   updateMod: (uuid: string) => Promise<void>
@@ -257,6 +257,18 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
   checkModUpdates: async (options) => {
     if (get().checkingModUpdates) return
+    // Recency gate (launch path): skip the request entirely when the cache was
+    // refreshed within `staleAfterMs`. The hydrated cache already shows current
+    // indicators, so quick relaunches don't each hit Nexus. Manual "Check
+    // Updates" and per-mod checks omit this option, so they always run.
+    const staleAfterMs = options?.staleAfterMs
+    if (typeof staleAfterMs === 'number' && staleAfterMs > 0) {
+      const last = get().modUpdatesCheckedAt
+      if (last) {
+        const elapsed = Date.now() - Date.parse(last)
+        if (Number.isFinite(elapsed) && elapsed >= 0 && elapsed < staleAfterMs) return
+      }
+    }
     const force = options?.force === true
     const full = options?.full === true
     const announce = options?.notify === true
@@ -299,6 +311,13 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         { mods: inputs, force, full, modIds, period }
       )
       if (result.ok && result.data) {
+        // No API key means no check actually ran — don't advance the cache or its
+        // last-checked timestamp (doing so would make the launch recency gate skip
+        // real checks once a key is added). Just nudge the user if asked.
+        if (result.data.skippedReason === 'no-api-key') {
+          if (announce) notify(translate('library.toast.addApiKey'), 'warning')
+          return
+        }
         const previousUpdates = get().modUpdates
         // A full pass inspects every mod and replaces the cache. Bulk and scoped checks
         // only return the mods they actually deep-checked, so they merge into the cache
@@ -324,26 +343,22 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
           }))
         }
         if (announce) {
-          if (result.data.skippedReason === 'no-api-key') {
-            notify(translate('library.toast.addApiKey'), 'warning')
+          if (modIds && modIds.length === 1) {
+            const single = result.data.statuses.some((status) => status.state === 'update-available')
+            notify(
+              single ? translate('library.toast.updateAvailableSingle') : translate('library.toast.modUpToDate'),
+              single ? 'info' : 'success'
+            )
           } else {
-            if (modIds && modIds.length === 1) {
-              const single = result.data.statuses.some((status) => status.state === 'update-available')
-              notify(
-                single ? translate('library.toast.updateAvailableSingle') : translate('library.toast.modUpToDate'),
-                single ? 'info' : 'success'
-              )
-            } else {
-              // Count across the whole (merged) cache — a bulk check only returns the
-              // mods that changed, so counting just the response would undercount.
-              const count = Object.values(map).filter((status) => status.state === 'update-available').length
-              notify(
-                count > 0
-                  ? translateN('library.toast.updatesAvailable', count)
-                  : translate('library.toast.allUpToDate'),
-                count > 0 ? 'info' : 'success'
-              )
-            }
+            // Count across the whole (merged) cache — a bulk check only returns the
+            // mods that changed, so counting just the response would undercount.
+            const count = Object.values(map).filter((status) => status.state === 'update-available').length
+            notify(
+              count > 0
+                ? translateN('library.toast.updatesAvailable', count)
+                : translate('library.toast.allUpToDate'),
+              count > 0 ? 'info' : 'success'
+            )
           }
         }
       } else if (announce) {
