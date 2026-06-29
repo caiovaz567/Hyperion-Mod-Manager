@@ -3,6 +3,7 @@ import type { BrowserWindow } from 'electron'
 import type { IncomingMessage } from 'http'
 import https from 'https'
 import fs from 'fs'
+import os from 'os'
 import crypto from 'crypto'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
@@ -27,7 +28,7 @@ import { findModDir } from './modManager'
 const NEXUS_API = 'https://api.nexusmods.com/v1'
 const APPLICATION_NAME = 'Hyperion'
 const APPLICATION_VERSION = app.getVersion()
-const USER_AGENT = `${APPLICATION_NAME}-${APPLICATION_VERSION}`
+const USER_AGENT = `${APPLICATION_NAME}/${APPLICATION_VERSION} (${os.type()} ${os.release()}; ${os.arch()}) Electron/${process.versions.electron}`
 const GAME_DOMAIN = 'cyberpunk2077'
 const NEXUS_REQUEST_TIMEOUT_MS = 20_000
 const inFlightApiRequests = new Map<string, Promise<IpcResult<unknown>>>()
@@ -667,7 +668,10 @@ function downloadFile(
 
     req = https.get(url, {
       signal,
-      headers: startByte > 0 ? { Range: `bytes=${startByte}-` } : undefined,
+      headers: {
+        'User-Agent': USER_AGENT,
+        ...(startByte > 0 ? { Range: `bytes=${startByte}-` } : {}),
+      },
     }, (response) => {
       responseStream = response
 
@@ -1396,7 +1400,7 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       fetchFileInfo(payload.modId, payload.fileId, settings.nexusApiKey, mainWindow)
         .catch(() => ({} as { version?: string; fileName?: string; displayName?: string })),
       fetchModCategoryInfo(payload.modId, settings.nexusApiKey, mainWindow)
-        .catch(() => ({} as { categoryId?: number; categoryName?: string })),
+        .catch(() => ({} as { categoryId?: number; categoryName?: string; modName?: string })),
     ])
 
     const detectedVersion = normalizeVersionString(fileInfo.version)
