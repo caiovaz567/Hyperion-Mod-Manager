@@ -3,6 +3,7 @@ import type { ModMetadata } from '@shared/types'
 import { DELETE_PROGRESS_APPEARANCE, getTransientDeleteProgress } from '../../utils/deleteProgressAppearance'
 import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
 import { LIBRARY_GRID_TEMPLATE } from './LibraryTableHeader'
+import { useTranslation } from '../../i18n/I18nContext'
 
 const clampPercent = (value: number, max = 100): number => Math.max(0, Math.min(value, max))
 
@@ -10,7 +11,7 @@ const getInstallDisplayName = (sourcePath: string, currentFile: string, targetNa
   if (targetName) return targetName
 
   const raw = currentFile || sourcePath
-  if (!raw) return 'Installing mod'
+  if (!raw) return ''
   const normalized = raw.replace(/\//g, '\\')
   const parts = normalized.split('\\').filter(Boolean)
   return parts[parts.length - 1] ?? raw
@@ -41,8 +42,9 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
   status,
   currentFile,
 }) => {
+  const { t } = useTranslation()
   const appearance = getInstallProgressAppearance(status)
-  const displayName = getInstallDisplayName(sourcePath, currentFile, targetName)
+  const displayName = getInstallDisplayName(sourcePath, currentFile, targetName) || t('library.progress.installingMod')
 
   return (
     <NestedProgressFrame nested={nested}>
@@ -168,11 +170,12 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
   startedAt,
   tick,
 }) => {
+  const { t } = useTranslation()
   const appearance = DELETE_PROGRESS_APPEARANCE
   const progress = getTransientDeleteProgress(startedAt ?? tick, tick)
   const summary = mod.kind === 'separator'
-    ? 'Removing separator from library'
-    : 'Removing files from disk'
+    ? t('library.progress.removingSeparator')
+    : t('library.progress.removingFiles')
 
   return (
     <NestedProgressFrame nested={nested}>
@@ -239,7 +242,7 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
                 background: `${appearance.accent}18`,
               }}
             >
-              {appearance.label}
+              {t('library.progress.deleting')}
             </span>
           </div>
           <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
@@ -253,7 +256,7 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
                 background: `${appearance.accent}18`,
               }}
             >
-              {mod.kind === 'separator' ? 'Deleting' : 'Deleting mod'}
+              {mod.kind === 'separator' ? t('library.progress.deleting') : t('library.progress.deletingMod')}
             </span>
           </div>
           <div className="flex items-center min-w-0 text-sm font-mono tracking-tight text-[#ffb4ab]">
