@@ -2,6 +2,7 @@ import React from 'react'
 import { HyperionSortHeader } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
 import { LIBRARY_GRID_FALLBACK, type LibraryColumnWidths, type LibraryResizableColumnKey } from './libraryColumns'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export type LibrarySortKey = 'name' | 'category' | 'installedAt'
 export type SortDirection = 'asc' | 'desc'
@@ -13,6 +14,7 @@ const ColumnResizeHandle: React.FC<{
   columnWidths: LibraryColumnWidths
   onResize: (key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => void
 }> = ({ columnKey, columnWidths, onResize }) => {
+  const { t } = useTranslation()
   const handleMouseDown = (event: React.MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
@@ -37,7 +39,7 @@ const ColumnResizeHandle: React.FC<{
     <span
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Resize ${columnKey} column`}
+      aria-label={t('library.header.resizeColumn', { column: columnKey })}
       onMouseDown={handleMouseDown}
       onClick={(event) => event.stopPropagation()}
       className="group/resize absolute top-0 z-20 flex h-full w-4 cursor-col-resize items-center justify-center"
@@ -84,7 +86,9 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
   onTopLevelDragOver,
   onTopLevelDragLeave,
   onTopLevelDrop,
-}) => (
+}) => {
+  const { t } = useTranslation()
+  return (
   <div
     className="sticky top-0 z-10 grid w-full gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
     onDragOver={showTopLevelHeaderDrop ? onTopLevelDragOver : undefined}
@@ -111,12 +115,12 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
               : 'bg-[#151515] text-[#8a8a8a]'
           }`}
         >
-          {topLevelDropActive ? 'Release For Top Level' : 'Drag Here For Top Level'}
+          {topLevelDropActive ? t('library.header.releaseTopLevel') : t('library.header.dragTopLevel')}
         </span>
       </div>
     )}
     <div className="flex h-8 items-center pl-2">
-      <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : isBulkToggling ? 'Applying...' : allVisibleEnabled ? 'Disable all visible mods' : 'Enable all visible mods'}>
+      <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : isBulkToggling ? t('library.header.applying') : allVisibleEnabled ? t('library.header.disableAllVisible') : t('library.header.enableAllVisible')}>
         <span className="inline-flex">
           <button
             type="button"
@@ -148,26 +152,26 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
     </div>
     <HyperionSortHeader
       columnKey="name"
-      label="Mod Name"
+      label={t('library.header.columnName')}
       sortKey={sortKey}
       sortDirection={sortDirection}
       onSort={onSort}
-      ariaLabel="Sort by mod name"
+      ariaLabel={t('library.header.sortByName')}
       className="justify-start gap-0.5"
       innerClassName="gap-0.5"
     />
     <div className="relative flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
-      <span className="min-w-0 truncate whitespace-nowrap">Version</span>
+      <span className="min-w-0 truncate whitespace-nowrap">{t('library.header.columnVersion')}</span>
       <ColumnResizeHandle columnKey="version" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
     <div className="relative flex min-w-0 items-center">
       <HyperionSortHeader
         columnKey="category"
-        label="Category"
+        label={t('library.header.columnCategory')}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onSort={onSort}
-        ariaLabel="Sort by category"
+        ariaLabel={t('library.header.sortByCategory')}
         className="justify-start gap-0.5"
         innerClassName="gap-0.5"
       />
@@ -176,16 +180,17 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
     <div className="relative flex min-w-0 items-center">
       <HyperionSortHeader
         columnKey="installedAt"
-        label="Date"
+        label={t('library.header.columnDate')}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onSort={onSort}
-        ariaLabel="Sort by installed date"
+        ariaLabel={t('library.header.sortByDate')}
         className="justify-start gap-0.5"
         innerClassName="gap-0.5"
       />
       <ColumnResizeHandle columnKey="date" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
-    <div className="flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">Actions</div>
+    <div className="flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">{t('library.header.columnActions')}</div>
   </div>
-)
+  )
+}

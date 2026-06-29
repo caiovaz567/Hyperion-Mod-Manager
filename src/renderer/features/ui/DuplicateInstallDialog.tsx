@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { ActionPromptDialog } from './ActionPromptDialog'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export const DuplicateInstallDialog: React.FC = () => {
+  const { t } = useTranslation()
   const {
     installPrompt,
     pendingInstallRequest,
@@ -46,7 +48,7 @@ export const DuplicateInstallDialog: React.FC = () => {
       })
 
       if (!result.ok || !result.data) {
-        addToast(result.error ?? 'Install failed', 'error')
+        addToast(result.error ?? t('dialogs.duplicateInstall.installFailed'), 'error')
         return
       }
 
@@ -55,9 +57,9 @@ export const DuplicateInstallDialog: React.FC = () => {
         const enableResult = await enableMod(result.data.mod.uuid)
         await scanMods({ immediateConflicts: true, refreshModUpdates: false })
         if (!enableResult.ok) {
-          addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+          addToast(t('dialogs.duplicateInstall.installedNotActivated', { error: enableResult.error ?? '' }), 'warning')
         } else {
-          addToast(`${result.data.mod.name} installed & activated`, 'success')
+          addToast(t('dialogs.duplicateInstall.installedActivated', { name: result.data.mod.name }), 'success')
         }
       } else if (result.data.status === 'conflict') {
         return
@@ -67,11 +69,11 @@ export const DuplicateInstallDialog: React.FC = () => {
     }
   }
 
-  const title = installPrompt.mode === 'reinstall' ? 'Reinstall Mod' : 'Mod Already Installed'
+  const title = installPrompt.mode === 'reinstall' ? t('dialogs.duplicateInstall.reinstallTitle') : t('dialogs.duplicateInstall.existsTitle')
   const description = installPrompt.mode === 'reinstall'
-    ? `You are about to reinstall ${installPrompt.existingModName} from the original source archive or folder.`
-    : `You are installing ${installPrompt.incomingModName}, but Hyperion found an existing module with the same identity in your library.`
-  const detailLabel = installPrompt.mode === 'reinstall' ? 'Target mod' : 'Existing mod'
+    ? t('dialogs.duplicateInstall.reinstallDescription', { name: installPrompt.existingModName })
+    : t('dialogs.duplicateInstall.existsDescription', { name: installPrompt.incomingModName })
+  const detailLabel = installPrompt.mode === 'reinstall' ? t('dialogs.duplicateInstall.reinstallDetailLabel') : t('dialogs.duplicateInstall.existsDetailLabel')
 
   return (
     <ActionPromptDialog
@@ -82,8 +84,8 @@ export const DuplicateInstallDialog: React.FC = () => {
       detailLabel={detailLabel}
       detailValue={installPrompt.existingModName}
       icon="warning"
-      primaryLabel="Replace"
-      secondaryLabel="Install as Copy"
+      primaryLabel={t('dialogs.duplicateInstall.replace')}
+      secondaryLabel={t('dialogs.duplicateInstall.installAsCopy')}
       onPrimary={() => handleAction('replace')}
       onSecondary={() => handleAction('copy')}
       onCancel={handleClose}

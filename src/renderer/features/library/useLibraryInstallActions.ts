@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import type { AppSettings, InstallModResponse, IpcResult, ModMetadata } from '@shared/types'
 import { IPC } from '@shared/types'
 import { IpcService } from '../../services/IpcService'
+import { translate } from '../../i18n/translate'
 
 type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -51,7 +52,7 @@ export function useLibraryInstallActions({
 
     const enableResult = await enableMod(mod.uuid)
     if (!enableResult.ok) {
-      addToast(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+      addToast(translate('library.toast.installedNotActivated', { error: String(enableResult.error ?? '') }), 'warning')
       return
     }
 
@@ -60,36 +61,36 @@ export function useLibraryInstallActions({
 
   const handleInstallFile = useCallback(async (filePath: string) => {
     if (gameRunning) {
-      addToast('Close Cyberpunk 2077 before installing mods', 'warning')
+      addToast(translate('library.toast.closeGameBeforeInstall'), 'warning')
       return
     }
     if (!hasRequiredPaths) {
-      addToast('Set Game Path and Mod Library before installing mods', 'warning')
+      addToast(translate('library.toast.setPathsBeforeInstall'), 'warning')
       setActiveView('settings')
       return
     }
 
     const installResult = await installMod(filePath)
     if (!installResult.ok || !installResult.data) {
-      addToast(installResult.error ?? 'Install failed', 'error')
+      addToast(installResult.error ?? translate('library.toast.installFailed'), 'error')
       return
     }
 
     if (installResult.data.status === 'installed' && installResult.data.mod) {
-      await finalizeInstalledMod(installResult.data.mod, `${installResult.data.mod.name} installed & activated`)
+      await finalizeInstalledMod(installResult.data.mod, translate('library.toast.installedActivated', { name: installResult.data.mod.name }))
     }
   }, [addToast, finalizeInstalledMod, hasRequiredPaths, installMod, setActiveView])
 
   const handleInstallClick = useCallback(async () => {
     if (gameRunning) {
-      addToast('Close Cyberpunk 2077 before installing mods', 'warning')
+      addToast(translate('library.toast.closeGameBeforeInstall'), 'warning')
       return
     }
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(
       IPC.OPEN_FILE_DIALOG,
       {
-        title: 'Select Mod Archive',
-        filters: [{ name: 'Mod Archives', extensions: ['zip', 'rar', '7z'] }],
+        title: translate('library.install.dialogTitle'),
+        filters: [{ name: translate('library.install.archiveFilterName'), extensions: ['zip', 'rar', '7z'] }],
         properties: ['openFile'],
       }
     )

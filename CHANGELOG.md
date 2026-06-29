@@ -10,6 +10,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.30.0] - 2026-06-29
+
+### Added
+- **Interface language selector (internationalization).** Hyperion can now be displayed in multiple languages. A language dropdown appears in two places: the first-run setup wizard (top-right of the welcome/onboarding screen) and **Settings > General**. The choice persists across sessions in app settings (`language`) and applies live without a restart. The **entire interface is now translatable** — app shell, Downloads, Library (mod details, conflicts, and all dialogs), every Settings tab, the FOMOD installer, the shared install/conflict/version dialogs, App Logs, and toasts all read from the translation catalog; only main-process error strings remain English. English is the source of truth (`en.json`); a **complete Brazilian Portuguese (Português Brasil)** catalog now ships at full key parity (712/712), and any untranslated string still falls back to English so the app always stays readable. New languages can be added by dropping a JSON catalog into `src/renderer/i18n/locales/` and registering it in `locales.ts` — no other code changes required.
+
+### Fixed
+- Several previously-hardcoded English strings are now translatable: all Library action toasts (install/delete/rename/move/enable/disable, drag-and-drop, separator actions), the Downloads delete-row status badge, the FOMOD installer's fallback module/step/group/plugin names, and the path validation "no folder selected" label.
+
+### Removed
+- Deleted four unused legacy components that were no longer rendered anywhere (`StatusBar`, `ModCard`, `LibraryPathSnackbar`, `ViewBackButton`) and the now-orphaned `statusMessage`/`setStatus` store state they depended on.
+
+---
+
 ## [0.29.2] - 2026-06-28
 
 ### Added

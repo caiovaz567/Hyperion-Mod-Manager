@@ -2,6 +2,7 @@ import React from 'react'
 import type { ConflictInfo, ModMetadata } from '@shared/types'
 import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 import { LIBRARY_GRID_TEMPLATE } from './LibraryTableHeader'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface LibraryConflictFloatingRowsProps {
   selectedMod: ModMetadata | null
@@ -86,6 +87,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
   collapsedSeparatorSet,
   onGoToMod,
 }) => {
+  const { t } = useTranslation()
   const floatingMods = React.useMemo<FloatingConflictMod[]>(() => {
     if (!selectedMod || selectedMod.kind !== 'mod') return []
 
@@ -154,7 +156,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
         <div className={`flex flex-col ${side === 'top' ? '' : 'flex-col-reverse'}`}>
           {hiddenCount > 0 ? (
             <div className="mx-2 mb-1 inline-flex h-6 w-fit items-center rounded-sm bg-[#101010] px-2.5 text-[10px] brand-font font-bold uppercase tracking-[0.14em] text-[#9a9586] shadow-[0_10px_24px_rgba(0,0,0,0.58)]">
-              {hiddenCount} more {side === 'top' ? 'above' : 'below'}
+              {side === 'top' ? t('library.conflict.moreAbove', { count: hiddenCount }) : t('library.conflict.moreBelow', { count: hiddenCount })}
             </div>
           ) : null}
           {stackRows.map((row) => {
@@ -174,7 +176,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                   borderColor: `${accent}36`,
                   boxShadow: `inset 3px 0 0 ${accent}, inset 0 0 0 1px rgba(255,255,255,0.035), 0 14px 32px rgba(0,0,0,0.72)`,
                 }}
-                title={`Go to ${row.mod.name}`}
+                title={t('library.conflict.goTo', { name: row.mod.name })}
               >
                 <div className="flex items-center pl-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: accent, boxShadow: `0 0 10px ${accent}88` }} />
@@ -206,7 +208,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                 </div>
                 <div className="flex min-w-0 items-center font-mono text-[12px] text-[#908b80]">
                   <span className="truncate whitespace-nowrap">
-                    {row.tone === 'win' ? 'Loses to selected' : 'Wins over selected'}
+                    {row.tone === 'win' ? t('library.conflict.losesToSelected') : t('library.conflict.winsOverSelected')}
                   </span>
                 </div>
                 <div className="flex items-center justify-end">
@@ -214,7 +216,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                     <span className="material-symbols-outlined text-[15px] leading-none text-current">
                       {row.side === 'top' ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'}
                     </span>
-                    GO
+                    {t('library.conflict.go')}
                   </span>
                 </div>
               </button>

@@ -12,6 +12,7 @@ import type {
 import { IPC } from '@shared/types'
 import { IpcService } from '../../services/IpcService'
 import { useAppStore } from '../../store/useAppStore'
+import { useTranslation } from '../../i18n/I18nContext'
 import { Tooltip } from '../ui/Tooltip'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
@@ -126,6 +127,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   initialTab = 'files',
   initialEditName = false,
 }) => {
+  const { t } = useTranslation()
   const {
     mods,
     conflicts,
@@ -415,8 +417,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     overwrittenBy: lossConflicts.length,
   }
   const fileTreeModeDescription = fileTreeUsesDeployedPaths
-    ? 'Showing the last known deployment structure relative to the game root.'
-    : 'Showing the inferred deployment structure based on indexed files and mod type.'
+    ? t('library.detail.treeModeDeployed')
+    : t('library.detail.treeModeInferred')
   const fullscreenLikeViewport = Math.abs(viewport.screenWidth - viewport.width) <= 48
     && Math.abs(viewport.screenHeight - viewport.height) <= 72
   const detailPanelFrameStyle: React.CSSProperties = {
@@ -447,7 +449,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const handleSaveName = async () => {
     const trimmed = nameValue.trim()
     if (!trimmed) {
-      addToast('Mod name cannot be empty', 'warning')
+      addToast(t('library.detail.toastNameEmpty'), 'warning')
       return
     }
 
@@ -460,7 +462,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     await updateModMetadata(mod.uuid, { name: trimmed })
     setNameSaving(false)
     setEditingName(false)
-    addToast('Mod name updated', 'success', 1800)
+    addToast(t('library.detail.toastNameUpdated'), 'success', 1800)
   }
 
   const handleCancelNameEdit = () => {
@@ -470,7 +472,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
   const handleOpenFolder = async () => {
     if (!modFolderPath) {
-      addToast('Library path is not configured', 'warning')
+      addToast(t('library.detail.toastLibraryPathNotConfigured'), 'warning')
       return
     }
 
@@ -479,7 +481,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
   const handleOpenNodeLocation = async (node: FileTreeNode | null, revealPath: string | null) => {
     if (!node || !revealPath) {
-      addToast('Select a file or folder first', 'warning')
+      addToast(t('library.detail.toastSelectFirst'), 'warning')
       return
     }
 
@@ -521,13 +523,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     setTreeActionSubmitting(true)
 
     let result: IpcResult<ModMetadata>
-    let successMessage = 'Tree updated'
+    let successMessage = t('library.detail.toastTreeUpdated')
 
     if (treeActionDialog.mode === 'create-folder') {
       const parentRelativePath = getCreateParentRelativePath(targetNode)
       if (parentRelativePath === null) {
         setTreeActionSubmitting(false)
-        addToast('This inferred folder has no exact source location in the mod package', 'warning')
+        addToast(t('library.detail.toastNoExactSource'), 'warning')
         return
       }
 
@@ -538,12 +540,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         parentRelativePath,
       }
       result = await IpcService.invoke<IpcResult<ModMetadata>>(IPC.MOD_TREE_CREATE_ENTRY, request)
-      successMessage = 'Folder created'
+      successMessage = t('library.detail.toastFolderCreated')
     } else if (treeActionDialog.mode === 'rename') {
       const relativePath = getExistingNodeRelativePath(targetNode)
       if (!relativePath) {
         setTreeActionSubmitting(false)
-        addToast('This entry cannot be renamed from the deploy tree view', 'warning')
+        addToast(t('library.detail.toastCannotRename'), 'warning')
         return
       }
 
@@ -553,12 +555,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         nextName: treeActionValue,
       }
       result = await IpcService.invoke<IpcResult<ModMetadata>>(IPC.MOD_TREE_RENAME_ENTRY, request)
-      successMessage = 'Entry renamed'
+      successMessage = t('library.detail.toastEntryRenamed')
     } else {
       const relativePath = getExistingNodeRelativePath(targetNode)
       if (!relativePath) {
         setTreeActionSubmitting(false)
-        addToast('This entry cannot be deleted from the deploy tree view', 'warning')
+        addToast(t('library.detail.toastCannotDelete'), 'warning')
         return
       }
 
@@ -567,13 +569,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         relativePath,
       }
       result = await IpcService.invoke<IpcResult<ModMetadata>>(IPC.MOD_TREE_DELETE_ENTRY, request)
-      successMessage = 'Entry deleted'
+      successMessage = t('library.detail.toastEntryDeleted')
     }
 
     setTreeActionSubmitting(false)
 
     if (!result.ok) {
-      addToast(result.error ?? 'File tree action failed', 'error')
+      addToast(result.error ?? t('library.detail.toastTreeActionFailed'), 'error')
       return
     }
 
@@ -637,8 +639,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
               <div className="mt-6 flex items-end justify-between gap-4">
                 <div className="flex items-end gap-6">
-                  <TabButton active={activeTab === 'files'} label="Files" onClick={() => setActiveTab('files')} />
-                  <TabButton active={activeTab === 'conflicts'} label="Conflicts" onClick={() => setActiveTab('conflicts')} />
+                  <TabButton active={activeTab === 'files'} label={t('library.detail.tabFiles')} onClick={() => setActiveTab('files')} />
+                  <TabButton active={activeTab === 'conflicts'} label={t('library.detail.tabConflicts')} onClick={() => setActiveTab('conflicts')} />
                 </div>
               </div>
             </div>
@@ -649,10 +651,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   ? 'border-[#21492f] bg-[#0b2214] text-[#4ff38f]'
                   : 'border-[#2d2d2d] bg-[#131313] text-[#c8c8c8]'
               }`}>
-                <span>{mod.enabled ? 'Enabled' : 'Disabled'}</span>
+                <span>{mod.enabled ? t('library.detail.enabled') : t('library.detail.disabled')}</span>
               </span>
 
-              <Tooltip content="Rename mod">
+              <Tooltip content={t('library.detail.renameMod')}>
                 <button
                   onClick={() => {
                     setNameValue(mod.name)
@@ -664,7 +666,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 </button>
               </Tooltip>
 
-              <Tooltip content="Close details">
+              <Tooltip content={t('library.detail.closeDetails')}>
                 <button
                   onClick={onClose}
                   className="flex h-10 w-10 items-center justify-center border border-[#2b2b2b] bg-[#111] text-[#a3a3a3] transition-colors hover:border-[#4b4b4b] hover:text-white"
@@ -684,7 +686,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   className={detailToolbarButtonClass}
                 >
                   <span className="material-symbols-outlined text-[16px]">folder_open</span>
-                  <span>Open Mod Folder</span>
+                  <span>{t('library.detail.openModFolder')}</span>
                 </button>
 
                 <label className="group relative min-w-[300px] flex-1">
@@ -695,7 +697,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                     ref={searchInputRef}
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search files..."
+                    placeholder={t('library.detail.searchFiles')}
                     className="h-10 w-full rounded-sm border-0 bg-[#101010] py-1.5 pl-10 pr-[88px] text-sm text-[#e5e2e1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] placeholder-[#6f6f6f] transition-all hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] focus:bg-[#121212] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.28)]"
                   />
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c7c7c]">
@@ -706,8 +708,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
               <section className="flex min-h-0 flex-1 flex-col border border-[#232323] bg-[#101010]">
                 <div className="grid grid-cols-[minmax(0,1fr)_120px] border-b border-[#1a1a1a] bg-[#151515] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#c8c3bf]">
-                  <div>Name</div>
-                  <div className="text-right">Scope</div>
+                  <div>{t('library.detail.columnName')}</div>
+                  <div className="text-right">{t('library.detail.columnScope')}</div>
                 </div>
 
                 <div className="border-b border-[#1a1a1a] bg-[#0d0d0d] px-4 py-3 text-sm text-[#9b9b9b]">
@@ -733,7 +735,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                     ))
                   ) : (
                     <div className="px-5 py-14 text-center text-sm text-[#8d8d8d]">
-                      No files matched this search.
+                      {t('library.detail.noFilesMatched')}
                     </div>
                   )}
                 </div>
@@ -745,13 +747,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
               <div className="flex items-center gap-3">
                 <TabButton
                   active={conflictSubTab === 'files'}
-                  label={`Paths (${totalFileConflicts})`}
+                  label={t('library.detail.pathsTab', { count: totalFileConflicts })}
                   onClick={() => setConflictSubTab('files')}
                 />
 
                 <TabButton
                   active={conflictSubTab === 'archives'}
-                  label={`.archive (${totalArchiveConflicts})`}
+                  label={t('library.detail.archivesTab', { count: totalArchiveConflicts })}
                   onClick={() => setConflictSubTab('archives')}
                 />
               </div>
@@ -759,10 +761,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
               <div className="mt-3 min-h-0 flex flex-1 flex-col gap-5">
                 <ConflictSection
                   conflicts={conflictSubTab === 'files' ? winFileConflicts : winArchiveConflicts}
-                  emptyMessage="This mod is not currently overwriting files from other mods."
+                  emptyMessage={t('library.detail.winsEmpty')}
                   mod={mod}
                   tone="win"
-                  title="This Mod Wins"
+                  title={t('library.detail.winsTitle')}
                   collapsed={winConflictsCollapsed}
                   onToggleCollapsed={() => setWinConflictsCollapsed((current) => !current)}
                   className={winConflictsCollapsed ? 'flex-none' : 'flex-1'}
@@ -772,10 +774,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
                 <ConflictSection
                   conflicts={conflictSubTab === 'files' ? lossFileConflicts : lossArchiveConflicts}
-                  emptyMessage="No other mod is currently overwriting files from this mod."
+                  emptyMessage={t('library.detail.lossEmpty')}
                   mod={mod}
                   tone="loss"
-                  title="Other Mods Win"
+                  title={t('library.detail.lossTitle')}
                   collapsed={lossConflictsCollapsed}
                   onToggleCollapsed={() => setLossConflictsCollapsed((current) => !current)}
                   className={lossConflictsCollapsed ? 'flex-none' : 'flex-1'}
@@ -807,7 +809,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">folder_open</span>
-                <span>{contextMenuNode.kind === 'file' ? 'Open File Location' : 'Open Exact Location'}</span>
+                <span>{contextMenuNode.kind === 'file' ? t('library.detail.menuOpenFileLocation') : t('library.detail.menuOpenExactLocation')}</span>
               </button>
               <div className="my-1 border-t border-[#222]" />
               <button
@@ -817,7 +819,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
-                <span>Create Folder</span>
+                <span>{t('library.detail.menuCreateFolder')}</span>
               </button>
               <div className="my-1 border-t border-[#222]" />
               <button
@@ -827,7 +829,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">edit</span>
-                <span>Rename</span>
+                <span>{t('library.detail.menuRename')}</span>
               </button>
               <button
                 type="button"
@@ -836,7 +838,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 className={`${treeMenuDangerButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>
-                <span>Delete</span>
+                <span>{t('common.delete')}</span>
               </button>
             </>
           ) : (
@@ -850,7 +852,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 className={treeMenuButtonClass}
               >
                 <span className="material-symbols-outlined text-[16px]">folder_open</span>
-                <span>Open Mod Folder</span>
+                <span>{t('library.detail.openModFolder')}</span>
               </button>
               <div className="my-1 border-t border-[#222]" />
               <button
@@ -859,7 +861,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 className={treeMenuButtonClass}
               >
                 <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
-                <span>Create Folder</span>
+                <span>{t('library.detail.menuCreateFolder')}</span>
               </button>
             </>
           )}
@@ -872,24 +874,24 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           <SeparatorNameDialog
             title={
               treeActionDialog.mode === 'rename'
-                ? 'Rename Entry'
-                : 'Create Folder'
+                ? t('library.detail.dialogRenameEntryTitle')
+                : t('library.detail.dialogCreateFolderTitle')
             }
             description={
               treeActionDialog.mode === 'rename'
-                ? 'Choose the new name for this entry inside the mod package.'
-                : 'Create a new folder in the currently targeted location of this mod.'
+                ? t('library.detail.dialogRenameEntryDescription')
+                : t('library.detail.dialogCreateFolderDescription')
             }
             inputLabel={
               treeActionDialog.mode === 'rename'
-                ? 'Entry Name'
-                : 'Folder Name'
+                ? t('library.detail.dialogEntryNameLabel')
+                : t('library.detail.dialogFolderNameLabel')
             }
             value={treeActionValue}
             submitLabel={
               treeActionDialog.mode === 'rename'
-                ? 'Save Name'
-                : 'Create Folder'
+                ? t('library.detail.dialogSaveName')
+                : t('library.detail.dialogCreateFolderTitle')
             }
             onChange={setTreeActionValue}
             onSubmit={() => void handleSubmitTreeAction()}
@@ -906,11 +908,11 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
       {editingName ? createPortal(
         <SeparatorNameDialog
-          title="Rename Mod"
-          description="Update the label shown for this mod in the library."
-          inputLabel="Mod Name"
+          title={t('library.detail.dialogRenameModTitle')}
+          description={t('library.detail.dialogRenameModDescription')}
+          inputLabel={t('library.detail.dialogModNameLabel')}
           value={nameValue}
-          submitLabel={nameSaving ? 'Saving...' : 'Save Name'}
+          submitLabel={nameSaving ? t('library.detail.dialogSaving') : t('library.detail.dialogSaveName')}
           onChange={setNameValue}
           onSubmit={() => void handleSaveName()}
           onCancel={handleCancelNameEdit}
@@ -923,12 +925,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         <ActionPromptDialog
           accentColor="#ff4d4f"
           accentGlow="rgba(255,77,79,0.45)"
-          title="Delete Entry"
-          description="This will permanently remove the selected file or folder from the mod package."
-          detailLabel="Target"
-          detailValue={findFileTreeNode(fileTree, treeActionDialog.nodeId)?.path ?? 'Unknown entry'}
+          title={t('library.detail.dialogDeleteEntryTitle')}
+          description={t('library.detail.dialogDeleteEntryDescription')}
+          detailLabel={t('library.detail.dialogDeleteEntryTarget')}
+          detailValue={findFileTreeNode(fileTree, treeActionDialog.nodeId)?.path ?? t('library.detail.dialogUnknownEntry')}
           icon="delete"
-          primaryLabel="Delete"
+          primaryLabel={t('common.delete')}
           primaryTextColor="#ffffff"
           onPrimary={() => void handleSubmitTreeAction()}
           onCancel={() => {

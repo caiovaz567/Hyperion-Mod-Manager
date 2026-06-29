@@ -8,6 +8,7 @@ import type {
   FomodGroupType,
   FomodPluginType,
 } from '@shared/types'
+import { translate } from '../i18n/translate'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ function parsePluginType(plugin: Element): FomodPluginType {
 }
 
 function parsePlugin(el: Element): FomodPlugin {
-  const name = el.getAttribute('name') ?? 'Unknown'
+  const name = el.getAttribute('name') ?? translate('dialogs.fomod.fallbackPluginName')
   const description = childText(el, 'description')
   const image = firstElementByLocalName(el, 'image')?.getAttribute('path') ?? undefined
   const files = parseFiles(firstElementByLocalName(el, 'files'))
@@ -81,7 +82,7 @@ const VALID_GROUP_TYPES: FomodGroupType[] = [
 ]
 
 function parseGroup(el: Element): FomodGroup {
-  const name = el.getAttribute('name') ?? 'Options'
+  const name = el.getAttribute('name') ?? translate('dialogs.fomod.fallbackGroupName')
   const rawType = el.getAttribute('type') ?? 'SelectExactlyOne'
   const type: FomodGroupType = VALID_GROUP_TYPES.includes(rawType as FomodGroupType)
     ? (rawType as FomodGroupType)
@@ -91,7 +92,7 @@ function parseGroup(el: Element): FomodGroup {
 }
 
 function parseStep(el: Element): FomodStep {
-  const name = el.getAttribute('name') ?? 'Installation Options'
+  const name = el.getAttribute('name') ?? translate('dialogs.fomod.fallbackStepName')
   const groups = elementsByLocalName(el, 'group').map(parseGroup).filter((g) => g.plugins.length > 0)
 
   const visibleEl = firstElementByLocalName(el, 'visible')
@@ -133,7 +134,7 @@ export function parseFomodXml(xml: string): FomodModuleConfig {
     doc = new DOMParser().parseFromString(cleanXml, 'text/html')
   }
 
-  const moduleName = firstElementByLocalName(doc, 'moduleName')?.textContent?.trim() || 'Mod Installation'
+  const moduleName = firstElementByLocalName(doc, 'moduleName')?.textContent?.trim() || translate('dialogs.fomod.fallbackModuleName')
   const moduleImage = firstElementByLocalName(doc, 'moduleImage')?.getAttribute('path') ?? undefined
   const requiredFiles = parseFiles(firstElementByLocalName(doc, 'requiredInstallFiles'))
   const steps = elementsByLocalName(doc, 'installstep').map(parseStep).filter((s) => s.groups.length > 0)

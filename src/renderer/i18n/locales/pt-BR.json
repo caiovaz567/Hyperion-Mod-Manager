@@ -1,0 +1,904 @@
+{
+  "common": {
+    "back": "Voltar",
+    "continue": "Continuar",
+    "finishSetup": "Concluir configuração",
+    "getStarted": "Começar",
+    "optional": "Opcional",
+    "chooseFolder": "Escolher pasta",
+    "useSuggested": "Usar sugerida",
+    "detectAutomatically": "Detectar automaticamente",
+    "detecting": "Detectando…",
+    "openFolder": "Abrir pasta",
+    "close": "Fechar",
+    "selectedFolder": "Pasta selecionada",
+    "premium": "Premium",
+    "free": "Gratuita",
+    "refresh": "Atualizar",
+    "install": "Instalar",
+    "reinstall": "Reinstalar",
+    "delete": "Excluir",
+    "cancel": "Cancelar",
+    "next": "Próximo",
+    "clearSearch": "Limpar busca",
+    "noFolderSelected": "Nenhuma pasta selecionada ainda",
+    "settingsNotLoaded": "As configurações ainda não foram carregadas"
+  },
+  "language": {
+    "label": "Idioma",
+    "select": "Selecionar idioma"
+  },
+  "shell": {
+    "nav": {
+      "library": "Biblioteca de Mods",
+      "downloads": "Downloads",
+      "settings": "Configurações"
+    },
+    "game": {
+      "launch": "INICIAR JOGO",
+      "launching": "INICIANDO...",
+      "inGame": "EM JOGO",
+      "close": "FECHAR JOGO",
+      "notConfigured": "Caminho do jogo não configurado — verifique as Configurações",
+      "launchFailed": "Não foi possível iniciar o jogo",
+      "closeFailed": "Não foi possível fechar o jogo"
+    },
+    "account": {
+      "name": "CONTA NEXUS",
+      "premium": "PREMIUM",
+      "free": "GRATUITA",
+      "checking": "VERIFICANDO",
+      "offline": "OFFLINE",
+      "connected": "NEXUS CONECTADO",
+      "validating": "VALIDANDO",
+      "notConnected": "NÃO CONECTADO",
+      "validateFailed": "Não foi possível validar a conta Nexus"
+    },
+    "header": {
+      "appLogs": "Registros do App",
+      "minimize": "Minimizar",
+      "maximize": "Maximizar",
+      "updateCheckFailed": "Falha ao verificar atualizações"
+    },
+    "update": {
+      "downloading": "Baixando {progress}%",
+      "installing": "Instalando atualização...",
+      "install": "Instalar atualização",
+      "installVersion": "Instalar atualização {version}",
+      "downloaded": "Atualização baixada. Reiniciando o Hyperion...",
+      "downloadFailed": "Não foi possível baixar a atualização"
+    },
+    "toast": {
+      "gameAutoDetected": "Caminho do jogo detectado automaticamente"
+    }
+  },
+  "downloads": {
+    "title": "Downloads",
+    "searchPlaceholder": "Buscar downloads...",
+    "openFolder": "Abrir Pasta",
+    "deleteAllTooltip": "Excluir todos os arquivos da pasta de downloads",
+    "summary": {
+      "local": "LOCAIS",
+      "active": "ATIVOS",
+      "shown": "EXIBIDOS"
+    },
+    "columns": {
+      "name": "Nome do Arquivo",
+      "status": "Status",
+      "version": "Versão",
+      "size": "Tamanho",
+      "downloaded": "Baixado em",
+      "actions": "Ações"
+    },
+    "sort": {
+      "name": "Ordenar por nome do arquivo",
+      "status": "Ordenar por status",
+      "version": "Ordenar por versão",
+      "size": "Ordenar por tamanho",
+      "downloaded": "Ordenar por data de download"
+    },
+    "status": {
+      "downloading": "Baixando",
+      "downloaded": "Baixado",
+      "paused": "Pausado",
+      "error": "Erro",
+      "installed": "Instalado"
+    },
+    "badge": {
+      "new": "NOVO"
+    },
+    "active": {
+      "downloadFailed": "Falha no download",
+      "readyToInstall": "Pronto para instalar",
+      "pausedAt": "Pausado em {pct}%",
+      "percentComplete": "{pct}% concluído",
+      "interrupted": "Transferência interrompida",
+      "downloaded": "{size} baixados",
+      "tryAgain": "Tentar novamente",
+      "waitingForScan": "Aguardando varredura",
+      "resumeToContinue": "Retome para continuar",
+      "eta": "TEMPO REST."
+    },
+    "tooltip": {
+      "resume": "Retomar download",
+      "pause": "Pausar download",
+      "cancel": "Cancelar download",
+      "reinstallArchive": "Reinstalar arquivo",
+      "installArchive": "Instalar arquivo",
+      "delete": "Excluir download"
+    },
+    "install": {
+      "preparing": {
+        "label": "Preparando",
+        "summary": "Preparando o espaço de instalação",
+        "detail": "Abrindo o arquivo e preparando a sessão de instalação"
+      },
+      "extracting": {
+        "label": "Extraindo",
+        "summary": "Extraindo o conteúdo do pacote",
+        "detail": "Lendo arquivos diretamente do pacote compactado"
+      },
+      "analyzing": {
+        "label": "Analisando",
+        "summary": "Inspecionando o conteúdo extraído",
+        "detail": "Detectando a estrutura do mod e verificando conflitos"
+      },
+      "installing": {
+        "label": "Instalando",
+        "summary": "Gravando arquivos na biblioteca de mods",
+        "detail": "Copiando o conteúdo extraído e finalizando os metadados"
+      },
+      "done": {
+        "label": "Concluído",
+        "summary": "Instalação concluída",
+        "detail": "Finalizando o mod instalado"
+      }
+    },
+    "installStatus": {
+      "preparingInstaller": "Preparando instalador...",
+      "reinstalling": "Reinstalando...",
+      "installingFomod": "Instalando seleção do FOMOD..."
+    },
+    "delete": {
+      "label": "Excluindo",
+      "summary": "Removendo arquivos do disco"
+    },
+    "overlay": {
+      "preparing": "Preparando instalação",
+      "analyzing": "Analisando",
+      "detectingFormat": "Detectando formato..."
+    },
+    "empty": {
+      "scanning": "Verificando downloads...",
+      "noMatch": "Nenhum download corresponde a esta busca",
+      "noArchives": "Nenhum arquivo encontrado na pasta de downloads",
+      "noPath": "Defina um caminho de downloads em Configuração primeiro",
+      "configuration": "Configuração"
+    },
+    "menu": {
+      "refreshDownloads": "Atualizar Downloads",
+      "openFolder": "Abrir Pasta de Downloads",
+      "deleteAll": "Excluir Todos os Downloads",
+      "openLocation": "Abrir Local do Arquivo",
+      "resume": "Retomar",
+      "removeFromList": "Remover da Lista",
+      "pause": "Pausar",
+      "cancel": "Cancelar Download",
+      "deleteDownload": "Excluir Download"
+    },
+    "deleteDialog": {
+      "title": "Excluir Download",
+      "description": "Você está prestes a excluir permanentemente {name} do seu caminho de downloads.",
+      "detailLabel": "Arquivo a excluir"
+    },
+    "deleteAllDialog": {
+      "title": "Excluir Todos os Downloads",
+      "description": "Isto exclui permanentemente todos os arquivos atualmente listados na sua pasta de downloads. Arquivos já instalados como mods não serão afetados.",
+      "detailLabel": "Arquivos a excluir",
+      "primary": "Excluir Tudo"
+    },
+    "toast": {
+      "setPathsFirst": "Defina o Caminho do Jogo e a Biblioteca de Mods antes de instalar mods",
+      "installFailed": "Falha na instalação",
+      "installedNotActivated": "Instalado, mas não foi possível ativar: {error}",
+      "installedActivated": "{name} instalado e ativado",
+      "deleteFailed": "Não foi possível excluir o download",
+      "deleted": "{name} excluído",
+      "deleteAllFailed": "Não foi possível excluir os downloads",
+      "deletedCount_one": "{count} download excluído",
+      "deletedCount_other": "{count} downloads excluídos",
+      "deleteFailedCount_one": "{count} download não pôde ser excluído",
+      "deleteFailedCount_other": "{count} downloads não puderam ser excluídos",
+      "fileNotAvailable": "O arquivo de download ainda não está disponível",
+      "autoInstallFailed": "Falha na instalação automática",
+      "installedNotActivatedNamed": "{name} instalado — não foi possível ativar: {error}",
+      "updateFailed": "Não foi possível atualizar {name}",
+      "updatedNotActivated": "Atualizado, mas não foi possível ativar: {error}",
+      "updatedActivated": "{name} atualizado e ativado",
+      "reinstalledNotActivated": "Reinstalado, mas não foi possível reativar: {error}",
+      "noOriginalSource": "A fonte original não está armazenada para este mod",
+      "originalSourceUnavailable": "A fonte original não está mais disponível",
+      "fomodInstallFailed": "Falha na instalação do FOMOD",
+      "nexusDownloadStartFailed": "Não foi possível iniciar o download do Nexus",
+      "nexusLinkReadFailed": "Não foi possível ler o link de download do Nexus"
+    }
+  },
+  "welcome": {
+    "headline": "Vamos configurar seu espaço de trabalho",
+    "subtitle": "Uma configuração rápida e única. Indique ao Hyperion onde o Cyberpunk 2077 está e escolha onde seus mods ficam — leva menos de um minuto.",
+    "version": "Hyperion {version}",
+    "stepCounter": "Etapa {current} de {total}",
+    "settingUp": "Preparando tudo…",
+    "closeAria": "Fechar o Hyperion",
+    "stepsAria": "Etapas de configuração",
+    "steps": {
+      "game": {
+        "label": "Jogo",
+        "heading": "Onde o Cyberpunk 2077 está instalado?",
+        "description": "Indique ao Hyperion a pasta do seu jogo. Nós a usamos para verificar a instalação e aplicar seus mods com segurança.",
+        "preview": "Onde o Cyberpunk 2077 está instalado"
+      },
+      "library": {
+        "label": "Biblioteca de mods",
+        "heading": "Onde seus mods devem ficar?",
+        "description": "Cada mod que você adiciona é guardado aqui — organizado, preparado e pronto para ativar quando quiser.",
+        "preview": "Onde seus mods gerenciados são armazenados"
+      },
+      "downloads": {
+        "label": "Downloads",
+        "heading": "Onde os novos downloads chegam?",
+        "description": "O Hyperion recolhe novos arquivos de mod desta pasta. Sugerimos uma ao lado da sua biblioteca — mude quando quiser.",
+        "preview": "Onde novos arquivos de mod são recolhidos"
+      },
+      "nexus": {
+        "label": "Nexus",
+        "heading": "Conecte sua conta Nexus",
+        "description": "Cole sua chave de API pessoal do Nexus Mods para habilitar downloads e verificações de atualização. Você pode pular isto e adicionar depois em Configurações > Nexus.",
+        "preview": "Habilita downloads e verificações de atualização do Nexus"
+      }
+    },
+    "game": {
+      "placeholder": "Nenhuma pasta selecionada — detecte ou procure abaixo",
+      "valid": "Cyberpunk 2077 encontrado — está tudo pronto.",
+      "invalid": "Não encontramos o Cyberpunk 2077 nesta pasta.",
+      "continueTooltip": "Selecione uma pasta válida do Cyberpunk 2077 para continuar"
+    },
+    "library": {
+      "placeholder": "Nenhuma pasta selecionada — use a sugestão ou procure",
+      "valid": "Esta pasta está pronta para uso.",
+      "invalid": "Esta pasta não pode ser usada como biblioteca de mods.",
+      "continueTooltip": "Selecione uma pasta de biblioteca de mods válida para continuar"
+    },
+    "downloads": {
+      "placeholder": "Nenhuma pasta selecionada ainda",
+      "info": "Novos downloads de mods serão salvos aqui."
+    },
+    "nexus": {
+      "instruction1": "Faça login no Nexus Mods e abra a página de Configurações de Chave de API.",
+      "instruction2": "Role até o fim e encontre a Chave de API Pessoal.",
+      "instruction3": "Copie sua chave de API pessoal e cole abaixo.",
+      "openApiPage": "Abrir página de Chave de API",
+      "apiKeyLabel": "Chave de API pessoal",
+      "apiKeyPlaceholder": "Cole sua chave de API do Nexus Mods",
+      "showKey": "Mostrar chave de API",
+      "hideKey": "Ocultar chave de API",
+      "optionalInfo": "Opcional — você pode adicionar isto depois em Configurações > Nexus.",
+      "validating": "Validando sua chave de API…",
+      "connectedAs": "Conectado como",
+      "error": "Não conseguimos validar esta chave. Confira se você copiou a Chave de API Pessoal."
+    },
+    "finishTooltip": "Selecione uma pasta de jogo válida e uma biblioteca de mods para concluir",
+    "dialog": {
+      "game": "Selecione a pasta do Cyberpunk 2077",
+      "library": "Selecione a pasta da Biblioteca de Mods",
+      "downloads": "Selecione a pasta de Downloads"
+    },
+    "label": {
+      "library": "biblioteca de mods sugerida",
+      "downloads": "pasta de downloads sugerida"
+    },
+    "toast": {
+      "detectFailed": "Não foi possível detectar o Cyberpunk 2077 automaticamente",
+      "gameDetected": "Pasta do jogo detectada",
+      "createDirFailed": "Não foi possível criar {label}",
+      "libraryLoaded": "Biblioteca de mods sugerida carregada",
+      "downloadsLoaded": "Pasta de downloads sugerida carregada",
+      "finishInvalid": "Selecione uma pasta de jogo válida e uma biblioteca de mods antes de concluir",
+      "purged": "Removidos {count} mod(s) ativo(s) da implantação anterior",
+      "purgeFailed": "Não foi possível remover totalmente {count} mod(s) da implantação anterior",
+      "saveFailed": "Não foi possível salvar a configuração",
+      "restorePartial": "Biblioteca carregada, mas {count} mod(s) ativo(s) não puderam ser restaurados",
+      "complete": "Configuração concluída"
+    }
+  },
+  "library": {
+    "toolbar": {
+      "title": "Mods Gerenciados",
+      "titleTooltip": "Mods Gerenciados: lista de mods gerenciados pela biblioteca do Hyperion.\nUse o botão 'Instalar Mod' para adicionar um mod. Use 'Reinstalar' para reinstalar a partir do arquivo de origem original.",
+      "quickSelectTooltip": "SELEÇÃO RÁPIDA:\nClique em um mod e depois selecione outro segurando Shift para selecionar vários mods.\nCtrl+A para selecionar todos os mods.",
+      "customOrderTooltip": "Ordem Personalizada ativa.\nArraste um mod até um separador para agrupá-lo.\nArraste antes/depois de uma linha para reordenar.\nArraste até o cabeçalho para mover um mod ao nível principal.",
+      "customOrder": "Ordem Personalizada",
+      "searchPlaceholder": "Buscar mods gerenciados...",
+      "openModsFolder": "Abrir Pasta de Mods",
+      "checkUpdatesTooltip": "Verificar se há versões mais novas dos mods do Nexus instalados",
+      "checking": "Verificando…",
+      "updatesCount": "Atualizações ({count})",
+      "checkUpdates": "Verificar Atualizações",
+      "deleteAllLabel": "Excluir todos os mods",
+      "deleteAllTooltip": "Excluir todos os mods da biblioteca atual",
+      "installMod": "Instalar Mod",
+      "clearStatusFilter": "Limpar filtro de status",
+      "statusFilterAria": "Filtro de status do mod"
+    },
+    "install": {
+      "dialogTitle": "Selecionar Arquivo de Mod",
+      "archiveFilterName": "Arquivos de Mod"
+    },
+    "status": {
+      "all": "Todos",
+      "on": "Ativos",
+      "off": "Inativos",
+      "showAll": "Mostrar todos os mods",
+      "showEnabled": "Mostrar mods ativados",
+      "showDisabled": "Mostrar mods desativados",
+      "viewingEnabled": "Vendo ativados",
+      "viewingDisabled": "Vendo desativados"
+    },
+    "bulk": {
+      "enable": "Ativar",
+      "disable": "Desativar",
+      "moveToSeparator": "Mover para Separador",
+      "topLevel": "Nível Principal",
+      "uninstall": "Desinstalar",
+      "clearSelection": "Limpar seleção"
+    },
+    "header": {
+      "resizeColumn": "Redimensionar coluna {column}",
+      "releaseTopLevel": "Solte Para Nível Principal",
+      "dragTopLevel": "Arraste Aqui Para Nível Principal",
+      "applying": "Aplicando...",
+      "disableAllVisible": "Desativar todos os mods visíveis",
+      "enableAllVisible": "Ativar todos os mods visíveis",
+      "columnName": "Nome do Mod",
+      "columnVersion": "Versão",
+      "columnCategory": "Categoria",
+      "columnDate": "Data",
+      "columnActions": "Ações",
+      "sortByName": "Ordenar por nome do mod",
+      "sortByCategory": "Ordenar por categoria",
+      "sortByDate": "Ordenar por data de instalação",
+      "bulkUnavailableEnabled": "Indisponível enquanto o filtro Ativos está ativo",
+      "bulkUnavailableDisabled": "Indisponível enquanto o filtro Inativos está ativo"
+    },
+    "empty": {
+      "noMatch": "Nenhum mod corresponde à busca",
+      "noneInstalled": "Nenhum mod instalado",
+      "noneDisabled": "Nenhum mod desativado",
+      "noneEnabled": "Nenhum mod ativado",
+      "noneAvailable": "Nenhum mod disponível",
+      "downloads": "Downloads"
+    },
+    "menu": {
+      "refreshLibrary": "Atualizar Biblioteca",
+      "createSeparatorHere": "Criar Separador Aqui",
+      "moveSelectedTopLevel": "Mover Selecionados para o Nível Principal",
+      "expandAll": "Expandir Todos os Separadores",
+      "collapseAll": "Recolher Todos os Separadores",
+      "renameSeparator": "Renomear Separador",
+      "createSeparatorBefore": "Criar Separador Antes",
+      "openInExplorer": "Abrir no Explorador de Arquivos",
+      "deleteSeparator": "Excluir Separador",
+      "details": "Detalhes",
+      "rename": "Renomear",
+      "moveToSeparator": "Mover para Separador",
+      "moveToTopLevel": "Mover para o Nível Principal",
+      "checkForUpdate": "Verificar Atualização",
+      "openOnNexus": "Abrir no Nexus"
+    },
+    "dnd": {
+      "dropToInstall": "Solte para instalar o mod"
+    },
+    "separator": {
+      "dropHint_one": "Solte {count} mod aqui",
+      "dropHint_other": "Solte {count} mods aqui"
+    },
+    "toast": {
+      "revealFailed": "Não foi possível exibir esse mod com os filtros atuais",
+      "modsFolderNotConfigured": "A pasta de mods ainda não está configurada",
+      "openModsFolderFailed": "Não foi possível abrir a pasta de mods",
+      "refreshed": "Biblioteca atualizada",
+      "noNexusMods": "Nenhum mod de origem Nexus para verificar.",
+      "addApiKey": "Adicione uma chave de API do Nexus nas Configurações para verificar atualizações.",
+      "updateAvailableSingle": "Atualização disponível no Nexus.",
+      "modUpToDate": "Este mod está atualizado.",
+      "updatesAvailable_one": "{count} atualização de mod disponível.",
+      "updatesAvailable_other": "{count} atualizações de mods disponíveis.",
+      "allUpToDate": "Todos os mods do Nexus estão atualizados.",
+      "checkUpdatesError": "Não foi possível verificar atualizações de mods.",
+      "openedOnNexus": "Aberto no Nexus — use \"Mod Manager Download\" para atualizar este mod.",
+      "noNexusLink": "Nenhum link do Nexus armazenado para este mod",
+      "noOriginalSource": "A fonte original não está armazenada para este mod",
+      "noEntriesToDelete": "Nenhum item da biblioteca para excluir",
+      "noSelectedToDelete": "Nenhum mod selecionado para excluir",
+      "entriesDeleted_one": "{count} item da biblioteca excluído",
+      "entriesDeleted_other": "{count} itens da biblioteca excluídos",
+      "entriesDeleteFailed_one": "{count} item da biblioteca não pôde ser excluído",
+      "entriesDeleteFailed_other": "{count} itens da biblioteca não puderam ser excluídos",
+      "selectionDeleted_one": "{count} mod excluído da seleção",
+      "selectionDeleted_other": "{count} mods excluídos da seleção",
+      "selectionDeleteFailed_one": "{count} mod não pôde ser excluído",
+      "selectionDeleteFailed_other": "{count} mods não puderam ser excluídos",
+      "deleteFailed": "Falha ao excluir",
+      "modDeleted": "{name} excluído",
+      "returnToCustomOrderReorder": "Volte para a Ordem Personalizada para reordenar mods manualmente",
+      "dropArchiveToInstall": "Solte um arquivo de mod .zip, .rar ou .7z para instalar",
+      "dropPathUnreadable": "Não foi possível ler o caminho do arquivo solto. Use Instalar Mod para selecioná-lo manualmente.",
+      "closeGameBeforeInstall": "Feche o Cyberpunk 2077 antes de instalar mods",
+      "setPathsBeforeInstall": "Defina o Caminho do Jogo e a Biblioteca de Mods antes de instalar mods",
+      "installFailed": "Falha na instalação",
+      "installedNotActivated": "Instalado, mas não foi possível ativar: {error}",
+      "installedActivated": "{name} instalado e ativado",
+      "returnToCustomOrderMoveBetween": "Volte para a Ordem Personalizada para mover mods entre separadores",
+      "returnToCustomOrderMoveOut": "Volte para a Ordem Personalizada para mover mods para fora dos separadores",
+      "movedIntoSeparator_one": "{count} mod movido para {name}",
+      "movedIntoSeparator_other": "{count} mods movidos para {name}",
+      "movedToTopLevel_one": "{count} mod movido de volta ao nível principal",
+      "movedToTopLevel_other": "{count} mods movidos de volta ao nível principal",
+      "separatorNameEmpty": "O nome do separador não pode ficar vazio",
+      "separatorCreateFailed": "Não foi possível criar o separador",
+      "separatorCreated": "Separador criado",
+      "separatorNameUpdated": "Nome do separador atualizado",
+      "separatorFallbackName": "separador",
+      "noModsToEnable": "Nenhum mod para ativar",
+      "noModsToDisable": "Nenhum mod para desativar",
+      "bulkEnabled_one": "{count} mod ativado",
+      "bulkEnabled_other": "{count} mods ativados",
+      "bulkDisabled_one": "{count} mod desativado",
+      "bulkDisabled_other": "{count} mods desativados",
+      "bulkEnableFailed_one": "{count} mod falhou ao ativar",
+      "bulkEnableFailed_other": "{count} mods falharam ao ativar",
+      "bulkDisableFailed_one": "{count} mod falhou ao desativar",
+      "bulkDisableFailed_other": "{count} mods falharam ao desativar"
+    },
+    "separatorDialog": {
+      "createTitle": "Criar Separador",
+      "renameTitle": "Renomear Separador",
+      "createDescription": "Crie um divisor de biblioteca para a ordem personalizada. Você pode arrastar mods para dentro dele depois ou usar Mover para Separador na barra de seleção.",
+      "renameDescription": "Atualize o rótulo exibido para este separador na Ordem Personalizada.",
+      "createSubmit": "Criar Separador",
+      "renameSubmit": "Salvar Nome",
+      "nameLabel": "Nome do Separador"
+    },
+    "row": {
+      "modCount_one": "{count} mod",
+      "modCount_other": "{count} mods",
+      "separatorUpdateTitle_one": "{count} mod tem atualização disponível",
+      "separatorUpdateTitle_other": "{count} mods têm atualizações disponíveis",
+      "dropSelectedHere": "Solte os Selecionados Aqui",
+      "recentInstalled": "Instalado",
+      "recentUpdated": "Atualizado",
+      "recentDowngraded": "Rebaixado",
+      "toggleFailed": "Falha na operação",
+      "categoryTooltip": "Categoria: {category}",
+      "saveName": "Salvar nome",
+      "cancelRename": "Cancelar renomeação",
+      "renameMod": "Renomear mod",
+      "removeMod": "Remover mod"
+    },
+    "conflict": {
+      "overwrites_one": "Sobrescreve {count} arquivo",
+      "overwrites_other": "Sobrescreve {count} arquivos",
+      "overwrittenBy_one": "Sobrescrito por {count} arquivo",
+      "overwrittenBy_other": "Sobrescrito por {count} arquivos",
+      "redundantFull": "Redundante: totalmente sobrescrito",
+      "redundantAria": "Redundante: todos os arquivos aplicados estão sobrescritos.",
+      "clickToInspect": "Clique para inspecionar conflitos",
+      "clickToInspectAria": "Clique para inspecionar conflitos.",
+      "goTo": "Ir para {name}",
+      "moreAbove": "mais {count} acima",
+      "moreBelow": "mais {count} abaixo",
+      "losesToSelected": "Perde para o selecionado",
+      "winsOverSelected": "Vence o selecionado",
+      "go": "IR"
+    },
+    "update": {
+      "installed": "Instalada: {version}",
+      "latest": "Mais recente: {version}",
+      "updatingInLibrary": "Atualizando na biblioteca.",
+      "newVersion": "Nova versão no Nexus. Clique para atualizar."
+    },
+    "progress": {
+      "installingMod": "Instalando mod",
+      "removingSeparator": "Removendo separador da biblioteca",
+      "removingFiles": "Removendo arquivos do disco",
+      "deleting": "Excluindo",
+      "deletingMod": "Excluindo mod"
+    },
+    "delete": {
+      "modTitle": "Excluir Mod",
+      "separatorTitle": "Excluir Separador",
+      "modDescription": "Você está prestes a excluir permanentemente {name} da sua biblioteca de mods.",
+      "separatorDescription": "Você está prestes a excluir permanentemente o separador {name} da sua biblioteca de mods.",
+      "modDetailLabel": "Mod sendo excluído",
+      "separatorDetailLabel": "Separador sendo excluído",
+      "allTitle": "Excluir Biblioteca Inteira",
+      "allDescription": "Isto exclui permanentemente todos os itens visíveis da biblioteca, incluindo separadores. Mods ativados são removidos do jogo primeiro e depois apagados da própria biblioteca.",
+      "allDetailLabelEntries": "Itens da biblioteca",
+      "allDetailLabelInstalled": "Mods instalados",
+      "everything": "Excluir Tudo",
+      "selectedTitle": "Excluir Mods Selecionados",
+      "selectedDescription": "Isto exclui permanentemente todos os mods selecionados da biblioteca atual. Mods ativados são removidos do jogo primeiro e depois apagados do disco.",
+      "selectedDetailLabel": "Mods selecionados",
+      "modsBeingUninstalled": "Mods sendo desinstalados",
+      "selectedCount": "{count} selecionados",
+      "deleteSelected": "Excluir Selecionados"
+    },
+    "detail": {
+      "tabFiles": "Arquivos",
+      "tabConflicts": "Conflitos",
+      "enabled": "Ativado",
+      "disabled": "Desativado",
+      "renameMod": "Renomear mod",
+      "closeDetails": "Fechar detalhes",
+      "openModFolder": "Abrir Pasta do Mod",
+      "searchFiles": "Buscar arquivos...",
+      "columnName": "Nome",
+      "columnScope": "Escopo",
+      "treeModeDeployed": "Exibindo a última estrutura de implantação conhecida em relação à raiz do jogo.",
+      "treeModeInferred": "Exibindo a estrutura de implantação inferida com base nos arquivos indexados e no tipo do mod.",
+      "noFilesMatched": "Nenhum arquivo correspondeu a esta busca.",
+      "pathsTab": "Caminhos ({count})",
+      "archivesTab": ".archive ({count})",
+      "winsEmpty": "Este mod não está sobrescrevendo arquivos de outros mods no momento.",
+      "lossEmpty": "Nenhum outro mod está sobrescrevendo arquivos deste mod no momento.",
+      "winsTitle": "Este Mod Vence",
+      "lossTitle": "Outros Mods Vencem",
+      "conflictModColumn": "Mod",
+      "conflictFileColumn": "Arquivo",
+      "conflictWinsSubtitle": "Este mod carrega por cima destes.",
+      "conflictLossSubtitle": "Estes carregam por cima deste mod.",
+      "conflictUnknownMod": "Mod desconhecido",
+      "conflictArchiveHash": "Hash do archive - {hash}",
+      "treeFileCount_one": "{count} arquivo",
+      "treeFileCount_other": "{count} arquivos",
+      "treeFile": "arquivo",
+      "menuOpenFileLocation": "Abrir Local do Arquivo",
+      "menuOpenExactLocation": "Abrir Local Exato",
+      "menuCreateFolder": "Criar Pasta",
+      "menuRename": "Renomear",
+      "dialogRenameEntryTitle": "Renomear Item",
+      "dialogCreateFolderTitle": "Criar Pasta",
+      "dialogRenameEntryDescription": "Escolha o novo nome para este item dentro do pacote do mod.",
+      "dialogCreateFolderDescription": "Crie uma nova pasta no local atualmente selecionado deste mod.",
+      "dialogEntryNameLabel": "Nome do Item",
+      "dialogFolderNameLabel": "Nome da Pasta",
+      "dialogSaveName": "Salvar Nome",
+      "dialogRenameModTitle": "Renomear Mod",
+      "dialogRenameModDescription": "Atualize o rótulo exibido para este mod na biblioteca.",
+      "dialogModNameLabel": "Nome do Mod",
+      "dialogSaving": "Salvando...",
+      "dialogDeleteEntryTitle": "Excluir Item",
+      "dialogDeleteEntryDescription": "Isto removerá permanentemente o arquivo ou pasta selecionado do pacote do mod.",
+      "dialogDeleteEntryTarget": "Alvo",
+      "dialogUnknownEntry": "Item desconhecido",
+      "toastNameEmpty": "O nome do mod não pode ficar vazio",
+      "toastNameUpdated": "Nome do mod atualizado",
+      "toastLibraryPathNotConfigured": "O caminho da biblioteca não está configurado",
+      "toastSelectFirst": "Selecione um arquivo ou pasta primeiro",
+      "toastNoExactSource": "Esta pasta inferida não tem um local de origem exato no pacote do mod",
+      "toastFolderCreated": "Pasta criada",
+      "toastCannotRename": "Este item não pode ser renomeado pela visualização da árvore de implantação",
+      "toastEntryRenamed": "Item renomeado",
+      "toastCannotDelete": "Este item não pode ser excluído pela visualização da árvore de implantação",
+      "toastEntryDeleted": "Item excluído",
+      "toastTreeUpdated": "Árvore atualizada",
+      "toastTreeActionFailed": "Falha na ação da árvore de arquivos"
+    }
+  },
+  "settings": {
+    "general": {
+      "installBehavior": {
+        "title": "Comportamento de Instalação",
+        "description": "Comportamento padrão para arquivos que terminam de baixar por links do Nexus.",
+        "toggleTitle": "Instalar downloads concluídos automaticamente",
+        "toggleDescription": "Downloads do Nexus são instalados automaticamente quando o arquivo está pronto. Desative isto se preferir preparar os arquivos em Downloads primeiro."
+      },
+      "runtimeCaptures": {
+        "title": "Capturas de Execução",
+        "description": "Arquivos escritos por ferramentas de mod (CET, plugins RED4ext) durante o jogo são capturados aqui e mantidos fora da pasta do jogo entre sessões.",
+        "clean": "Nenhum arquivo capturado - a pasta do jogo está limpa.",
+        "captured_one": "{count} arquivo capturado de sessões anteriores.",
+        "captured_other": "{count} arquivos capturados de sessões anteriores.",
+        "loading": "Carregando...",
+        "clearing": "Limpando...",
+        "clear": "Limpar capturas"
+      },
+      "language": {
+        "title": "Idioma",
+        "description": "Escolha o idioma em que a interface do Hyperion é exibida."
+      }
+    },
+    "header": {
+      "eyebrow": "Painel de controle",
+      "title": "Configurações",
+      "subtitle": "Configure caminhos, acesso ao Nexus e atualizações do Hyperion sem sair do gerenciador.",
+      "sectionsAria": "Seções das configurações"
+    },
+    "tabs": {
+      "general": "Geral",
+      "paths": "Caminhos",
+      "nexus": "Nexus",
+      "updates": "Atualizações",
+      "about": "Sobre"
+    },
+    "paths": {
+      "game": {
+        "title": "Caminho do Jogo",
+        "description": "Raiz da instalação do Cyberpunk 2077 usada para validação de inicialização e implantação.",
+        "placeholder": "Nenhuma pasta selecionada - detecte ou procure",
+        "valid": "Cyberpunk 2077 encontrado. A validação de inicialização e implantação está pronta.",
+        "invalid": "Não encontramos o Cyberpunk 2077 nesta pasta. A inicialização permanece bloqueada até ser corrigida.",
+        "dialogTitle": "Selecione a pasta do Cyberpunk 2077"
+      },
+      "library": {
+        "title": "Biblioteca de Mods",
+        "description": "Repositório de arquivos gerenciado para metadados, reinstalações, recuperação preparada e reconstruções de implantação.",
+        "placeholder": "Nenhuma pasta selecionada - use a sugerida ou procure",
+        "valid": "Instalações, reverificações e recuperação podem usar esta biblioteca.",
+        "invalid": "Esta pasta não pode ser usada como biblioteca de mods. As instalações permanecem bloqueadas até ser corrigida.",
+        "dialogTitle": "Selecione a pasta da Biblioteca de Mods"
+      },
+      "downloads": {
+        "title": "Entrada de Downloads",
+        "description": "Pasta de origem opcional para arquivos recebidos antes da instalação.",
+        "placeholder": "Aguardando um caminho de biblioteca...",
+        "defaultDescription": "Usando a pasta padrão ao lado da sua biblioteca.",
+        "activeDescription": "Novos arquivos de mod são recolhidos daqui.",
+        "dialogTitle": "Selecione a pasta de Downloads"
+      }
+    },
+    "nexus": {
+      "status": {
+        "connected": "Conectado",
+        "checking": "Verificando...",
+        "invalidKey": "Chave inválida",
+        "notConnected": "Não conectado"
+      },
+      "connection": {
+        "title": "Conexão Nexus",
+        "description": "Cole sua chave de API pessoal do Nexus. O Hyperion a salva automaticamente e a valida em segundo plano.",
+        "placeholder": "Cole sua chave de API do Nexus aqui...",
+        "clearKey": "Limpar chave"
+      },
+      "account": {
+        "title": "Conta",
+        "description": "Identidade Nexus vinculada e nível de assinatura.",
+        "userLine": "{email} · Usuário #{id}",
+        "empty": "Adicione uma chave de API válida para exibir sua conta e desbloquear os fluxos integrados ao Nexus."
+      },
+      "tiers": {
+        "free": {
+          "feat1": "Atualizações de mods abrem o Nexus no navegador",
+          "feat2": "Downloads via link nxm:// a partir do site",
+          "feat3": "Downloads concluídos instalam automaticamente por padrão"
+        },
+        "premium": {
+          "feat1": "Atualizações de mods baixam diretamente, sem navegador",
+          "feat2": "Links diretos de CDN resolvidos pela API do Nexus",
+          "feat3": "Instalação inline com um clique, sem sair da Biblioteca"
+        }
+      },
+      "downloadFlow": {
+        "title": "Fluxo de Download",
+        "description": "Mantenha as instalações do Nexus previsíveis.",
+        "bullet1": "Links do Nexus chegam em Downloads e instalam automaticamente, a menos que desativado em Geral.",
+        "bullet2": "O Hyperion ainda pergunta quando uma decisão de duplicata, FOMOD ou sobrescrita precisa da sua escolha."
+      }
+    },
+    "updates": {
+      "title": "Atualizações do Aplicativo",
+      "description": "Verifique, baixe e instale novas versões do Hyperion.",
+      "status": {
+        "ready": "Pronta para instalar",
+        "available": "Atualização disponível"
+      },
+      "message": {
+        "ready": "A atualização {version} está pronta para instalar.",
+        "available": "A atualização {version} está disponível para download.",
+        "upToDate": "A versão atual está atualizada."
+      },
+      "checking": "Verificando...",
+      "checkButton": "Verificar atualizações",
+      "downloading": "Baixando...",
+      "downloadButton": "Baixar atualização",
+      "installButton": "Instalar e reiniciar"
+    },
+    "about": {
+      "title": "Sobre o Hyperion",
+      "description": "Gerenciador de mods de Cyberpunk 2077 focado em implantação virtual, visibilidade de conflitos e uma ordem de carregamento previsível.",
+      "projectLabel": "Projeto",
+      "unofficial": "Não oficial",
+      "projectBody": "Feito para um fluxo de modding de Cyberpunk 2077 limpo: instalar, inspecionar, reordenar e iniciar sem transformar a pasta do jogo na fonte da verdade.",
+      "releases": "Versões",
+      "supportLabel": "Suporte",
+      "supportBody": "Para relatórios de bugs, inclua sua versão do Hyperion e o resumo de diagnóstico para que problemas de inicialização, VFS e caminhos sejam mais fáceis de rastrear.",
+      "reportIssue": "Relatar problema",
+      "copyDiagnostics": "Copiar diagnóstico",
+      "creditsTitle": "Créditos",
+      "creditsDescription": "Agradecimentos às ferramentas, APIs e referências de modding que tornam o Hyperion possível.",
+      "credits": {
+        "coreVfsLabel": "VFS Principal",
+        "coreVfsBody": "A implantação virtual do Hyperion é movida pelo usvfs, o VFS de espaço de usuário usado pelo Mod Organizer 2.",
+        "serviceApiLabel": "API de Serviço",
+        "serviceApiBody": "Validação de conta, verificações de atualização, links nxm e tratamento de downloads com suporte a Premium.",
+        "referenceLabel": "Referência",
+        "referenceBody": "Comportamento de archives, detalhes da ordem de carregamento e documentação pública de modding de Cyberpunk."
+      },
+      "disclaimer": "O Hyperion não é afiliado à CD PROJEKT RED, ao Nexus Mods, ao Mod Organizer 2 nem aos mantenedores do usvfs."
+    },
+    "toast": {
+      "capturesCleared": "Capturas de execução limpas",
+      "capturesClearError": "Não foi possível limpar as capturas de execução",
+      "diagnosticsCopied": "Resumo de diagnóstico copiado",
+      "diagnosticsCopyError": "Não foi possível copiar o resumo de diagnóstico",
+      "purged_one": "Removido {count} mod ativo da implantação anterior",
+      "purged_other": "Removidos {count} mods ativos da implantação anterior",
+      "purgeFailed_one": "Não foi possível remover totalmente {count} mod da implantação anterior",
+      "purgeFailed_other": "Não foi possível remover totalmente {count} mods da implantação anterior",
+      "saveConfigError": "Não foi possível salvar a configuração",
+      "restoreFailed_one": "Biblioteca carregada, mas {count} mod ativo não pôde ser restaurado",
+      "restoreFailed_other": "Biblioteca carregada, mas {count} mods ativos não puderam ser restaurados",
+      "changesSaved": "Alterações salvas",
+      "nexusKeySaved": "Chave de API do Nexus salva",
+      "nexusKeyCleared": "Chave de API do Nexus removida",
+      "nexusKeyError": "Não foi possível salvar a chave de API do Nexus",
+      "gameDetectError": "Não foi possível detectar o Cyberpunk 2077 automaticamente",
+      "gameDetected": "Pasta do jogo detectada",
+      "createDirError": "Não foi possível criar {label}",
+      "libraryLabel": "biblioteca de mods sugerida",
+      "downloadsLabel": "pasta de downloads sugerida",
+      "libraryLoaded": "Biblioteca de mods sugerida carregada",
+      "downloadsLoaded": "Pasta de downloads sugerida carregada",
+      "updateRefreshed": "Status de atualização atualizado",
+      "updateChecked": "Verificação de atualizações do Hyperion concluída",
+      "updateCheckError": "Não foi possível verificar atualizações",
+      "updateDownloaded": "Atualização baixada",
+      "updateDownloadError": "Não foi possível baixar a atualização"
+    }
+  },
+  "dialogs": {
+    "fomod": {
+      "label": "Instalador FOMOD",
+      "stepCounter": "Etapa {pos} / {total}",
+      "noOptions": "Nenhuma opção para configurar",
+      "preview": "Pré-visualização",
+      "clickToExpand": "Clique para expandir",
+      "required": "obrigatório",
+      "allSelected": "todos selecionados",
+      "fallbackModuleName": "Instalação do Mod",
+      "fallbackStepName": "Opções de Instalação",
+      "fallbackGroupName": "Opções",
+      "fallbackPluginName": "Desconhecido"
+    },
+    "duplicateDownload": {
+      "titleDownloading": "Arquivo Já Está Baixando",
+      "titleExists": "Arquivo Já Existe",
+      "descriptionDownloading": "O Hyperion já está baixando este arquivo agora. Se você continuar, a nova solicitação será salva como uma cópia separada para que os dois downloads terminem sem colidir.",
+      "descriptionExists": "O Hyperion encontrou este arquivo na sua pasta de downloads. Se você continuar, o novo download será salvo como uma cópia separada com um rótulo de duplicata claro.",
+      "downloadAgain": "Baixar Novamente",
+      "labelDownloading": "Arquivo baixando agora",
+      "labelExisting": "Arquivo existente",
+      "newName": "Nome do novo arquivo"
+    },
+    "duplicateInstall": {
+      "installFailed": "Falha na instalação",
+      "installedNotActivated": "Instalado, mas não foi possível ativar: {error}",
+      "installedActivated": "{name} instalado e ativado",
+      "reinstallTitle": "Reinstalar Mod",
+      "existsTitle": "Mod Já Instalado",
+      "reinstallDescription": "Você está prestes a reinstalar {name} a partir do arquivo ou pasta de origem original.",
+      "existsDescription": "Você está instalando {name}, mas o Hyperion encontrou um módulo existente com a mesma identidade na sua biblioteca.",
+      "reinstallDetailLabel": "Mod alvo",
+      "existsDetailLabel": "Mod existente",
+      "replace": "Substituir",
+      "installAsCopy": "Instalar como Cópia"
+    },
+    "overwrite": {
+      "title": "Prévia de Sobrescrita",
+      "descriptionLosing": "Esta instalação compartilha caminhos de destino do jogo com mods ativados. O Hyperion respeitará a ordem da biblioteca, então arquivos de mods abaixo desta posição ainda vencem sobre o mod recebido.",
+      "descriptionWinning": "Esta instalação compartilha caminhos de destino do jogo com mods ativados. O Hyperion o implantará usando a ordem da biblioteca, então o mod recebido terá prioridade onde ele cair mais tarde na pilha.",
+      "descriptionArchive": "Esta instalação também afeta recursos de archive já presentes em mods ativados. Revise a sobreposição antes de continuar.",
+      "incomingPriority": "Prioridade do Recebido",
+      "wins": "Vence",
+      "stillOverridden": "Ainda Sobrescrito",
+      "affectedMods": "Mods Afetados",
+      "archiveConflictNote_one": "{count} conflito de recurso de archive detectado. Estes não são simples sobrescritas de arquivo e ainda podem depender do comportamento de carregamento do archive.",
+      "archiveConflictNote_other": "{count} conflitos de recurso de archive detectados. Estes não são simples sobrescritas de arquivo e ainda podem depender do comportamento de carregamento do archive.",
+      "priorityNote": "Mods com uma posição `#` maior que esta instalação manterão prioridade nesses caminhos compartilhados.",
+      "outcome": "Resultado",
+      "gameTarget": "Destino no Jogo",
+      "existingMod": "Mod Existente",
+      "tagArchive": "Archive",
+      "tagIncomingWins": "Recebido Vence",
+      "tagExistingWins": "Existente Vence",
+      "archiveResource": "Recurso de archive: {hash}",
+      "moreOverlaps_one": "+{count} sobreposição a mais nesta instalação.",
+      "moreOverlaps_other": "+{count} sobreposições a mais nesta instalação.",
+      "primary": "Instalar Com a Prioridade Atual",
+      "cancel": "Cancelar Instalação"
+    },
+    "version": {
+      "title": "Versão Divergente",
+      "unknown": "Desconhecida",
+      "badgeNewer": "Mais nova",
+      "badgeOlder": "Mais antiga",
+      "badgeDifferent": "Diferente",
+      "badgeReview": "Revisar",
+      "summaryUpgrade": "Uma versão mais nova deste mod já está na sua biblioteca.",
+      "summaryDowngrade": "O arquivo selecionado é mais antigo do que o que você tem instalado.",
+      "summaryDifferent": "O arquivo selecionado é uma versão diferente de um mod instalado.",
+      "summaryUnknown": "Este arquivo corresponde a um mod instalado, mas as versões não puderam ser comparadas.",
+      "recommended": "Recomendado",
+      "installed": "Instalada",
+      "selected": "Selecionada",
+      "keep": "Manter {version}",
+      "keepHelper": "Mantenha a instalação atual e ignore este arquivo mais antigo.",
+      "addToLibrary": "Adicionar à Biblioteca",
+      "addToLibraryHelper": "Mantenha as duas — adicione esta versão como um item separado.",
+      "updateTo": "Atualizar para {version}",
+      "switchTo": "Trocar para {version}",
+      "replaceHelper": "Substitua o mod instalado por esta versão.",
+      "replaceOlder": "Substituir pela mais antiga {version}",
+      "notNow": "Agora não"
+    },
+    "moveToSeparator": {
+      "title": "Mover para Separador",
+      "descriptionOne": "Escolha um separador para mover este mod.",
+      "descriptionMany": "Escolha um separador para mover {count} mods selecionados.",
+      "searchPlaceholder": "Buscar separadores...",
+      "noMatch": "Nenhum separador corresponde à sua busca."
+    }
+  },
+  "logs": {
+    "title": "Registros do App",
+    "live": "ao vivo",
+    "description": "Eventos de diagnóstico e solicitações à API do Nexus são agrupados aqui. Clique em uma linha para inspecionar detalhes estruturados ou payloads de solicitação.",
+    "closeLogs": "Fechar registros",
+    "sectionsAria": "Seções dos registros do app",
+    "tabGeneral": "Geral",
+    "tabRequests": "Solicitações",
+    "clearGeneral": "Limpar registros Gerais",
+    "clearRequests": "Limpar registros de Solicitações",
+    "entries_one": "{count} entrada",
+    "entries_other": "{count} entradas",
+    "loading": "Carregando registros...",
+    "emptyGeneral": "Nenhum registro geral do app foi gravado ainda",
+    "emptyRequests": "Nenhum registro de solicitação foi gravado ainda",
+    "emptyRequestsLive": "Nenhum registro de solicitação ao vivo foi gravado ainda",
+    "hideSecrets": "Ocultar segredos",
+    "revealSecrets": "Revelar segredos",
+    "copyTitle": "Copiar {title}",
+    "emptyNode": "vazio",
+    "payload": "Payload",
+    "copiedWithSecrets": "{label} copiado com os segredos visíveis",
+    "copied": "{label} copiado",
+    "copyError": "Não foi possível copiar {label}",
+    "preview": "Pré-visualização",
+    "previewMock": "Exemplo de POST fictício para pré-visualizar como o payload enviado e a resposta recebida são exibidos no inspetor.",
+    "method": "Método",
+    "endpoint": "Endpoint",
+    "status": "Status",
+    "apiTime": "Tempo da API",
+    "requestUrl": "URL da Solicitação",
+    "error": "Erro",
+    "requestBody": "Corpo da Solicitação",
+    "noRequestBody": "Sem corpo de solicitação",
+    "responseBody": "Corpo da Resposta",
+    "noResponseBody": "Nenhum corpo de resposta capturado",
+    "source": "Origem",
+    "level": "Nível",
+    "occurred": "Ocorreu em",
+    "details": "Detalhes",
+    "noDetails": "Sem detalhes estruturados"
+  }
+}

@@ -1,3 +1,5 @@
+import { translate } from '../i18n/translate'
+
 export type InstallProgressPhase = 'preparing' | 'extracting' | 'analyzing' | 'installing' | 'done'
 
 export interface InstallProgressAppearance {
@@ -72,15 +74,26 @@ const DONE_APPEARANCE: InstallProgressAppearance = {
   icon: 'task_alt',
 }
 
+// Overlay text is localized at call time (translate() reads the active language
+// from the store); the consuming components re-render on language change.
+function withTranslatedText(base: InstallProgressAppearance): InstallProgressAppearance {
+  return {
+    ...base,
+    label: translate(`downloads.install.${base.phase}.label`),
+    summary: translate(`downloads.install.${base.phase}.summary`),
+    detailFallback: translate(`downloads.install.${base.phase}.detail`),
+  }
+}
+
 export function getInstallProgressAppearance(status?: string): InstallProgressAppearance {
   const normalized = status?.trim().toLowerCase() ?? ''
 
-  if (normalized.includes('done') || normalized.includes('complete')) return DONE_APPEARANCE
-  if (normalized.includes('extract') || normalized.includes('reading archive')) return EXTRACTING_APPEARANCE
+  if (normalized.includes('done') || normalized.includes('complete')) return withTranslatedText(DONE_APPEARANCE)
+  if (normalized.includes('extract') || normalized.includes('reading archive')) return withTranslatedText(EXTRACTING_APPEARANCE)
   if (normalized.includes('detect') || normalized.includes('conflict') || normalized.includes('checking')) {
-    return ANALYZING_APPEARANCE
+    return withTranslatedText(ANALYZING_APPEARANCE)
   }
-  if (normalized.includes('prepare') || normalized.includes('starting')) return PREPARING_APPEARANCE
-  return INSTALLING_APPEARANCE
+  if (normalized.includes('prepare') || normalized.includes('starting')) return withTranslatedText(PREPARING_APPEARANCE)
+  return withTranslatedText(INSTALLING_APPEARANCE)
 }
 

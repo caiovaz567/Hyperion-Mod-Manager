@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface SeparatorNameDialogProps {
   title: string
@@ -20,7 +21,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
   description,
   value,
   submitLabel,
-  inputLabel = 'Separator Name',
+  inputLabel,
   placeholder,
   selectOnOpen = false,
   onChange,
@@ -28,6 +29,8 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
   onCancel,
   submitting = false,
 }) => {
+  const { t } = useTranslation()
+  const resolvedInputLabel = inputLabel ?? t('library.separatorDialog.nameLabel')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useLayoutEffect(() => {
@@ -96,7 +99,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
 
           <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a]">
             <div className="border-b-[0.5px] border-[#171717] px-4 py-2 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#7f7f7f]">
-              {inputLabel}
+              {resolvedInputLabel}
             </div>
             <div className="px-4 py-4">
               <input
@@ -116,7 +119,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
               disabled={submitting}
               className="h-10 rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] px-4 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#9a9a9a] transition-colors hover:border-[#4c4c4c] hover:text-white disabled:opacity-60"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={onSubmit}

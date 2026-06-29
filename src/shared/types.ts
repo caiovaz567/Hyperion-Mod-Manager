@@ -67,6 +67,10 @@ export interface AppSettings {
   autoUpdate: boolean
   autoInstallDownloads: boolean
   nexusApiKey: string
+  // BCP-47 locale code for the interface language (e.g. 'en', 'pt-BR'). The
+  // renderer owns the list of supported locales; the main process only persists
+  // the value and falls back to 'en' when it is missing or not a string.
+  language?: string
   libraryColumnWidths?: {
     name?: number
     version?: number

@@ -16,6 +16,7 @@ import { DownloadsPane } from './features/downloads/DownloadsPane'
 import { SettingsPage } from './features/ui/SettingsDialog'
 import { AppLogsDialog } from './features/ui/NexusRequestLogDialog'
 import { getInstallProgressAppearance } from './utils/installProgressAppearance'
+import { useTranslation } from './i18n/I18nContext'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
@@ -47,7 +48,7 @@ async function waitForCriticalFonts(): Promise<void> {
 
 function getInstallOverlayName(sourcePath: string, currentFile: string): string {
   const raw = currentFile || sourcePath
-  if (!raw) return 'Preparing installation'
+  if (!raw) return ''
   const normalized = raw.replace(/\//g, '\\')
   const parts = normalized.split('\\').filter(Boolean)
   return parts[parts.length - 1] ?? raw
@@ -63,7 +64,6 @@ export const App: React.FC = () => {
     setupUpdateListeners,
     setupNxmListeners,
     activeView,
-    setStatus,
     settings,
     addToast,
     gamePathValid,
@@ -85,7 +85,6 @@ export const App: React.FC = () => {
     setupUpdateListeners: state.setupUpdateListeners,
     setupNxmListeners: state.setupNxmListeners,
     activeView: state.activeView,
-    setStatus: state.setStatus,
     settings: state.settings,
     addToast: state.addToast,
     gamePathValid: state.gamePathValid,
@@ -99,6 +98,7 @@ export const App: React.FC = () => {
     dialogs: state.dialogs,
     closeDialog: state.closeDialog,
   }), shallow)
+  const { t } = useTranslation()
 
   const [booting, setBooting] = useState(true)
 
@@ -110,7 +110,6 @@ export const App: React.FC = () => {
       const bootStartedAt = Date.now()
       const fontsReadyPromise = waitForCriticalFonts()
       const updateBootStatus = (message: string) => {
-        setStatus(message)
         IpcService.send(IPC.APP_BOOT_STATUS, message)
       }
 
@@ -123,7 +122,7 @@ export const App: React.FC = () => {
         if (detectedGame.ok && detectedGame.data) {
           await updateSettings({ gamePath: detectedGame.data })
           currentSettings = { ...currentSettings, gamePath: detectedGame.data }
-          addToast('Game path auto-detected', 'success', 2200)
+          addToast(t('shell.toast.gameAutoDetected'), 'success', 2200)
         }
       }
 
@@ -190,7 +189,6 @@ export const App: React.FC = () => {
       if (disposed) return
       console.error(error)
       IpcService.send(IPC.APP_BOOT_STATUS, 'Starting interface...')
-      setStatus('Ready')
       setBooting(false)
       void waitForFirstPaint().then(() => {
         if (disposed) return
@@ -230,7 +228,7 @@ export const App: React.FC = () => {
   const showSidebar = !needsOnboarding
   const showHeader = !needsOnboarding
   const installAppearance = getInstallProgressAppearance(installStatus)
-  const installOverlayName = getInstallOverlayName(installSourcePath, installCurrentFile)
+  const installOverlayName = getInstallOverlayName(installSourcePath, installCurrentFile) || t('downloads.overlay.preparing')
   const clampedInstallProgress = Math.max(6, Math.min(installProgress || 8, 100))
 
   return (
@@ -279,7 +277,7 @@ export const App: React.FC = () => {
                   className="brand-font text-[0.72rem] font-bold uppercase tracking-[0.2em] whitespace-nowrap"
                   style={{ color: installing ? installAppearance.accent : '#fcee09' }}
                 >
-                  {installing ? (installAppearance.label || 'Installing') : 'Analyzing'}
+                  {installing ? installAppearance.label : t('downloads.overlay.analyzing')}
                 </span>
               </div>
 
@@ -300,7 +298,7 @@ export const App: React.FC = () => {
 
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-[11px] text-[#555]">
-                  {installStatus || (detecting ? 'Detecting format...' : '')}
+                  {installStatus || (detecting ? t('downloads.overlay.detectingFormat') : '')}
                 </span>
                 <span className="text-[11px] font-mono text-[#444]">{Math.round(clampedInstallProgress)}%</span>
               </div>

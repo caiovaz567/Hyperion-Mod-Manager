@@ -2,6 +2,7 @@ import React from 'react'
 import type { ConflictInfo, ModMetadata } from '@shared/types'
 import type { FileTreeNode } from './DetailPanelTypes'
 import { getArchiveConflictHash, isUnresolvedArchiveConflict } from '../../utils/archiveConflictDisplay'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export const detailTitleClass = 'text-[1.12rem] font-bold leading-[1.08] tracking-[0.01em] text-[#f4f1ee] sm:text-[1.18rem]'
 export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm border-0 bg-[rgba(252,238,9,0.10)] px-4 text-[10px] brand-font font-bold uppercase tracking-widest text-[#d8d19a] transition-colors hover:bg-[#fcee09] hover:text-[#050505] [&_.material-symbols-outlined]:!text-current [&_.material-symbols-outlined]:transition-colors'
@@ -41,11 +42,12 @@ export const ConflictSection: React.FC<{
   showArchiveDetails?: boolean
   modsById?: Map<string, ModMetadata>
 }> = ({ conflicts, emptyMessage, tone, title, collapsed, onToggleCollapsed, className }) => {
+  const { t } = useTranslation()
   const isWin = tone === 'win'
   const accent = isWin ? '#34d399' : '#f87171'
   const count = conflicts.length
   // The right-hand column names the mod on the other side of the conflict.
-  const otherColumnLabel = 'Mod'
+  const otherColumnLabel = t('library.detail.conflictModColumn')
 
   // Cluster rows by the opposing mod (in load-order priority), then by path,
   // so every conflict against the same mod sits together.
@@ -84,7 +86,7 @@ export const ConflictSection: React.FC<{
           {title}
         </span>
         <span className="text-[13px] text-[#8f8b87]">
-          {isWin ? 'This mod loads over these.' : 'These load over this mod.'}
+          {isWin ? t('library.detail.conflictWinsSubtitle') : t('library.detail.conflictLossSubtitle')}
         </span>
 
         <span
@@ -109,7 +111,7 @@ export const ConflictSection: React.FC<{
         <div className="hyperion-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#090909]">
           {/* Sticky column headers */}
           <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1.6fr)_minmax(220px,1fr)] border-b border-[#161616] bg-[#080808]">
-            <span className="px-5 py-2.5 brand-font text-[11px] font-bold uppercase tracking-widest text-[#7a7672]">File</span>
+            <span className="px-5 py-2.5 brand-font text-[11px] font-bold uppercase tracking-widest text-[#7a7672]">{t('library.detail.conflictFileColumn')}</span>
             <span className="border-l border-[#141414] px-5 py-2.5 brand-font text-[11px] font-bold uppercase tracking-widest text-[#7a7672]">{otherColumnLabel}</span>
           </div>
 
@@ -117,11 +119,11 @@ export const ConflictSection: React.FC<{
           {sortedConflicts.map((conflict, index) => {
               const opponentName = isWin ? conflict.existingModName : conflict.incomingModName
               const opponentOrder = isWin ? conflict.existingOrder : conflict.incomingOrder
-              const opponentTitle = `${opponentName || 'Unknown mod'}${typeof opponentOrder === 'number' ? ` #${opponentOrder + 1}` : ''}`
+              const opponentTitle = `${opponentName || t('library.detail.conflictUnknownMod')}${typeof opponentOrder === 'number' ? ` #${opponentOrder + 1}` : ''}`
               const archiveHash = getArchiveConflictHash(conflict)
               const unresolved = isUnresolvedArchiveConflict(conflict)
               const displayPath = unresolved && archiveHash
-                ? `Archive hash - ${archiveHash}`
+                ? t('library.detail.conflictArchiveHash', { hash: archiveHash })
                 : conflict.resourcePath
               // Zebra striping helps the eye track a file across the gap to its mod.
               const zebra = index % 2 === 1
@@ -149,7 +151,7 @@ export const ConflictSection: React.FC<{
                       className="min-w-0 text-[13px] font-medium text-[#d2cec9] break-words leading-snug"
                       title={opponentTitle}
                     >
-                      {opponentName || 'Unknown mod'}
+                      {opponentName || t('library.detail.conflictUnknownMod')}
                     </span>
                     {typeof opponentOrder === 'number' && (
                       <span className="shrink-0 text-[12px] text-[#6f6b67]">#{opponentOrder + 1}</span>
@@ -177,6 +179,7 @@ export const FileTreeBranch: React.FC<{
   onSelect: (id: string) => void
   onContextMenu: (event: React.MouseEvent, node: FileTreeNode) => void
 }> = ({ node, depth, expandedIds, onToggle, selectedId, onSelect, onContextMenu }) => {
+  const { t, tn } = useTranslation()
   const isFolder = node.kind === 'folder'
   const isExpanded = isFolder && expandedIds.has(node.id)
   const selected = selectedId === node.id
@@ -225,7 +228,7 @@ export const FileTreeBranch: React.FC<{
         </button>
 
         <span className={`shrink-0 pl-4 text-sm ${selected ? 'text-[#f5efc4]' : 'text-[#979797]'}`}>
-          {isFolder ? `${node.fileCount} file${node.fileCount === 1 ? '' : 's'}` : 'file'}
+          {isFolder ? tn('library.detail.treeFileCount', node.fileCount) : t('library.detail.treeFile')}
         </span>
       </div>
 

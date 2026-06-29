@@ -1,5 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface ActionPromptDialogProps {
   accentColor: string
@@ -31,7 +32,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
   icon,
   primaryLabel,
   secondaryLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   primaryTextColor = '#050505',
   onPrimary,
   onSecondary,
@@ -40,6 +41,8 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
   detailContent,
   maxWidthClassName,
 }) => {
+  const { t } = useTranslation()
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel')
   return createPortal(
     <div
       data-action-prompt="true"
@@ -114,7 +117,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
             disabled={submitting}
             className="w-full border-[0.5px] border-transparent text-[#8a8a8a] hover:text-white hover:border-[#222] hover:bg-[#0a0a0a] py-2 text-[10px] font-bold tracking-widest uppercase transition-all mt-2 disabled:opacity-60 rounded-sm"
           >
-            {cancelLabel}
+            {resolvedCancelLabel}
           </button>
         </div>
       </div>

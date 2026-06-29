@@ -6,6 +6,7 @@ import { Tooltip } from '../ui/Tooltip'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 import { LIBRARY_GRID_TEMPLATE } from './LibraryTableHeader'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface ModRowProps {
   mod: ModMetadata
@@ -81,6 +82,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   onSeparatorDragLeave,
   onSeparatorDrop,
 }) => {
+  const { t, tn } = useTranslation()
   const {
     enableMod,
     disableMod,
@@ -217,13 +219,13 @@ export const ModRow: React.FC<ModRowProps> = ({
               </span>
               {separatorChildCount > 0 ? (
                 <span className="shrink-0 rounded-sm border-0 bg-[#101719] px-2 py-[3px] text-[11px] font-mono uppercase tracking-[0.12em] text-[#8aa6af] transition-colors duration-150 group-hover:bg-[#142024] group-hover:text-[#c6edf8]">
-                  {separatorChildCount} {separatorChildCount === 1 ? 'mod' : 'mods'}
+                  {tn('library.row.modCount', separatorChildCount)}
                 </span>
               ) : null}
               {separatorCollapsed && separatorUpdateCount > 0 ? (
                 <span
                   className="flex shrink-0 items-center gap-[3px] rounded-sm bg-[#061419] px-[6px] py-[3px] text-[11px] font-mono uppercase tracking-[0.1em] text-[#4fd8ff]"
-                  title={`${separatorUpdateCount} ${separatorUpdateCount === 1 ? 'mod has an update' : 'mods have updates'} available`}
+                  title={tn('library.row.separatorUpdateTitle', separatorUpdateCount)}
                 >
                   <span className="material-symbols-outlined text-[13px] leading-none">upgrade</span>
                   {separatorUpdateCount}
@@ -240,7 +242,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     : 'bg-[#151515] text-[#a4a4a4]'
                 }`}
               >
-                {separatorDropTarget ? 'Drop Selected Here' : separatorMoveHint}
+                {separatorDropTarget ? t('library.row.dropSelectedHere') : separatorMoveHint}
               </span>
             ) : null}
           </div>
@@ -261,15 +263,15 @@ export const ModRow: React.FC<ModRowProps> = ({
     activeDownloads.some((download) => download.intent?.kind === 'mod-update' && download.intent.targetModId === mod.uuid) ||
     ((detecting || installing) && installTargetModId === mod.uuid)
   const modUpdateTooltip = [
-    modUpdate?.currentVersion ? `Installed: ${modUpdate.currentVersion}` : null,
-    modUpdate?.latestVersion ? `Latest: ${modUpdate.latestVersion}` : null,
-    updatingThisMod ? 'Updating in the library.' : 'New version on Nexus. Click to update.',
+    modUpdate?.currentVersion ? t('library.update.installed', { version: modUpdate.currentVersion }) : null,
+    modUpdate?.latestVersion ? t('library.update.latest', { version: modUpdate.latestVersion }) : null,
+    updatingThisMod ? t('library.update.updatingInLibrary') : t('library.update.newVersion'),
   ].filter(Boolean).join(' · ')
   const conflictAriaLabel = [
-    conflictSummary.overwrites > 0 ? `Overwrites ${conflictSummary.overwrites} file${conflictSummary.overwrites === 1 ? '' : 's'}` : null,
-    conflictSummary.overwrittenBy > 0 ? `Overwritten by ${conflictSummary.overwrittenBy} file${conflictSummary.overwrittenBy === 1 ? '' : 's'}` : null,
-    isRedundant ? 'Redundant: every deployed file is overwritten.' : null,
-    'Click to inspect conflicts.',
+    conflictSummary.overwrites > 0 ? tn('library.conflict.overwrites', conflictSummary.overwrites) : null,
+    conflictSummary.overwrittenBy > 0 ? tn('library.conflict.overwrittenBy', conflictSummary.overwrittenBy) : null,
+    isRedundant ? t('library.conflict.redundantAria') : null,
+    t('library.conflict.clickToInspectAria'),
   ].filter(Boolean).join(' · ')
   const conflictTooltipContent = (
     <div className="flex min-w-[210px] flex-col gap-1.5">
@@ -278,7 +280,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           <span className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm bg-[rgba(52,211,153,0.14)] px-1.5 font-mono text-[11px] font-bold leading-none">
             +{conflictSummary.overwrites}
           </span>
-          <span>Overwrites {conflictSummary.overwrites} file{conflictSummary.overwrites === 1 ? '' : 's'}</span>
+          <span>{tn('library.conflict.overwrites', conflictSummary.overwrites)}</span>
         </div>
       ) : null}
       {conflictSummary.overwrittenBy > 0 ? (
@@ -286,7 +288,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           <span className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm bg-[rgba(248,113,113,0.14)] px-1.5 font-mono text-[11px] font-bold leading-none">
             -{conflictSummary.overwrittenBy}
           </span>
-          <span>Overwritten by {conflictSummary.overwrittenBy} file{conflictSummary.overwrittenBy === 1 ? '' : 's'}</span>
+          <span>{tn('library.conflict.overwrittenBy', conflictSummary.overwrittenBy)}</span>
         </div>
       ) : null}
       {isRedundant ? (
@@ -294,11 +296,11 @@ export const ModRow: React.FC<ModRowProps> = ({
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.14)] font-mono text-[12px] font-bold leading-none">
             !
           </span>
-          <span>Redundant: fully overwritten</span>
+          <span>{t('library.conflict.redundantFull')}</span>
         </div>
       ) : null}
       <div className="border-t border-[#242424] pt-1 text-[#858585]">
-        Click to inspect conflicts
+        {t('library.conflict.clickToInspect')}
       </div>
     </div>
   )
@@ -399,7 +401,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   const handleToggle = async (event: React.MouseEvent) => {
     event.stopPropagation()
     const result = mod.enabled ? await disableMod(mod.uuid) : await enableMod(mod.uuid)
-    if (!result.ok) addToast(result.error ?? 'Operation failed', 'error')
+    if (!result.ok) addToast(result.error ?? t('library.row.toggleFailed'), 'error')
   }
 
   return (
@@ -512,7 +514,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                         : 'rgba(52,211,153,0.12)',
                   }}
                 >
-                  {recentBadge === 'downgraded' ? 'Downgraded' : recentBadge === 'updated' ? 'Updated' : 'Installed'}
+                  {recentBadge === 'downgraded' ? t('library.row.recentDowngraded') : recentBadge === 'updated' ? t('library.row.recentUpdated') : t('library.row.recentInstalled')}
                 </span>
               ) : null}
               {hasConflictSummary ? (
@@ -573,7 +575,7 @@ export const ModRow: React.FC<ModRowProps> = ({
         </div>
 
         <div className="flex min-w-0 items-center overflow-hidden">
-          <Tooltip content={`Category: ${categoryLabel}`} side="bottom" wrapperClassName="block w-full min-w-0">
+          <Tooltip content={t('library.row.categoryTooltip', { category: categoryLabel })} side="bottom" wrapperClassName="block w-full min-w-0">
             <span className={`block truncate text-sm transition-colors ${secondaryTextClass}`}>
               {categoryLabel}
             </span>
@@ -587,7 +589,7 @@ export const ModRow: React.FC<ModRowProps> = ({
         <div className="flex items-center justify-start gap-2">
           {isRenaming ? (
             <>
-              <Tooltip content="Save name">
+              <Tooltip content={t('library.row.saveName')}>
                 <button
                   onMouseDown={(event) => {
                     event.preventDefault()
@@ -602,7 +604,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   <span className="material-symbols-outlined text-[15px]">check</span>
                 </button>
               </Tooltip>
-              <Tooltip content="Cancel rename">
+              <Tooltip content={t('library.row.cancelRename')}>
                 <button
                   onMouseDown={(event) => {
                     event.preventDefault()
@@ -620,7 +622,7 @@ export const ModRow: React.FC<ModRowProps> = ({
             </>
           ) : (
             <>
-              <Tooltip content="Rename mod">
+              <Tooltip content={t('library.row.renameMod')}>
                 <button
                   onClick={(event) => {
                     event.stopPropagation()
@@ -631,7 +633,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   <span className="material-symbols-outlined text-[15px]">edit</span>
                 </button>
               </Tooltip>
-              <Tooltip content="Remove mod">
+              <Tooltip content={t('library.row.removeMod')}>
                 <button
                   onClick={(event) => {
                     event.stopPropagation()

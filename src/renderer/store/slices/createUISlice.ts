@@ -12,7 +12,6 @@ export interface DialogState {
 }
 
 export interface UISlice {
-  statusMessage: string
   toasts: Toast[]
   dialogs: DialogState
   activeView: 'library' | 'downloads' | 'settings'
@@ -26,7 +25,6 @@ export interface UISlice {
     losses: string[]
   }
 
-  setStatus: (message: string) => void
   addToast: (message: string, severity?: ToastSeverity, duration?: number) => void
   removeToast: (id: string) => void
   openDialog: (name: keyof DialogState) => void
@@ -41,7 +39,6 @@ export interface UISlice {
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
-  statusMessage: 'Ready',
   toasts: [],
   dialogs: {
     settings: false,
@@ -54,8 +51,6 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   recentLibraryBadges: {},
   collapsedLibrarySeparatorIds: [],
   conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] },
-
-  setStatus: (message) => set({ statusMessage: message }),
 
   addToast: (message, severity = 'info', duration = 4000) => {
     const id = uuidv4()

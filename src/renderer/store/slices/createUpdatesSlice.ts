@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand'
 import { IPC } from '../../../shared/types'
 import type { IpcResult, UpdateInfo, UpdateProgress } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
+import { translate } from '../../i18n/translate'
 
 export interface UpdatesSlice {
   updateAvailable: boolean
@@ -31,7 +32,7 @@ export const createUpdatesSlice: StateCreator<UpdatesSlice, [], [], UpdatesSlice
   checkForUpdates: async () => {
     const result = await IpcService.invoke<IpcResult>(IPC.CHECK_UPDATE)
     if (!result.ok) {
-      set({ updateError: result.error ?? 'Update check failed', updateDownloading: false })
+      set({ updateError: result.error ?? translate('shell.header.updateCheckFailed'), updateDownloading: false })
       return
     }
 
@@ -42,7 +43,7 @@ export const createUpdatesSlice: StateCreator<UpdatesSlice, [], [], UpdatesSlice
     set({ updateDownloading: true, updateProgress: 0 })
     const result = await IpcService.invoke<IpcResult>(IPC.DOWNLOAD_UPDATE)
     if (!result.ok) {
-      const errorMessage = result.error ?? 'Could not download update'
+      const errorMessage = result.error ?? translate('shell.update.downloadFailed')
       set({ updateError: errorMessage, updateDownloading: false })
       throw new Error(errorMessage)
     }
