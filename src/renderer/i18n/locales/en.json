@@ -48,7 +48,8 @@
       "offline": "OFFLINE",
       "connected": "NEXUS CONNECTED",
       "validating": "VALIDATING",
-      "notConnected": "NOT CONNECTED"
+      "notConnected": "NOT CONNECTED",
+      "validateFailed": "Could not validate Nexus account"
     },
     "header": {
       "appLogs": "App Logs",
@@ -200,7 +201,18 @@
       "deletedCount_other": "{count} downloads deleted",
       "deleteFailedCount_one": "{count} download could not be deleted",
       "deleteFailedCount_other": "{count} downloads could not be deleted",
-      "fileNotAvailable": "Download file is not available yet"
+      "fileNotAvailable": "Download file is not available yet",
+      "autoInstallFailed": "Auto-install failed",
+      "installedNotActivatedNamed": "{name} installed — couldn't activate: {error}",
+      "updateFailed": "Could not update {name}",
+      "updatedNotActivated": "Updated but couldn't activate: {error}",
+      "updatedActivated": "{name} updated & activated",
+      "reinstalledNotActivated": "Reinstalled but couldn't reactivate: {error}",
+      "noOriginalSource": "Original source is not stored for this mod",
+      "originalSourceUnavailable": "Original source is no longer available",
+      "fomodInstallFailed": "FOMOD install failed",
+      "nexusDownloadStartFailed": "Could not start Nexus download",
+      "nexusLinkReadFailed": "Could not read Nexus download link"
     }
   },
   "welcome": {
@@ -380,7 +392,16 @@
       "revealFailed": "Could not reveal that mod with the current filters",
       "modsFolderNotConfigured": "Mods folder is not configured yet",
       "openModsFolderFailed": "Could not open mods folder",
-      "refreshed": "Library refreshed"
+      "refreshed": "Library refreshed",
+      "noNexusMods": "No Nexus-sourced mods to check.",
+      "addApiKey": "Add a Nexus API key in Settings to check for updates.",
+      "updateAvailableSingle": "Update available on Nexus.",
+      "modUpToDate": "This mod is up to date.",
+      "updatesAvailable_one": "{count} mod update available.",
+      "updatesAvailable_other": "{count} mod updates available.",
+      "allUpToDate": "All Nexus mods are up to date.",
+      "checkUpdatesError": "Could not check for mod updates.",
+      "openedOnNexus": "Opened on Nexus — use \"Mod Manager Download\" to update this mod."
     },
     "separatorDialog": {
       "createTitle": "Create Separator",

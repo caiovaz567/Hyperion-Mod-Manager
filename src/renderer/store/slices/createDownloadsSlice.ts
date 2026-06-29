@@ -17,6 +17,7 @@ import type {
 } from '../../../shared/types'
 import { parseNxmUrl } from '../../../shared/nxm'
 import { IpcService } from '../../services/IpcService'
+import { translate } from '../../i18n/translate'
 
 // Serialize Nexus start requests per mod:file key so repeated clicks keep
 // their order and fall through to the duplicate prompt instead of racing.
@@ -272,7 +273,7 @@ async function installCompletedDownload(
   })
 
   if (!result.ok) {
-    state.addToast?.(result.error ?? 'Auto-install failed', 'error')
+    state.addToast?.(result.error ?? translate('downloads.toast.autoInstallFailed'), 'error')
     return
   }
 
@@ -286,9 +287,9 @@ async function installCompletedDownload(
     const enableResult = await state.enableMod?.(mod.uuid)
     await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
     if (enableResult && !enableResult.ok) {
-      state.addToast?.(`${mod.name} installed — couldn't activate: ${enableResult.error}`, 'warning', 3000)
+      state.addToast?.(translate('downloads.toast.installedNotActivatedNamed', { name: mod.name, error: enableResult.error ?? '' }), 'warning', 3000)
     } else {
-      state.addToast?.(`${mod.name} installed & activated`, 'success', 2200)
+      state.addToast?.(translate('downloads.toast.installedActivated', { name: mod.name }), 'success', 2200)
     }
     state.setRecentLibraryBadge?.(mod.uuid, 'installed')
   }
@@ -319,7 +320,7 @@ async function installCompletedModUpdate(
   })
 
   if (!result.ok || !result.data) {
-    state.addToast?.(result.error ?? `Could not update ${intent.targetModName}`, 'error')
+    state.addToast?.(result.error ?? translate('downloads.toast.updateFailed', { name: intent.targetModName ?? '' }), 'error')
     return
   }
 
@@ -328,9 +329,9 @@ async function installCompletedModUpdate(
     const enableResult = await state.enableMod?.(result.data.mod.uuid)
     await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
     if (enableResult && !enableResult.ok) {
-      state.addToast?.(`Updated but couldn't activate: ${enableResult.error}`, 'warning')
+      state.addToast?.(translate('downloads.toast.updatedNotActivated', { error: enableResult.error ?? '' }), 'warning')
     } else {
-      state.addToast?.(`${result.data.mod.name} updated & activated`, 'success')
+      state.addToast?.(translate('downloads.toast.updatedActivated', { name: result.data.mod.name }), 'success')
     }
     state.setRecentLibraryBadge?.(result.data.mod.uuid, 'updated')
     // We just installed this mod's latest file — clear its update flag locally,
@@ -707,7 +708,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         if (enableResult && !enableResult.ok) {
           ;(get() as DownloadsSlice & {
             addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
-          }).addToast?.(`Reinstalled but couldn't reactivate: ${enableResult.error}`, 'warning')
+          }).addToast?.(translate('downloads.toast.reinstalledNotActivated', { error: enableResult.error ?? '' }), 'warning')
         }
       }
       await (get() as DownloadsSlice & {
@@ -724,7 +725,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     }).addToast
 
     if (!mod.sourcePath) {
-      addToast?.('Original source is not stored for this mod', 'warning')
+      addToast?.(translate('downloads.toast.noOriginalSource'), 'warning')
       return
     }
 
@@ -733,7 +734,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     // only to hit an error afterwards.
     const check = await IpcService.invoke<IpcResult>(IPC.REINSTALL_SOURCE_CHECK, mod.sourcePath)
     if (!check.ok) {
-      addToast?.(check.error ?? 'Original source is no longer available', 'error')
+      addToast?.(check.error ?? translate('downloads.toast.originalSourceUnavailable'), 'error')
       return
     }
 
@@ -801,7 +802,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     })
 
     if (!result.ok || !result.data) {
-      state.addToast?.(result.error ?? 'Install failed', 'error')
+      state.addToast?.(result.error ?? translate('downloads.toast.installFailed'), 'error')
       return
     }
 
@@ -810,9 +811,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       const enableResult = await state.enableMod?.(result.data.mod.uuid)
       await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
       if (enableResult && !enableResult.ok) {
-        state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+        state.addToast?.(translate('downloads.toast.installedNotActivated', { error: enableResult.error ?? '' }), 'warning')
       } else {
-        state.addToast?.(`${result.data.mod.name} installed & activated`, 'success')
+        state.addToast?.(translate('downloads.toast.installedActivated', { name: result.data.mod.name }), 'success')
       }
       const badge = action === 'replace'
         ? (getVersionRelation(prompt.existingVersion, prompt.incomingVersion) === 'downgrade' ? 'downgraded' : 'updated')
@@ -861,7 +862,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     })
 
     if (!result.ok || !result.data) {
-      state.addToast?.(result.error ?? 'Install failed', 'error')
+      state.addToast?.(result.error ?? translate('downloads.toast.installFailed'), 'error')
       return
     }
 
@@ -870,9 +871,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       const enableResult = await state.enableMod?.(result.data.mod.uuid)
       await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
       if (enableResult && !enableResult.ok) {
-        state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+        state.addToast?.(translate('downloads.toast.installedNotActivated', { error: enableResult.error ?? '' }), 'warning')
       } else {
-        state.addToast?.(`${result.data.mod.name} installed & activated`, 'success')
+        state.addToast?.(translate('downloads.toast.installedActivated', { name: result.data.mod.name }), 'success')
       }
       state.setRecentLibraryBadge?.(result.data.mod.uuid, 'installed')
     }
@@ -966,18 +967,18 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         const enableResult = await state.enableMod?.(data.mod.uuid)
         await state.scanMods?.({ immediateConflicts: true, refreshModUpdates: false })
         if (enableResult && !enableResult.ok) {
-          state.addToast?.(`Installed but couldn't activate: ${enableResult.error}`, 'warning')
+          state.addToast?.(translate('downloads.toast.installedNotActivated', { error: enableResult.error ?? '' }), 'warning')
         } else {
           state.addToast?.(
             badge === 'updated'
-              ? `${data.mod.name} updated & activated`
-              : `${data.mod.name} installed & activated`,
+              ? translate('downloads.toast.updatedActivated', { name: data.mod.name })
+              : translate('downloads.toast.installedActivated', { name: data.mod.name }),
             'success'
           )
         }
         state.setRecentLibraryBadge?.(data.mod.uuid, badge)
       } else if (!result.ok) {
-        state.addToast?.(result.error ?? 'FOMOD install failed', 'error')
+        state.addToast?.(result.error ?? translate('downloads.toast.fomodInstallFailed'), 'error')
       }
     }
 
@@ -1053,7 +1054,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           }
         )
         if (!result.ok || !result.data) {
-          notify(result.error ?? 'Could not start Nexus download', 'warning')
+          notify(result.error ?? translate('downloads.toast.nexusDownloadStartFailed'), 'warning')
           return
         }
 
@@ -1087,7 +1088,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         }
 
         if (result.data.status !== 'started' || !result.data.id || !result.data.fileName) {
-          notify('Could not start Nexus download', 'warning')
+          notify(translate('downloads.toast.nexusDownloadStartFailed'), 'warning')
           return
         }
 
@@ -1204,7 +1205,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         const state = get() as DownloadsSlice & {
           addToast?: (toastMessage: string, toastType?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
         }
-        state.addToast?.('Could not read Nexus download link', 'warning', 3200)
+        state.addToast?.(translate('downloads.toast.nexusLinkReadFailed'), 'warning', 3200)
         return
       }
       const key = `${payload.modId}:${payload.fileId}`
