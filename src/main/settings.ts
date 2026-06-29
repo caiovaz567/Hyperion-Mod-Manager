@@ -96,6 +96,7 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
     autoUpdate: raw?.autoUpdate ?? true,
     autoInstallDownloads: raw?.autoInstallDownloads ?? true,
     nexusApiKey: raw?.nexusApiKey ?? '',
+    language: typeof raw?.language === 'string' && raw.language.trim() ? raw.language : 'en',
     libraryColumnWidths: normalizeLibraryColumnWidths(raw?.libraryColumnWidths),
     collapsedLibrarySeparatorIds: Array.isArray(raw?.collapsedLibrarySeparatorIds)
       ? raw.collapsedLibrarySeparatorIds.filter((id): id is string => typeof id === 'string')

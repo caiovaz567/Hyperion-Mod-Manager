@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Interface language selector (internationalization).** Hyperion can now be displayed in multiple languages, with **Brazilian Portuguese (Português Brasil)** shipping as the first translation alongside English. A language dropdown appears in two places: the first-run setup wizard (top-right of the welcome/onboarding screen) and **Settings > General**. The choice persists across sessions in app settings (`language`) and applies live without a restart. The first-run wizard and the Settings > General tab are fully translated; remaining screens fall back to English and will be localized in follow-up work. New languages can be added by dropping a JSON catalog into `src/renderer/i18n/locales/` and registering it in `locales.ts` — no other code changes required.
+
 ---
 
 ## [0.29.2] - 2026-06-28

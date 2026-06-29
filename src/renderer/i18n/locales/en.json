@@ -1,0 +1,133 @@
+{
+  "common": {
+    "back": "Back",
+    "continue": "Continue",
+    "finishSetup": "Finish setup",
+    "getStarted": "Get started",
+    "optional": "Optional",
+    "chooseFolder": "Choose folder",
+    "useSuggested": "Use suggested",
+    "detectAutomatically": "Detect automatically",
+    "detecting": "Detecting…",
+    "openFolder": "Open folder",
+    "close": "Close",
+    "selectedFolder": "Selected folder",
+    "premium": "Premium",
+    "free": "Free"
+  },
+  "language": {
+    "label": "Language",
+    "select": "Select language"
+  },
+  "welcome": {
+    "headline": "Let's set up your workspace",
+    "subtitle": "A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods live — it takes less than a minute.",
+    "version": "Hyperion {version}",
+    "stepCounter": "Step {current} of {total}",
+    "settingUp": "Setting things up…",
+    "closeAria": "Close Hyperion",
+    "steps": {
+      "game": {
+        "label": "Game",
+        "heading": "Where is Cyberpunk 2077 installed?",
+        "description": "Point Hyperion to your game folder. We use it to verify the install and deploy your mods safely.",
+        "preview": "Where Cyberpunk 2077 is installed"
+      },
+      "library": {
+        "label": "Mod library",
+        "heading": "Where should your mods live?",
+        "description": "Every mod you add is kept here — organized, staged, and ready to enable whenever you want.",
+        "preview": "Where your managed mods are stored"
+      },
+      "downloads": {
+        "label": "Downloads",
+        "heading": "Where do new downloads land?",
+        "description": "Hyperion picks up new mod archives from this folder. We've suggested one next to your library — change it anytime.",
+        "preview": "Where new mod archives are picked up"
+      },
+      "nexus": {
+        "label": "Nexus",
+        "heading": "Connect your Nexus account",
+        "description": "Paste your personal Nexus Mods API key to enable downloads and update checks. You can skip this and add it later in Settings > Nexus.",
+        "preview": "Enable Nexus downloads & update checks"
+      }
+    },
+    "game": {
+      "placeholder": "No folder selected — detect or browse below",
+      "valid": "Cyberpunk 2077 found — you're good to go.",
+      "invalid": "We couldn't find Cyberpunk 2077 in this folder.",
+      "continueTooltip": "Select a valid Cyberpunk 2077 folder to continue"
+    },
+    "library": {
+      "placeholder": "No folder selected — use the suggestion or browse",
+      "valid": "This folder is ready to use.",
+      "invalid": "This folder can't be used as a mod library.",
+      "continueTooltip": "Select a valid mod library folder to continue"
+    },
+    "downloads": {
+      "placeholder": "No folder selected yet",
+      "info": "New mod downloads will be saved here."
+    },
+    "nexus": {
+      "instruction1": "Log in to Nexus Mods and open the API Key Settings page.",
+      "instruction2": "Scroll to the bottom and find Personal API Key.",
+      "instruction3": "Copy your personal API key and paste it below.",
+      "openApiPage": "Open API Key page",
+      "apiKeyLabel": "Personal API key",
+      "apiKeyPlaceholder": "Paste your Nexus Mods API key",
+      "showKey": "Show API key",
+      "hideKey": "Hide API key",
+      "optionalInfo": "Optional — you can add this later in Settings > Nexus.",
+      "validating": "Validating your API key…",
+      "connectedAs": "Connected as",
+      "error": "We couldn't validate this key. Double-check you copied the Personal API Key."
+    },
+    "finishTooltip": "Select a valid game folder and mod library to finish",
+    "dialog": {
+      "game": "Select Cyberpunk 2077 folder",
+      "library": "Select Mod Library folder",
+      "downloads": "Select Downloads folder"
+    },
+    "label": {
+      "library": "suggested mod library",
+      "downloads": "suggested downloads folder"
+    },
+    "toast": {
+      "detectFailed": "Could not auto-detect Cyberpunk 2077",
+      "gameDetected": "Game path detected",
+      "createDirFailed": "Could not create {label}",
+      "libraryLoaded": "Suggested mod library loaded",
+      "downloadsLoaded": "Suggested downloads folder loaded",
+      "finishInvalid": "Select a valid game folder and mod library before finishing",
+      "purged": "Purged {count} active mod(s) from the previous deployment",
+      "purgeFailed": "Could not fully purge {count} mod(s) from the previous deployment",
+      "saveFailed": "Could not save setup",
+      "restorePartial": "Loaded library, but {count} active mod(s) could not be restored",
+      "complete": "Setup complete"
+    }
+  },
+  "settings": {
+    "general": {
+      "installBehavior": {
+        "title": "Install Behavior",
+        "description": "Default behavior for archives that finish downloading through Nexus links.",
+        "toggleTitle": "Auto-install completed downloads",
+        "toggleDescription": "Nexus downloads install automatically when the archive is ready. Disable this if you prefer staging files in Downloads first."
+      },
+      "runtimeCaptures": {
+        "title": "Runtime Captures",
+        "description": "Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions.",
+        "clean": "No captured files - game folder is clean.",
+        "capturedOne": "{count} file captured from previous sessions.",
+        "capturedMany": "{count} files captured from previous sessions.",
+        "loading": "Loading...",
+        "clearing": "Clearing...",
+        "clear": "Clear captures"
+      },
+      "language": {
+        "title": "Language",
+        "description": "Choose the language Hyperion's interface is displayed in."
+      }
+    }
+  }
+}

@@ -54,6 +54,16 @@
 - `writeMetadata` always strips archive fields before writing so they never re-enter `_metadata.json`.
 - Non-archive mods that previously had a sidecar get it deleted during `refreshArchiveResourceMetadata`.
 
+## Internationalization (i18n)
+- Hyperion uses a **lightweight custom i18n layer** (no external library) under `src/renderer/i18n/`. JSON catalogs were chosen specifically so future translators can contribute without touching TypeScript.
+- **Catalogs**: `src/renderer/i18n/locales/<code>.json` — `en.json` is the **source of truth** for the available keys; `pt-BR.json` is the first translation. Keys are nested by area (`common.*`, `welcome.*`, `settings.general.*`). Missing keys in a non-English catalog **fall back to English** at runtime, so partial translations are safe.
+- **Registry**: `src/renderer/i18n/locales.ts` exports `LOCALES` (the single list to edit when adding a language: `{ code, label, nativeLabel, messages }`), `DEFAULT_LOCALE` (`'en'`), and the `Messages` type. **Adding a language = drop a `<code>.json` next to `en.json`, import it, add one `LOCALES` entry.** No other code changes.
+- **Engine**: `src/renderer/i18n/I18nContext.tsx` provides `I18nProvider` + `useTranslation()`, returning `{ t, language, setLanguage, languages }`. `t(key, vars?)` does dot-path lookup in the active catalog → English fallback → the key itself, with `{var}` interpolation. `TranslationKey` is a flattened union derived from `en.json` (typed autocomplete + typo safety) — this relies on `resolveJsonModule` (already enabled in `tsconfig.json`). For dynamic keys (e.g. `welcome.steps.${step.key}.heading`), keep the source array `as const` so the template-literal type resolves to a valid `TranslationKey` subset without casts.
+- **State flow**: the active language is read from `settings.language` (persisted via the existing settings pipeline — `AppSettings.language` in `src/shared/types.ts`, defaulted to `'en'` in `normalizeSettings` in `src/main/settings.ts`). `setLanguage` calls `updateSettings({ language })`; the provider re-renders all consumers reactively. No new IPC.
+- **Provider mount**: `I18nProvider` wraps `<App/>` in `src/renderer/main.tsx` (inside `ThemeProvider`); it works before settings load (defaults to English).
+- **Selector UI**: `src/renderer/features/ui/LanguageSelect.tsx` is a reusable dark/squared combo box, used in the setup wizard (`WelcomeScreen.tsx`, top-right beside Close) and Settings > General (a `SettingCard`).
+- **Current coverage**: only `WelcomeScreen.tsx` and the Settings **General** tab are translated. The rest of the app (Library, Downloads, other Settings tabs, toasts elsewhere) is still hardcoded English and gets migrated screen-by-screen in follow-up tasks — the English fallback keeps everything functional in the meantime. When migrating a screen, add keys to `en.json` + `pt-BR.json` and replace hardcoded strings with `t()`.
+
 ## FOMOD Installer
 
 - FOMOD is a mod configuration format (XML-based) used widely on Nexus Mods to offer conditional install options (body type, hair color, etc.).

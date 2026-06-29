@@ -1,0 +1,133 @@
+{
+  "common": {
+    "back": "Voltar",
+    "continue": "Continuar",
+    "finishSetup": "Concluir configuração",
+    "getStarted": "Começar",
+    "optional": "Opcional",
+    "chooseFolder": "Escolher pasta",
+    "useSuggested": "Usar sugerida",
+    "detectAutomatically": "Detectar automaticamente",
+    "detecting": "Detectando…",
+    "openFolder": "Abrir pasta",
+    "close": "Fechar",
+    "selectedFolder": "Pasta selecionada",
+    "premium": "Premium",
+    "free": "Gratuita"
+  },
+  "language": {
+    "label": "Idioma",
+    "select": "Selecionar idioma"
+  },
+  "welcome": {
+    "headline": "Vamos configurar seu espaço de trabalho",
+    "subtitle": "Uma configuração rápida e única. Indique ao Hyperion onde o Cyberpunk 2077 está e escolha onde seus mods ficam — leva menos de um minuto.",
+    "version": "Hyperion {version}",
+    "stepCounter": "Etapa {current} de {total}",
+    "settingUp": "Preparando tudo…",
+    "closeAria": "Fechar o Hyperion",
+    "steps": {
+      "game": {
+        "label": "Jogo",
+        "heading": "Onde o Cyberpunk 2077 está instalado?",
+        "description": "Indique ao Hyperion a pasta do seu jogo. Nós a usamos para verificar a instalação e aplicar seus mods com segurança.",
+        "preview": "Onde o Cyberpunk 2077 está instalado"
+      },
+      "library": {
+        "label": "Biblioteca de mods",
+        "heading": "Onde seus mods devem ficar?",
+        "description": "Cada mod que você adiciona é guardado aqui — organizado, preparado e pronto para ativar quando quiser.",
+        "preview": "Onde seus mods gerenciados são armazenados"
+      },
+      "downloads": {
+        "label": "Downloads",
+        "heading": "Onde os novos downloads chegam?",
+        "description": "O Hyperion recolhe novos arquivos de mod desta pasta. Sugerimos uma ao lado da sua biblioteca — mude quando quiser.",
+        "preview": "Onde novos arquivos de mod são recolhidos"
+      },
+      "nexus": {
+        "label": "Nexus",
+        "heading": "Conecte sua conta Nexus",
+        "description": "Cole sua chave de API pessoal do Nexus Mods para habilitar downloads e verificações de atualização. Você pode pular isto e adicionar depois em Configurações > Nexus.",
+        "preview": "Habilita downloads e verificações de atualização do Nexus"
+      }
+    },
+    "game": {
+      "placeholder": "Nenhuma pasta selecionada — detecte ou procure abaixo",
+      "valid": "Cyberpunk 2077 encontrado — está tudo pronto.",
+      "invalid": "Não encontramos o Cyberpunk 2077 nesta pasta.",
+      "continueTooltip": "Selecione uma pasta válida do Cyberpunk 2077 para continuar"
+    },
+    "library": {
+      "placeholder": "Nenhuma pasta selecionada — use a sugestão ou procure",
+      "valid": "Esta pasta está pronta para uso.",
+      "invalid": "Esta pasta não pode ser usada como biblioteca de mods.",
+      "continueTooltip": "Selecione uma pasta de biblioteca de mods válida para continuar"
+    },
+    "downloads": {
+      "placeholder": "Nenhuma pasta selecionada ainda",
+      "info": "Novos downloads de mods serão salvos aqui."
+    },
+    "nexus": {
+      "instruction1": "Faça login no Nexus Mods e abra a página de Configurações de Chave de API.",
+      "instruction2": "Role até o fim e encontre a Chave de API Pessoal.",
+      "instruction3": "Copie sua chave de API pessoal e cole abaixo.",
+      "openApiPage": "Abrir página de Chave de API",
+      "apiKeyLabel": "Chave de API pessoal",
+      "apiKeyPlaceholder": "Cole sua chave de API do Nexus Mods",
+      "showKey": "Mostrar chave de API",
+      "hideKey": "Ocultar chave de API",
+      "optionalInfo": "Opcional — você pode adicionar isto depois em Configurações > Nexus.",
+      "validating": "Validando sua chave de API…",
+      "connectedAs": "Conectado como",
+      "error": "Não conseguimos validar esta chave. Confira se você copiou a Chave de API Pessoal."
+    },
+    "finishTooltip": "Selecione uma pasta de jogo válida e uma biblioteca de mods para concluir",
+    "dialog": {
+      "game": "Selecione a pasta do Cyberpunk 2077",
+      "library": "Selecione a pasta da Biblioteca de Mods",
+      "downloads": "Selecione a pasta de Downloads"
+    },
+    "label": {
+      "library": "biblioteca de mods sugerida",
+      "downloads": "pasta de downloads sugerida"
+    },
+    "toast": {
+      "detectFailed": "Não foi possível detectar o Cyberpunk 2077 automaticamente",
+      "gameDetected": "Pasta do jogo detectada",
+      "createDirFailed": "Não foi possível criar {label}",
+      "libraryLoaded": "Biblioteca de mods sugerida carregada",
+      "downloadsLoaded": "Pasta de downloads sugerida carregada",
+      "finishInvalid": "Selecione uma pasta de jogo válida e uma biblioteca de mods antes de concluir",
+      "purged": "Removidos {count} mod(s) ativo(s) da implantação anterior",
+      "purgeFailed": "Não foi possível remover totalmente {count} mod(s) da implantação anterior",
+      "saveFailed": "Não foi possível salvar a configuração",
+      "restorePartial": "Biblioteca carregada, mas {count} mod(s) ativo(s) não puderam ser restaurados",
+      "complete": "Configuração concluída"
+    }
+  },
+  "settings": {
+    "general": {
+      "installBehavior": {
+        "title": "Comportamento de Instalação",
+        "description": "Comportamento padrão para arquivos que terminam de baixar por links do Nexus.",
+        "toggleTitle": "Instalar downloads concluídos automaticamente",
+        "toggleDescription": "Downloads do Nexus são instalados automaticamente quando o arquivo está pronto. Desative isto se preferir preparar os arquivos em Downloads primeiro."
+      },
+      "runtimeCaptures": {
+        "title": "Capturas de Execução",
+        "description": "Arquivos escritos por ferramentas de mod (CET, plugins RED4ext) durante o jogo são capturados aqui e mantidos fora da pasta do jogo entre sessões.",
+        "clean": "Nenhum arquivo capturado - a pasta do jogo está limpa.",
+        "capturedOne": "{count} arquivo capturado de sessões anteriores.",
+        "capturedMany": "{count} arquivos capturados de sessões anteriores.",
+        "loading": "Carregando...",
+        "clearing": "Limpando...",
+        "clear": "Limpar capturas"
+      },
+      "language": {
+        "title": "Idioma",
+        "description": "Escolha o idioma em que a interface do Hyperion é exibida."
+      }
+    }
+  }
+}

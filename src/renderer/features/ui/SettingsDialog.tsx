@@ -5,6 +5,8 @@ import { IPC, type IpcResult, type VfsOverwriteInfo } from '@shared/types'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, SettingCard, StatusReadout, SurfaceTabRail, ValidationRow, uiButton } from './uiKit'
+import { LanguageSelect } from './LanguageSelect'
+import { useTranslation } from '../../i18n/I18nContext'
 
 type SettingsTab = 'general' | 'paths' | 'nexus' | 'updates' | 'about'
 type FolderState = 'valid' | 'invalid' | 'empty'
@@ -84,6 +86,7 @@ function getDownloadsStatus(downloadPath: string, defaultDownloadPath: string) {
 }
 
 export const SettingsPage: React.FC = () => {
+  const { t } = useTranslation()
   const appVersion = useAppVersion()
   const {
     settings,
@@ -432,8 +435,8 @@ export const SettingsPage: React.FC = () => {
               <>
                 <SettingCard
                   icon="deployed_code"
-                  title="Install Behavior"
-                  description="Default behavior for archives that finish downloading through Nexus links."
+                  title={t('settings.general.installBehavior.title')}
+                  description={t('settings.general.installBehavior.description')}
                   className="fade-up"
                   style={{ animationDelay: '0ms' }}
                 >
@@ -445,9 +448,9 @@ export const SettingsPage: React.FC = () => {
                   className="flex w-full items-center justify-between gap-4 rounded-sm border-0 bg-[#101010] px-4 py-3 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.055)] transition-colors hover:bg-[#151515]"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[14px] font-semibold text-[#e5e2e1]">Auto-install completed downloads</span>
+                    <span className="block text-[14px] font-semibold text-[#e5e2e1]">{t('settings.general.installBehavior.toggleTitle')}</span>
                     <span className="mt-1 block text-[13px] leading-5 text-[#8f8f8f]">
-                      Nexus downloads install automatically when the archive is ready. Disable this if you prefer staging files in Downloads first.
+                      {t('settings.general.installBehavior.toggleDescription')}
                     </span>
                   </span>
                   <span
@@ -470,16 +473,16 @@ export const SettingsPage: React.FC = () => {
 
               <SettingCard
                 icon="folder_special"
-                title="Runtime Captures"
-                description="Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions."
+                title={t('settings.general.runtimeCaptures.title')}
+                description={t('settings.general.runtimeCaptures.description')}
                 className="fade-up"
                 style={{ animationDelay: '60ms' }}
               >
                 <ValidationRow
                   state={runtimeCapturesInfo ? (runtimeCapturesInfo.fileCount > 0 ? 'info' : 'valid') : 'empty'}
-                  validText="No captured files - game folder is clean."
-                  infoText={runtimeCapturesInfo ? `${runtimeCapturesInfo.fileCount} file${runtimeCapturesInfo.fileCount === 1 ? '' : 's'} captured from previous sessions.` : ''}
-                  emptyText="Loading..."
+                  validText={t('settings.general.runtimeCaptures.clean')}
+                  infoText={runtimeCapturesInfo ? t(runtimeCapturesInfo.fileCount === 1 ? 'settings.general.runtimeCaptures.capturedOne' : 'settings.general.runtimeCaptures.capturedMany', { count: runtimeCapturesInfo.fileCount }) : ''}
+                  emptyText={t('settings.general.runtimeCaptures.loading')}
                 />
                 <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                   <button
@@ -488,7 +491,7 @@ export const SettingsPage: React.FC = () => {
                     className={`${secondaryBtn} w-full sm:w-auto`}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
-                    Open folder
+                    {t('common.openFolder')}
                   </button>
                   {runtimeCapturesInfo && runtimeCapturesInfo.fileCount > 0 && (
                     <button
@@ -500,10 +503,20 @@ export const SettingsPage: React.FC = () => {
                       <span className={`material-symbols-outlined ${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
                         {clearingCaptures ? 'progress_activity' : 'delete_sweep'}
                       </span>
-                      {clearingCaptures ? 'Clearing...' : 'Clear captures'}
+                      {clearingCaptures ? t('settings.general.runtimeCaptures.clearing') : t('settings.general.runtimeCaptures.clear')}
                     </button>
                   )}
                 </div>
+              </SettingCard>
+
+              <SettingCard
+                icon="language"
+                title={t('settings.general.language.title')}
+                description={t('settings.general.language.description')}
+                className="fade-up"
+                style={{ animationDelay: '120ms' }}
+              >
+                <LanguageSelect align="left" buttonClassName="w-full justify-between sm:w-auto sm:justify-start" />
               </SettingCard>
               </>
             )}
