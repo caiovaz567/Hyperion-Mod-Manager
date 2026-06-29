@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ModMetadata } from '@shared/types'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface MoveToSeparatorDialogProps {
   separators: ModMetadata[]
@@ -15,6 +16,7 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
   onSelect,
   onCancel,
 }) => {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -55,14 +57,14 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
           <div className="mb-4 flex items-center gap-3 text-[#fcee09]">
             <span className="material-symbols-outlined text-[20px]">move_item</span>
             <h2 className="brand-font text-[1.05rem] font-bold uppercase tracking-[0.08em] text-white">
-              Move to Separator
+              {t('dialogs.moveToSeparator.title')}
             </h2>
           </div>
 
           <p className="mb-4 text-sm leading-relaxed text-[#a2a2a2]">
             {modCount === 1
-              ? 'Choose a separator to move this mod into.'
-              : `Choose a separator to move ${modCount} selected mods into.`}
+              ? t('dialogs.moveToSeparator.descriptionOne')
+              : t('dialogs.moveToSeparator.descriptionMany', { count: modCount })}
           </p>
 
           {/* Search — border lives on the wrapper, never on the input */}
@@ -73,7 +75,7 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
               autoFocus
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search separators..."
+              placeholder={t('dialogs.moveToSeparator.searchPlaceholder')}
               className="h-11 w-full border-0 bg-transparent text-[14px] text-[#e5e2e1] placeholder-[#444] outline-none focus:outline-none focus-visible:outline-none"
             />
             {search && (
@@ -106,7 +108,7 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
               ))
             ) : (
               <div className="px-4 py-6 text-center text-[13px] italic text-[#555]">
-                No separators match your search.
+                {t('dialogs.moveToSeparator.noMatch')}
               </div>
             )}
           </div>
@@ -116,7 +118,7 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
               onClick={onCancel}
               className="h-10 rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] px-4 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#9a9a9a] transition-colors hover:border-[#4c4c4c] hover:text-white"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

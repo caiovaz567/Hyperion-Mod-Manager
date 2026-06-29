@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { ActionPromptDialog } from './ActionPromptDialog'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export const DuplicateDownloadDialog: React.FC = () => {
+  const { t } = useTranslation()
   const {
     duplicateDownloadPrompt,
     confirmDuplicateDownload,
@@ -36,14 +38,14 @@ export const DuplicateDownloadDialog: React.FC = () => {
     <ActionPromptDialog
       accentColor="#fcee09"
       accentGlow="rgba(252,238,9,0.5)"
-      title={duplicateDownloadPrompt.existingIsDownloading ? 'File Already Downloading' : 'File Already Exists'}
+      title={duplicateDownloadPrompt.existingIsDownloading ? t('dialogs.duplicateDownload.titleDownloading') : t('dialogs.duplicateDownload.titleExists')}
       description={
         duplicateDownloadPrompt.existingIsDownloading
-          ? 'Hyperion is already downloading this archive right now. If you continue, the new request will be saved as a separate copy so both downloads can finish without colliding.'
-          : 'Hyperion found this file in your downloads folder already. If you continue, the new download will be saved as a separate copy with a clear duplicate label.'
+          ? t('dialogs.duplicateDownload.descriptionDownloading')
+          : t('dialogs.duplicateDownload.descriptionExists')
       }
       icon="warning"
-      primaryLabel="Download Again"
+      primaryLabel={t('dialogs.duplicateDownload.downloadAgain')}
       onPrimary={() => void handleConfirm()}
       onCancel={handleClose}
       submitting={submitting}
@@ -52,7 +54,7 @@ export const DuplicateDownloadDialog: React.FC = () => {
           <div className="space-y-4">
             <div>
               <div className="ui-support-mono uppercase tracking-[0.18em]">
-                {duplicateDownloadPrompt.existingIsDownloading ? 'Archive downloading now' : 'Existing archive'}
+                {duplicateDownloadPrompt.existingIsDownloading ? t('dialogs.duplicateDownload.labelDownloading') : t('dialogs.duplicateDownload.labelExisting')}
               </div>
               <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-white">
                 {duplicateDownloadPrompt.existingFileName}
@@ -60,7 +62,7 @@ export const DuplicateDownloadDialog: React.FC = () => {
             </div>
             <div className="h-px w-full bg-[#1d1d1d]" />
             <div>
-              <div className="ui-support-mono uppercase tracking-[0.18em]">New archive name</div>
+              <div className="ui-support-mono uppercase tracking-[0.18em]">{t('dialogs.duplicateDownload.newName')}</div>
               <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-[#fcee09]">
                 {duplicateDownloadPrompt.incomingFileName}
               </div>

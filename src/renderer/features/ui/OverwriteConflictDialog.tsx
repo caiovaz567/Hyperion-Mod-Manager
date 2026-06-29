@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 import { ActionPromptDialog } from './ActionPromptDialog'
 import { getArchiveConflictHash, isUnresolvedArchiveConflict } from '../../utils/archiveConflictDisplay'
+import { useTranslation } from '../../i18n/I18nContext'
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
   const seen = new Set<string>()
@@ -18,6 +19,7 @@ function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
 }
 
 export const OverwriteConflictDialog: React.FC = () => {
+  const { t, tn } = useTranslation()
   const {
     overwriteConflictPrompt,
     confirmOverwriteConflicts,
@@ -62,48 +64,48 @@ export const OverwriteConflictDialog: React.FC = () => {
 
   const description = overwriteConflicts.length > 0
     ? losingOverwrites.length > 0
-      ? 'This install shares game-target paths with enabled mods. Hyperion will respect library order, so files from mods below this position still win over the incoming mod.'
-      : 'This install shares game-target paths with enabled mods. Hyperion will deploy it using library order, so the incoming mod will take priority where it lands later in the stack.'
-    : 'This install also touches archive resources already present in enabled mods. Review the overlap before continuing.'
+      ? t('dialogs.overwrite.descriptionLosing')
+      : t('dialogs.overwrite.descriptionWinning')
+    : t('dialogs.overwrite.descriptionArchive')
 
   const detailContent = (
     <div className="px-4 py-4 sm:px-5 sm:py-5">
       <div className="grid gap-3 sm:grid-cols-4">
         <div className="border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">Incoming Priority</div>
+          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.incomingPriority')}</div>
           <div className="mt-2 text-lg font-semibold text-white">#{incomingOrder}</div>
         </div>
         <div className="border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">Wins</div>
+          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.wins')}</div>
           <div className="mt-2 text-lg font-semibold text-[#34d399]">{winningOverwrites.length}</div>
         </div>
         <div className="border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">Still Overridden</div>
+          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.stillOverridden')}</div>
           <div className="mt-2 text-lg font-semibold text-[#fcee09]">{losingOverwrites.length}</div>
         </div>
         <div className="border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">Affected Mods</div>
+          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.affectedMods')}</div>
           <div className="mt-2 text-lg font-semibold text-white">{affectedMods}</div>
         </div>
       </div>
 
       {archiveConflicts.length > 0 ? (
         <div className="mt-4 border-[0.5px] border-[#4f2020] bg-[#120808] px-4 py-3 text-sm leading-relaxed text-[#f3b8b8]">
-          {archiveConflicts.length} archive resource conflict{archiveConflicts.length === 1 ? '' : 's'} detected. These are not simple file overwrites and may still depend on archive load behavior.
+          {tn('dialogs.overwrite.archiveConflictNote', archiveConflicts.length)}
         </div>
       ) : null}
 
       {losingOverwrites.length > 0 ? (
         <div className="mt-4 border-[0.5px] border-[#5a4e12] bg-[#0f0d03] px-4 py-3 text-sm leading-relaxed text-[#efe3a4]">
-          Mods with a higher `#` position than this install will keep priority on those shared paths.
+          {t('dialogs.overwrite.priorityNote')}
         </div>
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a]">
         <div className="grid grid-cols-[124px_minmax(0,1fr)_minmax(0,0.9fr)] gap-3 border-b-[0.5px] border-[#171717] px-4 py-3 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#8d8d8d]">
-          <div>Outcome</div>
-          <div>Game Target</div>
-          <div>Existing Mod</div>
+          <div>{t('dialogs.overwrite.outcome')}</div>
+          <div>{t('dialogs.overwrite.gameTarget')}</div>
+          <div>{t('dialogs.overwrite.existingMod')}</div>
         </div>
         <div className="max-h-[360px] overflow-y-auto hyperion-scrollbar">
           {previewRows.map((conflict, index) => {
@@ -115,10 +117,10 @@ export const OverwriteConflictDialog: React.FC = () => {
                 ? 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
                 : 'border-[#5a4e12] bg-[#0f0d03] text-[#fcee09]'
             const label = conflict.kind === 'archive-resource'
-              ? 'Archive'
+              ? t('dialogs.overwrite.tagArchive')
               : conflict.incomingWins
-                ? 'Incoming Wins'
-                : 'Existing Wins'
+                ? t('dialogs.overwrite.tagIncomingWins')
+                : t('dialogs.overwrite.tagExistingWins')
 
             return (
               <div
@@ -134,7 +136,7 @@ export const OverwriteConflictDialog: React.FC = () => {
                   <div className="break-all">{conflict.resourcePath}</div>
                   {showArchiveHash ? (
                     <div className="mt-1 break-all text-xs text-[#8d8d8d]">
-                      Archive resource: {archiveHash}
+                      {t('dialogs.overwrite.archiveResource', { hash: archiveHash ?? '' })}
                     </div>
                   ) : null}
                 </div>
@@ -152,7 +154,7 @@ export const OverwriteConflictDialog: React.FC = () => {
 
       {hiddenCount > 0 ? (
         <div className="mt-3 text-sm text-[#8d8d8d]">
-          +{hiddenCount} more overlap{hiddenCount === 1 ? '' : 's'} in this install.
+          {tn('dialogs.overwrite.moreOverlaps', hiddenCount)}
         </div>
       ) : null}
     </div>
@@ -176,11 +178,11 @@ export const OverwriteConflictDialog: React.FC = () => {
     <ActionPromptDialog
       accentColor="#fcee09"
       accentGlow="rgba(252,238,9,0.36)"
-      title="Overwrite Preview"
+      title={t('dialogs.overwrite.title')}
       description={description}
       icon="layers"
-      primaryLabel="Install With Current Priority"
-      cancelLabel="Cancel Install"
+      primaryLabel={t('dialogs.overwrite.primary')}
+      cancelLabel={t('dialogs.overwrite.cancel')}
       onPrimary={() => void handleProceed()}
       onCancel={handleCancel}
       submitting={submitting}

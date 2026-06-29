@@ -17,7 +17,9 @@
     "refresh": "Refresh",
     "install": "Install",
     "reinstall": "Reinstall",
-    "delete": "Delete"
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "next": "Next"
   },
   "language": {
     "label": "Language",
@@ -386,7 +388,8 @@
       "createDescription": "Create a library divider for custom order. You can drag mods into it later or use Move to Separator from the selection bar.",
       "renameDescription": "Update the label shown for this separator in Custom Order.",
       "createSubmit": "Create Separator",
-      "renameSubmit": "Save Name"
+      "renameSubmit": "Save Name",
+      "nameLabel": "Separator Name"
     },
     "row": {
       "modCount_one": "{count} mod",
@@ -683,6 +686,95 @@
       "updateCheckError": "Could not check for updates",
       "updateDownloaded": "Update downloaded",
       "updateDownloadError": "Could not download update"
+    }
+  },
+  "dialogs": {
+    "fomod": {
+      "label": "FOMOD Installer",
+      "stepCounter": "Step {pos} / {total}",
+      "noOptions": "No options to configure",
+      "preview": "Preview",
+      "clickToExpand": "Click to expand",
+      "required": "required",
+      "allSelected": "all selected"
+    },
+    "duplicateDownload": {
+      "titleDownloading": "File Already Downloading",
+      "titleExists": "File Already Exists",
+      "descriptionDownloading": "Hyperion is already downloading this archive right now. If you continue, the new request will be saved as a separate copy so both downloads can finish without colliding.",
+      "descriptionExists": "Hyperion found this file in your downloads folder already. If you continue, the new download will be saved as a separate copy with a clear duplicate label.",
+      "downloadAgain": "Download Again",
+      "labelDownloading": "Archive downloading now",
+      "labelExisting": "Existing archive",
+      "newName": "New archive name"
+    },
+    "duplicateInstall": {
+      "installFailed": "Install failed",
+      "installedNotActivated": "Installed but couldn't activate: {error}",
+      "installedActivated": "{name} installed & activated",
+      "reinstallTitle": "Reinstall Mod",
+      "existsTitle": "Mod Already Installed",
+      "reinstallDescription": "You are about to reinstall {name} from the original source archive or folder.",
+      "existsDescription": "You are installing {name}, but Hyperion found an existing module with the same identity in your library.",
+      "reinstallDetailLabel": "Target mod",
+      "existsDetailLabel": "Existing mod",
+      "replace": "Replace",
+      "installAsCopy": "Install as Copy"
+    },
+    "overwrite": {
+      "title": "Overwrite Preview",
+      "descriptionLosing": "This install shares game-target paths with enabled mods. Hyperion will respect library order, so files from mods below this position still win over the incoming mod.",
+      "descriptionWinning": "This install shares game-target paths with enabled mods. Hyperion will deploy it using library order, so the incoming mod will take priority where it lands later in the stack.",
+      "descriptionArchive": "This install also touches archive resources already present in enabled mods. Review the overlap before continuing.",
+      "incomingPriority": "Incoming Priority",
+      "wins": "Wins",
+      "stillOverridden": "Still Overridden",
+      "affectedMods": "Affected Mods",
+      "archiveConflictNote_one": "{count} archive resource conflict detected. These are not simple file overwrites and may still depend on archive load behavior.",
+      "archiveConflictNote_other": "{count} archive resource conflicts detected. These are not simple file overwrites and may still depend on archive load behavior.",
+      "priorityNote": "Mods with a higher `#` position than this install will keep priority on those shared paths.",
+      "outcome": "Outcome",
+      "gameTarget": "Game Target",
+      "existingMod": "Existing Mod",
+      "tagArchive": "Archive",
+      "tagIncomingWins": "Incoming Wins",
+      "tagExistingWins": "Existing Wins",
+      "archiveResource": "Archive resource: {hash}",
+      "moreOverlaps_one": "+{count} more overlap in this install.",
+      "moreOverlaps_other": "+{count} more overlaps in this install.",
+      "primary": "Install With Current Priority",
+      "cancel": "Cancel Install"
+    },
+    "version": {
+      "title": "Version Mismatch",
+      "unknown": "Unknown",
+      "badgeNewer": "Newer",
+      "badgeOlder": "Older",
+      "badgeDifferent": "Different",
+      "badgeReview": "Review",
+      "summaryUpgrade": "A newer version of this mod is already in your library.",
+      "summaryDowngrade": "The selected archive is older than what you have installed.",
+      "summaryDifferent": "The selected archive is a different version of an installed mod.",
+      "summaryUnknown": "This archive matches an installed mod but the versions could not be compared.",
+      "recommended": "Recommended",
+      "installed": "Installed",
+      "selected": "Selected",
+      "keep": "Keep {version}",
+      "keepHelper": "Keep the current install and ignore this older archive.",
+      "addToLibrary": "Add to Library",
+      "addToLibraryHelper": "Keep both — add this version as a separate entry.",
+      "updateTo": "Update to {version}",
+      "switchTo": "Switch to {version}",
+      "replaceHelper": "Replace the installed mod with this version.",
+      "replaceOlder": "Replace with older {version}",
+      "notNow": "Not now"
+    },
+    "moveToSeparator": {
+      "title": "Move to Separator",
+      "descriptionOne": "Choose a separator to move this mod into.",
+      "descriptionMany": "Choose a separator to move {count} selected mods into.",
+      "searchPlaceholder": "Search separators...",
+      "noMatch": "No separators match your search."
     }
   }
 }

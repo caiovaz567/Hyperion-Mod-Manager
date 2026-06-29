@@ -6,6 +6,7 @@ import { parseFomodXml, buildInitialSelections, resolveInstallEntries, fomodImag
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import type { FomodGroup, FomodPlugin, FomodModuleConfig } from '@shared/types'
+import { useTranslation } from '../../i18n/I18nContext'
 
 function getDefaultPluginForStep(
   config: FomodModuleConfig,
@@ -85,6 +86,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
   onToggle,
   onHover,
 }) => {
+  const { t } = useTranslation()
   const isNotUsable = plugin.typeDescriptor === 'NotUsable'
   const isRequired = plugin.typeDescriptor === 'Required'
   const effectiveDisabled = disabled || isNotUsable || isRequired
@@ -127,7 +129,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
       </div>
 
       {isRequired && (
-        <span className="shrink-0 text-[11px] font-bold tracking-widest uppercase text-[#fcee09]/70">required</span>
+        <span className="shrink-0 text-[11px] font-bold tracking-widest uppercase text-[#fcee09]/70">{t('dialogs.fomod.required')}</span>
       )}
     </label>
   )
@@ -148,6 +150,7 @@ const GroupSection: React.FC<GroupSectionProps> = ({
   onSelect,
   onHoverPlugin,
 }) => {
+  const { t } = useTranslation()
   const selected = selections.get(groupKey) ?? new Set<number>()
   const isAll = group.type === 'SelectAll' || group.type === 'SelectAllAndMore'
   const isCheckbox = group.type === 'SelectAny' || isAll
@@ -157,7 +160,7 @@ const GroupSection: React.FC<GroupSectionProps> = ({
       <div className="mb-1.5 flex items-center gap-2 px-1">
         <span className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a]">{group.name}</span>
         {isAll && (
-          <span className="text-[11px] font-bold tracking-widest uppercase text-[#555]">all selected</span>
+          <span className="text-[11px] font-bold tracking-widest uppercase text-[#555]">{t('dialogs.fomod.allSelected')}</span>
         )}
       </div>
       <div className="overflow-hidden rounded-sm border border-[#1e1e1e] bg-[#080808]">
@@ -190,17 +193,18 @@ interface PreviewPanelProps {
 }
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpenLightbox }) => {
+  const { t } = useTranslation()
   const imagePath = plugin?.image ? fomodImageUrl(extractRoot, plugin.image) : null
 
   return (
     <div className="w-[420px] shrink-0 flex flex-col gap-3 border-l border-[#1a1a1a] pl-6 min-h-0 overflow-hidden">
-      <div className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a] shrink-0">Preview</div>
+      <div className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a] shrink-0">{t('dialogs.fomod.preview')}</div>
 
       <div className="flex-1 min-h-0 overflow-y-auto hyperion-scrollbar flex flex-col gap-3" style={{ scrollbarGutter: 'stable' }}>
         {imagePath ? (
           <div
             className="shrink-0 overflow-hidden rounded-sm border border-[#1e1e1e] cursor-zoom-in"
-            title="Click to expand"
+            title={t('dialogs.fomod.clickToExpand')}
             onClick={() => onOpenLightbox(imagePath)}
           >
             <FomodImage filePath={imagePath} className="block w-full h-auto" />
@@ -227,6 +231,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
 // ─── Main Dialog ──────────────────────────────────────────────────────────────
 
 export const FomodInstallerDialog: React.FC = () => {
+  const { t } = useTranslation()
   const { fomodPrompt, fomodInstall, dismissFomodPrompt, clearFomodPrompt } = useAppStore((s) => ({
     fomodPrompt: s.fomodPrompt,
     fomodInstall: s.fomodInstall,
@@ -438,12 +443,12 @@ export const FomodInstallerDialog: React.FC = () => {
           <div className="flex items-center gap-3 min-w-0">
             <span className="material-symbols-outlined text-xl text-[#fcee09]">install_desktop</span>
             <div className="min-w-0">
-              <div className="text-[12px] brand-font font-bold tracking-widest uppercase text-[#fcee09]">FOMOD Installer</div>
+              <div className="text-[12px] brand-font font-bold tracking-widest uppercase text-[#fcee09]">{t('dialogs.fomod.label')}</div>
               <div className="text-sm font-semibold text-[#e0e0e0] truncate mt-0.5">{config.moduleName}</div>
             </div>
           </div>
           {hasSteps && (
-            <div className="shrink-0 font-mono text-[13px] text-[#8a8a8a]">Step {safePos + 1} / {totalSteps}</div>
+            <div className="shrink-0 font-mono text-[13px] text-[#8a8a8a]">{t('dialogs.fomod.stepCounter', { pos: safePos + 1, total: totalSteps })}</div>
           )}
         </div>
 
@@ -484,7 +489,7 @@ export const FomodInstallerDialog: React.FC = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-[#4a4a4a]">
                 <span className="material-symbols-outlined text-3xl mb-2">check_circle</span>
-                <span className="text-sm">No options to configure</span>
+                <span className="text-sm">{t('dialogs.fomod.noOptions')}</span>
               </div>
             )}
           </div>
@@ -505,7 +510,7 @@ export const FomodInstallerDialog: React.FC = () => {
             onClick={clearFomodPrompt}
             className="border-[0.5px] border-[#2a2a2a] px-5 py-2.5 text-sm font-medium text-[#9a9a9a] hover:border-[#444] hover:text-[#e0e0e0] transition-colors rounded-sm"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
 
           <div className="flex items-center gap-3">
@@ -518,7 +523,7 @@ export const FomodInstallerDialog: React.FC = () => {
                 className="flex items-center gap-2 border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] px-5 py-2.5 text-xs font-bold tracking-widest uppercase text-[#9a9a9a] hover:border-[#444] hover:text-white transition-colors rounded-sm"
               >
                 <span className="material-symbols-outlined text-base">arrow_back</span>
-                Back
+                {t('common.back')}
               </button>
             )}
 
@@ -531,7 +536,7 @@ export const FomodInstallerDialog: React.FC = () => {
                 disabled={!stepValid}
                 className="flex items-center gap-2 bg-[#fcee09] px-6 py-2.5 text-xs font-bold tracking-widest uppercase text-black hover:brightness-110 transition-all disabled:opacity-40 rounded-sm shadow-[0_0_12px_rgba(252,238,9,0.3)]"
               >
-                Next
+                {t('common.next')}
                 <span className="material-symbols-outlined text-base">arrow_forward</span>
               </button>
             ) : (
@@ -541,7 +546,7 @@ export const FomodInstallerDialog: React.FC = () => {
                 className="flex items-center gap-2 bg-[#fcee09] px-6 py-2.5 text-xs font-bold tracking-widest uppercase text-black hover:brightness-110 transition-all disabled:opacity-40 rounded-sm shadow-[0_0_12px_rgba(252,238,9,0.3)]"
               >
                 <span className="material-symbols-outlined text-base">download</span>
-                Install
+                {t('common.install')}
               </button>
             )}
           </div>
