@@ -10,6 +10,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.30.1] - 2026-06-29
+
+### Changed
+- Nexus requests now send a descriptive, fully dynamic `User-Agent` (`Hyperion/{version} ({OS} {release}; {arch}) Electron/{version}`) instead of the minimal `Hyperion-{version}` string, matching the format recommended for Nexus API clients. Every field is derived at runtime, so a `package.json` version bump is all that's needed — no manual edits.
+
+### Fixed
+- The Nexus CDN file download now sends the same `User-Agent` header as the API calls. Previously the actual archive download went out with a blank `User-Agent`, which the Nexus API Acceptable Use Policy discourages.
+
+---
+
 ## [0.30.0] - 2026-06-29
 
 ### Added
