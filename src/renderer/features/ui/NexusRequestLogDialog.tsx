@@ -13,6 +13,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { SurfaceTabRail } from './uiKit'
 import { Tooltip } from './Tooltip'
+import { useTranslation } from '../../i18n/I18nContext'
 
 interface AppLogsDialogProps {
   onClose: () => void
@@ -170,6 +171,7 @@ const StructuredDataPanel: React.FC<{
   icon = 'data_object',
   defaultExpanded = true,
 }) => {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(defaultExpanded)
   const hasSecrets = payloadHasSecrets(value)
 
@@ -196,7 +198,7 @@ const StructuredDataPanel: React.FC<{
         </div>
         <div className="flex items-center gap-2">
           {hasSecrets ? (
-            <Tooltip content={revealSecrets ? 'Hide secrets' : 'Reveal secrets'}>
+            <Tooltip content={revealSecrets ? t('logs.hideSecrets') : t('logs.revealSecrets')}>
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggleRevealSecrets() }}
@@ -210,7 +212,7 @@ const StructuredDataPanel: React.FC<{
               </button>
             </Tooltip>
           ) : null}
-          <Tooltip content={`Copy ${title.toLowerCase()}`}>
+          <Tooltip content={t('logs.copyTitle', { title: title.toLowerCase() })}>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); void onCopy(value, title) }}
@@ -242,6 +244,7 @@ const PayloadNode: React.FC<{
   defaultExpanded?: boolean
   isLast?: boolean
 }> = ({ name, value, revealSecrets, depth = 0, defaultExpanded = true, isLast = true }) => {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(defaultExpanded)
   const isRoot = name === undefined
   const isArrayIdx = /^\[\d+\]$/.test(name ?? '')
@@ -324,7 +327,7 @@ const PayloadNode: React.FC<{
           {/* Children with vertical guide line */}
           <div style={{ marginLeft: guideLeft, borderLeft: '1px solid #1c1c1c' }}>
             {entries.length === 0 ? (
-              <div className="ui-support-mono py-[2px] pl-2 text-[#8a8a8a]">empty</div>
+              <div className="ui-support-mono py-[2px] pl-2 text-[#8a8a8a]">{t('logs.emptyNode')}</div>
             ) : (
               entries.map(([k, v], i) => (
                 <PayloadNode
@@ -351,6 +354,7 @@ const PayloadNode: React.FC<{
 }
 
 export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
+  const { t, tn } = useTranslation()
   const addToast = useAppStore((state) => state.addToast)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<LogsTab>('general')
@@ -427,18 +431,18 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
   }, [onClose])
 
   const activeCount = activeTab === 'general' ? generalEntries.length : requestEntries.length
-  const clearTabLabel = activeTab === 'general' ? 'Clear General logs' : 'Clear Request logs'
+  const clearTabLabel = activeTab === 'general' ? t('logs.clearGeneral') : t('logs.clearRequests')
   const logTabItems = [
-    { id: 'general' as const, label: 'General', icon: 'article', count: generalEntries.length },
-    { id: 'requests' as const, label: 'Requests', icon: 'cloud_sync', count: requestEntries.length },
+    { id: 'general' as const, label: t('logs.tabGeneral'), icon: 'article', count: generalEntries.length },
+    { id: 'requests' as const, label: t('logs.tabRequests'), icon: 'cloud_sync', count: requestEntries.length },
   ]
 
   const emptyLabel = useMemo(() => {
-    if (loading) return 'Loading logs...'
+    if (loading) return t('logs.loading')
     return activeTab === 'general'
-      ? 'No general app logs recorded yet'
-      : 'No request logs recorded yet'
-  }, [activeTab, loading])
+      ? t('logs.emptyGeneral')
+      : t('logs.emptyRequests')
+  }, [activeTab, loading, t])
 
   const toggleGeneral = (id: string) => {
     setExpandedGeneralIds((current) => {
@@ -470,16 +474,16 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
     setExpandedRequestIds(new Set())
   }
 
-  const handleCopyPayload = async (payload: unknown, label = 'Payload') => {
+  const handleCopyPayload = async (payload: unknown, label = t('logs.payload')) => {
     try {
       await navigator.clipboard.writeText(stringifyPayload(payload, revealSecrets))
       addToast(
-        revealSecrets ? `${label} copied with secrets shown` : `${label} copied`,
+        revealSecrets ? t('logs.copiedWithSecrets', { label }) : t('logs.copied', { label }),
         'success',
         1800
       )
     } catch {
-      addToast(`Could not copy ${label.toLowerCase()}`, 'error', 2200)
+      addToast(t('logs.copyError', { label: label.toLowerCase() }), 'error', 2200)
     }
   }
 
@@ -530,34 +534,34 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           <div className="border-t-[0.5px] border-[#1a1a1a] bg-[#060606] px-6 py-4">
             {previewLabel ? (
               <div className="mb-4 overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#090909] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em] text-[#d6d6d6]">Preview</div>
+                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em] text-[#d6d6d6]">{t('logs.preview')}</div>
                 <div className="font-mono text-sm text-[#b8b8b8]">
-                  Mock POST example to preview how sent payload and received response are rendered in the inspector.
+                  {t('logs.previewMock')}
                 </div>
               </div>
             ) : null}
             <div className="mb-4 grid gap-3 md:grid-cols-4">
               <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">Method</div>
+                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.method')}</div>
                 <span className={`${inlineBadgeClass} ${requestMethodBadgeClass[entry.method]}`}>{entry.method}</span>
               </div>
               <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">Endpoint</div>
+                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.endpoint')}</div>
                 <div className="font-mono text-sm text-[#e5e2e1] break-all">{entry.endpoint}</div>
               </div>
               <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">Status</div>
+                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.status')}</div>
                 <div className="font-mono text-sm text-[#e5e2e1]">{formatStatusCode(entry)}</div>
               </div>
               <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">API Time</div>
+                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.apiTime')}</div>
                 <div className="font-mono text-sm text-[#e5e2e1]">{formatDuration(entry.durationMs)}</div>
               </div>
             </div>
             <div className="mb-4 overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#070707]">
               <div className="flex items-center gap-2 border-b-[0.5px] border-[#161616] bg-[#0b0b0b] px-3 py-2">
                 <span className="material-symbols-outlined text-[15px] text-[#fcee09]">link</span>
-                <span className="ui-support-mono uppercase tracking-[0.14em]">Request URL</span>
+                <span className="ui-support-mono uppercase tracking-[0.14em]">{t('logs.requestUrl')}</span>
               </div>
               <div className="px-3 py-3 font-mono text-sm text-[#e5e2e1] break-all">
                 {entry.url}
@@ -567,7 +571,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
               <div className="mb-4 overflow-hidden rounded-sm border-[0.5px] border-[#4a1212] bg-[#120707]">
                 <div className="flex items-center gap-2 border-b-[0.5px] border-[#341010] bg-[#180909] px-3 py-2">
                   <span className="material-symbols-outlined text-[15px] text-[#f87171]">error</span>
-                  <span className="ui-support-mono uppercase tracking-[0.14em] text-[#fca5a5]">Error</span>
+                  <span className="ui-support-mono uppercase tracking-[0.14em] text-[#fca5a5]">{t('logs.error')}</span>
                 </div>
                 <div className="px-3 py-3 font-mono text-sm text-[#fca5a5]">
                   {entry.error}
@@ -577,9 +581,9 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             <div className="space-y-4">
               {hasStructuredValue(entry.requestBody) ? (
                 <StructuredDataPanel
-                  title="Request Body"
+                  title={t('logs.requestBody')}
                   value={entry.requestBody}
-                  emptyLabel="No request body"
+                  emptyLabel={t('logs.noRequestBody')}
                   revealSecrets={revealSecrets}
                   onToggleRevealSecrets={toggleRevealSecrets}
                   onCopy={handleCopyPayload}
@@ -589,9 +593,9 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
               ) : null}
               {hasStructuredValue(resolvedResponseBody) ? (
                 <StructuredDataPanel
-                  title="Response Body"
+                  title={t('logs.responseBody')}
                   value={resolvedResponseBody}
-                  emptyLabel="No response body captured"
+                  emptyLabel={t('logs.noResponseBody')}
                   revealSecrets={revealSecrets}
                   onToggleRevealSecrets={toggleRevealSecrets}
                   onCopy={handleCopyPayload}
@@ -616,19 +620,19 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             <div className="mb-2 flex items-center gap-3">
               <span className="material-symbols-outlined text-[20px] text-[#fcee09]">terminal</span>
               <h2 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
-                App Logs
+                {t('logs.title')}
               </h2>
               <span className={`${inlineBadgeClass} border-[#4a3f08] bg-[#171303] text-[#fcee09]`}>
-                live
+                {t('logs.live')}
               </span>
             </div>
             <p className="ui-support-mono max-w-3xl">
-              Diagnostic events and Nexus API requests are grouped here. Click a row to inspect structured details or request payloads.
+              {t('logs.description')}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <Tooltip content="Close logs">
+            <Tooltip content={t('logs.closeLogs')}>
               <button
                 type="button"
                 onClick={onClose}
@@ -652,13 +656,13 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
               items={logTabItems}
               activeId={activeTab}
               onChange={setActiveTab}
-              ariaLabel="App log sections"
+              ariaLabel={t('logs.sectionsAria')}
               className="min-w-0 flex-1"
               withBottomBorder={false}
             />
             <div className="flex shrink-0 items-center gap-3">
               <span className="ui-support-mono uppercase tracking-[0.14em]">
-                {activeCount} entr{activeCount === 1 ? 'y' : 'ies'}
+                {tn('logs.entries', activeCount)}
               </span>
               <Tooltip content={clearTabLabel}>
                 <button
@@ -713,22 +717,22 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                         <div className="border-t-[0.5px] border-[#1a1a1a] bg-[#060606] px-4 py-4">
                           <div className="mb-4 grid gap-3 md:grid-cols-3">
                             <div className="border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">Source</div>
+                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.source')}</div>
                               <div className="font-mono text-sm text-[#e5e2e1]">{entry.source}</div>
                             </div>
                             <div className="border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">Level</div>
+                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.level')}</div>
                               <div className="font-mono text-sm uppercase tracking-[0.08em] text-[#e5e2e1]">{entry.level}</div>
                             </div>
                             <div className="border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">Occurred</div>
+                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.occurred')}</div>
                               <div className="font-mono text-sm text-[#e5e2e1]">{formatWindowsDateTime(entry.timestamp)}</div>
                             </div>
                           </div>
                           <StructuredDataPanel
-                            title="Details"
+                            title={t('logs.details')}
                             value={entry.details}
-                            emptyLabel="No structured details"
+                            emptyLabel={t('logs.noDetails')}
                             revealSecrets={revealSecrets}
                             onToggleRevealSecrets={toggleRevealSecrets}
                             onCopy={handleCopyPayload}
@@ -746,7 +750,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             <div className="space-y-2">
               {requestEntries.length === 0 ? (
                 <div className="flex min-h-[180px] items-center justify-center border-[0.5px] border-[#1a1a1a] bg-[#070707]">
-                  <div className="ui-support-mono text-center uppercase tracking-[0.14em]">No live request logs recorded yet</div>
+                  <div className="ui-support-mono text-center uppercase tracking-[0.14em]">{t('logs.emptyRequestsLive')}</div>
                 </div>
               ) : (
                 requestEntries.map((entry) => renderRequestEntry(entry))
