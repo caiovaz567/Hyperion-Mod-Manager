@@ -26,7 +26,6 @@ import {
 import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
 import { MoveToSeparatorDialog } from '../ui/MoveToSeparatorDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
-import { useVirtualRows } from '../../hooks/useVirtualRows'
 import { useTranslation } from '../../i18n/I18nContext'
 import { useLibraryBulkToggle } from './useLibraryBulkToggle'
 import { useLibraryContextMenuActions } from './useLibraryContextMenuActions'
@@ -49,15 +48,14 @@ interface DetailOverlayState {
 }
 
 const MOD_ROW_HEIGHT = 38
-// Above this many rows the list windows (renders only the visible slice). Windowing
-// requires tracking scroll position in React state, which re-renders this (large)
-// component on every scroll frame — fine when it saves rendering hundreds of rows, but
-// pure overhead for a few hundred. Below the threshold every row is in the DOM and
-// scrolling is a cheap GPU composite with NO React work (see useVirtualRows: it doesn't
-// even attach a scroll listener when disabled). Kept high so typical libraries never pay
-// the per-scroll re-render cost; only very large ones window. Do not lower this without
-// a way to keep scroll from re-rendering the whole ModList (e.g. extracting the row list).
-const MOD_VIRTUALIZATION_THRESHOLD = 400
+// Above this many rows the list windows (renders only the visible slice + overscan),
+// so the first paint and every scroll frame touch ~30-50 rows instead of all of them.
+// The scroll-position state that drives windowing now lives INSIDE <LibraryRows>, so a
+// scroll re-renders only that small row list — never this large ModList. That isolation
+// is what makes a low threshold safe: the old warning ("re-renders the whole ModList on
+// every scroll frame") no longer applies. Kept modest so a normal large library (100+
+// mods) windows and starts up fast, while tiny libraries still render every row.
+const MOD_VIRTUALIZATION_THRESHOLD = 60
 
 export const ModList: React.FC = () => {
   const { t } = useTranslation()
@@ -449,24 +447,10 @@ export const ModList: React.FC = () => {
   const hasAppendInstallRow = installing && installPlacement === 'append'
   const hasInsertAfterInstallRow = installing && installPlacement === 'insert-after'
 
-  const virtualizedMods = useVirtualRows({
-    containerRef: listScrollRef,
-    count: displayedMods.length + (hasAppendInstallRow || hasInsertAfterInstallRow ? 1 : 0),
-    rowHeight: MOD_ROW_HEIGHT,
-    overscan: 14,
-    enabled: displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD,
-  })
-
-  const visibleMods = useMemo(
-    () => displayedMods.slice(
-      virtualizedMods.startIndex,
-      Math.min(virtualizedMods.endIndex, displayedMods.length)
-    ),
-    [displayedMods, virtualizedMods.endIndex, virtualizedMods.startIndex]
-  )
-  const showAppendInstallRow = hasAppendInstallRow &&
-    virtualizedMods.startIndex <= displayedMods.length &&
-    virtualizedMods.endIndex > displayedMods.length
+  // Windowing now lives inside <LibraryRows> (it owns the scroll-position state), so
+  // scrolling re-renders only that row list — never this large ModList. That's the
+  // isolation the threshold note below depends on.
+  const virtualizationEnabled = displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD
   const selectedConflictMod = selectedIds.length === 1
     ? allMods.find((mod) => mod.uuid === selectedIds[0]) ?? null
     : null
@@ -806,10 +790,9 @@ export const ModList: React.FC = () => {
           <LibraryRows
             rowsRef={listRowsRef}
             displayedMods={displayedMods}
-            visibleMods={visibleMods}
-            virtualStartIndex={virtualizedMods.startIndex}
-            paddingTop={displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD ? virtualizedMods.paddingTop : 0}
-            paddingBottom={displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD ? virtualizedMods.paddingBottom : 0}
+            scrollContainerRef={listScrollRef}
+            rowHeight={MOD_ROW_HEIGHT}
+            virtualizationEnabled={virtualizationEnabled}
             filter={filter}
             totalCount={totalCount}
             libraryStatusFilter={libraryStatusFilter}
@@ -821,7 +804,7 @@ export const ModList: React.FC = () => {
             installTargetModId={installTargetModId}
             installTargetNested={installTargetNested}
             hasInsertAfterInstallRow={hasInsertAfterInstallRow}
-            showAppendInstallRow={showAppendInstallRow}
+            hasAppendInstallRow={hasAppendInstallRow}
             loadOrderMap={loadOrderMap}
             selectedSet={selectedSet}
             nestedModIds={nestedModIds}
