@@ -564,11 +564,16 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       nextSelectedNodeId = nextName ? replaceTreeNodeName(targetNode.id, nextName) : null
     }
 
-    await scanMods()
+    // Refresh ONLY the edited mod so the Files tree updates instantly — re-scanning
+    // the whole library here (and recomputing every mod's conflicts) is what made
+    // each create/rename/delete feel slow. A full sync still runs in the background,
+    // unawaited, to keep conflict badges current without blocking the action.
+    await refreshModFiles(mod.uuid)
     setTreeActionDialog(null)
     setTreeActionValue('')
     setSelectedNodeId(nextSelectedNodeId)
     addToast(successMessage, 'success', 1800)
+    void scanMods()
   }
 
   return createPortal(

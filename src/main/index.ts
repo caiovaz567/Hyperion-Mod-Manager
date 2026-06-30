@@ -24,6 +24,7 @@ import {
 } from './ipc/modManager'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridge'
 import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
+import { setSplashProgressEmitter } from './splashProgress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
 import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
@@ -2704,10 +2705,16 @@ app.whenReady().then(async () => {
   const updateSplashStatus = (message: string) => {
     if (splash.isDestroyed()) return
     const serialized = JSON.stringify(message)
-    splash.webContents.executeJavaScript(`
+    // Wrap in an IIFE. Repeated executeJavaScript calls run in the page's SAME
+    // top-level lexical scope, so a bare `const s` throws "Identifier 's' has already
+    // been declared" on every call after the first — which the .catch swallowed,
+    // silently dropping every status update past the initial one (the splash froze on
+    // the first message; this was the real "stuck on Loading Settings" cause). A
+    // function scope keeps each call independent so live progress actually shows.
+    splash.webContents.executeJavaScript(`(() => {
       const s = document.getElementById('status');
       if (s) s.textContent = ${serialized};
-    `).catch(() => { /* splash element may not exist */ })
+    })()`).catch(() => { /* splash element may not exist */ })
   }
 
   const revealMainWindow = () => {
@@ -2715,6 +2722,8 @@ app.whenReady().then(async () => {
 
     const targetWindow = mainWindow
     mainWindowRevealed = true
+    // Splash is going away — stop routing main-process progress to it.
+    setSplashProgressEmitter(null)
 
     if (targetWindow.isMinimized()) {
       targetWindow.restore()
@@ -2746,8 +2755,45 @@ app.whenReady().then(async () => {
     flushPendingNxmUrls()
   }
 
+  // Splash safety net as an INACTIVITY watchdog rather than an absolute deadline: a
+  // large library can boot for >12s while progressing perfectly fine (mod scan +
+  // first-run conflict re-index), so an absolute timer fired the false "did not
+  // signal in time" warning and revealed early. Instead, every boot-status update
+  // (and the initial first-paint) re-arms the timer, so it only fires after a real
+  // stall — the renderer going silent for the whole grace period with no progress
+  // and no APP_READY. That's the genuine "stuck on LOADING SETTINGS…" hang.
+  let splashSafetyTimer: ReturnType<typeof setTimeout> | null = null
+  const clearSplashSafetyWatchdog = () => {
+    if (splashSafetyTimer) {
+      clearTimeout(splashSafetyTimer)
+      splashSafetyTimer = null
+    }
+  }
+  const armSplashSafetyWatchdog = () => {
+    if (mainWindowRevealed) return
+    clearSplashSafetyWatchdog()
+    splashSafetyTimer = setTimeout(() => {
+      splashSafetyTimer = null
+      if (mainWindowRevealed || !mainWindow || mainWindow.isDestroyed()) return
+      pushGeneralLog(mainWindow, {
+        level: 'warn',
+        source: 'app',
+        message: 'Renderer went silent during boot; revealing window via safety net',
+      })
+      rendererReady = true
+      revealMainWindow()
+    }, SPLASH_SAFETY_REVEAL_MS)
+  }
+
+  // Let main-process work (mod scan, conflict pass) report fine-grained progress to
+  // the splash, and treat that progress as proof-of-life for the watchdog too.
+  setSplashProgressEmitter((message) => {
+    updateSplashStatus(message)
+    armSplashSafetyWatchdog()
+  })
+
   splash.webContents.on('did-finish-load', () => {
-    updateSplashStatus('Loading settings...')
+    updateSplashStatus('Starting Hyperion…')
   })
 
   if (app.isPackaged) {
@@ -2815,22 +2861,8 @@ app.whenReady().then(async () => {
   mainWindow.once('ready-to-show', () => {
     mainWindowReadyToShow = true
     revealMainWindow()
-
-    // Safety net: never trap the user on the splash forever. The normal reveal waits
-    // for the renderer to send APP_READY, but if its boot stalls on a hung/slow IPC
-    // (settings load, mod scan, conflict pass) APP_READY may never arrive — that's the
-    // "stuck on LOADING SETTINGS…" hang. Once the window has painted its first frame we
-    // guarantee a reveal within a grace period regardless of the renderer's boot state.
-    setTimeout(() => {
-      if (mainWindowRevealed || !mainWindow || mainWindow.isDestroyed()) return
-      pushGeneralLog(mainWindow, {
-        level: 'warn',
-        source: 'app',
-        message: 'Renderer did not signal APP_READY in time; revealing window via safety net',
-      })
-      rendererReady = true
-      revealMainWindow()
-    }, SPLASH_SAFETY_REVEAL_MS)
+    // Start the inactivity watchdog (re-armed on every boot-status update below).
+    armSplashSafetyWatchdog()
   })
 
   // Initialize auto-updater and start the self-update check during the splash so the
@@ -2845,10 +2877,13 @@ app.whenReady().then(async () => {
   // the renderer explicitly signals that the boot sequence is complete.
   ipcMain.on(IPC.APP_BOOT_STATUS, (_event, message: string) => {
     updateSplashStatus(message)
+    // Progress arrived — the renderer is alive, so push the safety net back.
+    armSplashSafetyWatchdog()
   })
 
   ipcMain.once(IPC.APP_READY, () => {
     rendererReady = true
+    clearSplashSafetyWatchdog()
     flushPendingNxmUrls()
     // Deliver any update result that resolved during the splash, now that the
     // renderer's update listeners are guaranteed to be registered.

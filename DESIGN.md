@@ -123,6 +123,7 @@ Alignment rules:
 - Minimal loading screen handled in main-process resources
 - Hyperion identity only, no faux terminal, no bracket ornaments
 - Progress remains understated and accent-led
+- The status line reports real, live boot progress rather than a single static label: a startup phase ("Starting Hyperion…"), then specific steps and per-mod counters ("Scanning library · 45/105", "Checking conflicts · 45/105") as the heavy work actually advances. It stays in the same understated micro-label treatment (single line, muted, uppercase) and truncates gracefully — it must never become a verbose log or break the centered layout
 
 ### Welcome / first setup
 
@@ -337,6 +338,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
 - `Paths` is the primary section and must surface consequence (launch blocked / installs blocked) in the invalid validation copy when required targets are missing
 - `General` owns runtime behavior decisions. It contains both Install Behavior and Runtime Captures, because captured files are automatic runtime output rather than a path configuration task
+- The Runtime Captures folder is a single always-active catch-all, modeled on Mod Organizer 2's Overwrite: captured files are never moved, parked, or hidden based on which mods are enabled. The card's file count reflects everything in the folder, and `Clear captures` wipes it manually. The only automatic cleanup is removing a mod's leftover files when that mod is deleted, limited to the mod's own private folder so it can never disturb another mod's data
 - Runtime Captures is no longer shown in `Paths`; keep the Paths tab focused on Game Path, Mod Library, and Downloads Intake
 - Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold readout tone, while `Free` uses the cool info-blue readout tone
 - The Account card in Settings > Nexus shows a two-card side-by-side tier comparison (`NexusTierComparison` in `SettingsDialog.tsx`): one card per tier, each listing 3 bullets describing how that tier behaves inside Hyperion. The active tier's card gets a subtle tinted fill and icon/text accent (blue for Free, amber for Premium); the inactive tier is rendered in muted grey. When the user is not connected, both cards render in neutral grey with no highlight

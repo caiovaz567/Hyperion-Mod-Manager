@@ -19,6 +19,12 @@ import type {
 import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
 import { suppressLibraryWatch } from '../libraryWatchSuppress'
+import {
+  captureOwnerFolder,
+  getOverwritePathForLibrary,
+  sweepOrphanCaptures,
+} from '../vfsOverwriteCleanup'
+import { isBootProgressActive, reportBootProgress } from '../splashProgress'
 import { detectModType } from './archiveParser'
 import {
   getArchiveResourceDisplayPath,
@@ -393,6 +399,46 @@ export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
   return mod.files
     .filter((relFile) => !isHyperionInternalFile(relFile))
     .map((relFile) => getDeployRelativePath(mod, relFile))
+}
+
+// Removes Runtime Captures left behind by mods that no longer exist. The Overwrite
+// folder is otherwise a single always-mounted catch-all (MO2 style) — captures are
+// never moved or parked based on enable/disable state. This only runs when a mod is
+// DELETED, and only deletes leftovers inside that gone mod's own private per-mod
+// folder (CET-mod / red4ext-plugin slot); framework roots and shared captures are
+// always kept. `remainingMods` must be a fresh, complete scan of the still-installed
+// mods. Best-effort — never let it block or fail a mod removal.
+function cleanDeletedModCaptures(libraryPath: string, remainingMods: ModMetadata[], window: BrowserWindow | null): void {
+  const overwritePath = getOverwritePathForLibrary(libraryPath)
+  if (!overwritePath) return
+
+  try {
+    const liveOwners = new Set<string>()
+    for (const mod of remainingMods) {
+      if (mod.kind !== 'mod') continue
+      for (const deployPath of getTrackedDeploymentPaths(mod)) {
+        const owner = captureOwnerFolder(deployPath)
+        if (owner) liveOwners.add(owner)
+      }
+    }
+
+    const result = sweepOrphanCaptures(overwritePath, liveOwners)
+    if (result.removedFiles > 0 || result.errors.length > 0) {
+      pushGeneralLog(window, {
+        level: result.errors.length > 0 ? 'warn' : 'info',
+        source: 'mods',
+        message: 'Runtime capture cleanup after mod removal',
+        details: {
+          removedFiles: result.removedFiles,
+          removedBytes: result.removedBytes,
+          removedOwners: result.removedOwners,
+          errors: result.errors,
+        },
+      })
+    }
+  } catch {
+    // Best-effort; never let capture bookkeeping surface as a failure.
+  }
 }
 
 function hasArchivePayload(files: string[]): boolean {
@@ -807,24 +853,41 @@ function resolvePathInsideModDir(modDir: string, relativePath = ''): { normalize
 async function refreshModAfterTreeMutation(
   modId: string,
   libraryPath: string,
-  gamePath: string
+  _gamePath: string
 ): Promise<IpcResult<ModMetadata>> {
-  let scannedMods = await scanMods(libraryPath, { refreshFileMetadata: true })
-  let updatedMod = scannedMods.find((entry) => entry.uuid === modId)
-  if (!updatedMod) return { ok: false, error: 'Mod not found after file operation' }
+  // Refresh ONLY the mod that was just edited — re-read its file list/type/size from
+  // disk. Never re-walk the whole library here: a full `refreshFileMetadata` scan
+  // re-reads every file of all installed mods, which made each create/rename/delete
+  // in the Files tab take noticeably long on large libraries. There is also no
+  // deployment work to do — the VFS is virtual and picks up file changes on the next
+  // launch — so the old enabled-mod resync (another full re-walk) is gone too.
+  const found = findModDir(libraryPath, modId)
+  if (!found) return { ok: false, error: 'Mod not found after file operation' }
+  const { mod, dir } = found
+  if (mod.kind !== 'mod') return { ok: true, data: mod }
 
-  if (updatedMod.enabled) {
-    const syncResult = await enableMod(updatedMod, gamePath, libraryPath)
-    if (!syncResult.ok) {
-      return { ok: false, error: syncResult.error ?? 'Could not resync modified mod' }
-    }
+  let changed = false
 
-    scannedMods = await scanMods(libraryPath, { refreshFileMetadata: true })
-    updatedMod = scannedMods.find((entry) => entry.uuid === modId)
-    if (!updatedMod) return { ok: false, error: 'Mod not found after resync' }
+  const files = getScannedModFiles(dir)
+  if (!Array.isArray(mod.files) || mod.files.length !== files.length || mod.files.some((file, index) => file !== files[index])) {
+    mod.files = files
+    changed = true
   }
 
-  return { ok: true, data: updatedMod }
+  const detectedType = detectModType(dir)
+  if (detectedType !== 'unknown' && mod.type !== detectedType) {
+    mod.type = detectedType
+    changed = true
+  }
+
+  const fileSize = getPathSizeSafe(dir)
+  if (mod.fileSize !== fileSize) {
+    mod.fileSize = fileSize
+    changed = true
+  }
+
+  if (changed) writeMetadata(dir, mod)
+  return { ok: true, data: mod }
 }
 
 async function createModTreeEntry(
@@ -966,13 +1029,22 @@ export function findModDir(libraryPath: string, uuid: string): { mod: ModMetadat
 
 export async function scanMods(
   libraryPath: string,
-  options: { refreshArchiveResources?: boolean; refreshFileMetadata?: boolean } = {}
+  options: { refreshArchiveResources?: boolean; refreshFileMetadata?: boolean; progressLabel?: string } = {}
 ): Promise<ModMetadata[]> {
   if (!fs.existsSync(libraryPath)) return []
 
   const entries = fs.readdirSync(libraryPath, { withFileTypes: true })
   const mods: ModMetadata[] = []
   const seenUuids = new Set<string>()
+
+  // Real-time splash feedback while booting: a fresh scan reads metadata for every
+  // mod folder synchronously, which would block the splash from repainting — so we
+  // emit a per-mod counter and periodically yield to the event loop. All gated on
+  // `bootProgress` so a normal (post-splash) scan keeps its original fast path.
+  const bootProgress = isBootProgressActive()
+  const progressLabel = options.progressLabel ?? 'Loading mods'
+  const progressTotal = bootProgress ? entries.reduce((n, e) => (e.isDirectory() ? n + 1 : n), 0) : 0
+  let progressDone = 0
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
@@ -1077,6 +1149,14 @@ export async function scanMods(
       }
     } catch (error) {
       console.warn(`Skipping mod directory during scan: ${modDir}`, error)
+    }
+
+    if (bootProgress) {
+      progressDone += 1
+      reportBootProgress(`${progressLabel} · ${progressDone}/${progressTotal}`, 40)
+      // Let the splash actually repaint the counter mid-scan (the loop is otherwise
+      // synchronous and would freeze it until the whole scan finished).
+      if (progressDone % 6 === 0) await new Promise((resolve) => setImmediate(resolve))
     }
   }
 
@@ -1259,7 +1339,10 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
   ipcMain.handle(IPC.SCAN_MODS, async (_event, options?: { refreshFileMetadata?: boolean }): Promise<IpcResult<ModMetadata[]>> => {
     try {
       const settings = loadSettings()
-      const mods = await scanMods(settings.libraryPath, { refreshFileMetadata: options?.refreshFileMetadata === true })
+      const mods = await scanMods(settings.libraryPath, {
+        refreshFileMetadata: options?.refreshFileMetadata === true,
+        progressLabel: 'Scanning library',
+      })
       return { ok: true, data: mods }
     } catch (error) {
       return {
@@ -1357,6 +1440,15 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       const found = findModDir(settings.libraryPath, modId)
       if (!found) return { ok: false, error: 'Mod directory not found' }
       fs.rmSync(found.dir, { recursive: true, force: true })
+
+      // Remove this mod's leftover Runtime Captures now that it's gone, so settings/
+      // configs from a mod that no longer exists don't pile up. `mods` is the fresh
+      // pre-deletion scan, so the remaining mods are an authoritative owner list.
+      cleanDeletedModCaptures(
+        settings.libraryPath,
+        mods.filter((m) => m.uuid !== modId),
+        getMainWindow?.() ?? null
+      )
       return { ok: true }
     }
   )
@@ -1497,6 +1589,7 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         const settings = loadSettings()
         const mods = await scanMods(settings.libraryPath, {
           refreshArchiveResources: options?.refreshArchiveResources === true,
+          progressLabel: 'Checking conflicts',
         })
 
         const pathOwners = new Map<string, Array<{ modId: string; name: string; order: number }>>()

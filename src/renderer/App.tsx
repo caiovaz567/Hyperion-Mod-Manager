@@ -154,6 +154,7 @@ export const App: React.FC = () => {
 
       // Load the persisted Nexus update cache (from the main process) before scanning,
       // so cached indicators show instantly and the scan's prune keeps the right data.
+      updateBootStatus('Loading update history...')
       await useAppStore.getState().hydrateModUpdates()
 
       updateBootStatus('Scanning mod library...')
