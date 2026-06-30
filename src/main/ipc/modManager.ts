@@ -412,10 +412,6 @@ function archiveResourcesEqual(left: ArchiveResourceEntry[], right: ArchiveResou
   return normalizedLeft.every((value, index) => value === normalizedRight[index])
 }
 
-function hasUnresolvedArchiveResources(resources: ArchiveResourceEntry[]): boolean {
-  return resources.some((resource) => Boolean(resource.hash) && !resource.resourcePath)
-}
-
 async function refreshArchiveResourceMetadata(
   modDir: string,
   meta: ModMetadata,
@@ -448,24 +444,25 @@ async function refreshArchiveResourceMetadata(
     return false
   }
 
-  // Already indexed at current version — skip loading the hash DB and running external scripts.
+  // Already indexed at the current version — treat it as final: skip the hash DB and any
+  // external hash tooling. We intentionally do NOT re-resolve still-unresolved hashes on
+  // every pass. The expensive resolution (archive parse + LXRS/kark/DB) already ran once
+  // at index time, and the bundled DB is static, so a hash unresolved then stays
+  // unresolved now. Re-hydrating here was spawning one resolve-kark-hashes PowerShell per
+  // 250 unresolved hashes per kark file on EVERY launch/refresh — e.g. a single mod with
+  // ~2.7k unresolved hashes caused ~24 PowerShell spawns against CET's tweakdb karks
+  // (which can't resolve resource hashes anyway) — which is what made conflict badges take
+  // many seconds to appear on the first conflict pass of each session (and made the first
+  // reinstall stall on "checking conflicts"; later ones were fast off the in-memory cache).
+  // Conflicts are keyed on the hash, not the path, so unresolved entries still detect
+  // conflicts — they only render as "Unresolved" in the inspector. A sidecar version bump
+  // or a reinstall re-runs full resolution.
   if (
     Array.isArray(meta.archiveResources) &&
     meta.archiveResourceIndexVersion === ARCHIVE_RESOURCE_INDEX_VERSION &&
     storedResources.length > 0
   ) {
-    if (!hasUnresolvedArchiveResources(storedResources)) {
-      return false
-    }
-
-    const hydratedResources = await hydrateArchiveResourcePaths(storedResources)
-    if (archiveResourcesEqual(storedResources, hydratedResources)) {
-      return false
-    }
-
-    meta.archiveResources = hydratedResources
-    writeArchiveSidecar(modDir, hydratedResources, ARCHIVE_RESOURCE_INDEX_VERSION)
-    return true
+    return false
   }
 
   const parsedResources = await resolveArchiveResources(modDir)

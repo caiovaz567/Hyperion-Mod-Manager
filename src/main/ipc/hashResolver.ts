@@ -20,6 +20,9 @@ const FNV1A64_OFFSET = 0xcbf29ce484222325n
 const FNV1A64_PRIME = 0x100000001b3n
 const EXTERNAL_HASH_CHUNK_SIZE = 250
 const HASH_DB_MAX_COMPRESSED_BYTES = 64 * 1024 * 1024
+// Rows to parse before yielding the event loop, so preloading the ~1.7M-row DB during
+// the splash never blocks IPC for the whole parse.
+const HASH_DB_PARSE_CHUNK = 100_000
 const HASH_SOURCE_SCAN_MAX_DEPTH = 10
 const HASH_SOURCE_SCAN_MAX_FILES = 256
 
@@ -277,15 +280,33 @@ async function doLoadHashDatabase(): Promise<Map<string, string>> {
           else resolve(result.toString('utf-8'))
         })
       })
-      const lines = decompressed.split('\n')
-
-      for (const line of lines) {
-        const commaIdx = line.indexOf(',')
-        if (commaIdx === -1) continue
-        const hash = normalizeArchiveHash(line.slice(0, commaIdx).trim())
-        const resourcePath = normalizeArchiveResourcePath(line.slice(commaIdx + 1).trim())
-        if (hash && resourcePath) {
-          map.set(hash, resourcePath)
+      // The bundled CSV is already fully normalized — every row is
+      // `<16-char lowercase FNV1a hex>,<forward-slash lowercase resource path>` with
+      // CRLF endings. Running the full normalize* helpers (regex + replace + lowercase
+      // + padStart + split/filter/join) on all ~1.7M rows roughly doubled load time for
+      // a byte-for-byte identical map, so we parse the trusted format directly with a
+      // single scan (no intermediate 1.7M-string array) and yield between chunks.
+      const length = decompressed.length
+      let lineStart = 0
+      let sinceYield = 0
+      for (let i = 0; i <= length; i += 1) {
+        // Scan to the next newline; treat EOF as a final newline so the last row flushes.
+        if (i < length && decompressed.charCodeAt(i) !== 10) continue
+        let lineEnd = i
+        if (lineEnd > lineStart && decompressed.charCodeAt(lineEnd - 1) === 13) lineEnd -= 1 // trim trailing \r
+        if (lineEnd > lineStart) {
+          const commaIdx = decompressed.indexOf(',', lineStart)
+          if (commaIdx !== -1 && commaIdx < lineEnd) {
+            const hash = decompressed.slice(lineStart, commaIdx)
+            const resourcePath = decompressed.slice(commaIdx + 1, lineEnd)
+            if (hash.length > 0 && resourcePath.length > 0) map.set(hash, resourcePath)
+          }
+        }
+        lineStart = i + 1
+        sinceYield += 1
+        if (sinceYield >= HASH_DB_PARSE_CHUNK) {
+          sinceYield = 0
+          await new Promise<void>((resolve) => { setImmediate(resolve) })
         }
       }
     } catch {
@@ -620,7 +641,10 @@ function findArchives(dir: string, depth = 0): string[] {
 }
 
 /**
- * Pre-loads the hash database at startup for fast conflict detection.
+ * Pre-loads the hash database at startup (during the splash) so the first conflict
+ * pass and any reinstall find it ready instead of paying the parse on the
+ * user-interaction path. Memoized via loadHashDatabase(), so a concurrent deep pass
+ * awaits the same in-flight parse rather than starting a second one.
  */
 export async function preloadHashDatabase(): Promise<void> {
   await loadHashDatabase()

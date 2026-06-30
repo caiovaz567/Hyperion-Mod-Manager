@@ -108,7 +108,18 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       // Only rebuild + re-persist the cache when a mod actually went away (e.g. delete);
       // a plain enable/disable/reorder scan shouldn't trigger a cache write.
       const prunedModUpdates = removedSome ? Object.fromEntries(keptEntries) : previousModUpdates
-      set({ mods: result.data, modUpdates: prunedModUpdates })
+      // conflictSummary is renderer-only derived state — SCAN_MODS reads from disk and never
+      // carries it, so a plain replace would blank every conflict badge until the async refresh
+      // lands. The refresh can be delayed (it serializes behind a slow first-run deep archive
+      // pass), which is why reinstalling a mod made its badges vanish "for a while". Carry the
+      // previous summary over by uuid (reinstall/replace preserves the uuid) so badges stay
+      // stable; the scheduled refresh below still corrects them when it runs.
+      const previousSummaries = new Map(get().mods.map((mod) => [mod.uuid, mod.conflictSummary] as const))
+      const mergedMods = result.data.map((mod) => {
+        const summary = previousSummaries.get(mod.uuid)
+        return summary ? { ...mod, conflictSummary: summary } : mod
+      })
+      set({ mods: mergedMods, modUpdates: prunedModUpdates })
       if (removedSome) persistModUpdates(prunedModUpdates, get().modUpdatesCheckedAt)
       // Update status is never fetched automatically — not on scan, install, or delete.
       // Cached indicators persist and refreshing is fully user-driven via per-mod

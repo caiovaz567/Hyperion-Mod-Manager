@@ -55,7 +55,22 @@ const clearConflictState = (set: LibrarySet) => {
   }))
 }
 
-const runConflictRefresh = async (set: LibrarySet): Promise<void> => {
+const runConflictRefresh = async (
+  set: LibrarySet,
+  // Fires as soon as conflict badges are visible (after the cheap first pass), so an
+  // awaiter — notably the splash/boot — is released BEFORE the slow deep pass. The deep
+  // pass can parse .archive files and run external hash tooling (per-archive LXRS /
+  // kark resolution), which can take many seconds on a large library or a first-run
+  // re-index; blocking the window on it is what froze the splash.
+  onBadgesVisible?: () => void
+): Promise<void> => {
+  let badgesSignaled = false
+  const signalBadgesVisible = () => {
+    if (badgesSignaled) return
+    badgesSignaled = true
+    onBadgesVisible?.()
+  }
+
   const requestConflictState = async (
     options: ConflictCalculationOptions
   ): Promise<ConflictCalculationResult | null> => {
@@ -75,6 +90,9 @@ const runConflictRefresh = async (set: LibrarySet): Promise<void> => {
     const quickState = await requestConflictState({ refreshArchiveResources: false })
     if (quickState) {
       applyConflictState(set, quickState.summaries ?? [], quickState.conflicts ?? [])
+      // Badges are on screen now — release the awaiter before the potentially slow
+      // deep pass so the window never waits on archive (re)indexing.
+      signalBadgesVisible()
 
       // Second pass may parse .archive files and run external hash tooling. It refines
       // paths/counts when ready, but a failure must not erase the visible quick result.
@@ -85,6 +103,8 @@ const runConflictRefresh = async (set: LibrarySet): Promise<void> => {
       return
     }
 
+    // Quick pass produced nothing — don't keep the awaiter blocked on the deep pass.
+    signalBadgesVisible()
     const deepState = await requestConflictState({ refreshArchiveResources: true })
     if (deepState) {
       applyConflictState(set, deepState.summaries ?? [], deepState.conflicts ?? [])
@@ -92,6 +112,9 @@ const runConflictRefresh = async (set: LibrarySet): Promise<void> => {
     }
   } catch {
     // Fall through to clear stale state only when neither pass produced data.
+  } finally {
+    // Safety net: never leave an awaiter hanging, even if both passes threw.
+    signalBadgesVisible()
   }
 
   clearConflictState(set)
@@ -126,7 +149,11 @@ export const scheduleConflictRefresh = (
         await activeConflictRefresh
       }
 
-      activeConflictRefresh = runConflictRefresh(set)
+      // Resolve the scheduled promise as soon as badges are visible (after the cheap
+      // first pass), not after the slow deep pass — so awaiters such as the splash/boot
+      // aren't blocked on archive (re)indexing. The deep refine still runs to completion
+      // as the active refresh; calling `finalize` again below is a harmless no-op.
+      activeConflictRefresh = runConflictRefresh(set, finalize ?? undefined)
       try {
         await activeConflictRefresh
       } finally {

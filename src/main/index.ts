@@ -22,6 +22,7 @@ import {
   normalizeRelativePath,
   scanMods,
 } from './ipc/modManager'
+import { preloadHashDatabase } from './ipc/hashResolver'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridge'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
@@ -2686,6 +2687,15 @@ app.whenReady().then(async () => {
 
   // Load initial settings
   const settings = loadSettings()
+
+  // Parse the WolvenKit resource-hash DB now, during the splash, so the first conflict
+  // pass and any reinstall don't pay the ~1s parse on the user-interaction path (which
+  // is what made conflict badges vanish for a moment right after launch). The parse
+  // yields between chunks, so it runs alongside the renderer boot without blocking IPC.
+  // Only worth it when there's a library to detect conflicts for.
+  if (settings.libraryPath) {
+    void preloadHashDatabase()
+  }
 
   // Ensure library directory exists
   if (settings.libraryPath && !fs.existsSync(settings.libraryPath)) {
