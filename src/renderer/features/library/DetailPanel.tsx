@@ -16,6 +16,7 @@ import { useTranslation } from '../../i18n/I18nContext'
 import { Tooltip } from '../ui/Tooltip'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
+import { isUnresolvedArchiveConflict } from '../../utils/archiveConflictDisplay'
 import {
   ConflictSection,
   FileTreeBranch,
@@ -39,8 +40,6 @@ import {
   filterFileTree,
   findFileTreeNode,
   getCreateParentRelativePath,
-  getDeployRelativeFolderPath,
-  getDeployRelativePath,
   getExistingNodeRelativePath,
   joinWindowsPath,
   normalizeRelativePath,
@@ -135,6 +134,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     scanMods,
     addToast,
     settings,
+    resolveArchiveNames,
+    refreshModFiles,
   } = useAppStore((state) => ({
     mods: state.mods,
     conflicts: state.conflicts,
@@ -142,6 +143,8 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     scanMods: state.scanMods,
     addToast: state.addToast,
     settings: state.settings,
+    resolveArchiveNames: state.resolveArchiveNames,
+    refreshModFiles: state.refreshModFiles,
   }), shallow)
 
   const mod = mods.find((item) => item.uuid === modId)
@@ -204,95 +207,33 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   }, [])
 
   const visibleFiles = useMemo(
-    () => mod?.files.filter((file) => file !== '_metadata.json') ?? [],
+    () => mod?.files.filter((file) => file !== '_metadata.json' && file !== '_archive_resources.json') ?? [],
     [mod?.files]
   )
-
-  const fileTreeUsesDeployedPaths = useMemo(
-    () => Boolean(mod?.deployedPaths?.some((value) => value.trim().length > 0)),
-    [mod?.deployedPaths]
-  )
-
-  const sourcePathByDeployPath = useMemo(() => {
-    if (!mod) return new Map<string, string>()
-
-    return new Map(
-      visibleFiles.map((file) => ([
-        normalizeRelativePath(getDeployRelativePath(mod, file)),
-        normalizeRelativePath(file),
-      ]))
-    )
-  }, [mod, visibleFiles])
 
   const fileTreeEntries = useMemo(() => {
     if (!mod) return []
 
-    const entriesByDeployPath = new Map<string, FileTreeEntry>()
+    // The Files tab is a faithful 1:1 mirror of the mod's real folder on disk — exactly
+    // the files and folders you'd see in Explorer, so any rename/add/remove on disk shows
+    // up verbatim. We build straight from the source paths and do NOT transform them into
+    // the inferred game-deployment layout. (Hyperion's own bookkeeping files are hidden.)
+    const entriesBySourcePath = new Map<string, FileTreeEntry>()
 
-    const registerEntry = (entry: FileTreeEntry) => {
-      const normalizedDeployPath = normalizeRelativePath(entry.deployPath)
-      if (!normalizedDeployPath) return
-
-      const normalizedSourcePath = entry.sourcePath
-        ? normalizeRelativePath(entry.sourcePath)
-        : undefined
-      const nextEntry: FileTreeEntry = {
-        deployPath: normalizedDeployPath,
-        kind: entry.kind,
-        sourcePath: normalizedSourcePath,
-      }
-      const existingEntry = entriesByDeployPath.get(normalizedDeployPath)
-
-      if (!existingEntry) {
-        entriesByDeployPath.set(normalizedDeployPath, nextEntry)
-        return
-      }
-
-      if (existingEntry.kind === 'folder' && nextEntry.kind === 'file') {
-        entriesByDeployPath.set(normalizedDeployPath, nextEntry)
-        return
-      }
-
-      if (!existingEntry.sourcePath && nextEntry.sourcePath) {
-        entriesByDeployPath.set(normalizedDeployPath, {
-          ...existingEntry,
-          sourcePath: nextEntry.sourcePath,
-        })
+    const registerEntry = (rawPath: string, kind: 'file' | 'folder') => {
+      const normalized = normalizeRelativePath(rawPath)
+      if (!normalized) return
+      const existing = entriesBySourcePath.get(normalized)
+      if (!existing || (existing.kind === 'folder' && kind === 'file')) {
+        entriesBySourcePath.set(normalized, { deployPath: normalized, kind, sourcePath: normalized })
       }
     }
 
-    if (fileTreeUsesDeployedPaths) {
-      ;(mod.deployedPaths ?? []).forEach((deployPath, index) => {
-        const normalizedDeployPath = normalizeRelativePath(deployPath)
-        registerEntry({
-          deployPath: normalizedDeployPath,
-          kind: 'file',
-          sourcePath: visibleFiles[index] ?? sourcePathByDeployPath.get(normalizedDeployPath),
-        })
-      })
-    } else {
-      visibleFiles.forEach((file) => {
-        registerEntry({
-          deployPath: getDeployRelativePath(mod, file),
-          kind: 'file',
-          sourcePath: file,
-        })
-      })
-    }
+    visibleFiles.forEach((file) => registerEntry(file, 'file'))
+    ;(mod.emptyDirs ?? []).forEach((emptyDir) => registerEntry(emptyDir, 'folder'))
 
-    ;(mod.emptyDirs ?? []).forEach((emptyDir) => {
-      const normalizedSourcePath = normalizeRelativePath(emptyDir)
-      if (!normalizedSourcePath) return
-
-      registerEntry({
-        deployPath: getDeployRelativeFolderPath(mod, normalizedSourcePath),
-        kind: 'folder',
-        sourcePath: normalizedSourcePath,
-      })
-    })
-
-    return Array.from(entriesByDeployPath.values())
-  }, [fileTreeUsesDeployedPaths, mod, sourcePathByDeployPath, visibleFiles])
+    return Array.from(entriesBySourcePath.values())
+  }, [mod, visibleFiles])
 
   const fileTree = useMemo(
     () => buildFileTree(fileTreeEntries),
@@ -351,7 +292,31 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const totalFileConflicts = winFileConflicts.length + lossFileConflicts.length
   const totalArchiveConflicts = winArchiveConflicts.length + lossArchiveConflicts.length
 
+  // The conflict inspector is the only surface that shows archive-resource names. Indexing
+  // resolves names from the in-memory DB only (fast); if any of this mod's archive conflicts
+  // are still rendering a raw hash, resolve them lazily via the external tooling now that the
+  // user is actually viewing them. The store action is guarded to run at most once per mod
+  // per session, so it's safe that this effect re-runs as conflicts refresh.
+  const hasUnresolvedArchiveConflict = useMemo(
+    () => [...winArchiveConflicts, ...lossArchiveConflicts].some(isUnresolvedArchiveConflict),
+    [winArchiveConflicts, lossArchiveConflicts]
+  )
+  useEffect(() => {
+    if (activeTab !== 'conflicts' || !mod || !hasUnresolvedArchiveConflict) return
+    void resolveArchiveNames(mod.uuid)
+  // mod identity changes with the mods array; only its uuid matters here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, mod?.uuid, hasUnresolvedArchiveConflict, resolveArchiveNames])
+
   // Keep both subtabs visible; user prefers renaming rather than hiding.
+
+  // When a mod's details open, re-read its files from disk so anything added or removed in
+  // the mod folder via Explorer appears in the Files tab — routine scans reuse the stored
+  // file list and never re-walk the folder.
+  useEffect(() => {
+    if (mod?.uuid) void refreshModFiles(mod.uuid)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mod?.uuid])
 
   const modsById = useMemo(() => new Map(mods.map((m) => [m.uuid, m])), [mods])
 
@@ -416,9 +381,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     overwrites: winConflicts.length,
     overwrittenBy: lossConflicts.length,
   }
-  const fileTreeModeDescription = fileTreeUsesDeployedPaths
-    ? t('library.detail.treeModeDeployed')
-    : t('library.detail.treeModeInferred')
+  const fileTreeModeDescription = t('library.detail.treeModeMirror')
   const fullscreenLikeViewport = Math.abs(viewport.screenWidth - viewport.width) <= 48
     && Math.abs(viewport.screenHeight - viewport.height) <= 72
   const detailPanelFrameStyle: React.CSSProperties = {
@@ -435,11 +398,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const contextMenuCreateParentRelativePath = getCreateParentRelativePath(contextMenuNode)
   const contextMenuRevealPath = contextMenuNode
     ? (
-      fileTreeUsesDeployedPaths && settings?.gamePath?.trim()
-        ? joinWindowsPath(settings.gamePath, contextMenuNode.path)
-        : contextMenuExistingRelativePath && modFolderPath
-          ? joinWindowsPath(modFolderPath, contextMenuExistingRelativePath)
-          : null
+      contextMenuExistingRelativePath && modFolderPath
+        ? joinWindowsPath(modFolderPath, contextMenuExistingRelativePath)
+        : null
     )
     : modFolderPath
   const contextMenuCanCreateFolder = !contextMenuNode || contextMenuCreateParentRelativePath !== null

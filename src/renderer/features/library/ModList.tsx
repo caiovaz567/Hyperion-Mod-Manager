@@ -49,7 +49,15 @@ interface DetailOverlayState {
 }
 
 const MOD_ROW_HEIGHT = 38
-const MOD_VIRTUALIZATION_THRESHOLD = 120
+// Above this many rows the list windows (renders only the visible slice). Windowing
+// requires tracking scroll position in React state, which re-renders this (large)
+// component on every scroll frame — fine when it saves rendering hundreds of rows, but
+// pure overhead for a few hundred. Below the threshold every row is in the DOM and
+// scrolling is a cheap GPU composite with NO React work (see useVirtualRows: it doesn't
+// even attach a scroll listener when disabled). Kept high so typical libraries never pay
+// the per-scroll re-render cost; only very large ones window. Do not lower this without
+// a way to keep scroll from re-rendering the whole ModList (e.g. extracting the row list).
+const MOD_VIRTUALIZATION_THRESHOLD = 400
 
 export const ModList: React.FC = () => {
   const { t } = useTranslation()
@@ -863,8 +871,8 @@ export const ModList: React.FC = () => {
             allMods={allMods}
             allSeparators={allSeparators}
             displayedMods={displayedMods}
-            visibleStartIndex={virtualizedMods.visibleStartIndex}
-            visibleEndIndex={virtualizedMods.visibleEndIndex}
+            scrollContainerRef={listScrollRef}
+            rowHeight={MOD_ROW_HEIGHT}
             loadOrderMap={loadOrderMap}
             separatorParentByModId={separatorParentByModId}
             collapsedSeparatorSet={collapsedSeparatorSet}

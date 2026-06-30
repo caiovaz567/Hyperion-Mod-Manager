@@ -18,6 +18,7 @@ import type {
 } from '../../shared/types'
 import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
+import { suppressLibraryWatch } from '../libraryWatchSuppress'
 import { detectModType } from './archiveParser'
 import {
   getArchiveResourceDisplayPath,
@@ -150,6 +151,9 @@ function readArchiveSidecar(modDir: string): { version: number; resources: Archi
 }
 
 export function writeArchiveSidecar(modDir: string, resources: ArchiveResourceEntry[], version: number): void {
+  // Opens a self-write window so the library watcher ignores this write (and the mod
+  // folder's resulting directory event) instead of looping back into another scan.
+  suppressLibraryWatch()
   fs.writeFileSync(
     path.join(modDir, ARCHIVE_SIDECAR_FILE),
     JSON.stringify({ version, resources }, null, 2),
@@ -701,6 +705,9 @@ function readMetadata(modDir: string): ModMetadata | null {
 }
 
 function writeMetadata(modDir: string, meta: ModMetadata): void {
+  // Opens a self-write window so the library watcher ignores this write (and the mod
+  // folder's resulting directory event) instead of looping back into another scan.
+  suppressLibraryWatch()
   const clean: ModMetadata = { ...meta }
   delete clean.hashes
   delete clean.archiveResources
@@ -1249,10 +1256,10 @@ async function setModsEnabledInBatch(
 // ─── Handler Registration ─────────────────────────────────────────────────────
 
 export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow | null): void {
-  ipcMain.handle(IPC.SCAN_MODS, async (): Promise<IpcResult<ModMetadata[]>> => {
+  ipcMain.handle(IPC.SCAN_MODS, async (_event, options?: { refreshFileMetadata?: boolean }): Promise<IpcResult<ModMetadata[]>> => {
     try {
       const settings = loadSettings()
-      const mods = await scanMods(settings.libraryPath)
+      const mods = await scanMods(settings.libraryPath, { refreshFileMetadata: options?.refreshFileMetadata === true })
       return { ok: true, data: mods }
     } catch (error) {
       return {
@@ -1610,6 +1617,75 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
           }
         })
         return { ok: true, data: { summaries, conflicts } }
+      } catch (err: unknown) {
+        return { ok: false, error: String(err) }
+      }
+    }
+  )
+
+  // Lazy, on-demand name resolution for a single mod's archive resources. Indexing/install
+  // only resolves names from the in-memory DB (instant); the slow external tooling (LXRS +
+  // kark via PowerShell) runs here, only when the renderer actually needs the names — i.e.
+  // when a mod's conflict inspector is opened and it still has unresolved hashes. The result
+  // is written back to the sidecar so it persists and isn't recomputed next time.
+  ipcMain.handle(
+    IPC.RESOLVE_MOD_ARCHIVE_NAMES,
+    async (_event, uuid: string): Promise<IpcResult<{ resolved: number }>> => {
+      try {
+        const settings = loadSettings()
+        const found = findModDir(settings.libraryPath, uuid)
+        if (!found) return { ok: false, error: 'Mod not found' }
+
+        const beforeResolved = getStoredArchiveResources(found.mod).filter((r) => r.resourcePath).length
+        const resources = await resolveArchiveResources(found.dir, { resolveExternalNames: true })
+        if (resources.length > 0) {
+          writeArchiveSidecar(found.dir, resources, ARCHIVE_RESOURCE_INDEX_VERSION)
+        }
+        const afterResolved = resources.filter((r) => r.resourcePath).length
+
+        return { ok: true, data: { resolved: Math.max(0, afterResolved - beforeResolved) } }
+      } catch (err: unknown) {
+        return { ok: false, error: String(err) }
+      }
+    }
+  )
+
+  // Re-read a single mod's on-disk file list (and re-detect type/size) so files added or
+  // removed directly in the mod folder via Explorer show up. Routine scans reuse the stored
+  // `files` for speed and never re-walk the folder, so without this opening a mod's Files
+  // tab (or an external library change) wouldn't reflect what's actually on disk.
+  ipcMain.handle(
+    IPC.REFRESH_MOD_FILES,
+    async (_event, uuid: string): Promise<IpcResult<ModMetadata>> => {
+      try {
+        const settings = loadSettings()
+        const found = findModDir(settings.libraryPath, uuid)
+        if (!found) return { ok: false, error: 'Mod not found' }
+        const { mod, dir } = found
+        if (mod.kind !== 'mod') return { ok: true, data: mod }
+
+        let changed = false
+
+        const files = getScannedModFiles(dir)
+        if (!Array.isArray(mod.files) || mod.files.length !== files.length || mod.files.some((file, index) => file !== files[index])) {
+          mod.files = files
+          changed = true
+        }
+
+        const detectedType = detectModType(dir)
+        if (detectedType !== 'unknown' && mod.type !== detectedType) {
+          mod.type = detectedType
+          changed = true
+        }
+
+        const fileSize = getPathSizeSafe(dir)
+        if (mod.fileSize !== fileSize) {
+          mod.fileSize = fileSize
+          changed = true
+        }
+
+        if (changed) writeMetadata(dir, mod)
+        return { ok: true, data: mod }
       } catch (err: unknown) {
         return { ok: false, error: String(err) }
       }

@@ -488,6 +488,9 @@ export const IPC = {
   // Mods
   SCAN_MODS: 'mods:scan',
   CALCULATE_MOD_CONFLICTS: 'mods:calculateConflicts',
+  RESOLVE_MOD_ARCHIVE_NAMES: 'mods:resolveArchiveNames',
+  REFRESH_MOD_FILES: 'mods:refreshFiles',
+  LIBRARY_CHANGED: 'mods:libraryChanged',
   ENABLE_MOD: 'mods:enable',
   ENABLE_MODS: 'mods:enableMany',
   DISABLE_MOD: 'mods:disable',

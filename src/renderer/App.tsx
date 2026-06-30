@@ -137,7 +137,13 @@ export const App: React.FC = () => {
 
       const cleanupUpdates = setupUpdateListeners()
       const cleanupNxm = setupNxmListeners()
-      const releaseListeners = () => { cleanupUpdates(); cleanupNxm() }
+      // External change inside the mod library (files added/removed in a mod folder via
+      // Explorer, a folder dropped in, etc.) — re-scan with a forced file-metadata refresh
+      // so the library and the Files tab reflect what's actually on disk.
+      const unsubLibraryChanged = IpcService.on(IPC.LIBRARY_CHANGED, () => {
+        void useAppStore.getState().scanMods({ refreshFileMetadata: true })
+      })
+      const releaseListeners = () => { cleanupUpdates(); cleanupNxm(); unsubLibraryChanged() }
 
       if (disposed) {
         releaseListeners()

@@ -41,6 +41,12 @@ function pickUpdatedPeriod(lastCheckedAt: string | null): '1d' | '1w' | '1m' {
   return '1m'
 }
 
+// Per-session guards for lazy archive-name resolution (see resolveArchiveNames): at most
+// one in-flight request per mod, and never re-attempt a mod whose names were already
+// resolved (or proven unresolvable) this session — the external tooling is expensive.
+const archiveNamesResolveInFlight = new Set<string>()
+const archiveNamesResolvedThisSession = new Set<string>()
+
 export interface LibrarySlice {
   mods: ModMetadata[]
   conflicts: ConflictInfo[]
@@ -54,7 +60,7 @@ export interface LibrarySlice {
   checkingModUpdates: boolean
 
   // Actions
-  scanMods: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean }) => Promise<ModMetadata[]>
+  scanMods: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean; refreshFileMetadata?: boolean }) => Promise<ModMetadata[]>
   restoreEnabledMods: (modsToRestore?: ModMetadata[]) => Promise<IpcResult<ModMetadata[]>[]>
   enableMod: (id: string) => Promise<IpcResult>
   disableMod: (id: string) => Promise<IpcResult>
@@ -66,6 +72,8 @@ export interface LibrarySlice {
   reorderMods: (orderedIds: string[]) => Promise<void>
   updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
   refreshConflicts: (options?: { immediate?: boolean }) => Promise<void>
+  resolveArchiveNames: (uuid: string) => Promise<void>
+  refreshModFiles: (uuid: string) => Promise<void>
   checkModUpdates: (options?: { force?: boolean; notify?: boolean; full?: boolean; modIds?: string[]; staleAfterMs?: number }) => Promise<void>
   hydrateModUpdates: () => Promise<void>
   clearModUpdate: (uuid: string) => void
@@ -99,7 +107,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   checkingModUpdates: false,
 
   scanMods: async (options) => {
-    const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS)
+    const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS, { refreshFileMetadata: options?.refreshFileMetadata === true })
     if (result.ok && result.data) {
       const currentModIds = new Set(result.data.map((mod) => mod.uuid))
       const previousModUpdates = get().modUpdates
@@ -265,6 +273,39 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
   refreshConflicts: async (options) => {
     await scheduleConflictRefresh(set, options?.immediate ?? false)
+  },
+  refreshModFiles: async (uuid) => {
+    // Re-read this mod's on-disk file list (Files tab). Routine scans reuse the stored list,
+    // so this is how files added/removed directly in the mod folder become visible.
+    if (!uuid) return
+    const result = await IpcService.invoke<IpcResult<ModMetadata>>(IPC.REFRESH_MOD_FILES, uuid)
+    if (result.ok && result.data) {
+      const updated = result.data
+      set((state) => ({
+        // Keep the renderer-derived conflictSummary; only the on-disk fields changed.
+        mods: state.mods.map((m) => (m.uuid === uuid ? { ...updated, conflictSummary: m.conflictSummary } : m)),
+      }))
+    }
+  },
+  resolveArchiveNames: async (uuid) => {
+    // Lazy display-name resolution: only runs the slow external tooling (LXRS + kark) for
+    // a single mod, on demand, when its conflict inspector is opened with unresolved hashes.
+    if (!uuid || archiveNamesResolveInFlight.has(uuid) || archiveNamesResolvedThisSession.has(uuid)) return
+    archiveNamesResolveInFlight.add(uuid)
+    try {
+      const result = await IpcService.invoke<IpcResult<{ resolved: number }>>(IPC.RESOLVE_MOD_ARCHIVE_NAMES, uuid)
+      // Mark attempted regardless of outcome so a genuinely-unresolvable mod (hashes not in
+      // the DB/LXRS/kark) doesn't re-trigger the slow tooling every time it's reopened.
+      archiveNamesResolvedThisSession.add(uuid)
+      if (result.ok && result.data && result.data.resolved > 0) {
+        // The sidecar now carries resolved names — recompute so the inspector shows them.
+        await scheduleConflictRefresh(set, true)
+      }
+    } catch {
+      // Name resolution is best-effort display sugar; never surface an error for it.
+    } finally {
+      archiveNamesResolveInFlight.delete(uuid)
+    }
   },
   checkModUpdates: async (options) => {
     if (get().checkingModUpdates) return

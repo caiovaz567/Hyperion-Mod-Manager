@@ -287,9 +287,16 @@ select,
 }
 
 .library-mod-row {
+  /* Per-row containment so a hover/selection repaint stays local to the row instead of
+     invalidating the whole list.
+     We deliberately DO NOT use `content-visibility: auto` here. It skips painting
+     off-screen rows, but it also RENDERS them on-demand as they enter the viewport — so
+     dragging the scrollbar fast turns into a burst of layout+paint on every frame, which
+     froze the whole app while scrolling. Without it, all rows paint once into the
+     container's composited scroll layer (the container sets `will-change: scroll-position`)
+     and scrolling becomes a cheap GPU translate. The DOM is still capped for very large
+     libraries by row virtualization above the threshold. */
   contain: layout paint style;
-  content-visibility: auto;
-  contain-intrinsic-size: 54px;
 }
 
 ::selection { background: rgba(252, 238, 9, 0.2); color: #fff; }

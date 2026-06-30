@@ -542,10 +542,24 @@ async function resolveHashesFromKark(targetHashes: string[]): Promise<Map<string
 }
 
 /**
- * Extracts all FNV1a64 hashes from .archive files in a directory
- * and resolves them to resource paths when the DB is available.
+ * Extracts all FNV1a64 hashes from .archive files in a directory and resolves them to
+ * resource paths.
+ *
+ * Detection vs. display: conflict detection only needs the hashes (cheap, from the native
+ * archive parse). Resolving hash -> path is purely for the inspector display, and the
+ * external tooling that does it — per-archive LXRS path tables and the `.kark` databases,
+ * both via PowerShell + oodle — is the slow part that made installs/refreshes hang for
+ * seconds (a single mod with thousands of unresolved hashes spawned dozens of PowerShell
+ * processes). So by default we resolve names only from the in-memory hash DB (instant);
+ * pass `resolveExternalNames: true` to additionally run LXRS + kark, which we now do
+ * lazily/on-demand (when a mod's conflicts are actually viewed) rather than eagerly on
+ * every install and index pass.
  */
-export async function resolveArchiveResources(modDir: string): Promise<ArchiveResourceEntry[]> {
+export async function resolveArchiveResources(
+  modDir: string,
+  options: { resolveExternalNames?: boolean } = {}
+): Promise<ArchiveResourceEntry[]> {
+  const resolveExternalNames = options.resolveExternalNames === true
   const db = await loadHashDatabase()
   const resourcesByHash = new Map<string, ArchiveResourceEntry>()
   const unresolvedHashes = new Set<string>()
@@ -555,7 +569,7 @@ export async function resolveArchiveResources(modDir: string): Promise<ArchiveRe
     const entries = parseRed4Archive(archivePath)
     if (!entries) continue
     const relativeArchivePath = normalizeArchiveResourcePath(path.relative(modDir, archivePath)) ?? path.basename(archivePath)
-    const lxrsLookup = await buildLxrsPathLookup(archivePath)
+    const lxrsLookup = resolveExternalNames ? await buildLxrsPathLookup(archivePath) : new Map<string, string>()
 
     for (const entry of entries) {
       const hashStr = entry.hash.toString(16).padStart(16, '0')
@@ -581,7 +595,7 @@ export async function resolveArchiveResources(modDir: string): Promise<ArchiveRe
     }
   }
 
-  if (unresolvedHashes.size > 0) {
+  if (resolveExternalNames && unresolvedHashes.size > 0) {
     const resolvedFromKark = await resolveHashesFromKark(Array.from(unresolvedHashes))
     for (const [hash, resourcePath] of resolvedFromKark.entries()) {
       const existing = resourcesByHash.get(hash)
@@ -638,14 +652,4 @@ function findArchives(dir: string, depth = 0): string[] {
     }
   } catch { /* ignore */ }
   return results
-}
-
-/**
- * Pre-loads the hash database at startup (during the splash) so the first conflict
- * pass and any reinstall find it ready instead of paying the parse on the
- * user-interaction path. Memoized via loadHashDatabase(), so a concurrent deep pass
- * awaits the same in-flight parse rather than starting a second one.
- */
-export async function preloadHashDatabase(): Promise<void> {
-  await loadHashDatabase()
 }

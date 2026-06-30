@@ -28,6 +28,13 @@ export function useVirtualRows({
   const [viewport, setViewport] = useState({ scrollTop: 0, height: 0 })
 
   useEffect(() => {
+    // Only observe scroll while we're actually windowing rows. When the list isn't
+    // virtualized (small enough to render every row), tracking scroll here would
+    // re-render the entire list on every scroll frame for no benefit — the cause of
+    // scroll stutter on large-but-sub-threshold libraries. Consumers that need the
+    // live visible range without windowing (the floating conflict overlay) track the
+    // scroll container themselves instead.
+    if (!enabled) return
     const element = containerRef.current
     if (!element) return
 
@@ -62,7 +69,7 @@ export function useVirtualRows({
       resizeObserver?.disconnect()
       window.removeEventListener('resize', scheduleMeasure)
     }
-  }, [containerRef])
+  }, [containerRef, enabled])
 
   return useMemo(() => {
     if (count === 0) {
