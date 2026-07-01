@@ -28,7 +28,7 @@ export const TabButton: React.FC<{
   </button>
 )
 
-// ─── Conflicts (MO2-style: flat File | Mod tables) ───────────────────────────
+// ─── Conflicts (flat File | Mod tables) ─────────────────────────────────────
 
 export const ConflictSection: React.FC<{
   conflicts: ConflictInfo[]

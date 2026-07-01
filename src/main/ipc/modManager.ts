@@ -24,7 +24,6 @@ import {
   getOverwritePathForLibrary,
   sweepOrphanCaptures,
 } from '../vfsOverwriteCleanup'
-import { isBootProgressActive, reportBootProgress } from '../splashProgress'
 import { detectModType } from './archiveParser'
 import {
   getArchiveResourceDisplayPath,
@@ -402,7 +401,7 @@ export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
 }
 
 // Removes Runtime Captures left behind by mods that no longer exist. The Overwrite
-// folder is otherwise a single always-mounted catch-all (MO2 style) — captures are
+// folder is otherwise a single always-mounted catch-all — captures are
 // never moved or parked based on enable/disable state. This only runs when a mod is
 // DELETED, and only deletes leftovers inside that gone mod's own private per-mod
 // folder (CET-mod / red4ext-plugin slot); framework roots and shared captures are
@@ -597,7 +596,7 @@ async function redeployEnabledMods(
  * destination directory to already exist.
  *
  * Order matches load order (ascending priority): a later mod's link overrides an
- * earlier one on shared paths, realizing MO2-style "higher load order wins".
+ * earlier one on shared paths, realizing "higher load order wins".
  * Cyberpunk archive conflicts are special: the game resolves resources by archive
  * filename order, so .archive files are given unique virtual names where lower UI
  * entries sort first.
@@ -1029,22 +1028,13 @@ export function findModDir(libraryPath: string, uuid: string): { mod: ModMetadat
 
 export async function scanMods(
   libraryPath: string,
-  options: { refreshArchiveResources?: boolean; refreshFileMetadata?: boolean; progressLabel?: string } = {}
+  options: { refreshArchiveResources?: boolean; refreshFileMetadata?: boolean } = {}
 ): Promise<ModMetadata[]> {
   if (!fs.existsSync(libraryPath)) return []
 
   const entries = fs.readdirSync(libraryPath, { withFileTypes: true })
   const mods: ModMetadata[] = []
   const seenUuids = new Set<string>()
-
-  // Real-time splash feedback while booting: a fresh scan reads metadata for every
-  // mod folder synchronously, which would block the splash from repainting — so we
-  // emit a per-mod counter and periodically yield to the event loop. All gated on
-  // `bootProgress` so a normal (post-splash) scan keeps its original fast path.
-  const bootProgress = isBootProgressActive()
-  const progressLabel = options.progressLabel ?? 'Loading mods'
-  const progressTotal = bootProgress ? entries.reduce((n, e) => (e.isDirectory() ? n + 1 : n), 0) : 0
-  let progressDone = 0
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
@@ -1149,14 +1139,6 @@ export async function scanMods(
       }
     } catch (error) {
       console.warn(`Skipping mod directory during scan: ${modDir}`, error)
-    }
-
-    if (bootProgress) {
-      progressDone += 1
-      reportBootProgress(`${progressLabel} · ${progressDone}/${progressTotal}`, 40)
-      // Let the splash actually repaint the counter mid-scan (the loop is otherwise
-      // synchronous and would freeze it until the whole scan finished).
-      if (progressDone % 6 === 0) await new Promise((resolve) => setImmediate(resolve))
     }
   }
 
@@ -1341,7 +1323,6 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       const settings = loadSettings()
       const mods = await scanMods(settings.libraryPath, {
         refreshFileMetadata: options?.refreshFileMetadata === true,
-        progressLabel: 'Scanning library',
       })
       return { ok: true, data: mods }
     } catch (error) {
@@ -1589,7 +1570,6 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         const settings = loadSettings()
         const mods = await scanMods(settings.libraryPath, {
           refreshArchiveResources: options?.refreshArchiveResources === true,
-          progressLabel: 'Checking conflicts',
         })
 
         const pathOwners = new Map<string, Array<{ modId: string; name: string; order: number }>>()

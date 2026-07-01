@@ -3,8 +3,8 @@ import path from 'path'
 
 // Mirrors VFS_OVERWRITE_DIR_NAME in index.ts. The Runtime Captures folder is the
 // "Overwrite" sibling beside the Mod Library, holding files mod tools wrote into
-// the game at runtime (CET settings, red4ext plugin state, etc.). Like MO2's
-// Overwrite, it is a single always-mounted catch-all — Hyperion never moves captures
+// the game at runtime (CET settings, red4ext plugin state, etc.). It is a single
+// always-mounted catch-all — Hyperion never moves captures
 // around based on enable/disable state. The ONLY automatic cleanup is removing a
 // deleted mod's own leftovers (below), and even that is limited to the mod's private
 // per-mod folder so it can never disturb another mod's data.

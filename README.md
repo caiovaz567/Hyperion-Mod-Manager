@@ -31,7 +31,7 @@ Since then, Hyperion has become the manager I use for my own Cyberpunk 2077 mod 
 
 ## Features
 
-- **Full mod library management** — enable/disable per mod or in bulk, group mods with separators, and reorder load priority by drag-and-drop (Mod Organizer–style: higher order wins on shared paths)
+- **Full mod library management** — enable/disable per mod or in bulk, group mods with separators, and reorder load priority by drag-and-drop (higher order wins on shared paths)
 - **Virtual deployment (usvfs)** — mods are mapped over the game tree at launch using usvfs, the same User-Space VFS behind Mod Organizer 2. Hyperion avoids full mod deployment into the game folder and keeps the library as the source of truth, with only small runtime bootstrap files staged when needed. Your mod library, downloads folder, and game installation can each live on different drives — an SSD for the game, a large HDD for mods, wherever makes sense
 - **Runtime captures** — files written by mod tools during gameplay are captured in Hyperion's managed Overwrite folder and replayed on future launches, keeping the game folder cleaner between sessions
 - **Nexus Mods integration** — install via `nxm://` links, automatic update detection scoped to each file's own lineage, and Premium/Free aware download handling

@@ -24,7 +24,6 @@ import {
 } from './ipc/modManager'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridge'
 import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
-import { setSplashProgressEmitter } from './splashProgress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
 import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
@@ -2702,28 +2701,11 @@ app.whenReady().then(async () => {
   let mainWindowReadyToShow = false
   let mainWindowRevealed = false
 
-  const updateSplashStatus = (message: string) => {
-    if (splash.isDestroyed()) return
-    const serialized = JSON.stringify(message)
-    // Wrap in an IIFE. Repeated executeJavaScript calls run in the page's SAME
-    // top-level lexical scope, so a bare `const s` throws "Identifier 's' has already
-    // been declared" on every call after the first — which the .catch swallowed,
-    // silently dropping every status update past the initial one (the splash froze on
-    // the first message; this was the real "stuck on Loading Settings" cause). A
-    // function scope keeps each call independent so live progress actually shows.
-    splash.webContents.executeJavaScript(`(() => {
-      const s = document.getElementById('status');
-      if (s) s.textContent = ${serialized};
-    })()`).catch(() => { /* splash element may not exist */ })
-  }
-
   const revealMainWindow = () => {
     if (!rendererReady || !mainWindowReadyToShow || !mainWindow || mainWindowRevealed) return
 
     const targetWindow = mainWindow
     mainWindowRevealed = true
-    // Splash is going away — stop routing main-process progress to it.
-    setSplashProgressEmitter(null)
 
     if (targetWindow.isMinimized()) {
       targetWindow.restore()
@@ -2784,17 +2766,6 @@ app.whenReady().then(async () => {
       revealMainWindow()
     }, SPLASH_SAFETY_REVEAL_MS)
   }
-
-  // Let main-process work (mod scan, conflict pass) report fine-grained progress to
-  // the splash, and treat that progress as proof-of-life for the watchdog too.
-  setSplashProgressEmitter((message) => {
-    updateSplashStatus(message)
-    armSplashSafetyWatchdog()
-  })
-
-  splash.webContents.on('did-finish-load', () => {
-    updateSplashStatus('Starting Hyperion…')
-  })
 
   if (app.isPackaged) {
     app.setAsDefaultProtocolClient('nxm')
@@ -2875,9 +2846,9 @@ app.whenReady().then(async () => {
 
   // Reveal the main window only when Electron has a first paint ready and
   // the renderer explicitly signals that the boot sequence is complete.
-  ipcMain.on(IPC.APP_BOOT_STATUS, (_event, message: string) => {
-    updateSplashStatus(message)
-    // Progress arrived — the renderer is alive, so push the safety net back.
+  ipcMain.on(IPC.APP_BOOT_STATUS, () => {
+    // The splash is animation-only now (no status text), but these still arrive as a
+    // boot heartbeat — the renderer is alive, so push the inactivity watchdog back.
     armSplashSafetyWatchdog()
   })
 

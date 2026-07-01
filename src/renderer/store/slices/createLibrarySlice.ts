@@ -30,7 +30,7 @@ function persistModUpdates(statuses: Record<string, ModUpdateStatus>, checkedAt:
 }
 
 // Pick the `updated.json` window for a bulk check based on how long since the last
-// check, so it always covers the gap (mirrors how MO2 adapts its query period).
+// check, so it always covers the gap.
 function pickUpdatedPeriod(lastCheckedAt: string | null): '1d' | '1w' | '1m' {
   if (!lastCheckedAt) return '1m'
   const elapsedMs = Date.now() - Date.parse(lastCheckedAt)
