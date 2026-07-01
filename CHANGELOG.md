@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.31.0] - 2026-07-01
+
 - **The WolvenKit resource-hash database parses ~2x faster and no longer sits in RAM when it isn't needed.** Conflict detection cross-references a bundled ~30 MB / 1.7-million-row hash database. Its parse was rewritten to read the already-normalized CSV directly instead of re-running per-row normalization on all 1.7M rows (verified byte-for-byte identical output), cutting it from ~1.5s to ~0.8s, and it yields between chunks so it never freezes the app while loading. It also loads strictly on demand again (on the first install/re-index or when a mod's conflict names are resolved) rather than eagerly at startup — because conflict detection now treats an already-indexed mod as final, the launch path never needs the database, so an idle session no longer holds a few hundred MB for a lookup table it won't use.
 
 ### Changed
