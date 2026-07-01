@@ -20,6 +20,11 @@ import { useTranslation } from './i18n/I18nContext'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
+// Hard cap on how long boot waits for the first conflict pass before revealing the
+// window anyway. Normally the cheap pass finishes well under this; the cap only exists
+// so a pathologically slow scan can never trap the user on the splash (badges still
+// appear once the pass completes in the background).
+const CONFLICT_BOOT_WAIT_TIMEOUT_MS = 6000
 // On launch, only re-check Nexus mod updates if the persisted cache is older than
 // this. Within the window the hydrated cache is shown as-is (no request), so rapid
 // relaunches don't spam Nexus; a normal session gap still refreshes.
@@ -132,7 +137,13 @@ export const App: React.FC = () => {
 
       const cleanupUpdates = setupUpdateListeners()
       const cleanupNxm = setupNxmListeners()
-      const releaseListeners = () => { cleanupUpdates(); cleanupNxm() }
+      // External change inside the mod library (files added/removed in a mod folder via
+      // Explorer, a folder dropped in, etc.) — re-scan with a forced file-metadata refresh
+      // so the library and the Files tab reflect what's actually on disk.
+      const unsubLibraryChanged = IpcService.on(IPC.LIBRARY_CHANGED, () => {
+        void useAppStore.getState().scanMods({ refreshFileMetadata: true })
+      })
+      const releaseListeners = () => { cleanupUpdates(); cleanupNxm(); unsubLibraryChanged() }
 
       if (disposed) {
         releaseListeners()
@@ -143,6 +154,7 @@ export const App: React.FC = () => {
 
       // Load the persisted Nexus update cache (from the main process) before scanning,
       // so cached indicators show instantly and the scan's prune keeps the right data.
+      updateBootStatus('Loading update history...')
       await useAppStore.getState().hydrateModUpdates()
 
       updateBootStatus('Scanning mod library...')
@@ -161,7 +173,18 @@ export const App: React.FC = () => {
       void useAppStore.getState().checkModUpdates({ force: true, staleAfterMs: MOD_UPDATE_LAUNCH_MAX_AGE_MS })
 
       updateBootStatus('Checking mod conflicts...')
-      void useAppStore.getState().refreshConflicts({ immediate: true })
+      // Await (do NOT fire-and-forget) so the splash holds until the +N/-N/! badges are
+      // on screen. Firing this off with `void` reveals the window first and the icons pop
+      // in a moment later — the startup "icons appear after a while" regression vs 0.28.0.
+      // This resolves after the cheap first pass (already-indexed sidecars), so it's fast
+      // for an established library; the slow deep archive re-index continues in the
+      // background afterwards and must NOT block boot (awaiting it froze the splash). The
+      // MIN_SPLASH_DURATION_MS wait below absorbs this time when the pass finishes first.
+      // Capped so a pathologically slow scan can never trap the user on the splash.
+      await Promise.race([
+        useAppStore.getState().refreshConflicts({ immediate: true }),
+        new Promise((resolve) => window.setTimeout(resolve, CONFLICT_BOOT_WAIT_TIMEOUT_MS)),
+      ])
 
       const elapsed = Date.now() - bootStartedAt
       const remaining = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed)

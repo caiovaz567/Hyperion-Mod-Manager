@@ -4,6 +4,9 @@ import type { Toast, ToastSeverity } from '../../../shared/types'
 
 type StringListUpdater = string[] | ((current: string[]) => string[])
 
+const sameStringList = (a: string[], b: string[]): boolean =>
+  a.length === b.length && a.every((value, index) => value === b[index])
+
 export interface DialogState {
   settings: boolean
   about: boolean
@@ -131,7 +134,28 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
     })),
 
   setConflictHighlight: (focusModId, wins, losses) =>
-    set(() => ({ conflictHighlight: { active: true, focusModId, wins, losses } })),
+    set((state) => {
+      // Idempotent: if the highlight is already exactly this, return the SAME state so
+      // Zustand performs no update and no subscriber re-renders. The library highlight
+      // effect re-derives fresh `wins`/`losses` arrays on every render, so without this
+      // guard a single unstable dependency upstream turned "set highlight" into an
+      // infinite render loop — every mod row re-rendering thousands of times per second.
+      const current = state.conflictHighlight
+      if (
+        current.active &&
+        current.focusModId === focusModId &&
+        sameStringList(current.wins, wins) &&
+        sameStringList(current.losses, losses)
+      ) {
+        return state
+      }
+      return { conflictHighlight: { active: true, focusModId, wins, losses } }
+    }),
 
-  clearConflictHighlight: () => set(() => ({ conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] } })),
+  clearConflictHighlight: () =>
+    set((state) =>
+      state.conflictHighlight.active
+        ? { conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] } }
+        : state
+    ),
 })

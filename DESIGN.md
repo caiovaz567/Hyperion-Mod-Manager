@@ -123,6 +123,7 @@ Alignment rules:
 - Minimal loading screen handled in main-process resources
 - Hyperion identity only, no faux terminal, no bracket ornaments
 - Progress remains understated and accent-led
+- The status line reports real, live boot progress rather than a single static label: a startup phase ("Starting Hyperion…"), then specific steps and per-mod counters ("Scanning library · 45/105", "Checking conflicts · 45/105") as the heavy work actually advances. It stays in the same understated micro-label treatment (single line, muted, uppercase) and truncates gracefully — it must never become a verbose log or break the centered layout
 
 ### Welcome / first setup
 
@@ -156,7 +157,7 @@ Setup wizard:
 - Mod details opens as a centered modal overlay over the library instead of navigating to a separate screen
 - MUST: the mod details modal stays visually centered, uses a lower-height squared silhouette, and all controls/panels/badges/inputs inside it use rectangular corners with no pill or soft-card rounding
 - MUST: the mod details modal is tabbed; `Files` is the primary inspection tab and `Details` holds secondary metadata, notes, conflicts, source context, and operational actions
-- MUST: file inspection inside mod details uses a dense squared tree view of game-relative deployment targets; do not reduce this surface to a flat filename dump when indexed paths are available
+- MUST: file inspection inside mod details uses a dense squared tree view that is a **faithful 1:1 mirror of the mod's real folder on disk** (file-explorer style) — exactly the files and folders inside the mod directory, so a rename/add/remove on disk shows up verbatim. It is NOT transformed into the inferred game-deployment layout (the deployment/conflict systems compute deploy targets separately). The view re-reads files from disk when the details open and updates live via the library watcher. Hyperion's own bookkeeping files (`_metadata.json`, `_archive_resources.json`) are hidden. Do not reduce this surface to a flat filename dump, and do not reintroduce the inferred-deployment transform on this tree
 - MUST: the `Files` tree starts collapsed by default, and expanding folders must never resize or recenter the modal; the modal frame stays fixed to the current app window and uses internal scroll regions instead
 - MUST: file-tree operations live in a right-click context menu instead of a crowded toolbar; folder expansion supports double click, and exact-location reveal lives in that same context surface
 - MUST: create/rename prompts launched from the mod-details file tree reuse the same compact squared input-modal language as separator creation, with an empty focused input for new file/folder actions
@@ -203,7 +204,7 @@ Setup wizard:
 - Right-clicking empty library space should expose `Create Separator Here` so the user can insert a separator at that exact point in custom order
 - Empty-space context menus should not also expose `Create Separator at End`; it duplicates the creation flow and makes the target position less clear
 - Right-clicking any library row should include a `Create Separator` action, and empty-library context menus should also offer `Refresh` and other lightweight utilities such as separator expand/collapse
-- Per-separator `Expand`/`Collapse` is no longer a context-menu action — clicking a separator row already toggles it, so the menu only exposes `Expand All Separators` / `Collapse All Separators`
+- Per-separator `Expand`/`Collapse` is not a context-menu action — clicking a separator row already toggles it, so the menu only exposes `Expand All Separators` / `Collapse All Separators`
 - Conflict status on mod rows is shown with compact numeric badges, not a generic warning triangle: `+X` in green for unique resources this mod overwrites, `-Y` in red for unique resources overwritten by later-loading mods, and a yellow `!` badge when the mod is fully redundant
 - A mod is redundant only when every tracked deploy resource for that enabled mod is overwritten by later load-order owners. Do not mark a mod redundant merely because it loses some conflicts
 - Conflict tooltips should be structured by semantic color: green row for `+` overwrites, red row for `-` overwritten-by, yellow row for redundant, plus a restrained action hint. Avoid one long sentence with every state joined together
@@ -216,7 +217,7 @@ Setup wizard:
 - Renaming a separator inline uses a full-width input that spans to the end of the row
 - Reinstalling as copy should insert the new mod immediately after the source mod's current `#` position; if that insertion point is right before the next separator, the separator must shift down so the copy stays in the same context as the source
 - Normal mod installations should always place the new mod at the end of the library list
-- For deploy-path conflicts between enabled mods, Hyperion follows Mod Organizer style priority: the mod with the higher `#` order (lower in the library) wins on shared game-target paths
+- For deploy-path conflicts between enabled mods, Hyperion uses load-order priority: the mod with the higher `#` order (lower in the library) wins on shared game-target paths
 - Changing enable state or reordering enabled mods must immediately rebuild the active deployment stack so the on-disk game state always reflects current library priority
 - Dragging a mod near the top or bottom edge of a long library list must auto-scroll the list so rows can move across large mod sets without dropping and re-grabbing
 
@@ -227,13 +228,12 @@ Two conflict kinds are tracked:
 - **archive-resource** — two or more `.archive` files contain an internal resource with the same FNV1a hash, meaning they likely override the same in-game asset regardless of file path
 
 Conflict indicators on mod rows:
-- A single `warning` Material Symbol icon replaces the old numeric `+N / -N` badges
-- Color encodes urgency: green = this mod only wins, red = this mod only loses, yellow = both win and lose
-- Tooltip format: `Wins N file(s) - Loses N file(s) - Click to inspect conflicts.`
-- Clicking the icon opens the mod detail modal directly on the Conflicts tab
+- Compact numeric badges (only on enabled mods): `+N` in green for unique resources this mod overwrites, `-N` in red for unique resources overwritten by later-loading mods, and a yellow `!` (a `priority_high` icon) when the mod is fully redundant
+- The tooltip is a compact JSX tooltip with one color-separated row per state (green `+N`, red `-N`, yellow redundant) plus a "click to inspect" hint; the full combined explanation lives in `aria-label` for accessibility
+- Clicking the badge opens the mod detail modal directly on the Conflicts tab (`onOpenDetails(mod, 'conflicts')`)
 
-Conflict inspector inside the mod detail modal (MO2-style):
-- The Conflicts tab uses two flat tables, kept deliberately simple like Mod Organizer 2: **This Mod Wins** on top, **Other Mods Win** on the bottom. Do not add a verdict/overview panel, per-opponent grouping headers, or win/loss ratio bars — those add complexity without helping the read
+Conflict inspector inside the mod detail modal:
+- The Conflicts tab uses two flat tables, kept deliberately simple: **This Mod Wins** on top, **Other Mods Win** on the bottom. Do not add a verdict/overview panel, per-opponent grouping headers, or win/loss ratio bars — those add complexity without helping the read
 - Each table is two columns: `File` (the resource path, monospace) and the other mod (`Overwritten mod` for wins / `Providing mod` for losses). The mod column is wide and wraps (`break-words`) so long mod names always show in full — never truncate mod names to `…`
 - Section header carries the meaning: a `visibility` (eye) icon + green for "This Mod Wins", a `visibility_off` icon + red for "Other Mods Win", plus a short plain subtitle and a count. The icon metaphor is "your file loads" vs "your file is hidden"
 - Sections with zero entries auto-collapse when the modal opens; sections with entries default to expanded
@@ -279,7 +279,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Downloads should behave like a real sortable table: `Archive Name`, `Status`, `Version`, `Size`, and `Downloaded` must support the same `asc -> desc -> default` sort cycle used in Managed Mods
 - Downloads should remember the user's last search and sort state between visits/restarts instead of resetting to the default table every time
 - `Status` in Downloads is an operational column (`Downloading`, `Paused`, `Installed`, `Downloaded`, `Error`, etc.); temporary attention markers such as `NEW` remain badges on the archive name rather than becoming status values
-- Because the table now has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` inside the `Actions` column
+- Because the table has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` inside the `Actions` column
 - Status badges in Downloads should stay visually stable while hovering the row; the row hover may brighten the line, but the badge itself should not morph into another semantic state
 - Downloads status badges and row action buttons use filled/tinted semantic surfaces instead of colored outline boxes. `Downloaded`/`Installed`, active transfer states, pause/resume/cancel, install/reinstall, and delete controls should keep their color meaning through background fill, icon/text color, and hover fill
 - Summary strip shows configured path, file count, and zip-ready count
@@ -337,7 +337,8 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Support copy in Settings should use the shared readable small-text baseline instead of compressed microtype
 - `Paths` is the primary section and must surface consequence (launch blocked / installs blocked) in the invalid validation copy when required targets are missing
 - `General` owns runtime behavior decisions. It contains both Install Behavior and Runtime Captures, because captured files are automatic runtime output rather than a path configuration task
-- Runtime Captures is no longer shown in `Paths`; keep the Paths tab focused on Game Path, Mod Library, and Downloads Intake
+- The Runtime Captures folder is a single always-active catch-all: captured files are never moved, parked, or hidden based on which mods are enabled. The card's file count reflects everything in the folder, and `Clear captures` wipes it manually. The only automatic cleanup is removing a mod's leftover files when that mod is deleted, limited to the mod's own private folder so it can never disturb another mod's data
+- Runtime Captures does not live in `Paths`; keep the Paths tab focused on Game Path, Mod Library, and Downloads Intake
 - Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold readout tone, while `Free` uses the cool info-blue readout tone
 - The Account card in Settings > Nexus shows a two-card side-by-side tier comparison (`NexusTierComparison` in `SettingsDialog.tsx`): one card per tier, each listing 3 bullets describing how that tier behaves inside Hyperion. The active tier's card gets a subtle tinted fill and icon/text accent (blue for Free, amber for Premium); the inactive tier is rendered in muted grey. When the user is not connected, both cards render in neutral grey with no highlight
 - The sidebar should always expose a compact Nexus identity marker (avatar or initials) even when the rail is collapsed; expanding the rail may reveal the full name and subscription label
@@ -356,7 +357,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Hyperion supports multiple interface languages. English is the source of truth; **Brazilian Portuguese (`Português (Brasil)`)** is the first translation. The selector is exposed in two places: the first-run setup wizard (top-right) and Settings > General
 - The selector is a compact, dark, squared **combo box** (`LanguageSelect`) in the standard Hyperion control language — a filled `#101010` trigger with an inset boundary, a `language` icon, the current language's native name, and an `expand_more` chevron; the popover lists each language by its native name (with the English label as a muted secondary line) and marks the active one in yellow with a check. No pills, no soft rounding beyond `rounded-sm`
 - Changing the language applies **live** (no restart) and persists across sessions in `settings.language`
-- Translation coverage now spans the whole renderer UI: the setup wizard, app shell, Downloads, Library (including mod details, conflicts, and dialogs), all Settings tabs, the shared install/conflict/version/duplicate/move-to-separator dialogs, the FOMOD installer, App Logs, and toasts. Only main-process error strings remain English. Untranslated strings still fall back to English rather than showing missing-key placeholders, so the app stays readable; `en.json` is the source of truth and `pt-BR.json` is now a complete translation at full key parity with it (712/712 keys)
+- Translation coverage spans the whole renderer UI: the setup wizard, app shell, Downloads, Library (including mod details, conflicts, and dialogs), all Settings tabs, the shared install/conflict/version/duplicate/move-to-separator dialogs, the FOMOD installer, App Logs, and toasts. Only main-process error strings remain English. Untranslated strings fall back to English rather than showing missing-key placeholders, so the app stays readable; `en.json` is the source of truth and `pt-BR.json` is a complete translation at full key parity with it (713/713 keys)
 - Engine/implementation details (JSON catalogs, the `LOCALES` registry, the `t()` fallback, how to add a language) live in CLAUDE.md → Internationalization
 
 ### App Logs
@@ -461,5 +462,5 @@ Release expectations:
 - Toasts: src/renderer/features/ui/ToastContainer.tsx
 - Language selector: src/renderer/features/ui/LanguageSelect.tsx
 - i18n engine + catalogs: src/renderer/i18n/ (I18nContext.tsx, locales.ts, locales/*.json)
-- Main-process splash: src/main/resources/splash.html
+- Main-process splash: src/main/splash.ts (inline HTML built by `buildSplashHtml`, loaded as a data: URL)
 - Theme tokens: src/renderer/styles/globals.css

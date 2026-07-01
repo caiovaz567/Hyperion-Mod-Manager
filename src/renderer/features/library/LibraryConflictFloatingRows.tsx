@@ -10,8 +10,13 @@ interface LibraryConflictFloatingRowsProps {
   allMods: ModMetadata[]
   allSeparators: ModMetadata[]
   displayedMods: ModMetadata[]
-  visibleStartIndex: number
-  visibleEndIndex: number
+  /**
+   * The library's scroll container. This overlay tracks its scroll position
+   * INTERNALLY (only while it actually has rows to show) so that scrolling does not
+   * re-render the whole mod list every frame — only this small overlay updates.
+   */
+  scrollContainerRef: React.RefObject<HTMLElement | null>
+  rowHeight: number
   loadOrderMap: Map<string, number>
   separatorParentByModId: Map<string, string>
   collapsedSeparatorSet: Set<string>
@@ -80,23 +85,84 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
   allMods,
   allSeparators,
   displayedMods,
-  visibleStartIndex,
-  visibleEndIndex,
+  scrollContainerRef,
+  rowHeight,
   loadOrderMap,
   separatorParentByModId,
   collapsedSeparatorSet,
   onGoToMod,
 }) => {
   const { t } = useTranslation()
-  const floatingMods = React.useMemo<FloatingConflictMod[]>(() => {
+
+  // Will this overlay actually render anything? Only a selected mod that participates
+  // in at least one conflict can produce floating rows. We use this to decide whether
+  // to bother tracking scroll at all — when there's nothing to show, we attach no
+  // listener and never re-render on scroll.
+  const overlayActive =
+    Boolean(selectedMod && selectedMod.kind === 'mod') &&
+    conflicts.some(
+      (conflict) =>
+        conflict.incomingModId === selectedMod!.uuid || conflict.existingModId === selectedMod!.uuid
+    )
+
+  // Track the scroll container's position locally (rAF-throttled) so that scrolling
+  // re-renders ONLY this lightweight overlay — never the full mod list. This is the
+  // key to smooth scrolling while a conflicting mod is selected.
+  const [viewport, setViewport] = React.useState({ scrollTop: 0, height: 0 })
+  React.useEffect(() => {
+    if (!overlayActive) return
+    const element = scrollContainerRef.current
+    if (!element) return
+
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      setViewport({ scrollTop: element.scrollTop, height: element.clientHeight })
+    }
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(measure)
+    }
+
+    measure()
+    element.addEventListener('scroll', schedule, { passive: true })
+    return () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame)
+      element.removeEventListener('scroll', schedule)
+    }
+  }, [overlayActive, scrollContainerRef])
+
+  const visibleStartIndex = Math.max(0, Math.floor(viewport.scrollTop / rowHeight))
+  const visibleEndIndex =
+    viewport.height > 0
+      ? visibleStartIndex + Math.ceil(viewport.height / rowHeight)
+      : displayedMods.length
+
+  // Who this mod wins over / loses to. This scans the (potentially very large) conflicts
+  // array, so it MUST NOT depend on scroll position — it's memoized on the selection +
+  // conflicts only, so scrolling never re-runs it.
+  const relatedMods = React.useMemo(() => {
     if (!selectedMod || selectedMod.kind !== 'mod') return []
+    return collectRelatedMods(selectedMod, conflicts, allMods)
+  }, [selectedMod, conflicts, allMods])
+
+  // O(1) row-index lookups so the per-scroll visibility pass below is O(related mods)
+  // instead of a findIndex scan over every displayed row per related mod.
+  const displayIndexByUuid = React.useMemo(() => {
+    const map = new Map<string, number>()
+    displayedMods.forEach((mod, index) => map.set(mod.uuid, index))
+    return map
+  }, [displayedMods])
+
+  // The ONLY part that depends on scroll. Kept deliberately cheap (a loop over the few
+  // related mods) so a scroll frame does no heavy work.
+  const floatingMods = React.useMemo<FloatingConflictMod[]>(() => {
+    if (!selectedMod || selectedMod.kind !== 'mod' || relatedMods.length === 0) return []
 
     const selectedOrder = loadOrderMap.get(selectedMod.uuid) ?? selectedMod.order
-    const related = collectRelatedMods(selectedMod, conflicts, allMods)
     const rows: FloatingConflictMod[] = []
 
-    for (const relation of related) {
-      const displayIndex = displayedMods.findIndex((mod) => mod.uuid === relation.mod.uuid)
+    for (const relation of relatedMods) {
+      const displayIndex = displayIndexByUuid.get(relation.mod.uuid) ?? -1
 
       if (displayIndex >= visibleStartIndex && displayIndex < visibleEndIndex) {
         continue
@@ -125,11 +191,10 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
       return (loadOrderMap.get(left.mod.uuid) ?? left.mod.order) - (loadOrderMap.get(right.mod.uuid) ?? right.mod.order)
     })
   }, [
-    allMods,
+    relatedMods,
+    displayIndexByUuid,
     allSeparators,
     collapsedSeparatorSet,
-    conflicts,
-    displayedMods,
     loadOrderMap,
     selectedMod,
     separatorParentByModId,

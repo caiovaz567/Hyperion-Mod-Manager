@@ -546,6 +546,7 @@
       "columnScope": "Scope",
       "treeModeDeployed": "Showing the last known deployment structure relative to the game root.",
       "treeModeInferred": "Showing the inferred deployment structure based on indexed files and mod type.",
+      "treeModeMirror": "Mirroring the mod's files exactly as they are on disk.",
       "noFilesMatched": "No files matched this search.",
       "pathsTab": "Paths ({count})",
       "archivesTab": ".archive ({count})",

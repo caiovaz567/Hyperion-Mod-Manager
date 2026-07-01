@@ -23,6 +23,7 @@ import {
   scanMods,
 } from './ipc/modManager'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridge'
+import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
 import { registerNexusDownloaderHandlers } from './ipc/nexusDownloader'
@@ -1431,6 +1432,10 @@ if (!app.isPackaged) {
 
 let mainWindow: BrowserWindow | null = null
 let rendererReady = false
+// Hard cap on how long the splash may stay up after the window can paint. Past this we
+// reveal regardless of the renderer's APP_READY signal so a stalled boot can't hang the
+// user on the splash indefinitely.
+const SPLASH_SAFETY_REVEAL_MS = 12000
 const pendingNxmUrls: string[] = []
 
 // Watches the configured Downloads folder so externally-added archives (e.g. a
@@ -1479,6 +1484,67 @@ function startDownloadsWatcher(downloadPath: string | undefined | null): void {
     })
   } catch {
     stopDownloadsWatcher()
+  }
+}
+
+let libraryWatcher: fs.FSWatcher | null = null
+let libraryWatcherPath: string | null = null
+let libraryChangeTimer: ReturnType<typeof setTimeout> | null = null
+
+// Files Hyperion itself writes into the library on every scan/index. The watcher ignores
+// them so the renderer's refresh-on-change (which can rewrite metadata) never loops back
+// into another change event.
+const LIBRARY_WATCH_IGNORED_FILES = new Set(['_metadata.json', '_archive_resources.json'])
+
+function stopLibraryWatcher(): void {
+  if (libraryChangeTimer) {
+    clearTimeout(libraryChangeTimer)
+    libraryChangeTimer = null
+  }
+  if (libraryWatcher) {
+    try {
+      libraryWatcher.close()
+    } catch {
+      // Closing an already-invalid watcher is fine.
+    }
+    libraryWatcher = null
+  }
+  libraryWatcherPath = null
+}
+
+// Watch the mod library (recursively) so files added/removed directly in a mod folder via
+// Explorer surface without a manual refresh — mirrors the Downloads watcher. Routine scans
+// reuse each mod's stored file list for speed and never re-walk the folder, so this is what
+// keeps the library honest about on-disk reality.
+function startLibraryWatcher(libraryPath: string | undefined | null): void {
+  const target = libraryPath?.trim()
+  if (target && target === libraryWatcherPath && libraryWatcher) return
+  stopLibraryWatcher()
+  if (!target || !isUsableDirectoryPath(target)) return
+  try {
+    libraryWatcher = fs.watch(target, { persistent: false, recursive: true }, (_event, filename) => {
+      // Skip Hyperion's own metadata/sidecar writes so a refresh that rewrites them doesn't
+      // re-trigger the watcher in a loop. (On Windows recursive watches report the filename.)
+      if (filename && LIBRARY_WATCH_IGNORED_FILES.has(path.basename(filename.toString()))) return
+      // Writing a file also fires a directory-level event (the mod folder's own mtime) whose
+      // filename is the folder, which the name filter above can't catch — so also ignore any
+      // event that lands inside a self-write window opened by our metadata/sidecar writers.
+      // Without this, a metadata-refreshing scan endlessly re-triggers itself (infinite loop).
+      if (isLibraryWatchSuppressed()) return
+      if (libraryChangeTimer) clearTimeout(libraryChangeTimer)
+      libraryChangeTimer = setTimeout(() => {
+        libraryChangeTimer = null
+        safeSendToWindow(mainWindow, IPC.LIBRARY_CHANGED)
+      }, 500)
+    })
+    libraryWatcherPath = target
+    libraryWatcher.on('error', () => {
+      // A removed/renamed library folder invalidates the watcher; drop it and let the next
+      // settings change or app restart re-establish it.
+      stopLibraryWatcher()
+    })
+  } catch {
+    stopLibraryWatcher()
   }
 }
 
@@ -1692,6 +1758,19 @@ function createMainWindow(): BrowserWindow {
 
   attachEditContextMenu(win)
 
+  // DevTools toggle. The window is frameless and no application menu is set, so the
+  // default Ctrl+Shift+I / F12 accelerators don't fire — bind them explicitly here so
+  // the console is reachable in any build (dev or packaged) for diagnostics.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return
+    const key = (input.key || '').toLowerCase()
+    const isToggleDevTools = key === 'f12' || (input.control && input.shift && key === 'i')
+    if (isToggleDevTools) {
+      win.webContents.toggleDevTools()
+      event.preventDefault()
+    }
+  })
+
   return win
 }
 
@@ -1767,8 +1846,9 @@ function registerGlobalHandlers(): void {
         })
       }
 
-      // Re-point the Downloads folder watcher at the (possibly) new path.
+      // Re-point the Downloads + library folder watchers at the (possibly) new paths.
       startDownloadsWatcher(settings.downloadPath)
+      startLibraryWatcher(settings.libraryPath)
 
       return { ok: true }
     } catch (error) {
@@ -2621,15 +2701,6 @@ app.whenReady().then(async () => {
   let mainWindowReadyToShow = false
   let mainWindowRevealed = false
 
-  const updateSplashStatus = (message: string) => {
-    if (splash.isDestroyed()) return
-    const serialized = JSON.stringify(message)
-    splash.webContents.executeJavaScript(`
-      const s = document.getElementById('status');
-      if (s) s.textContent = ${serialized};
-    `).catch(() => { /* splash element may not exist */ })
-  }
-
   const revealMainWindow = () => {
     if (!rendererReady || !mainWindowReadyToShow || !mainWindow || mainWindowRevealed) return
 
@@ -2666,9 +2737,35 @@ app.whenReady().then(async () => {
     flushPendingNxmUrls()
   }
 
-  splash.webContents.on('did-finish-load', () => {
-    updateSplashStatus('Loading settings...')
-  })
+  // Splash safety net as an INACTIVITY watchdog rather than an absolute deadline: a
+  // large library can boot for >12s while progressing perfectly fine (mod scan +
+  // first-run conflict re-index), so an absolute timer fired the false "did not
+  // signal in time" warning and revealed early. Instead, every boot-status update
+  // (and the initial first-paint) re-arms the timer, so it only fires after a real
+  // stall — the renderer going silent for the whole grace period with no progress
+  // and no APP_READY. That's the genuine "stuck on LOADING SETTINGS…" hang.
+  let splashSafetyTimer: ReturnType<typeof setTimeout> | null = null
+  const clearSplashSafetyWatchdog = () => {
+    if (splashSafetyTimer) {
+      clearTimeout(splashSafetyTimer)
+      splashSafetyTimer = null
+    }
+  }
+  const armSplashSafetyWatchdog = () => {
+    if (mainWindowRevealed) return
+    clearSplashSafetyWatchdog()
+    splashSafetyTimer = setTimeout(() => {
+      splashSafetyTimer = null
+      if (mainWindowRevealed || !mainWindow || mainWindow.isDestroyed()) return
+      pushGeneralLog(mainWindow, {
+        level: 'warn',
+        source: 'app',
+        message: 'Renderer went silent during boot; revealing window via safety net',
+      })
+      rendererReady = true
+      revealMainWindow()
+    }, SPLASH_SAFETY_REVEAL_MS)
+  }
 
   if (app.isPackaged) {
     app.setAsDefaultProtocolClient('nxm')
@@ -2686,6 +2783,13 @@ app.whenReady().then(async () => {
 
   // Load initial settings
   const settings = loadSettings()
+
+  // NOTE: the WolvenKit resource-hash DB is intentionally NOT preloaded here. It's a
+  // ~1.7M-entry Map (a few hundred MB resident) and, since conflict detection treats an
+  // already-indexed sidecar as final and resolves names from the DB only on demand, the
+  // boot conflict pass never needs it. It now loads lazily on the first install/re-index
+  // or lazy name resolution (with the faster parse), so an idle session never pays the
+  // RAM for a DB it won't use. Do not reintroduce an eager boot preload.
 
   // Ensure library directory exists
   if (settings.libraryPath && !fs.existsSync(settings.libraryPath)) {
@@ -2720,12 +2824,16 @@ app.whenReady().then(async () => {
     })
   }
 
-  // Watch the Downloads folder so externally-added archives appear without a manual refresh.
+  // Watch the Downloads + mod library folders so externally-added files appear without a
+  // manual refresh.
   startDownloadsWatcher(settings.downloadPath)
+  startLibraryWatcher(settings.libraryPath)
 
   mainWindow.once('ready-to-show', () => {
     mainWindowReadyToShow = true
     revealMainWindow()
+    // Start the inactivity watchdog (re-armed on every boot-status update below).
+    armSplashSafetyWatchdog()
   })
 
   // Initialize auto-updater and start the self-update check during the splash so the
@@ -2738,12 +2846,15 @@ app.whenReady().then(async () => {
 
   // Reveal the main window only when Electron has a first paint ready and
   // the renderer explicitly signals that the boot sequence is complete.
-  ipcMain.on(IPC.APP_BOOT_STATUS, (_event, message: string) => {
-    updateSplashStatus(message)
+  ipcMain.on(IPC.APP_BOOT_STATUS, () => {
+    // The splash is animation-only now (no status text), but these still arrive as a
+    // boot heartbeat — the renderer is alive, so push the inactivity watchdog back.
+    armSplashSafetyWatchdog()
   })
 
   ipcMain.once(IPC.APP_READY, () => {
     rendererReady = true
+    clearSplashSafetyWatchdog()
     flushPendingNxmUrls()
     // Deliver any update result that resolved during the splash, now that the
     // renderer's update listeners are guaranteed to be registered.
@@ -2762,6 +2873,7 @@ app.on('before-quit', () => {
   // Tear down any active VFS so usvfs shared state doesn't outlive the controller.
   unmountVfsIfMounted()
   stopDownloadsWatcher()
+  stopLibraryWatcher()
   try {
     cleanupInstallerTempDirs(loadSettings())
   } catch {

@@ -18,6 +18,12 @@ import type {
 } from '../../shared/types'
 import { pushGeneralLog } from '../logStore'
 import { loadSettings } from '../settings'
+import { suppressLibraryWatch } from '../libraryWatchSuppress'
+import {
+  captureOwnerFolder,
+  getOverwritePathForLibrary,
+  sweepOrphanCaptures,
+} from '../vfsOverwriteCleanup'
 import { detectModType } from './archiveParser'
 import {
   getArchiveResourceDisplayPath,
@@ -150,6 +156,9 @@ function readArchiveSidecar(modDir: string): { version: number; resources: Archi
 }
 
 export function writeArchiveSidecar(modDir: string, resources: ArchiveResourceEntry[], version: number): void {
+  // Opens a self-write window so the library watcher ignores this write (and the mod
+  // folder's resulting directory event) instead of looping back into another scan.
+  suppressLibraryWatch()
   fs.writeFileSync(
     path.join(modDir, ARCHIVE_SIDECAR_FILE),
     JSON.stringify({ version, resources }, null, 2),
@@ -391,6 +400,46 @@ export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
     .map((relFile) => getDeployRelativePath(mod, relFile))
 }
 
+// Removes Runtime Captures left behind by mods that no longer exist. The Overwrite
+// folder is otherwise a single always-mounted catch-all — captures are
+// never moved or parked based on enable/disable state. This only runs when a mod is
+// DELETED, and only deletes leftovers inside that gone mod's own private per-mod
+// folder (CET-mod / red4ext-plugin slot); framework roots and shared captures are
+// always kept. `remainingMods` must be a fresh, complete scan of the still-installed
+// mods. Best-effort — never let it block or fail a mod removal.
+function cleanDeletedModCaptures(libraryPath: string, remainingMods: ModMetadata[], window: BrowserWindow | null): void {
+  const overwritePath = getOverwritePathForLibrary(libraryPath)
+  if (!overwritePath) return
+
+  try {
+    const liveOwners = new Set<string>()
+    for (const mod of remainingMods) {
+      if (mod.kind !== 'mod') continue
+      for (const deployPath of getTrackedDeploymentPaths(mod)) {
+        const owner = captureOwnerFolder(deployPath)
+        if (owner) liveOwners.add(owner)
+      }
+    }
+
+    const result = sweepOrphanCaptures(overwritePath, liveOwners)
+    if (result.removedFiles > 0 || result.errors.length > 0) {
+      pushGeneralLog(window, {
+        level: result.errors.length > 0 ? 'warn' : 'info',
+        source: 'mods',
+        message: 'Runtime capture cleanup after mod removal',
+        details: {
+          removedFiles: result.removedFiles,
+          removedBytes: result.removedBytes,
+          removedOwners: result.removedOwners,
+          errors: result.errors,
+        },
+      })
+    }
+  } catch {
+    // Best-effort; never let capture bookkeeping surface as a failure.
+  }
+}
+
 function hasArchivePayload(files: string[]): boolean {
   return files.some((file) => path.extname(file).toLowerCase() === '.archive')
 }
@@ -410,10 +459,6 @@ function archiveResourcesEqual(left: ArchiveResourceEntry[], right: ArchiveResou
   const normalizedLeft = normalize(left)
   const normalizedRight = normalize(right)
   return normalizedLeft.every((value, index) => value === normalizedRight[index])
-}
-
-function hasUnresolvedArchiveResources(resources: ArchiveResourceEntry[]): boolean {
-  return resources.some((resource) => Boolean(resource.hash) && !resource.resourcePath)
 }
 
 async function refreshArchiveResourceMetadata(
@@ -448,24 +493,25 @@ async function refreshArchiveResourceMetadata(
     return false
   }
 
-  // Already indexed at current version — skip loading the hash DB and running external scripts.
+  // Already indexed at the current version — treat it as final: skip the hash DB and any
+  // external hash tooling. We intentionally do NOT re-resolve still-unresolved hashes on
+  // every pass. The expensive resolution (archive parse + LXRS/kark/DB) already ran once
+  // at index time, and the bundled DB is static, so a hash unresolved then stays
+  // unresolved now. Re-hydrating here was spawning one resolve-kark-hashes PowerShell per
+  // 250 unresolved hashes per kark file on EVERY launch/refresh — e.g. a single mod with
+  // ~2.7k unresolved hashes caused ~24 PowerShell spawns against CET's tweakdb karks
+  // (which can't resolve resource hashes anyway) — which is what made conflict badges take
+  // many seconds to appear on the first conflict pass of each session (and made the first
+  // reinstall stall on "checking conflicts"; later ones were fast off the in-memory cache).
+  // Conflicts are keyed on the hash, not the path, so unresolved entries still detect
+  // conflicts — they only render as "Unresolved" in the inspector. A sidecar version bump
+  // or a reinstall re-runs full resolution.
   if (
     Array.isArray(meta.archiveResources) &&
     meta.archiveResourceIndexVersion === ARCHIVE_RESOURCE_INDEX_VERSION &&
     storedResources.length > 0
   ) {
-    if (!hasUnresolvedArchiveResources(storedResources)) {
-      return false
-    }
-
-    const hydratedResources = await hydrateArchiveResourcePaths(storedResources)
-    if (archiveResourcesEqual(storedResources, hydratedResources)) {
-      return false
-    }
-
-    meta.archiveResources = hydratedResources
-    writeArchiveSidecar(modDir, hydratedResources, ARCHIVE_RESOURCE_INDEX_VERSION)
-    return true
+    return false
   }
 
   const parsedResources = await resolveArchiveResources(modDir)
@@ -550,7 +596,7 @@ async function redeployEnabledMods(
  * destination directory to already exist.
  *
  * Order matches load order (ascending priority): a later mod's link overrides an
- * earlier one on shared paths, realizing MO2-style "higher load order wins".
+ * earlier one on shared paths, realizing "higher load order wins".
  * Cyberpunk archive conflicts are special: the game resolves resources by archive
  * filename order, so .archive files are given unique virtual names where lower UI
  * entries sort first.
@@ -704,6 +750,9 @@ function readMetadata(modDir: string): ModMetadata | null {
 }
 
 function writeMetadata(modDir: string, meta: ModMetadata): void {
+  // Opens a self-write window so the library watcher ignores this write (and the mod
+  // folder's resulting directory event) instead of looping back into another scan.
+  suppressLibraryWatch()
   const clean: ModMetadata = { ...meta }
   delete clean.hashes
   delete clean.archiveResources
@@ -803,24 +852,41 @@ function resolvePathInsideModDir(modDir: string, relativePath = ''): { normalize
 async function refreshModAfterTreeMutation(
   modId: string,
   libraryPath: string,
-  gamePath: string
+  _gamePath: string
 ): Promise<IpcResult<ModMetadata>> {
-  let scannedMods = await scanMods(libraryPath, { refreshFileMetadata: true })
-  let updatedMod = scannedMods.find((entry) => entry.uuid === modId)
-  if (!updatedMod) return { ok: false, error: 'Mod not found after file operation' }
+  // Refresh ONLY the mod that was just edited — re-read its file list/type/size from
+  // disk. Never re-walk the whole library here: a full `refreshFileMetadata` scan
+  // re-reads every file of all installed mods, which made each create/rename/delete
+  // in the Files tab take noticeably long on large libraries. There is also no
+  // deployment work to do — the VFS is virtual and picks up file changes on the next
+  // launch — so the old enabled-mod resync (another full re-walk) is gone too.
+  const found = findModDir(libraryPath, modId)
+  if (!found) return { ok: false, error: 'Mod not found after file operation' }
+  const { mod, dir } = found
+  if (mod.kind !== 'mod') return { ok: true, data: mod }
 
-  if (updatedMod.enabled) {
-    const syncResult = await enableMod(updatedMod, gamePath, libraryPath)
-    if (!syncResult.ok) {
-      return { ok: false, error: syncResult.error ?? 'Could not resync modified mod' }
-    }
+  let changed = false
 
-    scannedMods = await scanMods(libraryPath, { refreshFileMetadata: true })
-    updatedMod = scannedMods.find((entry) => entry.uuid === modId)
-    if (!updatedMod) return { ok: false, error: 'Mod not found after resync' }
+  const files = getScannedModFiles(dir)
+  if (!Array.isArray(mod.files) || mod.files.length !== files.length || mod.files.some((file, index) => file !== files[index])) {
+    mod.files = files
+    changed = true
   }
 
-  return { ok: true, data: updatedMod }
+  const detectedType = detectModType(dir)
+  if (detectedType !== 'unknown' && mod.type !== detectedType) {
+    mod.type = detectedType
+    changed = true
+  }
+
+  const fileSize = getPathSizeSafe(dir)
+  if (mod.fileSize !== fileSize) {
+    mod.fileSize = fileSize
+    changed = true
+  }
+
+  if (changed) writeMetadata(dir, mod)
+  return { ok: true, data: mod }
 }
 
 async function createModTreeEntry(
@@ -1252,10 +1318,12 @@ async function setModsEnabledInBatch(
 // ─── Handler Registration ─────────────────────────────────────────────────────
 
 export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow | null): void {
-  ipcMain.handle(IPC.SCAN_MODS, async (): Promise<IpcResult<ModMetadata[]>> => {
+  ipcMain.handle(IPC.SCAN_MODS, async (_event, options?: { refreshFileMetadata?: boolean }): Promise<IpcResult<ModMetadata[]>> => {
     try {
       const settings = loadSettings()
-      const mods = await scanMods(settings.libraryPath)
+      const mods = await scanMods(settings.libraryPath, {
+        refreshFileMetadata: options?.refreshFileMetadata === true,
+      })
       return { ok: true, data: mods }
     } catch (error) {
       return {
@@ -1353,6 +1421,15 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       const found = findModDir(settings.libraryPath, modId)
       if (!found) return { ok: false, error: 'Mod directory not found' }
       fs.rmSync(found.dir, { recursive: true, force: true })
+
+      // Remove this mod's leftover Runtime Captures now that it's gone, so settings/
+      // configs from a mod that no longer exists don't pile up. `mods` is the fresh
+      // pre-deletion scan, so the remaining mods are an authoritative owner list.
+      cleanDeletedModCaptures(
+        settings.libraryPath,
+        mods.filter((m) => m.uuid !== modId),
+        getMainWindow?.() ?? null
+      )
       return { ok: true }
     }
   )
@@ -1613,6 +1690,75 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
           }
         })
         return { ok: true, data: { summaries, conflicts } }
+      } catch (err: unknown) {
+        return { ok: false, error: String(err) }
+      }
+    }
+  )
+
+  // Lazy, on-demand name resolution for a single mod's archive resources. Indexing/install
+  // only resolves names from the in-memory DB (instant); the slow external tooling (LXRS +
+  // kark via PowerShell) runs here, only when the renderer actually needs the names — i.e.
+  // when a mod's conflict inspector is opened and it still has unresolved hashes. The result
+  // is written back to the sidecar so it persists and isn't recomputed next time.
+  ipcMain.handle(
+    IPC.RESOLVE_MOD_ARCHIVE_NAMES,
+    async (_event, uuid: string): Promise<IpcResult<{ resolved: number }>> => {
+      try {
+        const settings = loadSettings()
+        const found = findModDir(settings.libraryPath, uuid)
+        if (!found) return { ok: false, error: 'Mod not found' }
+
+        const beforeResolved = getStoredArchiveResources(found.mod).filter((r) => r.resourcePath).length
+        const resources = await resolveArchiveResources(found.dir, { resolveExternalNames: true })
+        if (resources.length > 0) {
+          writeArchiveSidecar(found.dir, resources, ARCHIVE_RESOURCE_INDEX_VERSION)
+        }
+        const afterResolved = resources.filter((r) => r.resourcePath).length
+
+        return { ok: true, data: { resolved: Math.max(0, afterResolved - beforeResolved) } }
+      } catch (err: unknown) {
+        return { ok: false, error: String(err) }
+      }
+    }
+  )
+
+  // Re-read a single mod's on-disk file list (and re-detect type/size) so files added or
+  // removed directly in the mod folder via Explorer show up. Routine scans reuse the stored
+  // `files` for speed and never re-walk the folder, so without this opening a mod's Files
+  // tab (or an external library change) wouldn't reflect what's actually on disk.
+  ipcMain.handle(
+    IPC.REFRESH_MOD_FILES,
+    async (_event, uuid: string): Promise<IpcResult<ModMetadata>> => {
+      try {
+        const settings = loadSettings()
+        const found = findModDir(settings.libraryPath, uuid)
+        if (!found) return { ok: false, error: 'Mod not found' }
+        const { mod, dir } = found
+        if (mod.kind !== 'mod') return { ok: true, data: mod }
+
+        let changed = false
+
+        const files = getScannedModFiles(dir)
+        if (!Array.isArray(mod.files) || mod.files.length !== files.length || mod.files.some((file, index) => file !== files[index])) {
+          mod.files = files
+          changed = true
+        }
+
+        const detectedType = detectModType(dir)
+        if (detectedType !== 'unknown' && mod.type !== detectedType) {
+          mod.type = detectedType
+          changed = true
+        }
+
+        const fileSize = getPathSizeSafe(dir)
+        if (mod.fileSize !== fileSize) {
+          mod.fileSize = fileSize
+          changed = true
+        }
+
+        if (changed) writeMetadata(dir, mod)
+        return { ok: true, data: mod }
       } catch (err: unknown) {
         return { ok: false, error: String(err) }
       }

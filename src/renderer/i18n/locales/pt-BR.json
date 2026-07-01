@@ -546,6 +546,7 @@
       "columnScope": "Escopo",
       "treeModeDeployed": "Exibindo a última estrutura de implantação conhecida em relação à raiz do jogo.",
       "treeModeInferred": "Exibindo a estrutura de implantação inferida com base nos arquivos indexados e no tipo do mod.",
+      "treeModeMirror": "Espelhando os arquivos do mod exatamente como estão no disco.",
       "noFilesMatched": "Nenhum arquivo correspondeu a esta busca.",
       "pathsTab": "Caminhos ({count})",
       "archivesTab": ".archive ({count})",

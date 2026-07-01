@@ -1,17 +1,20 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import type { ModMetadata } from '@shared/types'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { MemoModRow } from './ModRow'
 import type { LibrarySortKey } from './LibraryTableHeader'
+import { useVirtualRows } from '../../hooks/useVirtualRows'
 import { useTranslation } from '../../i18n/I18nContext'
 
 interface LibraryRowsProps {
   rowsRef: React.RefObject<HTMLDivElement>
   displayedMods: ModMetadata[]
-  visibleMods: ModMetadata[]
-  virtualStartIndex: number
-  paddingTop: number
-  paddingBottom: number
+  // The list windows itself here (not in the parent ModList) so scrolling only
+  // re-renders this row list, never the whole ModList — that's what keeps scroll
+  // cheap even with windowing enabled.
+  scrollContainerRef: React.RefObject<HTMLDivElement>
+  rowHeight: number
+  virtualizationEnabled: boolean
   filter: string
   totalCount: number
   libraryStatusFilter: LibraryStatusFilter
@@ -23,7 +26,7 @@ interface LibraryRowsProps {
   installTargetModId: string | null
   installTargetNested: boolean
   hasInsertAfterInstallRow: boolean
-  showAppendInstallRow: boolean
+  hasAppendInstallRow: boolean
   loadOrderMap: Map<string, number>
   selectedSet: Set<string>
   nestedModIds: Set<string>
@@ -69,10 +72,9 @@ interface LibraryRowsProps {
 export const LibraryRows: React.FC<LibraryRowsProps> = ({
   rowsRef,
   displayedMods,
-  visibleMods,
-  virtualStartIndex,
-  paddingTop,
-  paddingBottom,
+  scrollContainerRef,
+  rowHeight,
+  virtualizationEnabled,
   filter,
   totalCount,
   libraryStatusFilter,
@@ -84,7 +86,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
   installTargetModId,
   installTargetNested,
   hasInsertAfterInstallRow,
-  showAppendInstallRow,
+  hasAppendInstallRow,
   loadOrderMap,
   selectedSet,
   nestedModIds,
@@ -127,6 +129,28 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
   renderDeleteRow,
 }) => {
   const { t, tn } = useTranslation()
+
+  // Windowing lives here so the scroll-position state that drives it re-renders
+  // only this component, not the parent ModList. The +1 reserves a slot for the
+  // trailing append/insert install-progress row so its height is accounted for.
+  const virtual = useVirtualRows({
+    containerRef: scrollContainerRef,
+    count: displayedMods.length + (hasAppendInstallRow || hasInsertAfterInstallRow ? 1 : 0),
+    rowHeight,
+    overscan: 14,
+    enabled: virtualizationEnabled,
+  })
+  const visibleMods = useMemo(
+    () => displayedMods.slice(virtual.startIndex, Math.min(virtual.endIndex, displayedMods.length)),
+    [displayedMods, virtual.endIndex, virtual.startIndex]
+  )
+  const virtualStartIndex = virtual.startIndex
+  const paddingTop = virtualizationEnabled ? virtual.paddingTop : 0
+  const paddingBottom = virtualizationEnabled ? virtual.paddingBottom : 0
+  const showAppendInstallRow = hasAppendInstallRow
+    && virtual.startIndex <= displayedMods.length
+    && virtual.endIndex > displayedMods.length
+
   return (
   <div
     ref={rowsRef}

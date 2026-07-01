@@ -15,7 +15,6 @@ function buildSplashHtml(): string {
       :root {
         --bg: #050505;
         --text: #e5e2e1;
-        --text-muted: rgba(229,226,225,0.28);
         --accent: #fcee09;
       }
 
@@ -127,7 +126,6 @@ function buildSplashHtml(): string {
       }
 
       .title {
-        position: relative;
         font-size: 30px;
         font-weight: 800;
         letter-spacing: 0.18em;
@@ -141,47 +139,25 @@ function buildSplashHtml(): string {
         opacity: 0;
       }
 
-      .title::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        bottom: -12px;
-        width: 164px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(252,238,9,0.85), transparent);
-        transform: translateX(-50%);
-        opacity: 0.9;
-      }
-
-      .status {
-        margin-top: 6px;
-        font-size: 10px;
-        letter-spacing: 0.34em;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        animation: fade-in 0.45s 0.22s ease forwards;
-        opacity: 0;
-      }
-
       .progress-track {
-        width: 260px;
-        height: 3px;
+        width: 200px;
+        height: 2px;
         margin-top: 10px;
         border-radius: 999px;
-        overflow: hidden;
-        background: rgba(255,255,255,0.055);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+        background: rgba(255,255,255,0.07);
         position: relative;
       }
 
       .progress-bar {
         position: absolute;
-        inset: 0 auto 0 0;
-        width: 38%;
-        height: 100%;
-        background: linear-gradient(90deg, rgba(252,238,9,0.55), #fcee09 48%, rgba(255,255,255,0.95));
-        box-shadow: 0 0 12px rgba(252,238,9,0.24);
-        animation: indeterminate 1.2s linear infinite;
+        inset: 0;
+        border-radius: 999px;
+        /* Fills from the left, then drains from the right — a calm, self-contained
+           loop that never travels outside the track, so its glow can't leak off the
+           edge the way a sweeping beam did. */
+        background: linear-gradient(90deg, rgba(252,238,9,0.55), #fffbe0);
+        box-shadow: 0 0 6px rgba(252,238,9,0.5);
+        animation: indeterminate 1.5s ease-in-out infinite;
         will-change: transform;
       }
 
@@ -221,8 +197,10 @@ function buildSplashHtml(): string {
       }
 
       @keyframes indeterminate {
-        0% { transform: translateX(-140%); }
-        100% { transform: translateX(360%); }
+        0%     { transform: scaleX(0); transform-origin: left; }
+        50%    { transform: scaleX(1); transform-origin: left; }
+        50.01% { transform: scaleX(1); transform-origin: right; }
+        100%   { transform: scaleX(0); transform-origin: right; }
       }
     </style>
   </head>
@@ -238,7 +216,6 @@ function buildSplashHtml(): string {
       </div>
       <div class="brand-lockup">
         <span class="title">Hyperion</span>
-        <span class="status" id="status">Booting Core</span>
         <div class="progress-track">
           <div class="progress-bar"></div>
         </div>

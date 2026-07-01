@@ -12,7 +12,7 @@
 //       tear the VFS down (call when the game exits).
 //
 // Links are applied in array order; a later link to the same dest wins, which
-// maps to Hyperion's MO2-style "higher load order overrides".
+// maps to Hyperion's "higher load order overrides".
 //
 // usvfs_x64.dll is delay-loaded and explicitly loaded from this addon's own
 // directory (default DLL search resolves relative to electron.exe, not us).
