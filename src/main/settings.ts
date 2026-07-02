@@ -92,7 +92,8 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
     downloadPath: hasDownloadPath
       ? (raw?.downloadPath?.trim() || getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath)
       : (getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath),
-    theme: 'dark',
+    accentColor: typeof raw?.accentColor === 'string' && raw.accentColor.trim() ? raw.accentColor : 'blue',
+    uiMode: raw?.uiMode === 'light' || raw?.uiMode === 'dark' ? raw.uiMode : 'system',
     autoUpdate: raw?.autoUpdate ?? true,
     autoInstallDownloads: raw?.autoInstallDownloads ?? true,
     nexusApiKey: raw?.nexusApiKey ?? '',

@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { CloseButton } from '@heroui/react'
 import {
   IPC,
   type AppGeneralLogEntry,
@@ -11,9 +12,10 @@ import {
 import { IpcService } from '../../services/IpcService'
 import { useAppStore } from '../../store/useAppStore'
 import { formatWindowsDateTime } from '../../utils/dateFormat'
-import { SurfaceTabRail } from './uiKit'
 import { Tooltip } from './Tooltip'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
+import { UnderlineTabs } from './uiKit'
 
 interface AppLogsDialogProps {
   onClose: () => void
@@ -28,28 +30,63 @@ interface LoggedSecretValue {
   value: string
 }
 
+// Soft filled chips (no harsh outline) — semantic per HTTP method / log level.
 const requestMethodBadgeClass: Record<NexusApiLogEntry['method'], string> = {
-  GET: 'border-[#4a3f08] bg-[#171303] text-[#fcee09]',
-  POST: 'border-[#14365a] bg-[#07111d] text-[#60a5fa]',
-  PUT: 'border-[#114038] bg-[#061512] text-[#34d399]',
-  PATCH: 'border-[#4b2f11] bg-[#1a1006] text-[#fb923c]',
-  DELETE: 'border-[#4a1212] bg-[#150404] text-[#f87171]',
+  GET: 'bg-[rgb(252_238_9/0.14)] text-[#fcee09]',
+  POST: 'bg-[rgb(96_165_250/0.16)] text-[#60a5fa]',
+  PUT: 'bg-[rgb(52_211_153/0.16)] text-[#34d399]',
+  PATCH: 'bg-[rgb(251_146_60/0.16)] text-[#fb923c]',
+  DELETE: 'bg-[rgb(248_113_113/0.16)] text-[#f87171]',
 }
 
 const generalLevelBadgeClass: Record<AppGeneralLogEntry['level'], string> = {
-  info: 'border-[#2a2a2a] bg-[#111] text-[#d0d0d0]',
-  warn: 'border-[#4a3f08] bg-[#171303] text-[#fcee09]',
-  error: 'border-[#4a1212] bg-[#150404] text-[#f87171]',
+  info: 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]',
+  warn: 'bg-[rgb(252_238_9/0.14)] text-[#fcee09]',
+  error: 'bg-[rgb(248_113_113/0.16)] text-[#f87171]',
 }
 
-const inlineBadgeClass = 'inline-flex h-5 items-center rounded-sm border-[0.5px] px-2 text-[10px] font-mono uppercase tracking-[0.14em]'
+const inlineBadgeClass = 'inline-flex h-5 items-center rounded-md px-2 text-[10px] font-mono uppercase tracking-[0.14em]'
 
 const logRowSurfaceClass = (active: boolean) =>
-  `overflow-hidden rounded-sm border-[0.5px] transition-[border-color,box-shadow,background-color] ${
+  `overflow-hidden rounded-xl transition-[box-shadow,background-color] ${
     active
-      ? 'border-[#6a5b10] bg-[#0b0a04] shadow-[0_0_0_1px_rgba(252,238,9,0.08)]'
-      : 'border-[#1a1a1a] bg-[#080808] hover:border-[#3b3512] hover:bg-[#0f0e08]'
+      ? 'bg-[rgb(var(--accent-rgb)/0.08)] shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.45)]'
+      : 'bg-[var(--surface)] hover:bg-[var(--surface-secondary)]'
   }`
+
+// Readable HeroUI-style section label (replaces the old faded micro-uppercase mono labels).
+const metaLabelClass = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]'
+
+// Small stat card used in the expanded request detail (Method / Endpoint / Status / API time).
+const MetaCard: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3">
+    <div className={`${metaLabelClass} mb-1.5`}>{label}</div>
+    {children}
+  </div>
+)
+
+// Labeled panel (Request URL / Error / structured payloads) — soft rounded surface, readable header.
+const LabeledPanel: React.FC<{
+  icon: string
+  label: string
+  tone?: 'default' | 'error'
+  headerRight?: React.ReactNode
+  children: React.ReactNode
+}> = ({ icon, label, tone = 'default', headerRight, children }) => {
+  const isError = tone === 'error'
+  return (
+    <div className={`overflow-hidden rounded-xl ${isError ? 'bg-[rgb(248_113_113/0.06)]' : 'bg-[var(--surface-secondary)]'}`}>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <Icon name={icon} className={`text-[16px] ${isError ? 'text-[var(--status-error)]' : 'text-[var(--accent)]'}`} />
+          <span className={`${metaLabelClass} ${isError ? 'text-[#fca5a5]' : ''}`}>{label}</span>
+        </div>
+        {headerRight}
+      </div>
+      {children}
+    </div>
+  )
+}
 
 function formatDuration(durationMs: number): string {
   if (!Number.isFinite(durationMs)) return '--'
@@ -108,9 +145,11 @@ function stringifyPayload(value: unknown, revealSecrets: boolean): string {
 }
 
 function getPrimitiveClassName(value: unknown): string {
-  if (typeof value === 'string') return 'text-[#f1df88]'
-  if (typeof value === 'number') return 'text-[#60a5fa]'
-  if (typeof value === 'boolean') return 'text-[#34d399]'
+  // Strings use a fixed, readable warm tone (not the accent — a low-opacity blue/etc. accent
+  // reads too dark on the code surface). Numbers/booleans/null keep their semantic colors.
+  if (typeof value === 'string') return 'text-[#e0af68]'
+  if (typeof value === 'number') return 'text-[#7aa2f7]'
+  if (typeof value === 'boolean') return 'text-[#9ece6a]'
   return 'text-[#8a8a8a]'
 }
 
@@ -176,25 +215,19 @@ const StructuredDataPanel: React.FC<{
   const hasSecrets = payloadHasSecrets(value)
 
   return (
-    <div className={`overflow-hidden rounded-sm border-[0.5px] transition-[border-color,box-shadow,background-color] ${
-      expanded
-        ? 'border-[#6a5b10] bg-[#0b0a04] shadow-[0_0_0_1px_rgba(252,238,9,0.08)]'
-        : 'border-[#1a1a1a] bg-[#080808] hover:border-[#3b3512]'
-    }`}>
+    <div className="overflow-hidden rounded-xl bg-[var(--surface-secondary)]">
       <div
         role="button"
         tabIndex={0}
         onClick={() => setExpanded((current) => !current)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setExpanded((c) => !c) }}
-        className={`flex items-center justify-between gap-3 px-3 py-2 transition-[border-color,background-color] ${expanded ? 'bg-[#111007]' : 'bg-[#080808] hover:border-[#3b3512] hover:bg-[#131109]'}`}
+        className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-[rgb(255_255_255/0.02)]"
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-sm py-1 pl-1 pr-2 text-left">
-          <span className={`material-symbols-outlined text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`}>
-            expand_more
-          </span>
-          <span className={`material-symbols-outlined text-[15px] text-[#fcee09]`}>{icon}</span>
-          <span className="ui-support-mono uppercase tracking-[0.14em]">{title}</span>
-          <span className="ui-support-mono text-[#7e8692]">{getPayloadKindLabel(value)}</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <Icon name="expand_more" className={`text-[16px] text-[var(--text-muted)] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
+          <Icon name={icon} className="text-[16px] text-[var(--accent)]" />
+          <span className={metaLabelClass}>{title}</span>
+          <span className="text-[11px] font-medium text-[var(--text-disabled)]">{getPayloadKindLabel(value)}</span>
         </div>
         <div className="flex items-center gap-2">
           {hasSecrets ? (
@@ -202,13 +235,13 @@ const StructuredDataPanel: React.FC<{
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onToggleRevealSecrets() }}
-                className={`flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] transition-colors ${
+                className={`flex h-8 w-8 items-center justify-center rounded-lg border-0 transition-colors ${
                   revealSecrets
-                    ? 'border-[#6a5b10] bg-[#151202] text-[#fcee09] hover:border-[#fcee09] hover:text-white'
-                    : 'border-[#232323] bg-[#111111] text-[#a8a8a8] hover:border-[#fcee09]/40 hover:text-white'
+                    ? 'bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)] hover:bg-[rgb(var(--accent-rgb)/0.22)]'
+                    : 'bg-[var(--surface)] text-[var(--text-support)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">{revealSecrets ? 'visibility_off' : 'visibility'}</span>
+                <Icon name={revealSecrets ? 'visibility_off' : 'visibility'} className="text-[16px]" />
               </button>
             </Tooltip>
           ) : null}
@@ -216,18 +249,18 @@ const StructuredDataPanel: React.FC<{
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); void onCopy(value, title) }}
-              className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#232323] bg-[#111111] text-[#a8a8a8] transition-colors hover:border-[#fcee09]/40 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-support)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)]"
             >
-              <span className="material-symbols-outlined text-[16px]">content_copy</span>
+              <Icon name="content_copy" className="text-[16px]" />
             </button>
           </Tooltip>
         </div>
       </div>
       {expanded ? (
         value === null || value === undefined ? (
-          <div className="ui-support-mono px-3 py-3 uppercase tracking-[0.14em] text-[#7f7f7f]">{emptyLabel}</div>
+          <div className="px-4 py-3 text-[13px] text-[var(--text-muted)]">{emptyLabel}</div>
           ) : (
-          <div className="bg-[#060606] px-2 py-2">
+          <div className="border-t border-[var(--border)] bg-[rgb(0_0_0/0.28)] px-3 py-2.5">
             <PayloadNode value={value} revealSecrets={revealSecrets} />
           </div>
         )
@@ -266,7 +299,7 @@ const PayloadNode: React.FC<{
     return (
       <div className="ui-support-mono flex items-baseline gap-0 py-[2px] hover:bg-[#111111]" style={{ paddingLeft: rowPl }}>
         {KeyEl}
-        <span className="break-all text-[#f1df88]">"{shown}"</span>
+        <span className="break-all text-[#e0af68]">"{shown}"</span>
         {TrailingComma}
       </div>
     )
@@ -305,12 +338,7 @@ const PayloadNode: React.FC<{
         onClick={toggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggle() }}
       >
-        <span
-          className={`material-symbols-outlined mr-[5px] mt-[1px] shrink-0 select-none text-[#636363] transition-transform ${expanded ? '' : '-rotate-90'}`}
-          style={{ fontSize: '12px' }}
-        >
-          expand_more
-        </span>
+        <Icon name="expand_more" className={`mr-[5px] mt-[1px] shrink-0 select-none text-[#636363] transition-transform ${expanded ? '' : '-rotate-90'}`} style={{ fontSize: '12px' }} />
         {KeyEl}
         <span className="text-[#6f6f6f]">{openBrace}</span>
         {!expanded ? (
@@ -325,7 +353,7 @@ const PayloadNode: React.FC<{
       {expanded ? (
         <>
           {/* Children with vertical guide line */}
-          <div style={{ marginLeft: guideLeft, borderLeft: '1px solid #1c1c1c' }}>
+          <div style={{ marginLeft: guideLeft, borderLeft: '1px solid var(--bg-subtle)' }}>
             {entries.length === 0 ? (
               <div className="ui-support-mono py-[2px] pl-2 text-[#8a8a8a]">{t('logs.emptyNode')}</div>
             ) : (
@@ -502,16 +530,16 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           type="button"
           onClick={() => toggleRequest(entry.id)}
           className={`grid w-full grid-cols-[150px_76px_minmax(0,1fr)_76px_86px_20px] items-center gap-3 px-6 py-3 text-left transition-colors ${
-            expanded ? 'bg-[#111007]' : 'hover:bg-[#131109]'
+            expanded ? 'bg-[rgb(var(--accent-rgb)/0.06)]' : 'hover:bg-[rgb(var(--accent-rgb)/0.04)]'
           }`}
         >
           <span className="ui-support-mono">{formatWindowsDateTime(entry.timestamp)}</span>
           <span className={`${inlineBadgeClass} justify-center ${requestMethodBadgeClass[entry.method]}`}>{entry.method}</span>
           <span className="min-w-0">
             <span className="mb-1 flex items-center gap-2">
-              <span className="block truncate font-mono text-sm text-[#e5e2e1]">{entry.endpoint}</span>
+              <span className="block truncate font-mono text-sm text-[var(--text-primary-alt)]">{entry.endpoint}</span>
               {previewLabel ? (
-                <span className="inline-flex h-5 shrink-0 items-center rounded-sm border-[0.5px] border-[#2b2b2b] bg-[#111111] px-2 text-[10px] font-mono uppercase tracking-[0.14em] text-[#d6d6d6]">
+                <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-[var(--surface-secondary)] px-2 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                   {previewLabel}
                 </span>
               ) : null}
@@ -520,62 +548,51 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           </span>
           <span className={`${inlineBadgeClass} justify-center ${
             entry.status === 'success'
-              ? 'border-[#1d3d2e] bg-[#091410] text-[#34d399]'
-              : 'border-[#4a1212] bg-[#150404] text-[#f87171]'
+              ? 'bg-[rgb(52_211_153/0.16)] text-[#34d399]'
+              : 'bg-[rgb(248_113_113/0.16)] text-[#f87171]'
           }`}>
             {formatStatusCode(entry)}
           </span>
           <span className="ui-support-mono truncate text-[#cfcfcf]">{formatDuration(entry.durationMs)}</span>
-          <span className={`material-symbols-outlined text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`}>
-            expand_more
-          </span>
+          <Icon name="expand_more" className={`text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
         </button>
         {expanded ? (
-          <div className="border-t-[0.5px] border-[#1a1a1a] bg-[#060606] px-6 py-4">
+          <div className="border-t border-[var(--border)] px-6 py-5">
             {previewLabel ? (
-              <div className="mb-4 overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#090909] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em] text-[#d6d6d6]">{t('logs.preview')}</div>
-                <div className="font-mono text-sm text-[#b8b8b8]">
+              <LabeledPanel icon="visibility" label={t('logs.preview')}>
+                <div className="px-4 py-3 font-mono text-[13px] text-[var(--text-secondary)]">
                   {t('logs.previewMock')}
                 </div>
-              </div>
+              </LabeledPanel>
             ) : null}
             <div className="mb-4 grid gap-3 md:grid-cols-4">
-              <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.method')}</div>
+              <MetaCard label={t('logs.method')}>
                 <span className={`${inlineBadgeClass} ${requestMethodBadgeClass[entry.method]}`}>{entry.method}</span>
-              </div>
-              <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.endpoint')}</div>
-                <div className="font-mono text-sm text-[#e5e2e1] break-all">{entry.endpoint}</div>
-              </div>
-              <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.status')}</div>
-                <div className="font-mono text-sm text-[#e5e2e1]">{formatStatusCode(entry)}</div>
-              </div>
-              <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.apiTime')}</div>
-                <div className="font-mono text-sm text-[#e5e2e1]">{formatDuration(entry.durationMs)}</div>
-              </div>
+              </MetaCard>
+              <MetaCard label={t('logs.endpoint')}>
+                <div className="font-mono text-[13px] text-[var(--text-primary)] break-all">{entry.endpoint}</div>
+              </MetaCard>
+              <MetaCard label={t('logs.status')}>
+                <div className="font-mono text-[13px] text-[var(--text-primary)]">{formatStatusCode(entry)}</div>
+              </MetaCard>
+              <MetaCard label={t('logs.apiTime')}>
+                <div className="font-mono text-[13px] text-[var(--text-primary)]">{formatDuration(entry.durationMs)}</div>
+              </MetaCard>
             </div>
-            <div className="mb-4 overflow-hidden rounded-sm border-[0.5px] border-[#1a1a1a] bg-[#070707]">
-              <div className="flex items-center gap-2 border-b-[0.5px] border-[#161616] bg-[#0b0b0b] px-3 py-2">
-                <span className="material-symbols-outlined text-[15px] text-[#fcee09]">link</span>
-                <span className="ui-support-mono uppercase tracking-[0.14em]">{t('logs.requestUrl')}</span>
-              </div>
-              <div className="px-3 py-3 font-mono text-sm text-[#e5e2e1] break-all">
-                {entry.url}
-              </div>
+            <div className="mb-4">
+              <LabeledPanel icon="link" label={t('logs.requestUrl')}>
+                <div className="px-4 pb-3 font-mono text-[13px] text-[var(--text-primary)] break-all">
+                  {entry.url}
+                </div>
+              </LabeledPanel>
             </div>
             {entry.error ? (
-              <div className="mb-4 overflow-hidden rounded-sm border-[0.5px] border-[#4a1212] bg-[#120707]">
-                <div className="flex items-center gap-2 border-b-[0.5px] border-[#341010] bg-[#180909] px-3 py-2">
-                  <span className="material-symbols-outlined text-[15px] text-[#f87171]">error</span>
-                  <span className="ui-support-mono uppercase tracking-[0.14em] text-[#fca5a5]">{t('logs.error')}</span>
-                </div>
-                <div className="px-3 py-3 font-mono text-sm text-[#fca5a5]">
-                  {entry.error}
-                </div>
+              <div className="mb-4">
+                <LabeledPanel icon="error" label={t('logs.error')} tone="error">
+                  <div className="px-4 pb-3 font-mono text-[13px] text-[#fca5a5]">
+                    {entry.error}
+                  </div>
+                </LabeledPanel>
               </div>
             ) : null}
             <div className="space-y-4">
@@ -612,69 +629,57 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
 
   return createPortal(
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
-      <div className="relative flex h-[88vh] w-[min(94vw,1760px)] max-w-none flex-col overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_22px_60px_rgba(0,0,0,0.82)]">
-        <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09] shadow-[0_0_14px_rgba(252,238,9,0.38)]" />
-
-        <div className="flex items-start justify-between gap-6 border-b-[0.5px] border-[#1a1a1a] px-6 py-5">
-          <div>
-            <div className="mb-2 flex items-center gap-3">
-              <span className="material-symbols-outlined text-[20px] text-[#fcee09]">terminal</span>
-              <h2 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
+      <div className="relative flex h-[88vh] w-[min(94vw,1760px)] max-w-none flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_24px_70px_rgba(0,0,0,0.7)]">
+        <div className="flex items-start justify-between gap-6 px-6 pt-5 pb-2">
+          <div className="min-w-0">
+            <div className="mb-1.5 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)]">
+                <Icon name="terminal" className="text-[20px]" />
+              </span>
+              <h2 className="text-[1.25rem] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
                 {t('logs.title')}
               </h2>
-              <span className={`${inlineBadgeClass} border-[#4a3f08] bg-[#171303] text-[#fcee09]`}>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgb(52_211_153/0.14)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--status-success)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-success)]" />
                 {t('logs.live')}
               </span>
             </div>
-            <p className="ui-support-mono max-w-3xl">
+            <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-support)]">
               {t('logs.description')}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Tooltip content={t('logs.closeLogs')}>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-sm border-[0.5px] border-[#222] bg-[#0a0a0a] text-[#9a9a9a] transition-colors hover:border-[#fcee09]/40 hover:text-white"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </Tooltip>
-          </div>
+          <Tooltip content={t('logs.closeLogs')}>
+            <CloseButton
+              aria-label={t('logs.closeLogs')}
+              onPress={onClose}
+              className="h-9 w-9 shrink-0 rounded-lg bg-[var(--surface)] text-[var(--text-support)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)]"
+            />
+          </Tooltip>
         </div>
 
-        <div
-          className="border-b-[0.5px] border-[#1a1a1a] pt-3"
-          style={{
-            paddingLeft: `${APP_LOGS_CONTENT_GUTTER_PX}px`,
-            paddingRight: `${APP_LOGS_CONTENT_GUTTER_PX}px`,
-          }}
-        >
-          <div className="flex items-center justify-between gap-6">
-            <SurfaceTabRail
-              items={logTabItems}
-              activeId={activeTab}
-              onChange={setActiveTab}
-              ariaLabel={t('logs.sectionsAria')}
-              className="min-w-0 flex-1"
-              withBottomBorder={false}
-            />
-            <div className="flex shrink-0 items-center gap-3">
-              <span className="ui-support-mono uppercase tracking-[0.14em]">
-                {tn('logs.entries', activeCount)}
-              </span>
-              <Tooltip content={clearTabLabel}>
-                <button
-                  type="button"
-                  aria-label={clearTabLabel}
-                  onClick={() => void handleClearTab()}
-                  className="flex h-9 w-9 items-center justify-center rounded-sm border-[0.5px] border-[#3a1010] bg-[#0d0404] text-[#f18d8d] transition-colors hover:border-[#f87171] hover:bg-[#1a0505] hover:text-[#ffe1e1]"
-                >
-                  <span className="material-symbols-outlined text-[20px] leading-none">delete</span>
-                </button>
-              </Tooltip>
-            </div>
+        <div className="flex items-end justify-between gap-6 border-b border-[var(--border)] px-6 pt-1">
+          <UnderlineTabs
+            items={logTabItems}
+            activeId={activeTab}
+            onChange={setActiveTab}
+            ariaLabel={t('logs.sectionsAria')}
+            withBorder={false}
+          />
+          <div className="flex shrink-0 items-center gap-3 pb-2">
+            <span className="text-[13px] text-[var(--text-support)]">
+              {tn('logs.entries', activeCount)}
+            </span>
+            <Tooltip content={clearTabLabel}>
+              <button
+                type="button"
+                aria-label={clearTabLabel}
+                onClick={() => void handleClearTab()}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border-0 bg-[rgb(248_113_113/0.12)] text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.2)]"
+              >
+                <Icon name="delete" className="text-[20px] leading-none" />
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -689,8 +694,8 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
         >
           {activeTab === 'general' ? (
             generalEntries.length === 0 ? (
-              <div className="flex h-full min-h-[260px] items-center justify-center border-[0.5px] border-[#1a1a1a] bg-[#070707]">
-                <div className="ui-support-mono text-center uppercase tracking-[0.14em]">{emptyLabel}</div>
+              <div className="flex h-full min-h-[260px] items-center justify-center rounded-xl bg-[var(--surface)]">
+                <div className="text-center text-sm text-[var(--text-muted)]">{emptyLabel}</div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -702,32 +707,27 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                         type="button"
                         onClick={() => toggleGeneral(entry.id)}
                         className={`grid w-full grid-cols-[150px_92px_120px_minmax(0,1fr)_20px] items-center gap-3 px-6 py-3 text-left transition-colors ${
-                          expanded ? 'bg-[#111007]' : 'hover:bg-[#131109]'
+                          expanded ? 'bg-[rgb(var(--accent-rgb)/0.06)]' : 'hover:bg-[rgb(var(--accent-rgb)/0.04)]'
                         }`}
                       >
                         <span className="ui-support-mono">{formatWindowsDateTime(entry.timestamp)}</span>
                         <span className={`${inlineBadgeClass} ${generalLevelBadgeClass[entry.level]}`}>{entry.level}</span>
                         <span className="ui-support-mono truncate uppercase tracking-[0.14em] text-[#cfcfcf]">{entry.source}</span>
-                        <span className="ui-support-mono truncate text-[#e5e2e1]">{entry.message}</span>
-                        <span className={`material-symbols-outlined text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`}>
-                          expand_more
-                        </span>
+                        <span className="ui-support-mono truncate text-[var(--text-primary-alt)]">{entry.message}</span>
+                        <Icon name="expand_more" className={`text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
                       </button>
                       {expanded ? (
-                        <div className="border-t-[0.5px] border-[#1a1a1a] bg-[#060606] px-4 py-4">
+                        <div className="border-t border-[var(--border)] px-4 py-5">
                           <div className="mb-4 grid gap-3 md:grid-cols-3">
-                            <div className="border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.source')}</div>
-                              <div className="font-mono text-sm text-[#e5e2e1]">{entry.source}</div>
-                            </div>
-                            <div className="border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.level')}</div>
-                              <div className="font-mono text-sm uppercase tracking-[0.08em] text-[#e5e2e1]">{entry.level}</div>
-                            </div>
-                            <div className="border-[0.5px] border-[#1a1a1a] bg-[#080808] px-3 py-3">
-                              <div className="ui-support-mono mb-1 uppercase tracking-[0.14em]">{t('logs.occurred')}</div>
-                              <div className="font-mono text-sm text-[#e5e2e1]">{formatWindowsDateTime(entry.timestamp)}</div>
-                            </div>
+                            <MetaCard label={t('logs.source')}>
+                              <div className="font-mono text-[13px] text-[var(--text-primary)]">{entry.source}</div>
+                            </MetaCard>
+                            <MetaCard label={t('logs.level')}>
+                              <div className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-primary)]">{entry.level}</div>
+                            </MetaCard>
+                            <MetaCard label={t('logs.occurred')}>
+                              <div className="font-mono text-[13px] text-[var(--text-primary)]">{formatWindowsDateTime(entry.timestamp)}</div>
+                            </MetaCard>
                           </div>
                           <StructuredDataPanel
                             title={t('logs.details')}
@@ -749,8 +749,8 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           ) : (
             <div className="space-y-2">
               {requestEntries.length === 0 ? (
-                <div className="flex min-h-[180px] items-center justify-center border-[0.5px] border-[#1a1a1a] bg-[#070707]">
-                  <div className="ui-support-mono text-center uppercase tracking-[0.14em]">{t('logs.emptyRequestsLive')}</div>
+                <div className="flex min-h-[180px] items-center justify-center rounded-xl bg-[var(--surface)]">
+                  <div className="text-center text-sm text-[var(--text-muted)]">{t('logs.emptyRequestsLive')}</div>
                 </div>
               ) : (
                 requestEntries.map((entry) => renderRequestEntry(entry))

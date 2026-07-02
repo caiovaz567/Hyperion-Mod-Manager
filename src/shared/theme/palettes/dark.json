@@ -1,0 +1,31 @@
+{
+  "name": "Dark",
+  "author": "Hyperion",
+  "tokens": {
+    "--bg-canvas": "#070709",
+    "--bg-base": "#0A0A0A",
+    "--bg-base-deep": "#050505",
+    "--bg-surface": "#111111",
+    "--bg-elevated": "#161616",
+    "--bg-subtle": "#1C1C1C",
+
+    "--border-default": "rgba(255, 255, 255, 0.06)",
+    "--border-subtle": "rgba(255, 255, 255, 0.04)",
+    "--border-strong": "rgba(255, 255, 255, 0.12)",
+    "--border-accent": "rgb(0 111 238 / 0.5)",
+
+    "--text-accent": "#006FEE",
+
+    "--accent": "#006FEE",
+    "--accent-hover": "#338EF7",
+    "--accent-dim": "rgb(0 111 238 / 0.12)",
+    "--accent-rgb": "0 111 238",
+
+    "--accent-cyber-blue": "#4FD8FF",
+    "--accent-cyber-blue-rgb": "79 216 255",
+    "--focus-ring": "rgb(0 111 238 / 0.5)",
+
+    "--scrollbar-thumb": "rgba(255, 255, 255, 0.14)",
+    "--scrollbar-thumb-hover": "rgba(255, 255, 255, 0.24)"
+  }
+}

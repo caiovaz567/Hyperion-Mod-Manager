@@ -23,6 +23,7 @@ import { ActionPromptDialog } from '../ui/ActionPromptDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 const DOWNLOAD_ROW_HEIGHT = 56
 const DOWNLOAD_VIRTUALIZATION_THRESHOLD = 120
@@ -619,10 +620,10 @@ export const DownloadsPane: React.FC = () => {
     setSortDirection('asc')
   }, [sortDirection, sortKey])
 
-  const downloadMenuButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09] transition-colors gap-3 tracking-wider font-semibold uppercase'
-  const downloadMenuSubtleButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#9d9d9d] hover:bg-[#111] hover:text-white transition-colors gap-3 tracking-wider font-semibold uppercase'
-  const downloadMenuBlueButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#c6f4ff] hover:bg-[#08141a] hover:text-[#4fd8ff] transition-colors gap-3 tracking-wider font-semibold uppercase'
-  const downloadMenuDangerButtonClass = 'flex items-center w-full px-4 py-2 text-[11px] text-[#ffb4ab] hover:bg-[#93000a]/10 transition-colors gap-3 tracking-wider font-semibold uppercase'
+  const downloadMenuButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+  const downloadMenuSubtleButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+  const downloadMenuBlueButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.1)] hover:text-[var(--accent)]'
+  const downloadMenuDangerButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.1)]'
   const contextMenuRow = contextMenu?.kind === 'row' ? contextMenu.row : null
   const contextMenuActiveDownload = contextMenuRow?.kind === 'active' ? contextMenuRow.active : null
   const contextMenuLocalEntry = contextMenuRow?.kind === 'local' ? contextMenuRow.entry : null
@@ -659,15 +660,13 @@ export const DownloadsPane: React.FC = () => {
               {/* Rows */}
               <div className="relative" onContextMenu={handleDownloadsBlankContextMenu}>
                 {loading ? (
-                  <div className="flex items-center justify-center py-24 text-[#8a8a8a] font-mono text-sm">
+                  <div className="flex items-center justify-center py-24 text-[#8a8a8a] tabular-nums text-sm">
                     {t('downloads.empty.scanning')}
                   </div>
                 ) : totalRows === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
-                    <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">
-                      {searchQuery.trim() ? 'search_off' : 'download'}
-                    </span>
-                    <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
+                    <Icon name={searchQuery.trim() ? 'search_off' : 'download'} className="text-[48px] text-[#7a7a7a]" />
+                    <span className="text-[#8a8a8a] text-sm tabular-nums">
                       {searchQuery.trim()
                         ? t('downloads.empty.noMatch')
                         : settings?.downloadPath
@@ -677,9 +676,9 @@ export const DownloadsPane: React.FC = () => {
                     {!settings?.downloadPath && (
                       <button
                         onClick={() => setActiveView('settings')}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg-base-deep)] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
                       >
-                        <span className="material-symbols-outlined text-[16px]">settings</span>
+                        <Icon name="settings" className="text-[16px]" />
                         {t('downloads.empty.configuration')}
                       </button>
                     )}
@@ -731,7 +730,7 @@ export const DownloadsPane: React.FC = () => {
       {contextMenu && createPortal(
         <div
           ref={contextMenuRef}
-          className="fixed z-[100] min-w-[220px] border-[0.5px] border-[#222] bg-[#0a0a0a] py-1 shadow-[0_10px_30px_rgba(0,0,0,0.5)] brand-font"
+          className="fixed z-[100] min-w-[224px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.55)]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -741,7 +740,7 @@ export const DownloadsPane: React.FC = () => {
                 onClick={() => void handleRefreshDownloads()}
                 className={downloadMenuButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                <Icon name="refresh" className="text-[16px]" />
                 <span>{t('downloads.menu.refreshDownloads')}</span>
               </button>
               <button
@@ -752,10 +751,10 @@ export const DownloadsPane: React.FC = () => {
                 disabled={!settings?.downloadPath}
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <Icon name="folder_open" className="text-[16px]" />
                 <span>{t('downloads.menu.openFolder')}</span>
               </button>
-              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 onClick={() => {
                   setDeleteAllOpen(true)
@@ -764,7 +763,7 @@ export const DownloadsPane: React.FC = () => {
                 disabled={localFiles.length === 0}
                 className={`${downloadMenuDangerButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+                <Icon name="delete_sweep" className="text-[16px]" />
                 <span>{t('downloads.menu.deleteAll')}</span>
               </button>
             </>
@@ -775,17 +774,17 @@ export const DownloadsPane: React.FC = () => {
                 disabled={!contextMenuRowPath}
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <Icon name="folder_open" className="text-[16px]" />
                 <span>{t('downloads.menu.openLocation')}</span>
               </button>
               <button
                 onClick={() => void handleRefreshDownloads()}
                 className={downloadMenuButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                <Icon name="refresh" className="text-[16px]" />
                 <span>{t('common.refresh')}</span>
               </button>
-              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 onClick={() => void handleToggleDownloadState()}
                 className={contextMenuActiveDownload?.status === 'paused'
@@ -794,13 +793,11 @@ export const DownloadsPane: React.FC = () => {
                     ? downloadMenuDangerButtonClass
                     : downloadMenuButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  {contextMenuActiveDownload?.status === 'paused'
+                <Icon name={contextMenuActiveDownload?.status === 'paused'
                     ? 'play_arrow'
                     : contextMenuActiveDownload?.status === 'error'
                       ? 'delete'
-                      : 'pause'}
-                </span>
+                      : 'pause'} className="text-[16px]" />
                 <span>
                   {contextMenuActiveDownload?.status === 'paused'
                     ? t('downloads.menu.resume')
@@ -814,7 +811,7 @@ export const DownloadsPane: React.FC = () => {
                   onClick={() => void handleCancelContextDownload()}
                   className={downloadMenuDangerButtonClass}
                 >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <Icon name="close" className="text-[16px]" />
                   <span>{t('downloads.menu.cancel')}</span>
                 </button>
               )}
@@ -826,26 +823,26 @@ export const DownloadsPane: React.FC = () => {
                 disabled={Boolean(contextMenuLocalEntry && installing && installSourcePath === contextMenuLocalEntry.path)}
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">{contextMenuInstalledMod ? 'restart_alt' : 'deployed_code'}</span>
+                <Icon name={contextMenuInstalledMod ? 'restart_alt' : 'deployed_code'} className="text-[16px]" />
                 <span>{contextMenuInstalledMod ? t('common.reinstall') : t('common.install')}</span>
               </button>
-              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 onClick={() => void handleOpenDownloadsLocation()}
                 disabled={!contextMenuRowPath}
                 className={`${downloadMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <Icon name="folder_open" className="text-[16px]" />
                 <span>{t('downloads.menu.openLocation')}</span>
               </button>
               <button
                 onClick={() => void handleRefreshDownloads()}
                 className={downloadMenuButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                <Icon name="refresh" className="text-[16px]" />
                 <span>{t('common.refresh')}</span>
               </button>
-              <div className="my-1 border-t-[0.5px] border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 onClick={() => {
                   if (!contextMenuLocalEntry) return
@@ -854,7 +851,7 @@ export const DownloadsPane: React.FC = () => {
                 }}
                 className={downloadMenuDangerButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <Icon name="delete" className="text-[16px]" />
                 <span>{t('downloads.menu.deleteDownload')}</span>
               </button>
             </>
@@ -865,8 +862,7 @@ export const DownloadsPane: React.FC = () => {
 
       {pendingDeleteDownload && (
         <ActionPromptDialog
-          accentColor="#ff4d4f"
-          accentGlow="rgba(255,77,79,0.45)"
+          tone="danger"
           title={t('downloads.deleteDialog.title')}
           description={t('downloads.deleteDialog.description', { name: pendingDeleteDownload.name })}
           detailLabel={t('downloads.deleteDialog.detailLabel')}
@@ -875,21 +871,18 @@ export const DownloadsPane: React.FC = () => {
           primaryLabel={t('common.delete')}
           onPrimary={() => void handleDeleteDownload()}
           onCancel={() => setPendingDeleteDownload(null)}
-          primaryTextColor="#ffffff"
         />
       )}
 
       {deleteAllOpen && (
         <ActionPromptDialog
-          accentColor="#ff4d4f"
-          accentGlow="rgba(255,77,79,0.4)"
+          tone="danger"
           title={t('downloads.deleteAllDialog.title')}
           description={t('downloads.deleteAllDialog.description')}
           detailLabel={t('downloads.deleteAllDialog.detailLabel')}
           detailValue={String(localFiles.length)}
           icon="delete_sweep"
           primaryLabel={t('downloads.deleteAllDialog.primary')}
-          primaryTextColor="#ffffff"
           onPrimary={() => void handleDeleteAllDownloads()}
           onCancel={() => setDeleteAllOpen(false)}
           submitting={deletingAll}

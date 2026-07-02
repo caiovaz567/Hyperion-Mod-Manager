@@ -40,6 +40,7 @@ import { useLibraryRowSelection } from './useLibraryRowSelection'
 import { useLibrarySeparatorActions } from './useLibrarySeparatorActions'
 import { useLibrarySelection } from './useLibrarySelection'
 import { useLibrarySort } from './useLibrarySort'
+import { Icon } from '../ui/Icon'
 
 interface DetailOverlayState {
   modId: string
@@ -47,7 +48,7 @@ interface DetailOverlayState {
   initialEditName?: boolean
 }
 
-const MOD_ROW_HEIGHT = 38
+const MOD_ROW_HEIGHT = 48
 // Above this many rows the list windows (renders only the visible slice + overscan),
 // so the first paint and every scroll frame touch ~30-50 rows instead of all of them.
 // The scroll-position state that drives windowing now lives INSIDE <LibraryRows>, so a
@@ -731,9 +732,9 @@ export const ModList: React.FC = () => {
       onDrop={handleDrop}
     >
       {isDragging && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050505]/90 border-[1px] border-[#fcee09]/40 pointer-events-none">
-          <span className="material-symbols-outlined text-[48px] text-[#fcee09] mb-4">file_download</span>
-          <span className="brand-font text-sm text-[#fcee09] tracking-widest uppercase">{t('library.dnd.dropToInstall')}</span>
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--bg-base-deep)]/90 border-[1px] border-[var(--accent)]/40 pointer-events-none">
+          <Icon name="file_download" className="text-[48px] text-[var(--accent)] mb-4" />
+          <span className="brand-font text-sm text-[var(--accent)] tracking-widest uppercase">{t('library.dnd.dropToInstall')}</span>
         </div>
       )}
 

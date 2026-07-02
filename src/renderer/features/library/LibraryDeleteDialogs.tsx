@@ -20,9 +20,6 @@ interface LibraryDeleteDialogsProps {
   onCancelAction: () => void
 }
 
-const DELETE_ACCENT = '#ff4d4f'
-const DELETE_GLOW = 'rgba(255,77,79,0.4)'
-
 export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
   pendingDeleteMod,
   pendingAction,
@@ -40,8 +37,7 @@ export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
   <>
     {pendingDeleteMod && (
       <ActionPromptDialog
-        accentColor={DELETE_ACCENT}
-        accentGlow="rgba(255,77,79,0.45)"
+        tone="danger"
         title={pendingDeleteMod.kind === 'separator' ? t('library.delete.separatorTitle') : t('library.delete.modTitle')}
         description={pendingDeleteMod.kind === 'separator'
           ? t('library.delete.separatorDescription', { name: pendingDeleteMod.name })
@@ -52,21 +48,18 @@ export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
         primaryLabel={t('common.delete')}
         onPrimary={() => void onConfirmDeleteMod(pendingDeleteMod)}
         onCancel={onCancelDeleteMod}
-        primaryTextColor="#ffffff"
       />
     )}
 
     {pendingAction?.type === 'delete-all' && (
       <ActionPromptDialog
-        accentColor={DELETE_ACCENT}
-        accentGlow={DELETE_GLOW}
+        tone="danger"
         title={t('library.delete.allTitle')}
         description={t('library.delete.allDescription')}
         detailLabel={hasSeparators ? t('library.delete.allDetailLabelEntries') : t('library.delete.allDetailLabelInstalled')}
         detailValue={String(pendingAction.count)}
         icon="delete_sweep"
         primaryLabel={t('library.delete.everything')}
-        primaryTextColor="#ffffff"
         onPrimary={() => void onConfirmDeleteAll()}
         onCancel={onCancelAction}
         submitting={submitting}
@@ -75,27 +68,26 @@ export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
 
     {pendingAction?.type === 'delete-selected' && (
       <ActionPromptDialog
-        accentColor={DELETE_ACCENT}
-        accentGlow={DELETE_GLOW}
+        tone="danger"
         title={t('library.delete.selectedTitle')}
         description={t('library.delete.selectedDescription')}
         detailLabel={t('library.delete.selectedDetailLabel')}
         detailValue={String(pendingAction.count)}
         detailContent={(
           <div className="px-4 py-3">
-            <div className="flex items-center justify-between gap-3 border-b-[0.5px] border-[#1d1d1d] pb-3">
-              <div className="text-sm font-mono text-[#9a9a9a]">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+              <div className="text-sm text-[var(--text-support)]">
                 {t('library.delete.modsBeingUninstalled')}
               </div>
-              <div className="rounded-sm border-[0.5px] border-[#4a1c1c] bg-[#160909] px-2.5 py-1 text-sm font-mono text-[#ffb4ab]">
+              <div className="rounded-lg bg-[rgb(248_113_113/0.12)] px-2.5 py-1 text-sm font-semibold text-[var(--status-error)]">
                 {t('library.delete.selectedCount', { count: pendingAction.count })}
               </div>
             </div>
-            <div className="delete-dialog-scrollbar mt-3 max-h-[248px] space-y-2 overflow-y-auto pr-1">
+            <div className="delete-dialog-scrollbar mt-3 max-h-[248px] space-y-1.5 overflow-y-auto pr-1">
               {selectedMods.map((mod) => (
                 <div
                   key={mod.uuid}
-                  className="rounded-sm border-[0.5px] border-[#2c1515] bg-[#120909] px-3 py-2 text-[12px] text-[#ffe1e1] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+                  className="rounded-lg bg-[var(--surface-secondary)] px-3 py-2 text-[12px] text-[var(--text-secondary)]"
                 >
                   {mod.name}
                 </div>
@@ -105,7 +97,6 @@ export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
         )}
         icon="delete"
         primaryLabel={t('library.delete.deleteSelected')}
-        primaryTextColor="#ffffff"
         onPrimary={() => void onConfirmDeleteSelected(pendingAction.modIds)}
         onCancel={onCancelAction}
         submitting={submitting}

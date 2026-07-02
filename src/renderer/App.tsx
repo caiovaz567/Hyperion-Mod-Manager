@@ -17,6 +17,7 @@ import { SettingsPage } from './features/ui/SettingsDialog'
 import { AppLogsDialog } from './features/ui/NexusRequestLogDialog'
 import { getInstallProgressAppearance } from './utils/installProgressAppearance'
 import { useTranslation } from './i18n/I18nContext'
+import { Icon } from './features/ui/Icon'
 
 const MIN_SPLASH_DURATION_MS = 450
 const FONT_READY_TIMEOUT_MS = 1800
@@ -263,7 +264,7 @@ export const App: React.FC = () => {
   const clampedInstallProgress = Math.max(6, Math.min(installProgress || 8, 100))
 
   return (
-    <div className="hyperion-shell h-screen overflow-hidden flex flex-col bg-[#050505] text-[#e5e2e1] antialiased">
+    <div className="hyperion-shell h-screen overflow-hidden flex flex-col bg-[var(--bg-base-deep)] text-[var(--text-primary-alt)] antialiased">
       <div className="hyperion-bg" aria-hidden="true" />
       <div className="hyperion-content flex h-full flex-col overflow-hidden">
         {showHeader && <Header />}
@@ -284,54 +285,42 @@ export const App: React.FC = () => {
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
         )}
         {(detecting || installing) && (
-          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
-            <div
-              className="relative w-full max-w-[540px] overflow-hidden rounded-sm border-[0.5px] bg-[#070707] px-8 py-7 shadow-[0_24px_60px_rgba(0,0,0,0.72)]"
-              style={{ borderColor: installing ? `${installAppearance.accent}28` : '#fcee0928' }}
-            >
-              <div
-                className="absolute left-0 top-0 h-[2px] w-full transition-colors duration-300"
-                style={{
-                  background: installing ? installAppearance.accent : '#fcee09',
-                  boxShadow: `0 0 14px ${installing ? installAppearance.accent : '#fcee09'}44`,
-                }}
-              />
-
-              <div className="flex items-center gap-2.5 mb-5">
+          <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+            <div className="relative w-full max-w-[540px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] px-7 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.62)]">
+              <div className="mb-4 flex items-center gap-2.5">
                 <span
-                  className="material-symbols-outlined animate-spin text-[16px] shrink-0"
-                  style={{ color: installing ? installAppearance.accent : '#fcee09' }}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: `${installing ? installAppearance.accent : 'var(--accent)'}22` }}
                 >
-                  progress_activity
+                  <Icon name="progress_activity" className="animate-spin text-[16px]" style={{ color: installing ? installAppearance.accent : 'var(--accent)' }} />
                 </span>
                 <span
-                  className="brand-font text-[0.72rem] font-bold uppercase tracking-[0.2em] whitespace-nowrap"
-                  style={{ color: installing ? installAppearance.accent : '#fcee09' }}
+                  className="text-[13.5px] font-semibold"
+                  style={{ color: installing ? installAppearance.accent : 'var(--accent)' }}
                 >
                   {installing ? installAppearance.label : t('downloads.overlay.analyzing')}
                 </span>
               </div>
 
-              <div className="truncate text-[1.05rem] font-semibold text-[#e8e8e8] mb-6" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+              <div className="mb-5 truncate text-[1.05rem] font-semibold text-[var(--text-primary)]">
                 {installOverlayName}
               </div>
 
-              <div className="h-[3px] overflow-hidden rounded-sm bg-[#141414]">
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
                 <div
-                  className="h-full transition-[width,background-color] duration-500"
+                  className="h-full rounded-full transition-[width,background-color] duration-500"
                   style={{
                     width: `${clampedInstallProgress}%`,
-                    background: installing ? installAppearance.fill : '#fcee09',
-                    boxShadow: `0 0 10px ${installing ? installAppearance.accent : '#fcee09'}44`,
+                    background: installing ? installAppearance.fill : 'var(--accent)',
                   }}
                 />
               </div>
 
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-[11px] text-[#555]">
+              <div className="mt-2.5 flex items-center justify-between">
+                <span className="text-[12px] text-[var(--text-muted)]">
                   {installStatus || (detecting ? t('downloads.overlay.detectingFormat') : '')}
                 </span>
-                <span className="text-[11px] font-mono text-[#444]">{Math.round(clampedInstallProgress)}%</span>
+                <span className="text-[12px] font-medium tabular-nums text-[var(--text-secondary)]">{Math.round(clampedInstallProgress)}%</span>
               </div>
             </div>
           </div>

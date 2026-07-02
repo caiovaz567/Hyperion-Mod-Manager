@@ -5,6 +5,11 @@ export type InstallProgressPhase = 'preparing' | 'extracting' | 'analyzing' | 'i
 export interface InstallProgressAppearance {
   phase: InstallProgressPhase
   accent: string
+  // Pre-built low-opacity companions. `accent` may be a var() reference (the installing
+  // phase follows the user accent), so hex concatenation like `${accent}18` is invalid
+  // CSS there and must never be used - read these instead.
+  soft: string
+  glow: string
   softBorder: string
   fill: string
   rowTint: string
@@ -17,6 +22,8 @@ export interface InstallProgressAppearance {
 const PREPARING_APPEARANCE: InstallProgressAppearance = {
   phase: 'preparing',
   accent: '#60A5FA',
+  soft: 'rgba(96,165,250,0.14)',
+  glow: 'rgba(96,165,250,0.33)',
   softBorder: '#1f3554',
   fill: 'linear-gradient(90deg, rgba(96,165,250,0.2) 0%, rgba(96,165,250,0.07) 100%)',
   rowTint: 'rgba(96,165,250,0.04)',
@@ -29,6 +36,8 @@ const PREPARING_APPEARANCE: InstallProgressAppearance = {
 const EXTRACTING_APPEARANCE: InstallProgressAppearance = {
   phase: 'extracting',
   accent: '#4FD8FF',
+  soft: 'rgba(79,216,255,0.14)',
+  glow: 'rgba(79,216,255,0.33)',
   softBorder: '#164552',
   fill: 'linear-gradient(90deg, rgba(79,216,255,0.22) 0%, rgba(79,216,255,0.08) 100%)',
   rowTint: 'rgba(79,216,255,0.045)',
@@ -41,6 +50,8 @@ const EXTRACTING_APPEARANCE: InstallProgressAppearance = {
 const ANALYZING_APPEARANCE: InstallProgressAppearance = {
   phase: 'analyzing',
   accent: '#7CC7FF',
+  soft: 'rgba(124,199,255,0.14)',
+  glow: 'rgba(124,199,255,0.33)',
   softBorder: '#233c53',
   fill: 'linear-gradient(90deg, rgba(124,199,255,0.2) 0%, rgba(124,199,255,0.07) 100%)',
   rowTint: 'rgba(124,199,255,0.04)',
@@ -52,10 +63,12 @@ const ANALYZING_APPEARANCE: InstallProgressAppearance = {
 
 const INSTALLING_APPEARANCE: InstallProgressAppearance = {
   phase: 'installing',
-  accent: '#FCEE09',
-  softBorder: '#3a3200',
-  fill: 'linear-gradient(90deg, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.09) 100%)',
-  rowTint: 'rgba(252,238,9,0.04)',
+  accent: 'var(--accent)',
+  soft: 'rgb(var(--accent-rgb) / 0.14)',
+  glow: 'rgb(var(--accent-rgb) / 0.33)',
+  softBorder: 'rgb(var(--accent-rgb) / 0.3)',
+  fill: 'linear-gradient(90deg, rgb(var(--accent-rgb) / 0.22) 0%, rgb(var(--accent-rgb) / 0.09) 100%)',
+  rowTint: 'rgb(var(--accent-rgb) / 0.04)',
   label: 'Installing',
   summary: 'Writing files into the mod library',
   detailFallback: 'Copying extracted content and finalizing metadata',
@@ -65,6 +78,8 @@ const INSTALLING_APPEARANCE: InstallProgressAppearance = {
 const DONE_APPEARANCE: InstallProgressAppearance = {
   phase: 'done',
   accent: '#34D399',
+  soft: 'rgba(52,211,153,0.14)',
+  glow: 'rgba(52,211,153,0.33)',
   softBorder: '#1d3d34',
   fill: 'linear-gradient(90deg, rgba(52,211,153,0.2) 0%, rgba(52,211,153,0.07) 100%)',
   rowTint: 'rgba(52,211,153,0.04)',

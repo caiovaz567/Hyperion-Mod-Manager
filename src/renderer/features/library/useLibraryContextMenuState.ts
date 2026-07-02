@@ -5,7 +5,7 @@ import type { LibraryContextMenuState } from './LibraryContextMenu'
 
 interface UseLibraryContextMenuStateOptions {
   displayedModsLength: number
-  listRowsRef: RefObject<HTMLDivElement>
+  listRowsRef: RefObject<HTMLDivElement | null>
   rowHeight: number
   selectMod: (modId: string | null) => void
 }

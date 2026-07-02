@@ -2,6 +2,7 @@ import React, { useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { ModMetadata } from '@shared/types'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 export type LibraryContextMenuState =
   | {
@@ -21,14 +22,14 @@ type MenuAction = () => void | Promise<void>
 type MenuButtonTone = 'default' | 'subtle' | 'blue' | 'danger' | 'disable'
 
 const menuButtonClassByTone: Record<MenuButtonTone, string> = {
-  default: 'text-[#e5e2e1] hover:bg-[#111] hover:text-[#fcee09]',
-  subtle: 'text-[#9d9d9d] hover:bg-[#111] hover:text-white',
-  blue: 'text-[#c6f4ff] hover:bg-[#08141a] hover:text-[#4fd8ff]',
-  danger: 'text-[#ffb4ab] hover:bg-[#93000a]/10',
-  disable: 'text-[#e5e2e1] hover:bg-[#111] hover:text-[#ff4d4f]',
+  default: 'text-[var(--text-secondary)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]',
+  subtle: 'text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]',
+  blue: 'text-[var(--text-secondary)] hover:bg-[rgb(var(--accent-rgb)/0.1)] hover:text-[var(--accent)]',
+  danger: 'text-[var(--status-error)] hover:bg-[rgb(248_113_113/0.1)] hover:text-[var(--status-error)]',
+  disable: 'text-[var(--text-secondary)] hover:bg-[var(--surface)] hover:text-[var(--status-error)]',
 }
 
-const MenuDivider: React.FC = () => <div className="my-1 border-t-[0.5px] border-[#222]" />
+const MenuDivider: React.FC = () => <div className="my-1 border-t border-[var(--border)]" />
 
 const MenuButton: React.FC<{
   icon: string
@@ -39,16 +40,16 @@ const MenuButton: React.FC<{
 }> = ({ icon, children, onClick, tone = 'default', labelClassName = '' }) => (
   <button
     onClick={() => void onClick()}
-    className={`flex items-center w-full px-4 py-2 text-[11px] transition-colors gap-3 tracking-wider font-semibold uppercase ${menuButtonClassByTone[tone]}`}
+    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${menuButtonClassByTone[tone]}`}
   >
-    <span className="material-symbols-outlined text-[16px]">{icon}</span>
+    <Icon name={icon} className="text-[18px]" />
     <span className={labelClassName}>{children}</span>
   </button>
 )
 
 interface LibraryContextMenuProps {
   menu: LibraryContextMenuState
-  menuRef: React.RefObject<HTMLDivElement>
+  menuRef: React.RefObject<HTMLDivElement | null>
   selectedModCount: number
   separators: ModMetadata[]
   hasSeparators: boolean
@@ -120,7 +121,7 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   return createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[100] bg-[#0a0a0a] border-[0.5px] border-[#222] shadow-[0_10px_30px_rgba(0,0,0,0.5)] py-1 min-w-[220px] brand-font"
+      className="fixed z-[100] min-w-[224px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.55)]"
       style={{ left: menu.x, top: menu.y }}
       onClick={(event) => event.stopPropagation()}
     >

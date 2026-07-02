@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { Button } from '@heroui/react'
+import { HyperionBadge } from './HyperionPrimitives'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
 
 interface NavItem {
   icon: string
@@ -82,16 +85,21 @@ export const Sidebar: React.FC = () => {
     active: activeView === 'settings',
   }
 
-  const itemClass = (active?: boolean, disabled?: boolean) => `relative flex h-12 w-full items-center gap-4 pl-7 pr-6 text-left transition-[background-color,color] duration-200 ${
+  const itemClass = (active?: boolean, disabled?: boolean) => `relative h-12 w-full min-w-0 rounded-none bg-transparent p-0 text-left transition-[background-color,color] duration-200 ${
     active
-      ? 'text-[#fcee09] bg-[#0a0a0a] before:absolute before:left-0 before:w-[2px] before:h-8 before:bg-[#fcee09] before:top-1/2 before:-translate-y-1/2'
+      ? 'text-[var(--accent)] bg-[var(--bg-base)] before:absolute before:left-0 before:w-[2px] before:h-8 before:bg-[var(--accent)] before:top-1/2 before:-translate-y-1/2'
       : disabled
-        ? 'text-[#7f7f7f]'
-        : 'text-[#7f7f7f] hover:text-white hover:bg-[#0a0a0a]'
+        ? 'text-[var(--text-muted)]'
+        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-base)]'
   }`
 
-  const labelClass = (active?: boolean, disabled?: boolean) => `ml-4 whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 tracking-wider ${
-    active ? 'text-[#fcee09]' : disabled ? 'text-[#8a8a8a]' : ''
+  // Same grid as the account block above (18px inset + 44px icon column), so the avatar,
+  // nav icons, and Settings gear all sit on one vertical axis in the collapsed rail.
+  const itemInnerClass =
+    'grid h-12 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4'
+
+  const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 tracking-wider ${
+    active ? 'text-[var(--accent)]' : disabled ? 'text-[#8a8a8a]' : ''
   }`
 
   const [launching, setLaunching] = useState(false)
@@ -128,23 +136,23 @@ export const Sidebar: React.FC = () => {
 
   const isLaunchDisabled = !settings?.gamePath || !gamePathValid
 
-  const subscriptionToneClass =
+  // Premium keeps its semantic gold (HeroUI warning chip) in every accent; Free follows the
+  // accent color the user picked in Settings; neutral states stay muted.
+  const subscriptionTone =
     nexusAccount.status === 'connected'
       ? nexusAccount.data.isPremium
-        ? 'bg-[rgba(252,238,9,0.12)] text-[#f7d154]'
-        : 'bg-[rgba(96,165,250,0.13)] text-[#8dbdff]'
+        ? ('warning' as const)
+        : ('accent' as const)
       : nexusAccount.status === 'checking'
-        ? 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]'
-        : 'bg-[#151515] text-[#8a8a8a]'
+        ? ('accent' as const)
+        : ('neutral' as const)
 
+  // The avatar always follows the accent color; only the subscription badge keeps the
+  // semantic Premium gold.
   const avatarToneClass =
-    nexusAccount.status === 'connected'
-      ? nexusAccount.data.isPremium
-        ? 'bg-[rgba(252,238,9,0.12)] text-[#f7d154]'
-        : 'bg-[rgba(96,165,250,0.13)] text-[#8dbdff]'
-      : nexusAccount.status === 'checking'
-        ? 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]'
-        : 'bg-[#151515] text-[#e5e2e1]'
+    nexusAccount.status === 'connected' || nexusAccount.status === 'checking'
+      ? 'bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)]'
+      : 'bg-[var(--surface-secondary)] text-[var(--text-primary-alt)]'
 
   const accountLabel =
     nexusAccount.status === 'connected'
@@ -163,99 +171,99 @@ export const Sidebar: React.FC = () => {
         : t('shell.account.notConnected')
 
   return (
-    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[#1a1a1a] bg-[#050505] py-8 text-sm tracking-tight text-[#fcee09] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
+    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[var(--bg-subtle)] bg-[var(--bg-base-deep)] py-8 text-sm tracking-tight text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
       <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border-0 text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-0 text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
         >
           {nexusAccount.status === 'connected' ? (
             getAccountInitials(nexusAccount.data.name)
           ) : (
-            <span className="material-symbols-outlined text-[18px]">
-              {nexusAccount.status === 'checking' ? 'sync' : 'person'}
-            </span>
+            <Icon name={nexusAccount.status === 'checking' ? 'sync' : 'person'} className="text-[18px]" />
           )}
         </div>
         <div className="pointer-events-none min-w-0 overflow-hidden opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
-          <div className="truncate text-xs font-bold tracking-wider text-[#e5e2e1]">
+          <div className="truncate text-xs font-bold tracking-wider text-[var(--text-primary-alt)]">
             {nexusAccount.status === 'connected' ? nexusAccount.data.name : t('shell.account.name')}
           </div>
           <div className="mt-1 flex flex-col items-start gap-1">
-            <span
-              className={`inline-flex h-5 items-center rounded-sm border-0 px-2 text-[9px] font-semibold tracking-[0.16em] ${subscriptionToneClass}`}
-            >
+            <HyperionBadge tone={subscriptionTone} size="sm">
               {accountLabel}
-            </span>
-            <span className="text-[10px] tracking-widest text-[#8f8f8f]">{accountSubLabel}</span>
+            </HyperionBadge>
+            <span className="text-[10px] tracking-widest text-[var(--text-muted)]">{accountSubLabel}</span>
           </div>
         </div>
       </div>
 
       <div className="mt-4 flex w-full flex-1 flex-col gap-2">
         {navItems.map((item) => (
-          <button
+          <Button
             key={item.icon}
-            onClick={item.action}
-            disabled={item.disabled}
+            onPress={item.action}
+            isDisabled={item.disabled}
+            variant="ghost"
+            fullWidth
             className={itemClass(item.active, item.disabled)}
           >
-            <span className={`material-symbols-outlined flex h-6 w-6 shrink-0 items-center justify-center ${item.active ? 'drop-shadow-[0_0_4px_rgba(252,238,9,0.3)]' : ''}`}>
-              {item.icon}
-            </span>
-            {item.badge ? (
-              <span
-                className={`absolute left-[38px] top-[7px] inline-flex min-w-[20px] items-center justify-center rounded-sm border-[0.5px] px-1 py-[1px] text-[8px] font-bold leading-none tracking-[0.08em] transition-opacity duration-150 ${
-                  item.badgeTone === 'active'
-                    ? 'border-[#fcee09]/45 bg-[#171400] text-[#fcee09] shadow-[0_0_10px_rgba(252,238,9,0.16)]'
-                    : 'border-[#4fd8ff]/35 bg-[#061117] text-[#9feaff]'
-                }`}
-              >
-                {item.badge}
+            <span className={itemInnerClass}>
+              <span className="relative flex h-11 w-11 items-center justify-center">
+                <Icon name={item.icon} className={`text-[22px] ${item.active ? 'drop-shadow-[0_0_4px_rgb(var(--accent-rgb)/0.3)]' : ''}`} />
+                {item.badge ? (
+                  <span
+                    className="absolute -right-1 -top-0.5 inline-flex min-w-[20px] items-center justify-center rounded-md border-0 bg-[rgb(var(--accent-rgb)/0.18)] px-1.5 py-[2px] font-sans text-[9px] font-semibold leading-none tracking-[0.04em] text-[var(--accent)] transition-opacity duration-150"
+                  >
+                    {item.badge}
+                  </span>
+                ) : null}
               </span>
-            ) : null}
-            <span className={labelClass(item.active, item.disabled)}>
-              {item.label}
+              <span className={labelClass(item.active, item.disabled)}>
+                {item.label}
+              </span>
             </span>
-          </button>
+          </Button>
         ))}
       </div>
       <div className="mt-auto w-full">
-        <button
-          onClick={settingsItem.action}
+        <Button
+          onPress={settingsItem.action}
+          variant="ghost"
+          fullWidth
           className={itemClass(settingsItem.active)}
         >
-          <span className={`material-symbols-outlined flex h-6 w-6 shrink-0 items-center justify-center ${settingsItem.active ? 'drop-shadow-[0_0_4px_rgba(252,238,9,0.3)]' : ''}`}>
-            {settingsItem.icon}
+          <span className={itemInnerClass}>
+            <span className="flex h-11 w-11 items-center justify-center">
+              <Icon name={settingsItem.icon} className={`text-[22px] ${settingsItem.active ? 'drop-shadow-[0_0_4px_rgb(var(--accent-rgb)/0.3)]' : ''}`} />
+            </span>
+            <span className={labelClass(settingsItem.active)}>
+              {settingsItem.label}
+            </span>
           </span>
-          <span className={labelClass(settingsItem.active)}>
-            {settingsItem.label}
-          </span>
-        </button>
+        </Button>
       </div>
       <div className="px-4 mt-4 w-full flex flex-col gap-2">
-        <button
-          onClick={gameRunning || launching ? undefined : handleLaunchGame}
-          disabled={isLaunchDisabled && !gameRunning && !launching}
-          className={`w-full overflow-hidden rounded-sm px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap transition-[background-color,color,border-color,box-shadow] duration-150 ${
+        <Button
+          onPress={gameRunning || launching ? undefined : handleLaunchGame}
+          isDisabled={isLaunchDisabled && !gameRunning && !launching}
+          fullWidth
+          variant={!gameRunning && !launching && !isLaunchDisabled ? 'primary' : 'tertiary'}
+          className={`h-auto min-w-0 w-full overflow-hidden rounded-md px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap transition-[background-color,color,border-color,box-shadow] duration-150 ${
             gameRunning
               ? 'bg-[#0c1410] border-[0.5px] border-[#34D399]/30 text-[#34D399] cursor-default'
               : launching
-                ? 'bg-[#1a1600] border-[0.5px] border-[#fcee09]/30 text-[#fcee09]/60 cursor-default'
+                ? 'bg-[#1a1600] border-[0.5px] border-[rgb(var(--accent-rgb)/0.3)] text-[rgb(var(--accent-rgb)/0.6)] cursor-default'
                 : isLaunchDisabled
                   ? 'bg-[#262626] text-[#8a8a8a] cursor-not-allowed'
-                  : 'bg-[#fcee09] text-[#050505] hover:bg-white shadow-[0_0_20px_rgba(252,238,9,0.15)]'
+                  : 'bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90 shadow-[0_0_20px_rgb(var(--accent-rgb)/0.15)]'
           }`}
         >
           <span className="flex items-center justify-center">
             {launching ? (
-              <svg className="shrink-0 animate-spin text-[#fcee09]/60" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <svg className="shrink-0 animate-spin text-[rgb(var(--accent-rgb)/0.6)]" width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
             ) : (
-              <span className="material-symbols-outlined shrink-0 text-[18px]">
-                {gameRunning ? 'sports_esports' : 'play_arrow'}
-              </span>
+              <Icon name={gameRunning ? 'sports_esports' : 'play_arrow'} className="shrink-0 text-[18px]" />
             )}
             <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
               <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
@@ -263,21 +271,23 @@ export const Sidebar: React.FC = () => {
               </span>
             </span>
           </span>
-        </button>
+        </Button>
         {gameRunning && (
-          <button
-            onClick={handleKillGame}
-            className="w-full overflow-hidden rounded-sm px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap border-[0.5px] border-[#f87272]/20 bg-[#0d0808] text-[#f87272] hover:bg-[#150a0a] hover:border-[#f87272]/40 transition-[background-color,border-color] duration-150"
+          <Button
+            onPress={handleKillGame}
+            fullWidth
+            variant="danger-soft"
+            className="h-auto min-w-0 w-full overflow-hidden rounded-md px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap border-[0.5px] border-[#f87272]/20 bg-[#0d0808] text-[#f87272] hover:bg-[#150a0a] hover:border-[#f87272]/40 transition-[background-color,border-color] duration-150"
           >
             <span className="flex items-center justify-center">
-              <span className="material-symbols-outlined shrink-0 text-[18px]">power_settings_new</span>
+              <Icon name="power_settings_new" className="shrink-0 text-[18px]" />
               <span className="grid [grid-template-columns:0fr] items-center transition-[grid-template-columns,margin] duration-150 group-hover/sidebar:ml-2 group-hover/sidebar:[grid-template-columns:1fr]">
                 <span className="overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sidebar:opacity-100">
                   {t('shell.game.close')}
                 </span>
               </span>
             </span>
-          </button>
+          </Button>
         )}
       </div>
     </nav>

@@ -5,6 +5,7 @@ import { DELETE_PROGRESS_APPEARANCE, getTransientDeleteProgress } from '../../ut
 import { getInstallProgressAppearance } from '../../utils/installProgressAppearance'
 import { Tooltip } from '../ui/Tooltip'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 export type DownloadListRow =
   | { kind: 'active'; key: string; orderTs: number; active: ActiveDownload }
@@ -91,12 +92,29 @@ const ActiveDownloadRow: React.FC<{
   const isDone = download.status === 'done'
   const isError = download.status === 'error'
   const isPaused = download.status === 'paused'
-  const accent = isDone ? '#34d399' : isError ? '#f87171' : isPaused ? '#60a5fa' : '#fcee09'
+  // Paused is a quiet neutral so it never clashes with the user-selected accent color.
+  const accent = isDone ? '#34d399' : isError ? '#f87171' : isPaused ? '#8b93a1' : 'var(--accent)'
+  // `accent` may be a var() reference, so pre-built soft/glow variants are needed - hex
+  // concatenation like `${accent}18` is invalid CSS for var() and silently renders nothing.
+  const accentSoft = isDone
+    ? 'rgba(52,211,153,0.14)'
+    : isError
+      ? 'rgba(248,113,113,0.14)'
+      : isPaused
+        ? 'rgba(139,147,161,0.16)'
+        : 'rgb(var(--accent-rgb) / 0.14)'
+  const accentGlow = isDone
+    ? 'rgba(52,211,153,0.33)'
+    : isError
+      ? 'rgba(248,113,113,0.33)'
+      : isPaused
+        ? 'rgba(139,147,161,0.33)'
+        : 'rgb(var(--accent-rgb) / 0.33)'
   const rowTint = isError
     ? 'rgba(248,113,113,0.04)'
     : isPaused
-      ? 'rgba(96,165,250,0.05)'
-      : 'rgba(252,238,9,0.035)'
+      ? 'rgba(139,147,161,0.05)'
+      : 'rgb(var(--accent-rgb)/0.035)'
   const eta = isDone || isError || isPaused ? null : formatETA(download.downloadedBytes, download.totalBytes, download.speedBps)
   const progressSummary = isError
     ? download.error ?? t('downloads.active.downloadFailed')
@@ -122,8 +140,8 @@ const ActiveDownloadRow: React.FC<{
     <div
       data-download-row="true"
       onContextMenu={(event) => onContextMenu(event, row)}
-      className="relative h-14 overflow-hidden border-b-[0.5px] border-[#1e1a00]"
-      style={{ background: rowTint, borderColor: '#1a1a1a' }}
+      className="relative h-14 overflow-hidden border-b border-[var(--border-subtle)]"
+      style={{ background: rowTint }}
     >
       <div
         aria-hidden="true"
@@ -133,8 +151,8 @@ const ActiveDownloadRow: React.FC<{
           background: isError
             ? 'linear-gradient(90deg, rgba(248,113,113,0.18) 0%, rgba(248,113,113,0.08) 100%)'
             : isPaused
-              ? 'linear-gradient(90deg, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.07) 100%)'
-              : 'linear-gradient(90deg, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.09) 100%)',
+              ? 'linear-gradient(90deg, rgba(139,147,161,0.16) 0%, rgba(139,147,161,0.06) 100%)'
+              : 'linear-gradient(90deg, rgb(var(--accent-rgb)/0.22) 0%, rgb(var(--accent-rgb)/0.09) 100%)',
         }}
       />
       {!isError && !isDone && !isPaused && (
@@ -144,13 +162,13 @@ const ActiveDownloadRow: React.FC<{
           style={{
             left: `calc(${Math.min(pct, 99.6)}% - 1px)`,
             background: accent,
-            boxShadow: `0 0 10px ${accent}aa`,
+            boxShadow: `0 0 10px ${accentGlow}`,
           }}
         />
       )}
       <div
         className="absolute inset-y-0 left-0 w-[3px]"
-        style={{ background: accent, boxShadow: `0 0 8px ${accent}55` }}
+        style={{ background: accent, boxShadow: `0 0 8px ${accentGlow}` }}
       />
 
       <div
@@ -159,13 +177,13 @@ const ActiveDownloadRow: React.FC<{
       >
         <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
+            <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)]">
               {download.fileName}
             </span>
           </div>
           <span
-            className="text-sm font-mono tracking-tight"
-            style={{ color: isError ? '#fca5a5' : isPaused ? '#93c5fd' : accent }}
+            className="text-sm tabular-nums"
+            style={{ color: isError ? '#fca5a5' : isPaused ? 'var(--text-secondary)' : accent }}
           >
             {transferSummary}
           </span>
@@ -173,27 +191,27 @@ const ActiveDownloadRow: React.FC<{
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden">
           <span
-            className="w-fit rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
-            style={{ color: accent, background: `${accent}18` }}
+            className="w-fit rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em]"
+            style={{ color: accent, background: accentSoft }}
           >
             {isError ? t('downloads.status.error') : isDone ? t('downloads.status.downloaded') : isPaused ? t('downloads.status.paused') : t('downloads.status.downloading')}
           </span>
-          <span className={`truncate text-sm font-mono tracking-tight ${isPaused ? 'text-[#93a8c8]' : 'text-[#9a9a9a]'}`}>
+          <span className="truncate text-sm tabular-nums text-[var(--text-support)]">
             {progressSummary}
           </span>
         </div>
 
-        <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a]">
+        <div className="flex items-center text-sm tabular-nums text-[var(--text-support)]">
           {download.version ?? '—'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#d8d8d8]">
+        <div className="flex items-center pl-4 text-sm tabular-nums text-[#d8d8d8]">
           {formatSize(Math.max(download.totalBytes, download.downloadedBytes))}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
+        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
           <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(download.startedAt)}</span>
-          <span className={`truncate ${isPaused ? 'text-[#93a8c8]' : 'text-[#9a9a9a]'}`}>{speedSummary}</span>
+          <span className="truncate text-[var(--text-support)]">{speedSummary}</span>
         </div>
 
         <div className="flex items-center justify-end gap-2">
@@ -203,27 +221,27 @@ const ActiveDownloadRow: React.FC<{
                 <Tooltip content={t('downloads.tooltip.resume')}>
                   <button
                     onClick={() => void onResumeDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[rgba(96,165,250,0.14)] text-[#8dbdff] transition-colors hover:bg-[#60a5fa] hover:text-[#051017]"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
                   >
-                    <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                    <Icon name="play_arrow" className="text-[16px]" />
                   </button>
                 </Tooltip>
               ) : (
                 <Tooltip content={t('downloads.tooltip.pause')}>
                   <button
                     onClick={() => void onPauseDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#c9c9c9] transition-colors hover:bg-[#fcee09] hover:text-[#050505]"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[#c9c9c9] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
                   >
-                    <span className="material-symbols-outlined text-[16px]">pause</span>
+                    <Icon name="pause" className="text-[16px]" />
                   </button>
                 </Tooltip>
               )}
               <Tooltip content={t('downloads.tooltip.cancel')}>
                 <button
                   onClick={() => void onCancelDownload(download.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#8a8a8a] transition-colors hover:bg-[rgba(248,113,113,0.18)] hover:text-[#ff9b9b]"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[#8a8a8a] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[#ff9b9b]"
                 >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <Icon name="close" className="text-[16px]" />
                 </button>
               </Tooltip>
             </>
@@ -259,11 +277,8 @@ const InstallingDownloadRow: React.FC<{
     <div
       data-download-row="true"
       onContextMenu={(event) => onContextMenu(event, row)}
-      className="relative h-14 overflow-hidden border-b-[0.5px]"
-      style={{
-        background: installAppearance.rowTint,
-        borderColor: '#1a1a1a',
-      }}
+      className="relative h-14 overflow-hidden border-b border-[var(--border-subtle)]"
+      style={{ background: installAppearance.rowTint }}
     >
       <div
         aria-hidden="true"
@@ -279,7 +294,7 @@ const InstallingDownloadRow: React.FC<{
         style={{
           left: `calc(${clampPercent(installProgress, 99.6)}% - 1px)`,
           background: installAppearance.accent,
-          boxShadow: `0 0 10px ${installAppearance.accent}aa`,
+          boxShadow: `0 0 10px ${installAppearance.glow}`,
         }}
       />
       <div
@@ -287,7 +302,7 @@ const InstallingDownloadRow: React.FC<{
         className="absolute inset-y-0 left-0 w-[3px]"
         style={{
           background: installAppearance.accent,
-          boxShadow: `0 0 8px ${installAppearance.accent}55`,
+          boxShadow: `0 0 8px ${installAppearance.glow}`,
         }}
       />
       <div
@@ -296,12 +311,12 @@ const InstallingDownloadRow: React.FC<{
       >
         <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium tracking-tight truncate text-[#e5e2e1]">
+            <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)]">
               {entry.name}
             </span>
           </div>
           <span
-            className="truncate text-sm font-mono tracking-tight"
+            className="truncate text-sm tabular-nums"
             style={{ color: installAppearance.accent }}
           >
             {progressDetail}
@@ -310,41 +325,41 @@ const InstallingDownloadRow: React.FC<{
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden">
           <span
-            className="w-fit rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
+            className="w-fit rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em]"
             style={{
               color: installAppearance.accent,
-              background: `${installAppearance.accent}18`,
+              background: installAppearance.soft,
             }}
           >
             {installAppearance.label}
           </span>
-          <span className="truncate text-sm font-mono tracking-tight text-[#d8d8d8]">
+          <span className="truncate text-sm tabular-nums text-[#d8d8d8]">
             {progressSummary}
           </span>
         </div>
 
-        <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+        <div className="flex items-center text-sm tabular-nums text-[#d8d8d8]">
           {entry.version ?? '—'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#d8d8d8]">
+        <div className="flex items-center pl-4 text-sm tabular-nums text-[#d8d8d8]">
           {formatSize(entry.size)}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
+        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
           <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
-          <span className="truncate text-[#9a9a9a]">{installAppearance.summary}</span>
+          <span className="truncate text-[var(--text-support)]">{installAppearance.summary}</span>
         </div>
 
         <div className="flex items-center justify-end gap-2">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-sm border-0"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border-0"
             style={{
               color: installAppearance.accent,
-              background: `${installAppearance.accent}18`,
+              background: installAppearance.soft,
             }}
           >
-            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+            <Icon name="progress_activity" className="animate-spin text-[16px]" />
           </div>
         </div>
       </div>
@@ -367,11 +382,8 @@ const DeletingDownloadRow: React.FC<{
   return (
     <div
       data-download-row="true"
-      className="relative h-14 overflow-hidden border-b-[0.5px]"
-      style={{
-        background: deleteAppearance.rowTint,
-        borderColor: '#1a1a1a',
-      }}
+      className="relative h-14 overflow-hidden border-b border-[var(--border-subtle)]"
+      style={{ background: deleteAppearance.rowTint }}
     >
       <div
         aria-hidden="true"
@@ -387,7 +399,7 @@ const DeletingDownloadRow: React.FC<{
         style={{
           left: `calc(${clampPercent(deleteProgress, 99.6)}% - 1px)`,
           background: deleteAppearance.accent,
-          boxShadow: `0 0 10px ${deleteAppearance.accent}aa`,
+          boxShadow: `0 0 10px ${deleteAppearance.glow}`,
         }}
       />
       <div
@@ -395,7 +407,7 @@ const DeletingDownloadRow: React.FC<{
         className="absolute inset-y-0 left-0 w-[3px]"
         style={{
           background: deleteAppearance.accent,
-          boxShadow: `0 0 8px ${deleteAppearance.accent}55`,
+          boxShadow: `0 0 8px ${deleteAppearance.glow}`,
         }}
       />
       <div
@@ -408,10 +420,10 @@ const DeletingDownloadRow: React.FC<{
               {entry.name}
             </span>
             <span
-              className="shrink-0 rounded-sm border-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest"
+              className="shrink-0 rounded-md border-0 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em]"
               style={{
                 color: deleteAppearance.accent,
-                background: `${deleteAppearance.accent}18`,
+                background: deleteAppearance.soft,
               }}
             >
               {deleteLabel}
@@ -421,25 +433,25 @@ const DeletingDownloadRow: React.FC<{
 
         <div className="flex items-center">
           <span
-            className="shrink-0 rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest"
+            className="shrink-0 rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em]"
             style={{
               color: deleteAppearance.accent,
-              background: `${deleteAppearance.accent}18`,
+              background: deleteAppearance.soft,
             }}
           >
             {t('downloads.delete.label')}
           </span>
         </div>
 
-        <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+        <div className="flex items-center text-sm tabular-nums text-[#d8d8d8]">
           {entry.version ?? '—'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#d8d8d8]">
+        <div className="flex items-center pl-4 text-sm tabular-nums text-[#d8d8d8]">
           {formatSize(entry.size)}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm font-mono tracking-tight">
+        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
           <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
           <span className="truncate text-[#ffb4ab]">
             {deleteProgress > 0 ? `${deleteProgress}% · ${deleteSummary}` : deleteSummary}
@@ -448,13 +460,13 @@ const DeletingDownloadRow: React.FC<{
 
         <div className="flex items-center justify-end gap-2">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-sm border-0"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border-0"
             style={{
               color: deleteAppearance.accent,
-              background: `${deleteAppearance.accent}18`,
+              background: deleteAppearance.soft,
             }}
           >
-            <span className="material-symbols-outlined animate-spin text-[16px]">delete</span>
+            <Icon name="delete" className="animate-spin text-[16px]" />
           </div>
         </div>
       </div>
@@ -488,9 +500,6 @@ const LocalDownloadRow: React.FC<{
   onMarkOld,
 }) => {
   const { t } = useTranslation()
-  const rowBg = rowIndex % 2 === 0
-    ? 'bg-[#050505] hover:bg-[#141414]'
-    : 'bg-[#0a0a0a] hover:bg-[#161616]'
 
   return (
     <div
@@ -503,38 +512,34 @@ const LocalDownloadRow: React.FC<{
         event.stopPropagation()
         void onInstall(entry)
       }}
-      className={`grid h-14 gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color] duration-150 ${rowBg} hover:border-[#363636]`}
+      className="grid h-14 gap-4 pl-5 pr-5 py-[5px] border-b border-[var(--border-subtle)] relative overflow-hidden group cursor-default bg-transparent"
       style={{ gridTemplateColumns: gridTemplate }}
     >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-        style={{
-          background: isNew
-            ? 'linear-gradient(90deg, rgba(252,238,9,0.07) 0%, rgba(252,238,9,0.025) 20%, transparent 60%)'
-            : 'linear-gradient(90deg, rgba(252,238,9,0.05) 0%, rgba(252,238,9,0.02) 18%, transparent 60%)',
-        }}
+        style={{ background: isNew ? 'rgb(var(--accent-rgb)/0.14)' : 'rgb(var(--accent-rgb)/0.1)' }}
       />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 left-0 w-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-        style={{ background: isNew ? '#fcee09' : 'rgba(252,238,9,0.55)' }}
+        style={{ background: isNew ? 'var(--accent)' : 'rgb(var(--accent-rgb)/0.55)' }}
       />
       {isNew && (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-0 left-0 w-[2px]"
-          style={{ background: 'rgba(252,238,9,0.4)' }}
+          style={{ background: 'rgb(var(--accent-rgb)/0.4)' }}
         />
       )}
 
       <div className="flex items-center overflow-hidden">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-medium tracking-tight truncate text-[#e5e2e1] group-hover:text-white transition-colors">
+          <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)] group-hover:text-white transition-colors">
             {entry.name}
           </span>
           {isNew && (
-            <span className="shrink-0 px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-widest bg-[#fcee09] text-[#050505] rounded-sm">
+            <span className="shrink-0 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em] bg-[var(--accent)] text-[var(--accent-foreground)] rounded-md">
               {t('downloads.badge.new')}
             </span>
           )}
@@ -543,25 +548,25 @@ const LocalDownloadRow: React.FC<{
 
       <div className="flex items-center">
         <span
-          className={`shrink-0 rounded-sm border-0 px-2 py-[3px] text-[9px] brand-font font-bold uppercase tracking-widest ${
+          className={`shrink-0 rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em] ${
             installedMod
-              ? 'bg-[#171717] text-[#f0f0f0]'
-              : 'bg-[rgba(252,238,9,0.10)] text-[#d8d19a]'
+              ? 'bg-[rgb(52_211_153/0.14)] text-[var(--status-success)]'
+              : 'bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)]'
           }`}
         >
           {installedMod ? t('downloads.status.installed') : t('downloads.status.downloaded')}
         </span>
       </div>
 
-      <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#c4c4c4] transition-colors">
+      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[#c4c4c4] transition-colors">
         {entry.version ?? '—'}
       </div>
 
-      <div className="flex items-center pl-4 text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#c4c4c4] transition-colors">
+      <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-support)] group-hover:text-[#c4c4c4] transition-colors">
         {formatSize(entry.size)}
       </div>
 
-      <div className="flex items-center text-sm font-mono tracking-tight text-[#9a9a9a] group-hover:text-[#bdbdbd] transition-colors">
+      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[#bdbdbd] transition-colors">
         {formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}
       </div>
 
@@ -573,15 +578,13 @@ const LocalDownloadRow: React.FC<{
               void onInstall(entry)
             }}
             disabled={isInstalling}
-            className={`flex h-8 w-8 items-center justify-center rounded-sm border-0 transition-colors disabled:opacity-50 ${
+            className={`flex h-8 w-8 items-center justify-center rounded-lg border-0 transition-colors disabled:opacity-50 ${
               installedMod
-                ? 'bg-[#151515] text-[#f0f0f0] hover:bg-[rgba(252,238,9,0.12)] hover:text-[#fcee09]'
-                : 'bg-[rgba(252,238,9,0.12)] text-[#fcee09] hover:bg-[#fcee09] hover:text-[#050505]'
-            } disabled:hover:bg-[#151515] disabled:hover:text-[#fcee09]`}
+                ? 'bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[rgb(var(--accent-rgb)/0.12)] hover:text-[var(--accent)]'
+                : 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
+            } disabled:hover:bg-[var(--surface)] disabled:hover:text-[var(--accent)]`}
           >
-            <span className="material-symbols-outlined text-[18px]">
-              {installedMod ? 'restart_alt' : 'deployed_code'}
-            </span>
+            <Icon name={installedMod ? 'restart_alt' : 'deployed_code'} className="text-[18px]" />
           </button>
         </Tooltip>
         <Tooltip content={t('downloads.tooltip.delete')}>
@@ -590,9 +593,9 @@ const LocalDownloadRow: React.FC<{
               event.stopPropagation()
               onDeleteRequest(entry)
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-sm border-0 bg-[rgba(248,113,113,0.13)] text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(248_113_113/0.13)] text-[var(--status-error)] transition-colors hover:bg-[var(--status-error)] hover:text-[#190505]"
           >
-            <span className="material-symbols-outlined text-[16px]">delete</span>
+            <Icon name="delete" className="text-[16px]" />
           </button>
         </Tooltip>
       </div>

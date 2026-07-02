@@ -36,8 +36,7 @@ export const DuplicateDownloadDialog: React.FC = () => {
 
   return (
     <ActionPromptDialog
-      accentColor="#fcee09"
-      accentGlow="rgba(252,238,9,0.5)"
+      tone="accent"
       title={duplicateDownloadPrompt.existingIsDownloading ? t('dialogs.duplicateDownload.titleDownloading') : t('dialogs.duplicateDownload.titleExists')}
       description={
         duplicateDownloadPrompt.existingIsDownloading
@@ -56,14 +55,14 @@ export const DuplicateDownloadDialog: React.FC = () => {
               <div className="ui-support-mono uppercase tracking-[0.18em]">
                 {duplicateDownloadPrompt.existingIsDownloading ? t('dialogs.duplicateDownload.labelDownloading') : t('dialogs.duplicateDownload.labelExisting')}
               </div>
-              <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-white">
+              <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-[var(--text-primary)]">
                 {duplicateDownloadPrompt.existingFileName}
               </div>
             </div>
-            <div className="h-px w-full bg-[#1d1d1d]" />
+            <div className="h-px w-full bg-[var(--bg-subtle)]" />
             <div>
               <div className="ui-support-mono uppercase tracking-[0.18em]">{t('dialogs.duplicateDownload.newName')}</div>
-              <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-[#fcee09]">
+              <div className="mt-2 break-words text-sm font-medium tracking-[0.01em] text-[var(--accent)]">
                 {duplicateDownloadPrompt.incomingFileName}
               </div>
             </div>

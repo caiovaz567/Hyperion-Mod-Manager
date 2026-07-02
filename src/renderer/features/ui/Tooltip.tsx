@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React from 'react'
+import { Tooltip as HeroTooltip } from '@heroui/react'
 
 type TooltipSide = 'top' | 'bottom'
 
@@ -9,9 +9,13 @@ interface TooltipProps {
   side?: TooltipSide
   wrapperClassName?: string
   contentClassName?: string
+  /** 'help' allows a wider, multi-paragraph body; 'micro' is the compact default. */
   variant?: 'micro' | 'help'
 }
 
+// Thin wrapper over the real HeroUI Tooltip (React Aria) keeping the legacy
+// `<Tooltip content=...>` call-site API. Copy uses Inter sentence-case at a readable
+// size — no brand-font uppercase micro-labels.
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
@@ -19,81 +23,20 @@ export const Tooltip: React.FC<TooltipProps> = ({
   wrapperClassName,
   contentClassName,
   variant = 'micro',
-}) => {
-  const anchorRef = useRef<HTMLSpanElement>(null)
-  const tooltipRef = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-  const [position, setPosition] = useState({ left: 0, top: 0 })
-
-  useLayoutEffect(() => {
-    if (!visible || !anchorRef.current || !tooltipRef.current) return
-
-    const anchorRect = anchorRef.current.getBoundingClientRect()
-    const tooltipRect = tooltipRef.current.getBoundingClientRect()
-    const gap = 8
-    const viewportPadding = 8
-
-    let left = anchorRect.left + (anchorRect.width / 2) - (tooltipRect.width / 2)
-    let top = side === 'top'
-      ? anchorRect.top - tooltipRect.height - gap
-      : anchorRect.bottom + gap
-
-    if (left < viewportPadding) left = viewportPadding
-    if (left + tooltipRect.width > window.innerWidth - viewportPadding) {
-      left = window.innerWidth - tooltipRect.width - viewportPadding
-    }
-
-    if (top < viewportPadding) {
-      top = anchorRect.bottom + gap
-    }
-
-    if (top + tooltipRect.height > window.innerHeight - viewportPadding) {
-      top = Math.max(viewportPadding, anchorRect.top - tooltipRect.height - gap)
-    }
-
-    setPosition({ left, top })
-  }, [side, visible])
-
-  return (
-    <>
-      <span
-        ref={anchorRef}
-        className={wrapperClassName ?? 'inline-flex'}
-        onMouseEnter={() => setVisible(true)}
-        onMouseLeave={() => setVisible(false)}
-        onFocus={() => setVisible(true)}
-        onBlur={() => setVisible(false)}
-      >
-        {children}
-      </span>
-      {visible && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={tooltipRef}
-          className={`pointer-events-none fixed z-[220] overflow-hidden rounded-sm border-[0.5px] border-[#2b2b2b] bg-[#111111] shadow-[0_10px_24px_rgba(0,0,0,0.42)] ${contentClassName ?? ''}`}
-          style={{ left: position.left, top: position.top, maxWidth: variant === 'help' ? 420 : undefined }}
-          role="tooltip"
-        >
-          <span className="absolute inset-x-0 top-0 h-px bg-[#fcee09]/45" />
-          {variant === 'micro' ? (
-            <div className="px-2.5 py-1.5 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#d3d3d3]">
-              {typeof content === 'string'
-                ? content.split('\n').map((line, idx) => (
-                    <div key={idx} className="leading-tight">{line}</div>
-                  ))
-                : content}
-            </div>
-          ) : (
-            <div className="px-3 py-2 text-[11px] brand-font font-bold normal-case tracking-wide text-[#d3d3d3]">
-              {typeof content === 'string'
-                ? content.split('\n').map((line, idx) => (
-                    <div key={idx} className="mb-2 last:mb-0 leading-relaxed">{line}</div>
-                  ))
-                : <div className="whitespace-normal">{content}</div>}
-            </div>
-          )}
-        </div>,
-        document.body
-      )}
-    </>
-  )
-}
+}) => (
+  <HeroTooltip delay={350} closeDelay={0}>
+    {/* cursor-default so info-only trigger wrappers never show the pointer hand; a real
+        button inside still gets the pointer from the global rule. */}
+    <HeroTooltip.Trigger className={wrapperClassName ?? 'inline-flex cursor-default'}>
+      {children}
+    </HeroTooltip.Trigger>
+    <HeroTooltip.Content
+      placement={side}
+      className={`z-[240] whitespace-pre-line text-[12px] font-medium leading-5 ${
+        variant === 'help' ? 'max-w-[420px]' : 'max-w-[320px]'
+      } ${contentClassName ?? ''}`}
+    >
+      {content}
+    </HeroTooltip.Content>
+  </HeroTooltip>
+)

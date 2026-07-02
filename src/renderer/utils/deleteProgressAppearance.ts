@@ -1,5 +1,7 @@
 export interface DeleteProgressAppearance {
   accent: string
+  soft: string
+  glow: string
   softBorder: string
   fill: string
   rowTint: string
@@ -7,6 +9,8 @@ export interface DeleteProgressAppearance {
 
 export const DELETE_PROGRESS_APPEARANCE: DeleteProgressAppearance = {
   accent: '#ff4d4f',
+  soft: 'rgba(255,77,79,0.14)',
+  glow: 'rgba(255,77,79,0.33)',
   softBorder: '#4a191a',
   fill: 'linear-gradient(90deg, rgba(255,77,79,0.24) 0%, rgba(255,77,79,0.08) 100%)',
   rowTint: 'rgba(255,77,79,0.05)',

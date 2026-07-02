@@ -28,7 +28,7 @@ export const DownloadsTableHeader: React.FC<DownloadsTableHeaderProps> = ({
   const { t } = useTranslation()
   return (
   <div
-    className="sticky top-0 z-10 grid gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+    className="sticky top-0 z-10 grid gap-4 px-5 border-b border-[var(--border)] bg-[var(--surface)]"
     style={{ gridTemplateColumns: gridTemplate }}
   >
     <HyperionSortHeader
@@ -72,7 +72,7 @@ export const DownloadsTableHeader: React.FC<DownloadsTableHeaderProps> = ({
       onSort={onSort}
       ariaLabel={t('downloads.sort.downloaded')}
     />
-    <div className="flex h-8 items-center justify-end text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+    <div className="flex h-8 items-center justify-end text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">
       {t('downloads.columns.actions')}
     </div>
   </div>

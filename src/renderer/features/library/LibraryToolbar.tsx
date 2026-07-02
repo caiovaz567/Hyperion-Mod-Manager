@@ -3,6 +3,7 @@ import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
 import { HyperionBadge, HyperionButton, HyperionIconButton, HyperionSearchField } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 interface LibraryToolbarProps {
   totalCount: number
@@ -63,7 +64,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           side="bottom"
           variant="help"
         >
-          <h1 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
+          <h1 className="text-[1.32rem] font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-[1.44rem]">
             {t('library.toolbar.title')}
           </h1>
         </Tooltip>
@@ -72,7 +73,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           side="bottom"
           variant="help"
         >
-          <span className="material-symbols-outlined cursor-help text-[16px] text-[#4a4a4a] hover:text-[#7a7a7a] transition-colors mt-0.5">help_outline</span>
+          <Icon name="help_outline" className="cursor-help text-[16px] text-[#4a4a4a] hover:text-[#7a7a7a] transition-colors mt-0.5" />
         </Tooltip>
         {showCustomOrderBadge && (
           <Tooltip
@@ -86,44 +87,31 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
       </div>
 
       <div
-        className="mt-1 flex flex-wrap items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em]"
-        style={{ fontFamily: '"DM Sans", sans-serif' }}
+        className="mt-2 inline-flex items-center gap-0.5 rounded-lg bg-[var(--surface)] p-0.5"
         role="group"
         aria-label={t('library.toolbar.statusFilterAria')}
       >
-        {statusReadouts.map((option, index) => {
+        {statusReadouts.map((option) => {
           const active = statusFilter === option.filter
 
           return (
-            <React.Fragment key={option.filter}>
-              <Tooltip content={option.tooltip} side="bottom" variant="help">
-                <button
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onStatusFilterChange(option.filter)}
-                  className={`group relative -ml-1 inline-flex h-7 min-w-[44px] items-center gap-1.5 rounded-sm border-0 px-1.5 text-left transition-colors focus:outline-none focus-visible:bg-[#141414] focus-visible:text-[#fcee09] ${
-                    active
-                      ? 'text-[#fcee09]'
-                      : 'text-[#898989] hover:text-[#efebe8]'
-                  }`}
-                >
-                  <span className="brand-font text-[11px] font-bold tracking-[0.16em]">
-                    {option.label}
-                  </span>
-                  <span className={`text-[12px] tabular-nums transition-colors ${
-                    active ? 'text-[#fff6a8]' : 'text-[#6f6f6f] group-hover:text-[#c7c7c7]'
-                  }`}>
-                    {option.count}
-                  </span>
-                  {active ? (
-                    <span className="absolute bottom-0 left-1.5 right-1.5 h-px bg-[#fcee09] shadow-[0_0_8px_rgba(252,238,9,0.28)]" />
-                  ) : null}
-                </button>
-              </Tooltip>
-              {index < statusReadouts.length - 1 ? (
-                <span className="text-[#363636]" aria-hidden="true">|</span>
-              ) : null}
-            </React.Fragment>
+            <Tooltip key={option.filter} content={option.tooltip} side="bottom" variant="help">
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => onStatusFilterChange(option.filter)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[12.5px] font-medium transition-colors focus:outline-none ${
+                  active
+                    ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <span>{option.label}</span>
+                <span className={`tabular-nums ${active ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
+                  {option.count}
+                </span>
+              </button>
+            </Tooltip>
           )
         })}
       </div>
@@ -141,15 +129,11 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             <button
               type="button"
               onClick={() => onStatusFilterChange('all')}
-              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-sm border-0 bg-[rgba(252,238,9,0.10)] px-3 text-[11px] brand-font font-bold uppercase tracking-[0.14em] text-[#fcee09] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-colors hover:bg-[rgba(252,238,9,0.16)] hover:text-[#fff6a8] focus:outline-none focus-visible:bg-[rgba(252,238,9,0.16)]"
+              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-sm border-0 bg-[rgb(var(--accent-rgb)/0.10)] px-3 text-[11px] brand-font font-bold uppercase tracking-[0.14em] text-[var(--accent)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.16)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.16)]"
             >
-              <span className="material-symbols-outlined text-[16px] text-current">
-                {activeStatusNotice.icon}
-              </span>
+              <Icon name={activeStatusNotice.icon} className="text-[16px] text-current" />
               <span>{activeStatusNotice.label}</span>
-              <span className="material-symbols-outlined ml-1 text-[15px] text-[#aaa35a] transition-colors group-hover:text-[#fcee09]">
-                close
-              </span>
+              <Icon name="close" className="ml-1 text-[15px] text-[rgb(var(--accent-rgb)/0.55)] transition-colors group-hover:text-[var(--accent)]" />
             </button>
           </Tooltip>
         ) : null}

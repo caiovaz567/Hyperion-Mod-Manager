@@ -26,11 +26,12 @@
   },
   "language": {
     "label": "Language",
-    "select": "Select language"
+    "select": "Select language",
+    "choose": "Choose a language"
   },
   "shell": {
     "nav": {
-      "library": "Mod Library",
+      "library": "Mods",
       "downloads": "Downloads",
       "settings": "Settings"
     },
@@ -58,7 +59,11 @@
       "appLogs": "App Logs",
       "minimize": "Minimize",
       "maximize": "Maximize",
-      "updateCheckFailed": "Update check failed"
+      "updateCheckFailed": "Update check failed",
+      "modeLight": "Light mode",
+      "modeDark": "Dark mode",
+      "modeSystem": "Follow system",
+      "modeAria": "Color scheme"
     },
     "update": {
       "downloading": "Downloading {progress}%",
@@ -479,6 +484,8 @@
       "recentUpdated": "Updated",
       "recentDowngraded": "Downgraded",
       "toggleFailed": "Operation failed",
+      "enableMod": "Enable mod",
+      "disableMod": "Disable mod",
       "categoryTooltip": "Category: {category}",
       "saveName": "Save name",
       "cancelRename": "Cancel rename",
@@ -617,6 +624,11 @@
       "language": {
         "title": "Language",
         "description": "Choose the language Hyperion's interface is displayed in."
+      },
+      "accent": {
+        "title": "Color",
+        "description": "Pick the highlight color used across buttons, switches, and active states. Applies instantly.",
+        "select": "Select color"
       }
     },
     "header": {

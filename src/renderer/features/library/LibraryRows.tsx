@@ -5,14 +5,15 @@ import { MemoModRow } from './ModRow'
 import type { LibrarySortKey } from './LibraryTableHeader'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 interface LibraryRowsProps {
-  rowsRef: React.RefObject<HTMLDivElement>
+  rowsRef: React.RefObject<HTMLDivElement | null>
   displayedMods: ModMetadata[]
   // The list windows itself here (not in the parent ModList) so scrolling only
   // re-renders this row list, never the whole ModList — that's what keeps scroll
   // cheap even with windowing enabled.
-  scrollContainerRef: React.RefObject<HTMLDivElement>
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>
   rowHeight: number
   virtualizationEnabled: boolean
   filter: string
@@ -163,7 +164,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
   >
     {displayedMods.length === 0 ? (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <span className="material-symbols-outlined text-[48px] text-[#7a7a7a]">inventory_2</span>
+        <Icon name="inventory_2" className="text-[48px] text-[#7a7a7a]" />
         <span className="text-[#8a8a8a] text-sm font-mono tracking-tight">
           {filter
             ? t('library.empty.noMatch')
@@ -178,9 +179,9 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
         {totalCount === 0 && !filter && (
           <button
             onClick={onOpenDownloads}
-            className="flex items-center gap-2 px-4 py-2 bg-[#fcee09] text-[#050505] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg-base-deep)] rounded-sm text-xs brand-font font-bold uppercase tracking-widest hover:bg-white transition-colors mt-2"
           >
-            <span className="material-symbols-outlined text-[16px]">download</span>
+            <Icon name="download" className="text-[16px]" />
             {t('library.empty.downloads')}
           </button>
         )}

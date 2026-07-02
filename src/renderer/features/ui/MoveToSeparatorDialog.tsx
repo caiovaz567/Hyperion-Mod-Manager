@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { Button } from '@heroui/react'
 import type { ModMetadata } from '@shared/types'
+import { HyperionModal, HyperionModalHeader, HyperionSearchField } from './HyperionPrimitives'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
 
 interface MoveToSeparatorDialogProps {
   separators: ModMetadata[]
@@ -19,19 +21,12 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const backdropMouseDownRef = useRef(false)
 
   useEffect(() => {
+    // Escape is handled by the shared modal shell; this only auto-focuses the search field.
     const timer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 40)
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.clearTimeout(timer)
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [onCancel])
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -39,98 +34,55 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
     return separators.filter((separator) => separator.name.toLowerCase().includes(query))
   }, [search, separators])
 
-  return createPortal(
-    <div
-      data-action-prompt="true"
-      className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        backdropMouseDownRef.current = event.target === event.currentTarget
-      }}
-      onClick={(event) => {
-        event.stopPropagation()
-        if (backdropMouseDownRef.current) {
-          onCancel()
-        }
-        backdropMouseDownRef.current = false
-      }}
-    >
-      <div
-        className="relative flex max-h-[calc(100vh-96px)] w-full max-w-[680px] flex-col overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09] shadow-[0_0_12px_rgba(252,238,9,0.35)]" />
+  return (
+    <HyperionModal onClose={onCancel} surfaceClassName="flex max-h-[calc(100vh-96px)] max-w-[560px] flex-col">
+      <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-6">
+        <HyperionModalHeader icon="move_item" title={t('dialogs.moveToSeparator.title')} className="mb-3" />
 
-        <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-5">
-          <div className="mb-4 flex items-center gap-3 text-[#fcee09]">
-            <span className="material-symbols-outlined text-[20px]">move_item</span>
-            <h2 className="brand-font text-[1.05rem] font-bold uppercase tracking-[0.08em] text-white">
-              {t('dialogs.moveToSeparator.title')}
-            </h2>
-          </div>
+        <p className="mb-4 text-sm leading-relaxed text-[var(--text-support)]">
+          {modCount === 1
+            ? t('dialogs.moveToSeparator.descriptionOne')
+            : t('dialogs.moveToSeparator.descriptionMany', { count: modCount })}
+        </p>
 
-          <p className="mb-4 text-sm leading-relaxed text-[#a2a2a2]">
-            {modCount === 1
-              ? t('dialogs.moveToSeparator.descriptionOne')
-              : t('dialogs.moveToSeparator.descriptionMany', { count: modCount })}
-          </p>
+        <HyperionSearchField
+          ref={inputRef}
+          wrapperClassName="mb-3 min-w-0 max-w-none"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onClear={() => setSearch('')}
+          placeholder={t('dialogs.moveToSeparator.searchPlaceholder')}
+        />
 
-          {/* Search — border lives on the wrapper, never on the input */}
-          <div className="mb-3 flex items-center gap-2 border-[0.5px] border-[#2d2d2d] bg-[#0a0a0a] px-3 transition-colors focus-within:border-[#fcee09]/40">
-            <span className="material-symbols-outlined text-[16px] text-[#555]">search</span>
-            <input
-              ref={inputRef}
-              autoFocus
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('dialogs.moveToSeparator.searchPlaceholder')}
-              className="h-11 w-full border-0 bg-transparent text-[14px] text-[#e5e2e1] placeholder-[#444] outline-none focus:outline-none focus-visible:outline-none"
-            />
-            {search && (
+        {/* Separator list */}
+        <div className="min-h-[300px] flex-1 overflow-y-auto hyperion-scrollbar rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1">
+          {filtered.length > 0 ? (
+            filtered.map((separator) => (
               <button
-                onClick={() => setSearch('')}
-                className="text-[#555] transition-colors hover:text-[#999]"
+                key={separator.uuid}
+                onClick={() => onSelect(separator.uuid)}
+                className="group grid h-10 w-full grid-cols-[28px_minmax(0,1fr)_28px] items-center rounded-lg px-3 text-center transition-colors hover:bg-[rgb(var(--accent-rgb)/0.10)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.12)]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <span aria-hidden="true" />
+                <span className="truncate text-center text-[13px] font-semibold text-[var(--text-primary-alt)] transition-colors group-hover:text-[var(--accent)]">
+                  {separator.name}
+                </span>
+                <Icon name="arrow_forward" className="justify-self-end text-[16px] text-[var(--text-muted)] transition-colors group-hover:text-[var(--accent)]" />
               </button>
-            )}
-          </div>
+            ))
+          ) : (
+            <div className="px-4 py-6 text-center text-[13px] italic text-[var(--text-muted)]">
+              {t('dialogs.moveToSeparator.noMatch')}
+            </div>
+          )}
+        </div>
 
-          {/* Separator list */}
-          <div className="min-h-[340px] flex-1 overflow-y-auto hyperion-scrollbar border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a]">
-            {filtered.length > 0 ? (
-              filtered.map((separator) => (
-                <button
-                  key={separator.uuid}
-                  onClick={() => onSelect(separator.uuid)}
-                  className="group grid h-10 w-full grid-cols-[28px_minmax(0,1fr)_28px] items-center border-b-[0.5px] border-[#141414] px-3 text-center transition-colors last:border-b-0 hover:bg-[rgba(252,238,9,0.08)] focus:outline-none focus-visible:bg-[rgba(252,238,9,0.10)] focus-visible:shadow-[inset_2px_0_0_rgba(252,238,9,0.85)]"
-                >
-                  <span aria-hidden="true" />
-                  <span className="truncate text-center text-[13px] font-semibold text-[#e5e2e1] transition-colors group-hover:text-[#fcee09]">
-                    {separator.name}
-                  </span>
-                  <span className="material-symbols-outlined justify-self-end text-[16px] text-[#555] transition-colors group-hover:text-[#fcee09]">
-                    arrow_forward
-                  </span>
-                </button>
-              ))
-            ) : (
-              <div className="px-4 py-6 text-center text-[13px] italic text-[#555]">
-                {t('dialogs.moveToSeparator.noMatch')}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-5 flex items-center justify-end">
-            <button
-              onClick={onCancel}
-              className="h-10 rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] px-4 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#9a9a9a] transition-colors hover:border-[#4c4c4c] hover:text-white"
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
+        <div className="mt-5 flex items-center justify-end">
+          <Button variant="tertiary" onPress={onCancel}>
+            {t('common.cancel')}
+          </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </HyperionModal>
   )
 }

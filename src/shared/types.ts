@@ -63,7 +63,14 @@ export interface AppSettings {
   gamePath: string
   libraryPath: string
   downloadPath: string
-  theme: 'dark'
+  // Active accent color id (see src/renderer/theme/accents.ts): it recolors
+  // buttons/switches/tabs/highlights over the light/dark base. Defaults to 'blue'; the
+  // renderer owns the preset list and falls back to 'blue' when the stored id no longer
+  // resolves. Main only persists the value.
+  accentColor?: string
+  // UI color scheme: HeroUI light, dark, or follow the OS ('system', the default).
+  // Resolved live by AppThemeProvider (renderer) and nativeTheme (splash).
+  uiMode?: 'light' | 'dark' | 'system'
   autoUpdate: boolean
   autoInstallDownloads: boolean
   nexusApiKey: string

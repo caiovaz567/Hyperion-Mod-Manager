@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { CloseButton } from '@heroui/react'
 import { shallow } from 'zustand/shallow'
 import type {
   ModMetadata,
@@ -32,6 +33,9 @@ import type {
   TreeActionDialogState,
   TreeContextMenuState,
 } from './DetailPanelTypes'
+import { Icon } from '../ui/Icon'
+import { HyperionBadge } from '../ui/HyperionPrimitives'
+import { SegmentedTabs } from '../ui/uiKit'
 import {
   buildFileTree,
   collectDefaultExpandedIds,
@@ -76,8 +80,8 @@ function isIncomingConflictForMod(conflict: ConflictInfo, mod: ModMetadata): boo
   )
 }
 
-const treeMenuButtonClass = 'flex w-full items-center gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e5e2e1] transition-colors hover:bg-[#111] hover:text-[#fcee09]'
-const treeMenuDangerButtonClass = 'flex w-full items-center gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ffb4ab] transition-colors hover:bg-[#93000a]/10'
+const treeMenuButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+const treeMenuDangerButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.1)]'
 
 function sanitizeTreeEntryName(rawName: string): string {
   return rawName
@@ -584,41 +588,25 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col overflow-hidden border border-[#2a2a2a] bg-[linear-gradient(180deg,rgba(12,12,12,0.99),rgba(8,8,8,1))] shadow-[0_32px_80px_rgba(0,0,0,0.58)]"
+        className="relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
         style={detailPanelFrameStyle}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09] shadow-[0_0_18px_rgba(252,238,9,0.32)]" />
-
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden="true">
-          <div className="absolute -left-10 top-0 h-36 w-80 bg-[linear-gradient(90deg,rgba(252,238,9,0.8),rgba(252,238,9,0))] blur-[72px]" />
-        </div>
 
         <div className="relative flex min-h-0 flex-1 flex-col px-8 pb-7 pt-7">
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-3">
-                <h2 className={`min-w-0 flex-1 whitespace-normal break-words text-[#f5f1ee] ${detailTitleClass}`}>
+                <h2 className={`min-w-0 flex-1 whitespace-normal break-words ${detailTitleClass}`}>
                   {mod.name}
                 </h2>
-              </div>
-
-              <div className="mt-6 flex items-end justify-between gap-4">
-                <div className="flex items-end gap-6">
-                  <TabButton active={activeTab === 'files'} label={t('library.detail.tabFiles')} onClick={() => setActiveTab('files')} />
-                  <TabButton active={activeTab === 'conflicts'} label={t('library.detail.tabConflicts')} onClick={() => setActiveTab('conflicts')} />
-                </div>
               </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-3 self-start">
-              <span className={`inline-flex h-10 items-center border px-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${
-                mod.enabled
-                  ? 'border-[#21492f] bg-[#0b2214] text-[#4ff38f]'
-                  : 'border-[#2d2d2d] bg-[#131313] text-[#c8c8c8]'
-              }`}>
-                <span>{mod.enabled ? t('library.detail.enabled') : t('library.detail.disabled')}</span>
-              </span>
+              <HyperionBadge tone={mod.enabled ? 'success' : 'neutral'}>
+                {mod.enabled ? t('library.detail.enabled') : t('library.detail.disabled')}
+              </HyperionBadge>
 
               <Tooltip content={t('library.detail.renameMod')}>
                 <button
@@ -626,21 +614,25 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                     setNameValue(mod.name)
                     setEditingName(true)
                   }}
-                  className="flex h-10 w-10 items-center justify-center border border-[#2a2a2a] bg-[#101010] text-[#959595] transition-colors hover:border-[#4a4a4a] hover:text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-support)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)]"
                 >
-                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                  <Icon name="edit" className="text-[18px]" />
                 </button>
               </Tooltip>
 
               <Tooltip content={t('library.detail.closeDetails')}>
-                <button
-                  onClick={onClose}
-                  className="flex h-10 w-10 items-center justify-center border border-[#2b2b2b] bg-[#111] text-[#a3a3a3] transition-colors hover:border-[#4b4b4b] hover:text-white"
-                >
-                  <span className="material-symbols-outlined text-[21px]">close</span>
-                </button>
+                <CloseButton
+                  aria-label={t('library.detail.closeDetails')}
+                  onPress={onClose}
+                  className="h-10 w-10 shrink-0 rounded-lg bg-[var(--surface)] text-[var(--text-support)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)]"
+                />
               </Tooltip>
             </div>
+          </div>
+
+          <div role="tablist" className="mt-5 flex items-end gap-1 border-b border-[var(--border)]">
+            <TabButton active={activeTab === 'files'} label={t('library.detail.tabFiles')} onClick={() => setActiveTab('files')} />
+            <TabButton active={activeTab === 'conflicts'} label={t('library.detail.tabConflicts')} onClick={() => setActiveTab('conflicts')} />
           </div>
 
           {activeTab === 'files' ? (
@@ -651,34 +643,32 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   onClick={() => void handleOpenFolder()}
                   className={detailToolbarButtonClass}
                 >
-                  <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                  <Icon name="folder_open" className="text-[16px]" />
                   <span>{t('library.detail.openModFolder')}</span>
                 </button>
 
                 <label className="group relative min-w-[300px] flex-1">
-                  <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#6a6a6a] transition-colors group-hover:text-[#e8e8e8] group-focus-within:text-[#fcee09]">
-                    search
-                  </span>
+                  <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)] transition-colors group-focus-within:text-[var(--accent)]" />
                   <input
                     ref={searchInputRef}
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder={t('library.detail.searchFiles')}
-                    className="h-10 w-full rounded-sm border-0 bg-[#101010] py-1.5 pl-10 pr-[88px] text-sm text-[#e5e2e1] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] placeholder-[#6f6f6f] transition-all hover:bg-[#141414] hover:text-[#f0f0f0] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] focus:bg-[#121212] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.28)]"
+                    className="h-10 w-full rounded-lg border-0 bg-[var(--surface)] py-1.5 pl-10 pr-[88px] text-sm text-[var(--text-primary-alt)] placeholder-[var(--text-muted)] transition-colors hover:bg-[var(--surface-secondary)] focus:bg-[var(--surface-secondary)] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.4)]"
                   />
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7c7c7c]">
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Ctrl + F
                   </span>
                 </label>
               </div>
 
-              <section className="flex min-h-0 flex-1 flex-col border border-[#232323] bg-[#101010]">
-                <div className="grid grid-cols-[minmax(0,1fr)_120px] border-b border-[#1a1a1a] bg-[#151515] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#c8c3bf]">
+              <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+                <div className="grid grid-cols-[minmax(0,1fr)_120px] border-b border-[var(--border)] bg-[var(--surface-secondary)] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   <div>{t('library.detail.columnName')}</div>
                   <div className="text-right">{t('library.detail.columnScope')}</div>
                 </div>
 
-                <div className="border-b border-[#1a1a1a] bg-[#0d0d0d] px-4 py-3 text-sm text-[#9b9b9b]">
+                <div className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-support)]">
                   {fileTreeModeDescription}
                 </div>
 
@@ -710,19 +700,15 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </div>
           ) : (
             <div className="mt-5 min-h-0 flex flex-1 flex-col gap-5">
-              <div className="flex items-center gap-3">
-                <TabButton
-                  active={conflictSubTab === 'files'}
-                  label={t('library.detail.pathsTab', { count: totalFileConflicts })}
-                  onClick={() => setConflictSubTab('files')}
-                />
-
-                <TabButton
-                  active={conflictSubTab === 'archives'}
-                  label={t('library.detail.archivesTab', { count: totalArchiveConflicts })}
-                  onClick={() => setConflictSubTab('archives')}
-                />
-              </div>
+              <SegmentedTabs
+                items={[
+                  { id: 'files' as const, label: t('library.detail.pathsTab', { count: totalFileConflicts }) },
+                  { id: 'archives' as const, label: t('library.detail.archivesTab', { count: totalArchiveConflicts }) },
+                ]}
+                activeId={conflictSubTab}
+                onChange={setConflictSubTab}
+                ariaLabel={t('library.detail.tabConflicts')}
+              />
 
               <div className="mt-3 min-h-0 flex flex-1 flex-col gap-5">
                 <ConflictSection
@@ -759,7 +745,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       {treeContextMenu && createPortal(
         <div
           ref={treeContextMenuRef}
-          className="fixed z-[205] min-w-[228px] border border-[#222] bg-[#0a0a0a] py-1 shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+          className="fixed z-[205] min-w-[228px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.55)]"
           style={{ left: treeContextMenu.x, top: treeContextMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -774,27 +760,27 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 disabled={!contextMenuRevealPath}
                 className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <Icon name="folder_open" className="text-[16px]" />
                 <span>{contextMenuNode.kind === 'file' ? t('library.detail.menuOpenFileLocation') : t('library.detail.menuOpenExactLocation')}</span>
               </button>
-              <div className="my-1 border-t border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 type="button"
                 onClick={() => openTreeActionDialog('create-folder', contextMenuNode.id)}
                 disabled={!contextMenuCanCreateFolder}
                 className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
+                <Icon name="create_new_folder" className="text-[16px]" />
                 <span>{t('library.detail.menuCreateFolder')}</span>
               </button>
-              <div className="my-1 border-t border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 type="button"
                 onClick={() => openTreeActionDialog('rename', contextMenuNode.id)}
                 disabled={!contextMenuCanRename}
                 className={`${treeMenuButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">edit</span>
+                <Icon name="edit" className="text-[16px]" />
                 <span>{t('library.detail.menuRename')}</span>
               </button>
               <button
@@ -803,7 +789,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 disabled={!contextMenuCanDelete}
                 className={`${treeMenuDangerButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <Icon name="delete" className="text-[16px]" />
                 <span>{t('common.delete')}</span>
               </button>
             </>
@@ -817,16 +803,16 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                 }}
                 className={treeMenuButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <Icon name="folder_open" className="text-[16px]" />
                 <span>{t('library.detail.openModFolder')}</span>
               </button>
-              <div className="my-1 border-t border-[#222]" />
+              <div className="my-1 border-t border-[var(--border)]" />
               <button
                 type="button"
                 onClick={() => openTreeActionDialog('create-folder', null)}
                 className={treeMenuButtonClass}
               >
-                <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
+                <Icon name="create_new_folder" className="text-[16px]" />
                 <span>{t('library.detail.menuCreateFolder')}</span>
               </button>
             </>
@@ -889,15 +875,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
       {treeActionDialog?.mode === 'delete' ? (
         <ActionPromptDialog
-          accentColor="#ff4d4f"
-          accentGlow="rgba(255,77,79,0.45)"
+          tone="danger"
           title={t('library.detail.dialogDeleteEntryTitle')}
           description={t('library.detail.dialogDeleteEntryDescription')}
           detailLabel={t('library.detail.dialogDeleteEntryTarget')}
           detailValue={findFileTreeNode(fileTree, treeActionDialog.nodeId)?.path ?? t('library.detail.dialogUnknownEntry')}
           icon="delete"
           primaryLabel={t('common.delete')}
-          primaryTextColor="#ffffff"
           onPrimary={() => void handleSubmitTreeAction()}
           onCancel={() => {
             if (treeActionSubmitting) return

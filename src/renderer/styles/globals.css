@@ -1,36 +1,76 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS v4 + HeroUI v3. Import order matters — tailwindcss first, then HeroUI styles
+   (HeroUI's default theme layers on top of Tailwind). HeroUI v3 needs no provider; its
+   components read theme variables (--accent, --background, --surface, …) straight from the
+   root element, so the Hyperion theme system below drives them by overriding those vars. */
+@import 'tailwindcss';
+@import '@heroui/styles';
+
+/* Tailwind v4 theme extensions ported from the old tailwind.config.js (font utilities +
+   the settings-in animation). The borderRadius override was intentionally dropped so HeroUI
+   components keep their rounded corners. */
+@theme {
+  --font-headline: 'Syne', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-label: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --animate-settings-in: settings-in 0.28s ease-out both;
+}
 
 :root {
   /* Backgrounds */
-  --bg-base:     #0A0A0A;
-  --bg-surface:  #111111;
-  --bg-elevated: #161616;
-  --bg-subtle:   #1C1C1C;
-  --bg-overlay:  rgba(0, 0, 0, 0.7);
+  --bg-base:      #0A0A0A;
+  --bg-base-deep: #050505; /* deliberately darker than --bg-base; distinct surface (header, brand chrome, atmospheric base fill) */
+  --bg-surface:   #111111;
+  --bg-elevated:  #161616;
+  --bg-subtle:    #1C1C1C;
+  --bg-overlay:   rgba(0, 0, 0, 0.7);
 
   /* Borders */
   --border-default: rgba(255, 255, 255, 0.06);
   --border-subtle:  rgba(255, 255, 255, 0.04);
   --border-strong:  rgba(255, 255, 255, 0.12);
-  --border-accent:  rgba(252, 238, 9, 0.5);
+  --border-accent:  rgba(0, 111, 238, 0.5);
 
   /* Text */
-  --text-primary:   #F2F2F2;
-  --text-secondary: rgba(242, 242, 242, 0.72);
-  --text-muted:     rgba(242, 242, 242, 0.5);
-  --text-disabled:  rgba(242, 242, 242, 0.46);
-  --text-support:   #9A9A9A;
-  --text-accent:    #FCEE09;
+  --text-primary:     #F2F2F2;
+  --text-primary-alt: #E5E2E1; /* distinct off-white shade used alongside --text-primary by design */
+  --text-secondary:   rgba(242, 242, 242, 0.72);
+  --text-muted:       rgba(242, 242, 242, 0.5);
+  --text-disabled:    rgba(242, 242, 242, 0.46);
+  --text-support:     #9A9A9A;
+  --text-accent:      #338EF7;
 
-  /* Accent */
-  --accent:       #FCEE09;
-  --accent-hover: #FFF22A;
-  --accent-dim:   rgba(252, 238, 9, 0.12);
-  --accent-cyber-blue: #4FD8FF;
+  /* Accent — shared name with HeroUI v3's own --accent token, so overriding it here
+     recolors both HeroUI components and Hyperion's legacy UI in one shot. Default is the
+     HeroUI blue; the Settings accent-color selector overrides these at runtime. */
+  --accent:            #006FEE;
+  --accent-foreground: #FFFFFF; /* text/icon color on top of --accent (read by HeroUI) */
+  --accent-hover:      #338EF7;
+  --accent-dim:        rgb(0 111 238 / 0.12);
+  --accent-rgb:        0 111 238; /* SPACE-separated companion to --accent for rgb(var(--accent-rgb)/opacity) blends. Must be space-separated — commas + slash is invalid CSS (renders transparent). */
 
-  /* Mod type colors */
+  /* Punctual secondary accent (focus ring, active list items, active tab underline).
+     Stays a small, deliberate footprint — never the primary interactive color. */
+  --accent-cyber-blue:     #4FD8FF;
+  --accent-cyber-blue-rgb: 79 216 255;
+  --focus-ring:            rgb(0 111 238 / 0.6);
+
+  /* Atmosphere (.hyperion-bg gradient/dot-pattern color stops) */
+  --bg-glow-tint-1: rgba(252, 238, 9, 0.03);
+  --bg-glow-tint-2: rgba(255, 255, 255, 0.018);
+  --bg-glow-tint-3: rgba(255, 248, 212, 0.03);
+  --bg-glow-tint-4: rgba(255, 248, 212, 0.016);
+  --bg-dot-tint-1:  rgba(255, 247, 205, 0.15);
+  --bg-dot-tint-2:  rgba(255, 247, 205, 0.08);
+
+  /* Flat app canvas behind everything (.hyperion-bg) */
+  --bg-canvas: #070709;
+
+  /* Scrollbar (.hyperion-scrollbar thumb) — neutral gray, never tinted by the accent */
+  --scrollbar-thumb:       rgba(255, 255, 255, 0.14);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.24);
+
+  /* Mod type colors — never themed, semantic per file type */
   --type-archive:   #60A5FA;
   --type-redmod:    #34D399;
   --type-cet:       #F0F0F0;
@@ -42,12 +82,18 @@
   --type-r6:        #60A5FA;
   --type-unknown:   #64748B;
 
-  /* Status */
+  /* Status — never themed, semantic across the whole app */
   --status-success: #34D399;
   --status-warning: #FCEE09;
   --status-error:   #F87171;
   --status-info:    #60A5FA;
 }
+
+/* The values above are the dark-mode factory defaults and the compiled-in fallback used
+   before the runtime tokens apply. AppThemeProvider overwrites these custom properties as
+   inline styles on the root element: the dark palette (src/shared/theme/palettes/dark.json),
+   overlaid with the light palette in light mode, plus the accent-color overlay last — see
+   CLAUDE.md → "UI Theming". */
 
 * { box-sizing: border-box; }
 
@@ -57,7 +103,7 @@ html, body, #root {
   padding: 0;
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
@@ -70,6 +116,16 @@ select,
 [contenteditable='true'],
 .allow-text-selection {
   user-select: text;
+}
+
+/* Native <button>/role=button default to the arrow cursor per CSS spec — make every enabled
+   button/link/interactive control show the pointer hand. Rows that intentionally use the arrow
+   are <div>s with an explicit cursor-default class, so they're unaffected. */
+:where(button:not(:disabled):not([aria-disabled='true']),
+[role='button']:not([aria-disabled='true']),
+label:has(> input[type='checkbox']:not(:disabled)),
+a[href]) {
+  cursor: pointer;
 }
 
 /* ── Keyframes ── */
@@ -108,24 +164,35 @@ select,
   to   { transform: rotate(360deg); }
 }
 
+/* Ported from the old tailwind.config.js (were declared there, used via animate-* / class refs) */
+@keyframes settings-in {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes firstrun-glow {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
 @keyframes row-attention {
   0% {
     box-shadow:
-      inset 0 0 0 1px rgba(252, 238, 9, 0.9),
-      inset 3px 0 0 #fcee09,
-      0 0 0 rgba(252, 238, 9, 0);
+      inset 0 0 0 1px rgb(var(--accent-rgb) / 0.9),
+      inset 3px 0 0 var(--accent),
+      0 0 0 rgb(var(--accent-rgb) / 0);
   }
   38% {
     box-shadow:
-      inset 0 0 0 1px rgba(252, 238, 9, 0.72),
-      inset 3px 0 0 #fcee09,
-      0 0 22px rgba(252, 238, 9, 0.22);
+      inset 0 0 0 1px rgb(var(--accent-rgb) / 0.72),
+      inset 3px 0 0 var(--accent),
+      0 0 22px rgb(var(--accent-rgb) / 0.22);
   }
   100% {
     box-shadow:
-      inset 0 0 0 1px rgba(252, 238, 9, 0.22),
-      inset 3px 0 0 rgba(252, 238, 9, 0.55),
-      0 0 0 rgba(252, 238, 9, 0);
+      inset 0 0 0 1px rgb(var(--accent-rgb) / 0.22),
+      inset 3px 0 0 rgb(var(--accent-rgb) / 0.55),
+      0 0 0 rgb(var(--accent-rgb) / 0);
   }
 }
 
@@ -144,7 +211,7 @@ select,
 }
 
 .ui-support-mono {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.875rem;
   line-height: 1.45;
   font-feature-settings: 'tnum' 1;
@@ -168,38 +235,16 @@ select,
   pointer-events: none;
   z-index: 0;
   contain: strict;
-  background:
-    radial-gradient(circle at 14% 0%, rgba(252, 238, 9, 0.03), transparent 24%),
-    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.018), transparent 28%),
-    linear-gradient(180deg, rgba(6, 6, 6, 0.88), rgba(5, 5, 5, 0.98) 42%, rgba(5, 5, 5, 1) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.008), transparent 18%),
-    #050505;
+  /* Flat, solid canvas (a single color — no gradient glow, dot texture, or vignette) so
+     elevated --surface panels float cleanly. Token-driven so light mode can flip it;
+     never accent-tinted so the canvas doesn't pull toward the selected color. */
+  background: var(--bg-canvas, #070709);
 }
 
+/* Atmospheric pseudo-layers removed — the canvas is now a single flat color. */
 .hyperion-bg::before,
 .hyperion-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-.hyperion-bg::before {
-  inset: -10%;
-  opacity: 0.16;
-  background-image:
-    radial-gradient(circle, rgba(255, 247, 205, 0.15) 0 0.7px, transparent 1px),
-    radial-gradient(circle, rgba(255, 247, 205, 0.08) 0 0.9px, transparent 1.2px);
-  background-position: 18px 24px, 140px 88px;
-  background-size: 240px 240px, 360px 360px;
-  background-repeat: repeat;
-}
-
-.hyperion-bg::after {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 16%),
-    radial-gradient(circle at 20% 18%, rgba(255, 248, 212, 0.03), transparent 20%),
-    radial-gradient(circle at 78% 24%, rgba(255, 248, 212, 0.016), transparent 18%),
-    radial-gradient(circle at bottom, rgba(0, 0, 0, 0.28), transparent 42%);
+  content: none;
 }
 
 .hyperion-content {
@@ -211,23 +256,8 @@ select,
 .brand-font { font-family: 'Syne', sans-serif; }
 .screen-title-font { font-family: 'Oxanium', sans-serif; }
 
-/* ── Material Symbols ── */
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
-  user-select: none;
-}
+/* Icons are now HeroUI-style Lucide SVGs (see features/ui/Icon.tsx) — the Material Symbols
+   font was removed. */
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -237,7 +267,7 @@ select,
 
 .hyperion-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(94, 88, 49, 0.9) rgba(8, 8, 8, 0.96);
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .hyperion-scrollbar::-webkit-scrollbar {
@@ -245,16 +275,16 @@ select,
 }
 
 .hyperion-scrollbar::-webkit-scrollbar-track {
-  background: rgba(8, 8, 8, 0.96);
+  background: transparent;
 }
 
 .hyperion-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(94, 88, 49, 0.9);
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
 }
 
 .hyperion-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(122, 114, 62, 0.95);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Scrollbar for delete-confirmation dialog: red to match DESIGN.md */
@@ -302,7 +332,7 @@ select,
 ::selection { background: rgba(252, 238, 9, 0.2); color: #fff; }
 
 *:focus-visible {
-  outline: 1px solid rgba(252, 238, 9, 0.5);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 3px;
 }
@@ -310,4 +340,14 @@ select,
 .hyperion-filter-button:focus,
 .hyperion-filter-button:focus-visible {
   outline: none;
+}
+
+/* HeroUI switch thumb fix: when checked, HeroUI colors the knob with --accent-foreground.
+   For light accents (yellow, green, cyan, orange, pink) that foreground is dark, so the knob
+   vanished into the colored track. Force a consistent white knob on every accent. This rule
+   is intentionally unlayered so it wins over HeroUI's layered component styles. */
+.switch[aria-checked='true'] .switch__thumb,
+.switch[data-selected='true'] .switch__thumb {
+  background-color: #ffffff;
+  color: var(--accent);
 }

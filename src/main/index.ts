@@ -2696,8 +2696,9 @@ function registerGlobalHandlers(): void {
 }
 
 app.whenReady().then(async () => {
-  // Show splash while loading
-  const splash = createSplashWindow()
+  // Show splash while loading, matching the user's accent color and light/dark mode
+  const bootSettings = loadSettings()
+  const splash = createSplashWindow(bootSettings.accentColor, bootSettings.uiMode)
   let mainWindowReadyToShow = false
   let mainWindowRevealed = false
 

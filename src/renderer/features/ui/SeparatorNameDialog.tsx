@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { Button, Input } from '@heroui/react'
+import { HyperionModal, HyperionModalHeader } from './HyperionPrimitives'
 import { useTranslation } from '../../i18n/I18nContext'
 
 interface SeparatorNameDialogProps {
@@ -32,11 +33,6 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
   const { t } = useTranslation()
   const resolvedInputLabel = inputLabel ?? t('library.separatorDialog.nameLabel')
   const inputRef = useRef<HTMLInputElement>(null)
-  // Track whether the mousedown that initiated a click actually started on the
-  // backdrop itself. If the user dragged from inside the input to outside (text
-  // selection), mouseup lands on the backdrop and triggers onClick — but since
-  // mousedown started inside we must NOT close the dialog.
-  const backdropMouseDownRef = useRef(false)
 
   useLayoutEffect(() => {
     const focusInput = () => {
@@ -59,7 +55,7 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
     }, 120)
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel()
+      // Escape is handled by the shared modal shell; this only owns Enter → submit.
       if (event.key === 'Enter') {
         event.preventDefault()
         onSubmit()
@@ -73,76 +69,38 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
       window.clearTimeout(id)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onCancel, onSubmit, selectOnOpen])
+  }, [onSubmit, selectOnOpen])
 
-  return createPortal(
-    <div
-      data-action-prompt="true"
-      className="fixed inset-0 z-[210] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        backdropMouseDownRef.current = event.target === event.currentTarget
-      }}
-      onClick={(event) => {
-        event.stopPropagation()
-        if (backdropMouseDownRef.current) {
-          onCancel()
-        }
-        backdropMouseDownRef.current = false
-      }}
-    >
-      <div
-        className="relative w-full max-w-[680px] overflow-hidden border-[0.5px] border-[#222] bg-[#050505] shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="absolute left-0 top-0 h-[2px] w-full bg-[#fcee09] shadow-[0_0_12px_rgba(252,238,9,0.35)]" />
+  return (
+    <HyperionModal onClose={onCancel} surfaceClassName="max-w-[520px]">
+      <div className="px-6 pb-6 pt-6">
+        <HyperionModalHeader icon="label" title={title} className="mb-3" />
 
-        <div className="px-6 pb-6 pt-5">
-          <div className="mb-4 flex items-center gap-3 text-[#fcee09]">
-            <span className="material-symbols-outlined text-[20px]">label</span>
-            <h2 className="brand-font text-[1.05rem] font-bold uppercase tracking-[0.08em] text-white">
-              {title}
-            </h2>
-          </div>
+        <p className="mb-5 text-sm leading-relaxed text-[var(--text-support)]">
+          {description}
+        </p>
 
-          <p className="mb-4 text-sm leading-relaxed text-[#a2a2a2]">
-            {description}
-          </p>
+        <label className="mb-2 block text-[12px] font-medium text-[var(--text-secondary)]">
+          {resolvedInputLabel}
+        </label>
+        <Input
+          ref={inputRef}
+          autoFocus
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="w-full"
+        />
 
-          <div className="overflow-hidden rounded-sm border-[0.5px] border-[#1f1f1f] bg-[#0a0a0a]">
-            <div className="border-b-[0.5px] border-[#171717] px-4 py-2 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#7f7f7f]">
-              {resolvedInputLabel}
-            </div>
-            <div className="px-4 py-4">
-              <input
-                ref={inputRef}
-                autoFocus
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                placeholder={placeholder}
-                className="h-12 w-full border-[0.5px] border-[#2d2d2d] bg-[#050505] px-4 text-[15px] font-medium tracking-[0.01em] text-white transition-colors focus:border-[#fcee09]/60 focus:outline-none focus:shadow-[0_0_14px_rgba(252,238,9,0.1)]"
-              />
-            </div>
-          </div>
-
-          <div className="mt-5 flex items-center justify-end gap-3">
-            <button
-              onClick={onCancel}
-              disabled={submitting}
-              className="h-10 rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] px-4 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#9a9a9a] transition-colors hover:border-[#4c4c4c] hover:text-white disabled:opacity-60"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={onSubmit}
-              disabled={submitting}
-              className="h-10 rounded-sm bg-[#fcee09] px-5 text-[11px] brand-font font-bold uppercase tracking-[0.16em] text-[#050505] transition-colors hover:bg-white disabled:opacity-60"
-            >
-              {submitLabel}
-            </button>
-          </div>
+        <div className="mt-6 flex items-center justify-end gap-2">
+          <Button variant="tertiary" onPress={onCancel} isDisabled={submitting}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="primary" onPress={onSubmit} isDisabled={submitting}>
+            {submitLabel}
+          </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </HyperionModal>
   )
 }

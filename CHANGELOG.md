@@ -8,6 +8,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Hyperion's interface was rebuilt on the HeroUI component library for a cleaner, more modern look.** Buttons, switches, inputs, chips/badges, dialogs, context menus, tooltips and toasts are now real HeroUI components (rounded surfaces, borderless fills, the Inter typeface) instead of hand-styled boxes, and the old Material UI dependency was removed entirely (a smaller app bundle as a result). The default highlight color is now a blue accent, and **Settings > General gains a "Color" picker** - a row of swatches (blue, cyan, green, yellow, orange, red, pink, purple) that recolors every button, switch, tab and highlight across the app instantly (including the first-run setup screen) and persists across sessions. All dialogs and right-click menus follow the selected color consistently, with semantic red reserved for destructive actions, and **every icon in the app is now a clean Lucide line-icon** - the Material Symbols icon font was removed entirely. Downloads status is color-coded (installed = green, downloaded = blue), buttons show the pointer cursor, and the decorative accent bars on top of dialogs were dropped.
+- **One tab pattern everywhere**: Settings, App Logs and the mod-details modal share the same underline tab rail (sentence-case label with an accent underline on a divider line), and sub-tabs inside a section (the conflict inspector's Paths / .archive split) use a compact segmented pill control so two underline rails never stack.
+- **Settings was reorganized into single-column cards**: each setting is one card with an icon tile, title and description up top and its control beside the title (a real HeroUI switch for auto-install) - no more side-by-side explanation column. The About tab was cleaned up: version/license/unofficial are proper info chips (never button-like), the project/support/credits content reads top-to-bottom, and outbound links are clearly salient accent-tinted buttons.
+- **The sidebar was tidied**: the account avatar, nav icons and Settings gear now sit on one exact vertical axis, nav icons are slightly larger, the first item is labeled "Mods" (with a proper stacked-boxes icon instead of an empty square), the avatar follows the chosen accent color, and the account tier chip is a real HeroUI chip - Premium keeps its gold, Free follows the accent color.
+- **The language selector moved to the app header** (a compact translate-icon button beside App Logs, opening a "Choose a language" popover in the HeroUI style) and was removed from Settings > General; the setup wizard uses the same icon button. The setup/welcome flow itself was restyled to the HeroUI look (surface cards, Inter headings, accent icon tiles).
+- **The splash screen was redesigned to match the HeroUI look**: a flat rounded dark card with the brand mark and progress bar tinted in the user's chosen accent color (no more fixed-yellow glow effects).
+- Close buttons across dialogs use the HeroUI CloseButton, header window controls share the same icon-button chrome as the language/App Logs buttons, toolbar buttons and search fields share one 40px height, tooltips use readable Inter sentence-case copy, remaining thin white inset borders were removed in favor of background-shift hover feedback, and scrollbars are now neutral gray instead of accent-tinted.
+
+### Added
+- **Light mode.** A new light / dark / system toggle lives in the header (following the OS scheme live when set to system, the default). Light mode mirrors HeroUI's light scheme - light-gray canvas with white elevated cards - and works with every accent color; the splash screen follows the same mode and accent.
+
+### Removed
+- **The JSON theme system** (Dark/Clean theme selector, the Themes folder, and community-theme support) was removed before ever shipping - visual customization is now the single accent-color picker, which covers the same need with far less complexity.
+
 ---
 
 ## [0.31.0] - 2026-07-01

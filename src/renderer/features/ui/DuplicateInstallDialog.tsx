@@ -77,8 +77,7 @@ export const DuplicateInstallDialog: React.FC = () => {
 
   return (
     <ActionPromptDialog
-      accentColor="#fcee09"
-      accentGlow="rgba(252,238,9,0.5)"
+      tone="accent"
       title={title}
       description={description}
       detailLabel={detailLabel}

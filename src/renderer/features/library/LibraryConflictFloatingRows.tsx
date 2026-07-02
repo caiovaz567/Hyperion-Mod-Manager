@@ -3,6 +3,7 @@ import type { ConflictInfo, ModMetadata } from '@shared/types'
 import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 import { LIBRARY_GRID_TEMPLATE } from './LibraryTableHeader'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 interface LibraryConflictFloatingRowsProps {
   selectedMod: ModMetadata | null
@@ -220,7 +221,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
       >
         <div className={`flex flex-col ${side === 'top' ? '' : 'flex-col-reverse'}`}>
           {hiddenCount > 0 ? (
-            <div className="mx-2 mb-1 inline-flex h-6 w-fit items-center rounded-sm bg-[#101010] px-2.5 text-[10px] brand-font font-bold uppercase tracking-[0.14em] text-[#9a9586] shadow-[0_10px_24px_rgba(0,0,0,0.58)]">
+            <div className="mx-2 mb-1 inline-flex h-6 w-fit items-center rounded-md bg-[var(--surface)] px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9a9586] shadow-[0_10px_24px_rgba(0,0,0,0.58)]">
               {side === 'top' ? t('library.conflict.moreAbove', { count: hiddenCount }) : t('library.conflict.moreBelow', { count: hiddenCount })}
             </div>
           ) : null}
@@ -237,7 +238,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                 className="pointer-events-auto group mx-0 grid h-[38px] w-full items-center gap-4 border-y px-5 text-left transition-colors hover:brightness-110"
                 style={{
                   gridTemplateColumns: LIBRARY_GRID_TEMPLATE,
-                  background: `linear-gradient(90deg, ${accent}20 0, #090909 86px, #090909 100%)`,
+                  background: `linear-gradient(90deg, ${accent}20 0, var(--surface) 86px, var(--surface) 100%)`,
                   borderColor: `${accent}36`,
                   boxShadow: `inset 3px 0 0 ${accent}, inset 0 0 0 1px rgba(255,255,255,0.035), 0 14px 32px rgba(0,0,0,0.72)`,
                 }}
@@ -251,7 +252,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                 </div>
                 <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-sm px-1.5 font-mono text-[11px] font-bold"
+                    className="inline-flex h-5 min-w-[26px] items-center justify-center rounded-md px-1.5 font-mono text-[11px] font-bold"
                     style={{ color: accent, background: `${accent}1f` }}
                   >
                     {row.tone === 'win' ? '+' : '-'}{row.conflictCount}
@@ -260,7 +261,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                     {row.mod.name}
                   </span>
                   {row.hiddenInSeparator ? (
-                    <span className="shrink-0 rounded-sm bg-[rgba(79,216,255,0.10)] px-1.5 py-[2px] text-[9px] brand-font font-bold uppercase tracking-[0.14em] text-[#7fe6ff]">
+                    <span className="shrink-0 rounded-md bg-[rgb(var(--accent-cyber-blue-rgb)/0.10)] px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-[0.14em] text-[#7fe6ff]">
                       {row.hiddenInSeparator}
                     </span>
                   ) : null}
@@ -277,10 +278,8 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                   </span>
                 </div>
                 <div className="flex items-center justify-end">
-                  <span className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-sm bg-[rgba(252,238,9,0.18)] px-2 text-[10px] brand-font font-bold uppercase tracking-[0.12em] text-[#fcee09] shadow-[0_0_14px_rgba(252,238,9,0.10)] transition-colors group-hover:bg-[#fcee09] group-hover:text-[#050505] group-hover:shadow-none">
-                    <span className="material-symbols-outlined text-[15px] leading-none text-current">
-                      {row.side === 'top' ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'}
-                    </span>
+                  <span className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-md bg-[rgb(var(--accent-rgb)/0.18)] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] shadow-[0_0_14px_rgb(var(--accent-rgb)/0.10)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)] group-hover:shadow-none">
+                    <Icon name={row.side === 'top' ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'} className="text-[15px] leading-none text-current" />
                     {t('library.conflict.go')}
                   </span>
                 </div>

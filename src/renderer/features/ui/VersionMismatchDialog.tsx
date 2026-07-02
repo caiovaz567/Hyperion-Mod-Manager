@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { Button } from '@heroui/react'
 import { useAppStore } from '../../store/useAppStore'
+import { HyperionModal } from './HyperionPrimitives'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
 
 type VersionRelation = 'upgrade' | 'downgrade' | 'different' | 'unknown'
 type MismatchAction = 'replace' | 'copy' | 'skip'
-type OptionAccent = 'cyan' | 'yellow' | 'neutral'
+type OptionAccent = 'accent' | 'neutral'
 
 function tokenizeVersion(value?: string): string[] {
   if (!value) return []
@@ -54,19 +56,14 @@ function formatVersionLabel(version: string | undefined, unknownLabel: string): 
 }
 
 const ACCENT_STYLES: Record<OptionAccent, { text: string; card: string; badge: string }> = {
-  cyan: {
-    text: 'text-[#4FD8FF]',
-    card: 'border-[#4FD8FF]/30 bg-[#0b1418] hover:border-[#4FD8FF]/60',
-    badge: 'border-[#4FD8FF]/40 text-[#4FD8FF]',
-  },
-  yellow: {
-    text: 'text-[#fcee09]',
-    card: 'border-[#fcee09]/30 bg-[#14130a] hover:border-[#fcee09]/60',
-    badge: 'border-[#fcee09]/40 text-[#fcee09]',
+  accent: {
+    text: 'text-[var(--accent)]',
+    card: 'border-[rgb(var(--accent-rgb)/0.35)] bg-[rgb(var(--accent-rgb)/0.06)] hover:border-[rgb(var(--accent-rgb)/0.6)] hover:bg-[rgb(var(--accent-rgb)/0.1)]',
+    badge: 'bg-[rgb(var(--accent-rgb)/0.16)] text-[var(--accent)]',
   },
   neutral: {
     text: 'text-[var(--text-primary)]',
-    card: 'border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]',
+    card: 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-secondary)]',
     badge: '',
   },
 }
@@ -101,19 +98,17 @@ const OptionCard: React.FC<OptionCardProps> = ({
     <button
       onClick={() => onSelect(action)}
       disabled={disabled}
-      className={`group flex w-full items-start gap-3 rounded-sm border-[0.5px] px-4 py-3.5 text-left transition-colors duration-150 disabled:opacity-60 ${style.card}`}
+      className={`group flex w-full items-start gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors duration-150 disabled:opacity-60 ${style.card}`}
     >
-      <span className={`material-symbols-outlined mt-[2px] shrink-0 text-[20px] ${style.text}`}>
-        {icon}
-      </span>
+      <Icon name={icon} className={`mt-[2px] shrink-0 text-[20px] ${style.text}`} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
-          <span className={`brand-font text-[0.9rem] font-bold uppercase tracking-[0.04em] ${style.text}`}>
+          <span className={`text-[0.92rem] font-semibold tracking-[-0.01em] ${style.text}`}>
             {title}
           </span>
           {recommended ? (
             <span
-              className={`shrink-0 rounded-sm border-[0.5px] bg-black/20 px-2 py-[2px] text-[9px] brand-font font-bold uppercase tracking-[0.16em] ${style.badge}`}
+              className={`shrink-0 rounded-md px-2 py-[2px] text-[9px] font-bold uppercase tracking-[0.14em] ${style.badge}`}
             >
               {t('dialogs.version.recommended')}
             </span>
@@ -166,11 +161,10 @@ export const VersionMismatchDialog: React.FC = () => {
     unknown: { badge: t('dialogs.version.badgeReview'), summary: t('dialogs.version.summaryUnknown') },
   }[relation]
 
-  const accentColor = isDowngrade ? 'var(--status-error)' : 'var(--accent-cyber-blue)'
-  const accentGlow = isDowngrade ? '0 0 12px rgba(248,113,113,0.24)' : '0 0 12px rgba(79,216,255,0.24)'
-  const badgeStyle = isDowngrade
-    ? { borderColor: 'rgba(248,113,113,0.45)', background: 'rgba(248,113,113,0.08)', color: 'var(--status-error)' }
-    : { borderColor: 'rgba(79,216,255,0.45)', background: 'rgba(79,216,255,0.08)', color: 'var(--accent-cyber-blue)' }
+  const accentColor = isDowngrade ? 'var(--status-error)' : 'var(--accent)'
+  const badgeClass = isDowngrade
+    ? 'bg-[rgb(248_113_113/0.12)] text-[var(--status-error)]'
+    : 'bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)]'
 
   // Two primary options, uniform across cases: the recommended outcome on top, then the
   // always-available "add as a separate copy" path. The risky/secondary action lives in
@@ -182,7 +176,7 @@ export const VersionMismatchDialog: React.FC = () => {
           icon: 'check_circle',
           title: t('dialogs.version.keep', { version: existingLabel }),
           helper: t('dialogs.version.keepHelper'),
-          accent: 'yellow',
+          accent: 'accent',
           recommended: true,
         },
         {
@@ -199,7 +193,7 @@ export const VersionMismatchDialog: React.FC = () => {
           icon: 'upgrade',
           title: relation === 'upgrade' ? t('dialogs.version.updateTo', { version: incomingLabel }) : t('dialogs.version.switchTo', { version: incomingLabel }),
           helper: t('dialogs.version.replaceHelper'),
-          accent: 'cyan',
+          accent: 'accent',
           recommended: relation === 'upgrade',
         },
         {
@@ -224,72 +218,49 @@ export const VersionMismatchDialog: React.FC = () => {
     }
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-[210] flex items-center justify-center overflow-hidden bg-black/82 px-4 py-5 backdrop-blur-sm sm:px-5">
-      <div className="relative mx-auto w-full max-w-[480px] overflow-hidden border-[0.5px] border-[var(--border-strong)] bg-[var(--bg-base)] px-5 py-5 shadow-[0_20px_50px_rgba(0,0,0,0.82)] sm:px-6 sm:py-6">
-        <div
-          className="absolute left-0 top-0 h-[2px] w-full"
-          style={{ background: accentColor, boxShadow: accentGlow }}
-        />
-
+  return (
+    <HyperionModal
+      onClose={() => { if (!submitting) clearVersionMismatchPrompt() }}
+      surfaceClassName="max-w-[480px]"
+    >
+      <div className="px-6 py-6">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[22px]" style={{ color: accentColor }}>
-              difference
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${badgeClass}`}>
+              <Icon name="difference" className="text-[20px]" />
             </span>
-            <h2
-              className="brand-font text-[1.05rem] font-bold uppercase tracking-[0.06em]"
-              style={{ color: 'var(--text-primary)' }}
-            >
+            <h2 className="text-[1.05rem] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">
               {t('dialogs.version.title')}
             </h2>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span
-              className="inline-flex items-center rounded-sm border-[0.5px] px-2.5 py-1 text-[10px] brand-font font-bold uppercase tracking-[0.16em]"
-              style={badgeStyle}
-            >
-              {headerMeta.badge}
-            </span>
-            <button
-              onClick={() => {
-                if (submitting) return
-                clearVersionMismatchPrompt()
-              }}
-              disabled={submitting}
-              aria-label={t('common.close')}
-              className="flex h-7 w-7 items-center justify-center rounded-sm border-[0.5px] border-[var(--border-default)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] disabled:opacity-60"
-            >
-              <span className="material-symbols-outlined text-[18px]">close</span>
-            </button>
-          </div>
+          <span className={`inline-flex shrink-0 items-center rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${badgeClass}`}>
+            {headerMeta.badge}
+          </span>
         </div>
 
         <p className="mb-4 text-sm leading-relaxed text-[var(--text-secondary)]">
           {headerMeta.summary}
         </p>
 
-        <div className="mb-5 rounded-sm border-[0.5px] border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3.5">
+        <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5">
           <div className="mb-3 truncate text-sm font-medium text-[var(--text-primary)]">
             {versionMismatchPrompt.existingModName}
           </div>
-          <div className="flex items-end gap-4 font-mono">
+          <div className="flex items-end gap-4">
             <div className="min-w-0">
               <div className="text-[1.4rem] font-semibold leading-none text-[var(--text-secondary)]">
                 {existingLabel}
               </div>
-              <div className="ui-support-mono mt-1.5 uppercase tracking-[0.14em] text-[var(--text-support)]">
+              <div className="mt-1.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-support)]">
                 {t('dialogs.version.installed')}
               </div>
             </div>
-            <span className="material-symbols-outlined pb-[18px] text-[20px] text-[var(--text-muted)]">
-              arrow_forward
-            </span>
+            <Icon name="arrow_forward" className="pb-[18px] text-[20px] text-[var(--text-muted)]" />
             <div className="min-w-0">
               <div className="text-[1.4rem] font-semibold leading-none" style={{ color: accentColor }}>
                 {incomingLabel}
               </div>
-              <div className="ui-support-mono mt-1.5 uppercase tracking-[0.14em] text-[var(--text-support)]">
+              <div className="mt-1.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-support)]">
                 {t('dialogs.version.selected')}
               </div>
             </div>
@@ -307,23 +278,16 @@ export const VersionMismatchDialog: React.FC = () => {
           ))}
         </div>
 
-        <button
-          onClick={() => {
-            if (submitting) return
-            void doAction(footer.action)
-          }}
-          disabled={submitting}
-          className={`w-full rounded-sm border-[0.5px] border-[var(--border-default)] py-2 text-[10px] brand-font font-bold uppercase tracking-[0.18em] transition-colors hover:border-[var(--border-strong)] disabled:opacity-60 ${
-            footer.danger
-              ? 'text-[var(--status-error)]/70 hover:text-[var(--status-error)]'
-              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-          }`}
+        <Button
+          variant="ghost"
+          onPress={() => { if (!submitting) void doAction(footer.action) }}
+          isDisabled={submitting}
+          className={`w-full ${footer.danger ? 'text-[var(--status-error)]' : ''}`}
         >
           {footer.label}
-        </button>
+        </Button>
       </div>
-    </div>,
-    document.body
+    </HyperionModal>
   )
 }
 

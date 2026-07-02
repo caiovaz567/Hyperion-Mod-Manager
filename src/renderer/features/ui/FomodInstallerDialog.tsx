@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { Button } from '@heroui/react'
 import { shallow } from 'zustand/shallow'
 import { useAppStore } from '../../store/useAppStore'
 import { parseFomodXml, buildInitialSelections, resolveInstallEntries, fomodImageUrl, computeVisibleSteps } from '../../utils/fomodParser'
@@ -7,6 +8,7 @@ import { IpcService } from '../../services/IpcService'
 import { IPC } from '@shared/types'
 import type { FomodGroup, FomodPlugin, FomodModuleConfig } from '@shared/types'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
 
 function getDefaultPluginForStep(
   config: FomodModuleConfig,
@@ -107,29 +109,29 @@ const PluginRow: React.FC<PluginRowProps> = ({
         {inputType === 'radio' ? (
           <span
             className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors
-              ${checked ? 'border-[#fcee09]' : 'border-[#444]'}`}
+              ${checked ? 'border-[var(--accent)]' : 'border-[#444]'}`}
           >
-            {checked && <span className="h-2 w-2 rounded-full bg-[#fcee09]" />}
+            {checked && <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />}
           </span>
         ) : (
           <span
             className={`flex h-4 w-4 items-center justify-center rounded-sm border transition-colors
-              ${checked ? 'border-[#fcee09] bg-[#fcee09]' : 'border-[#444]'}`}
+              ${checked ? 'border-[var(--accent)] bg-[var(--accent)]' : 'border-[#444]'}`}
           >
             {checked && (
-              <span className="material-symbols-outlined text-[11px] text-black font-bold leading-none">check</span>
+              <Icon name="check" className="text-[11px] text-[var(--accent-foreground)] font-bold leading-none" />
             )}
           </span>
         )}
       </span>
 
       {/* Name */}
-      <div className={`min-w-0 flex-1 text-base font-medium leading-snug truncate ${checked ? 'text-[#f2f2f2]' : 'text-[#b0b0b0]'}`}>
+      <div className={`min-w-0 flex-1 text-base font-medium leading-snug truncate ${checked ? 'text-[var(--text-primary)]' : 'text-[#b0b0b0]'}`}>
         {plugin.name}
       </div>
 
       {isRequired && (
-        <span className="shrink-0 text-[11px] font-bold tracking-widest uppercase text-[#fcee09]/70">{t('dialogs.fomod.required')}</span>
+        <span className="shrink-0 text-[11px] font-bold tracking-widest uppercase text-[var(--accent)]/70">{t('dialogs.fomod.required')}</span>
       )}
     </label>
   )
@@ -163,7 +165,7 @@ const GroupSection: React.FC<GroupSectionProps> = ({
           <span className="text-[11px] font-bold tracking-widest uppercase text-[#555]">{t('dialogs.fomod.allSelected')}</span>
         )}
       </div>
-      <div className="overflow-hidden rounded-sm border border-[#1e1e1e] bg-[#080808]">
+      <div className="overflow-hidden rounded-sm border border-[#1e1e1e] bg-[var(--bg-base-deep)]">
         {group.plugins.map((plugin, idx) => {
           const isAllChecked = isAll || plugin.typeDescriptor === 'Required'
           const checked = isAllChecked ? true : selected.has(idx)
@@ -197,7 +199,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
   const imagePath = plugin?.image ? fomodImageUrl(extractRoot, plugin.image) : null
 
   return (
-    <div className="w-[420px] shrink-0 flex flex-col gap-3 border-l border-[#1a1a1a] pl-6 min-h-0 overflow-hidden">
+    <div className="w-[420px] shrink-0 flex flex-col gap-3 border-l border-[var(--bg-subtle)] pl-6 min-h-0 overflow-hidden">
       <div className="text-[12px] font-bold tracking-widest uppercase text-[#5a5a5a] shrink-0">{t('dialogs.fomod.preview')}</div>
 
       <div className="flex-1 min-h-0 overflow-y-auto hyperion-scrollbar flex flex-col gap-3" style={{ scrollbarGutter: 'stable' }}>
@@ -213,7 +215,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
 
         {plugin && (
           <>
-            <div className="text-sm font-semibold text-[#e0e0e0] border-b border-[#1a1a1a] pb-2 leading-snug shrink-0">
+            <div className="text-sm font-semibold text-[#e0e0e0] border-b border-[var(--bg-subtle)] pb-2 leading-snug shrink-0">
               {plugin.name}
             </div>
             {plugin.description && (
@@ -422,28 +424,25 @@ export const FomodInstallerDialog: React.FC = () => {
       onClick={clearFomodPrompt}
     >
         <div
-        className="relative flex flex-col bg-[#050505] border-[0.5px] border-[#1e1e1e] shadow-[0_24px_64px_rgba(0,0,0,0.85)]"
+        className="relative flex flex-col overflow-hidden rounded-2xl bg-[var(--background)] border border-[var(--border)] shadow-[0_24px_70px_rgba(0,0,0,0.7)]"
         style={{
           width: hasPreviewImages ? 'min(1180px, calc(100vw - 32px))' : 'min(860px, calc(100vw - 32px))',
           height: 'min(82vh, 840px)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top accent bar */}
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-[#fcee09] shadow-[0_0_10px_rgba(252,238,9,0.5)]" />
-
         {/* Step progress bar */}
         {hasSteps && (
-          <div className="absolute top-[2px] left-0 h-[2px] bg-[#fcee09]/30 transition-all duration-300"
+          <div className="absolute top-0 left-0 h-[2px] bg-[var(--accent)]/40 transition-all duration-300"
             style={{ width: `${progressPct}%` }} />
         )}
 
         {/* Header */}
         <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#131313]">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="material-symbols-outlined text-xl text-[#fcee09]">install_desktop</span>
+            <Icon name="install_desktop" className="text-xl text-[var(--accent)]" />
             <div className="min-w-0">
-              <div className="text-[12px] brand-font font-bold tracking-widest uppercase text-[#fcee09]">{t('dialogs.fomod.label')}</div>
+              <div className="text-[12px] brand-font font-bold tracking-widest uppercase text-[var(--accent)]">{t('dialogs.fomod.label')}</div>
               <div className="text-sm font-semibold text-[#e0e0e0] truncate mt-0.5">{config.moduleName}</div>
             </div>
           </div>
@@ -488,7 +487,7 @@ export const FomodInstallerDialog: React.FC = () => {
               ))
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-[#4a4a4a]">
-                <span className="material-symbols-outlined text-3xl mb-2">check_circle</span>
+                <Icon name="check_circle" className="text-3xl mb-2" />
                 <span className="text-sm">{t('dialogs.fomod.noOptions')}</span>
               </div>
             )}
@@ -505,49 +504,42 @@ export const FomodInstallerDialog: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[#131313] px-6 py-4">
-          <button
-            onClick={clearFomodPrompt}
-            className="border-[0.5px] border-[#2a2a2a] px-5 py-2.5 text-sm font-medium text-[#9a9a9a] hover:border-[#444] hover:text-[#e0e0e0] transition-colors rounded-sm"
-          >
+        <div className="flex items-center justify-between border-t border-[var(--border)] px-6 py-4">
+          <Button variant="tertiary" onPress={clearFomodPrompt}>
             {t('common.cancel')}
-          </button>
+          </Button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {hasSteps && !isFirstStep && (
-              <button
-                onClick={() => {
+              <Button
+                variant="secondary"
+                onPress={() => {
                   const prevIdx = visibleSteps[safePos - 1]
                   if (prevIdx !== undefined) { setCurrentStep(prevIdx); setHoveredPlugin(null); setLastHoveredPlugin(getDefaultPluginForStep(config, selections, prevIdx)); setLightboxIndex(null) }
                 }}
-                className="flex items-center gap-2 border-[0.5px] border-[#2a2a2a] bg-[#0a0a0a] px-5 py-2.5 text-xs font-bold tracking-widest uppercase text-[#9a9a9a] hover:border-[#444] hover:text-white transition-colors rounded-sm"
               >
-                <span className="material-symbols-outlined text-base">arrow_back</span>
+                <Icon name="arrow_back" className="text-[18px]" />
                 {t('common.back')}
-              </button>
+              </Button>
             )}
 
             {!isLastStep ? (
-              <button
-                onClick={() => {
+              <Button
+                variant="primary"
+                isDisabled={!stepValid}
+                onPress={() => {
                   const nextIdx = visibleSteps[safePos + 1]
                   if (nextIdx !== undefined) { setCurrentStep(nextIdx); setHoveredPlugin(null); setLastHoveredPlugin(getDefaultPluginForStep(config, selections, nextIdx)); setLightboxIndex(null) }
                 }}
-                disabled={!stepValid}
-                className="flex items-center gap-2 bg-[#fcee09] px-6 py-2.5 text-xs font-bold tracking-widest uppercase text-black hover:brightness-110 transition-all disabled:opacity-40 rounded-sm shadow-[0_0_12px_rgba(252,238,9,0.3)]"
               >
                 {t('common.next')}
-                <span className="material-symbols-outlined text-base">arrow_forward</span>
-              </button>
+                <Icon name="arrow_forward" className="text-[18px]" />
+              </Button>
             ) : (
-              <button
-                onClick={handleInstall}
-                disabled={!stepValid}
-                className="flex items-center gap-2 bg-[#fcee09] px-6 py-2.5 text-xs font-bold tracking-widest uppercase text-black hover:brightness-110 transition-all disabled:opacity-40 rounded-sm shadow-[0_0_12px_rgba(252,238,9,0.3)]"
-              >
-                <span className="material-symbols-outlined text-base">download</span>
+              <Button variant="primary" isDisabled={!stepValid} onPress={handleInstall}>
+                <Icon name="download" className="text-[18px]" />
                 {t('common.install')}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -573,7 +565,7 @@ export const FomodInstallerDialog: React.FC = () => {
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-all ${lightboxIndex > 0 ? 'hover:bg-white/20 cursor-pointer' : 'opacity-0 pointer-events-none'}`}
               onClick={() => lightboxIndex > 0 && setLightboxIndex(lightboxIndex - 1)}
             >
-              <span className="material-symbols-outlined text-2xl">arrow_back</span>
+              <Icon name="arrow_back" className="text-2xl" />
             </button>
 
             {/* Image */}
@@ -586,7 +578,7 @@ export const FomodInstallerDialog: React.FC = () => {
                 className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-sm bg-black/60 text-white hover:bg-black/90 transition-colors"
                 onClick={() => setLightboxIndex(null)}
               >
-                <span className="material-symbols-outlined text-lg">close</span>
+                <Icon name="close" className="text-lg" />
               </button>
             </div>
 
@@ -595,7 +587,7 @@ export const FomodInstallerDialog: React.FC = () => {
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-all ${lightboxIndex < lightboxEntries.length - 1 ? 'hover:bg-white/20 cursor-pointer' : 'opacity-0 pointer-events-none'}`}
               onClick={() => lightboxIndex < lightboxEntries.length - 1 && setLightboxIndex(lightboxIndex + 1)}
             >
-              <span className="material-symbols-outlined text-2xl">arrow_forward</span>
+              <Icon name="arrow_forward" className="text-2xl" />
             </button>
           </div>
 

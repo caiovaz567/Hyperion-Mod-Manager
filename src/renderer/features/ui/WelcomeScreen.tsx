@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { CloseButton } from '@heroui/react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
 import { IPC, type IpcResult } from '@shared/types'
@@ -8,6 +9,7 @@ import { useNexusAccount } from '../../hooks/useNexusAccount'
 import { PathBox, ValidationRow, uiButton } from './uiKit'
 import { LanguageSelect } from './LanguageSelect'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
 
 function getParentDirectory(targetPath: string): string {
   const normalizedPath = targetPath.trim().replace(/[\\/]+$/, '')
@@ -36,13 +38,13 @@ const BrandMark: React.FC<{ size?: 'sm' | 'lg' }> = ({ size = 'sm' }) => {
   return (
     <div className="flex items-center gap-3 select-none">
       <span
-        className={`relative flex items-center justify-center border border-[#5f5a08] bg-[#fcee09] ${
+        className={`relative flex items-center justify-center border border-[rgb(var(--accent-rgb)/0.5)] bg-[var(--accent)] ${
           isLarge
-            ? 'h-12 w-12 rounded-[10px] shadow-[0_0_30px_rgba(252,238,9,0.22)]'
+            ? 'h-12 w-12 rounded-[10px] shadow-[0_0_30px_rgb(var(--accent-rgb)/0.22)]'
             : 'h-7 w-7 rounded-[6px]'
         }`}
       >
-        <span className={`rounded-[3px] bg-[#050505] ${isLarge ? 'h-[18px] w-[18px]' : 'h-[10px] w-[10px]'}`} />
+        <span className={`rounded-[3px] bg-[var(--bg-base-deep)] ${isLarge ? 'h-[18px] w-[18px]' : 'h-[10px] w-[10px]'}`} />
       </span>
       <span className={`brand-font font-black tracking-tighter text-white ${isLarge ? 'text-3xl' : 'text-base'}`}>
         HYPERION
@@ -75,28 +77,28 @@ const StepProgress: React.FC<{
             <span
               className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold transition-all duration-200 ${
                 isActive
-                  ? 'bg-[#fcee09] text-[#0a0a0a] shadow-[0_0_0_4px_rgba(252,238,9,0.12)]'
+                  ? 'bg-[var(--accent)] text-[var(--accent-foreground)] shadow-[0_0_0_4px_rgb(var(--accent-rgb)/0.12)]'
                   : isCompleted
-                  ? 'bg-[#0e1a14] text-[#34d399] ring-1 ring-[#1f3d2e] group-hover:ring-[#34d399]/60'
-                  : 'bg-[#111111] text-[#5a5a5a] ring-1 ring-[#222222]'
+                  ? 'bg-[rgb(52_211_153/0.14)] text-[var(--status-success)] group-hover:bg-[rgb(52_211_153/0.22)]'
+                  : 'bg-[var(--surface-secondary)] text-[var(--text-muted)]'
               }`}
             >
               {isCompleted ? (
-                <span className="material-symbols-outlined scale-in" style={{ fontSize: 15 }}>check</span>
+                <Icon name="check" className="scale-in" style={{ fontSize: 15 }} />
               ) : (
                 index + 1
               )}
             </span>
             <span
               className={`hidden text-[12.5px] font-medium transition-colors duration-200 sm:inline ${
-                isActive ? 'text-white' : isCompleted ? 'text-[#9a9a9a] group-hover:text-white' : 'text-[#5a5a5a]'
+                isActive ? 'text-white' : isCompleted ? 'text-[var(--text-support)] group-hover:text-white' : 'text-[#5a5a5a]'
               }`}
             >
               {t(`welcome.steps.${step.key}.label`)}
             </span>
           </button>
           {index < SETUP_STEPS.length - 1 && (
-            <div className="mx-3 h-px flex-1 rounded-full bg-[#1c1c1c] sm:mx-4">
+            <div className="mx-3 h-px flex-1 rounded-full bg-[var(--bg-subtle)] sm:mx-4">
               <div
                 className="h-full rounded-full bg-[#34d399]/45 transition-all duration-300 ease-out"
                 style={{ width: index < currentStep ? '100%' : '0%' }}
@@ -368,11 +370,11 @@ export const WelcomeScreen: React.FC = () => {
   const centeredEndIconButton = `${primaryBtn} !grid grid-cols-[1fr_auto_1fr] gap-x-3`
   const centeredStartIconButton = `${ghostBtn} !grid grid-cols-[1fr_auto_1fr] gap-x-3`
   const centeredButtonLabel = 'col-start-2 translate-y-px leading-none'
-  const centeredEndIcon = 'material-symbols-outlined col-start-3 justify-self-start leading-none transition-transform duration-150 group-hover:translate-x-0.5'
-  const centeredStartIcon = 'material-symbols-outlined col-start-1 justify-self-end leading-none transition-transform duration-150 group-hover:-translate-x-0.5'
+  const centeredEndIcon = 'col-start-3 justify-self-start leading-none transition-transform duration-150 group-hover:translate-x-0.5'
+  const centeredStartIcon = 'col-start-1 justify-self-end leading-none transition-transform duration-150 group-hover:-translate-x-0.5'
 
   return (
-    <div className="relative h-full overflow-y-auto animate-settings-in bg-[#050505]">
+    <div className="relative h-full overflow-y-auto animate-settings-in bg-[var(--bg-base-deep)]">
       <div
         className="absolute inset-x-0 top-0 h-12"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -381,16 +383,13 @@ export const WelcomeScreen: React.FC = () => {
         className="absolute right-4 top-4 z-20 flex items-center gap-2"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <LanguageSelect />
+        <LanguageSelect variant="icon" />
         <Tooltip content={t('common.close')}>
-          <button
-            type="button"
+          <CloseButton
             aria-label={t('welcome.closeAria')}
-            onClick={() => IpcService.send('window:close')}
-            className="flex h-8 w-8 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[#111111] hover:text-[#f87171]"
-          >
-            <span className="material-symbols-outlined text-[18px] leading-none">close</span>
-          </button>
+            onPress={() => IpcService.send('window:close')}
+            className="h-9 w-9 rounded-lg bg-[var(--surface)] text-[var(--text-support)] transition-colors hover:bg-[var(--surface-secondary)] hover:text-[#f87171]"
+          />
         </Tooltip>
       </div>
       <div className="mx-auto flex min-h-full w-full items-center justify-center px-4 py-8 sm:px-6 sm:py-10">
@@ -404,13 +403,13 @@ export const WelcomeScreen: React.FC = () => {
               </div>
 
               <h1
-                className="fade-up brand-font text-[28px] font-bold leading-tight text-white sm:text-[34px]"
+                className="fade-up text-[28px] font-bold leading-tight tracking-[-0.02em] text-white sm:text-[32px]"
                 style={{ animationDelay: '50ms' }}
               >
                 {t('welcome.headline')}
               </h1>
               <p
-                className="fade-up mt-3 max-w-md text-[15px] leading-relaxed text-[#9a9a9a]"
+                className="fade-up mt-3 max-w-md text-[15px] leading-relaxed text-[var(--text-support)]"
                 style={{ animationDelay: '100ms' }}
               >
                 {t('welcome.subtitle')}
@@ -420,14 +419,12 @@ export const WelcomeScreen: React.FC = () => {
                 {SETUP_STEPS.map((s, index) => (
                   <div
                     key={s.key}
-                    className="flex items-center gap-3.5 rounded-md border border-[#181818] bg-[#0a0a0a] px-4 py-3.5"
+                    className="flex items-center gap-3.5 rounded-xl border-0 bg-[var(--surface)] px-4 py-3.5"
                   >
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#141414] text-[12px] font-semibold text-[#6a6a6a]">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[12px] font-semibold text-[var(--text-muted)]">
                       {index + 1}
                     </div>
-                    <span className="material-symbols-outlined flex-shrink-0 text-[#fcee09]" style={{ fontSize: 20 }}>
-                      {s.icon}
-                    </span>
+                    <Icon name={s.icon} className="flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 20 }} />
                     <div className="min-w-0">
                       <div className="text-[13.5px] font-semibold text-white">{t(`welcome.steps.${s.key}.label`)}</div>
                       <div className="truncate text-[12.5px] text-[#8a8a8a]">{t(`welcome.steps.${s.key}.preview`)}</div>
@@ -445,9 +442,7 @@ export const WelcomeScreen: React.FC = () => {
                 style={{ animationDelay: '200ms' }}
               >
                 <span className={centeredButtonLabel}>{t('common.getStarted')}</span>
-                <span className={centeredEndIcon} style={{ fontSize: 18 }}>
-                  arrow_forward
-                </span>
+                <Icon name="arrow_forward" className={centeredEndIcon} style={{ fontSize: 18 }} />
               </button>
 
               <div className="fade-up mt-7 text-[11.5px] text-[#5a5a5a]" style={{ animationDelay: '250ms' }}>
@@ -476,20 +471,20 @@ export const WelcomeScreen: React.FC = () => {
             {/* Step card */}
             <div
               key={currentStep}
-              className={`rounded-lg border border-[#191919] bg-[#080808] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.3)] sm:p-7 ${
+              className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.3)] sm:p-7 ${
                 stepDirection === 'forward' ? 'slide-in-right' : 'slide-in-left'
               }`}
             >
               <div className="mb-4 flex items-center gap-3.5">
-                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border border-[#2a2607] bg-[#0d0b00]">
-                  <span className="material-symbols-outlined text-[#fcee09]" style={{ fontSize: 22 }}>{step.icon}</span>
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border-0 bg-[rgb(var(--accent-rgb)/0.12)]">
+                  <Icon name={step.icon} className="text-[var(--accent)]" style={{ fontSize: 22 }} />
                 </div>
-                <h2 className="brand-font text-[18px] font-bold leading-snug text-white sm:text-[19px]">
+                <h2 className="text-[18px] font-semibold leading-snug tracking-[-0.01em] text-white sm:text-[19px]">
                   {t(`welcome.steps.${step.key}.heading`)}
                 </h2>
               </div>
 
-              <p className="mb-5 text-[14px] leading-relaxed text-[#9a9a9a]">{t(`welcome.steps.${step.key}.description`)}</p>
+              <p className="mb-5 text-[14px] leading-relaxed text-[var(--text-support)]">{t(`welcome.steps.${step.key}.description`)}</p>
 
               <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">{t('common.selectedFolder')}</div>
 
@@ -505,18 +500,18 @@ export const WelcomeScreen: React.FC = () => {
                     <button onClick={() => void applyGameDefault()} disabled={detectingGame} className={`${secondaryBtn} w-full sm:w-auto`}>
                       {detectingGame ? (
                         <>
-                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                          <Icon name="progress_activity" className="animate-spin" style={{ fontSize: 16 }} />
                           {t('common.detecting')}
                         </>
                       ) : (
                         <>
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
+                          <Icon name="auto_awesome" style={{ fontSize: 16 }} />
                           {t('common.detectAutomatically')}
                         </>
                       )}
                     </button>
                     <button onClick={browseGame} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      <Icon name="folder_open" style={{ fontSize: 16 }} />
                       {t('common.chooseFolder')}
                     </button>
                   </div>
@@ -533,11 +528,11 @@ export const WelcomeScreen: React.FC = () => {
                   />
                   <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                     <button onClick={applyLibraryDefault} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                      <Icon name="bookmark" style={{ fontSize: 16 }} />
                       {t('common.useSuggested')}
                     </button>
                     <button onClick={browseLibrary} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      <Icon name="folder_open" style={{ fontSize: 16 }} />
                       {t('common.chooseFolder')}
                     </button>
                   </div>
@@ -550,11 +545,11 @@ export const WelcomeScreen: React.FC = () => {
                   <ValidationRow state="info" infoText={t('welcome.downloads.info')} />
                   <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                     <button onClick={applyDownloadsDefault} className={`${secondaryBtn} w-full sm:w-auto`}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                      <Icon name="bookmark" style={{ fontSize: 16 }} />
                       {t('common.useSuggested')}
                     </button>
                     <button onClick={browseDownloads} className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      <Icon name="folder_open" style={{ fontSize: 16 }} />
                       {t('common.chooseFolder')}
                     </button>
                   </div>
@@ -570,8 +565,8 @@ export const WelcomeScreen: React.FC = () => {
                       t('welcome.nexus.instruction2'),
                       t('welcome.nexus.instruction3'),
                     ].map((text, index) => (
-                      <li key={index} className="flex items-start gap-3 text-[13.5px] leading-relaxed text-[#9a9a9a]">
-                        <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#141414] text-[11px] font-semibold text-[#8a8a8a]">
+                      <li key={index} className="flex items-start gap-3 text-[13.5px] leading-relaxed text-[var(--text-support)]">
+                        <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[11px] font-semibold text-[var(--text-muted)]">
                           {index + 1}
                         </span>
                         <span>{text}</span>
@@ -580,7 +575,7 @@ export const WelcomeScreen: React.FC = () => {
                   </ol>
 
                   <button onClick={openNexusApiKeysPage} className={`${secondaryBtn} mb-5 w-full sm:w-auto`}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                    <Icon name="open_in_new" style={{ fontSize: 16 }} />
                     {t('welcome.nexus.openApiPage')}
                   </button>
 
@@ -593,16 +588,16 @@ export const WelcomeScreen: React.FC = () => {
                       placeholder={t('welcome.nexus.apiKeyPlaceholder')}
                       spellCheck={false}
                       autoComplete="off"
-                      className="h-11 w-full rounded-md border-[0.5px] border-[#2d2d2d] bg-[#050505] px-3 pr-11 text-[13.5px] text-white outline-none transition-colors focus:border-[#fcee09]/55 focus-visible:outline-none"
+                      className="h-11 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 pr-11 text-[13.5px] text-white outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.45)] focus-visible:outline-none"
                     />
                     {nexusApiKey && (
                       <button
                         type="button"
                         onClick={() => setShowApiKey((value) => !value)}
-                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[#111111] hover:text-[#cfcfcf]"
+                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[var(--surface)] hover:text-[#cfcfcf]"
                         aria-label={showApiKey ? t('welcome.nexus.hideKey') : t('welcome.nexus.showKey')}
                       >
-                        <span className="material-symbols-outlined text-[17px] leading-none">{showApiKey ? 'visibility_off' : 'visibility'}</span>
+                        <Icon name={showApiKey ? 'visibility_off' : 'visibility'} className="text-[17px] leading-none" />
                       </button>
                     )}
                   </div>
@@ -611,19 +606,19 @@ export const WelcomeScreen: React.FC = () => {
                   <div className="mt-3 flex items-start gap-2 text-[13px] leading-relaxed">
                     {nexusAccount.status === 'not-configured' && (
                       <>
-                        <span className="material-symbols-outlined mt-px text-[#60A5FA]" style={{ fontSize: 16 }}>info</span>
-                        <span className="text-[#9a9a9a]">{t('welcome.nexus.optionalInfo')}</span>
+                        <Icon name="info" className="mt-px text-[#60A5FA]" style={{ fontSize: 16 }} />
+                        <span className="text-[var(--text-support)]">{t('welcome.nexus.optionalInfo')}</span>
                       </>
                     )}
                     {nexusAccount.status === 'checking' && (
                       <>
-                        <span className="material-symbols-outlined mt-px animate-spin text-[#9a9a9a]" style={{ fontSize: 16 }}>progress_activity</span>
-                        <span className="text-[#9a9a9a]">{t('welcome.nexus.validating')}</span>
+                        <Icon name="progress_activity" className="mt-px animate-spin text-[var(--text-support)]" style={{ fontSize: 16 }} />
+                        <span className="text-[var(--text-support)]">{t('welcome.nexus.validating')}</span>
                       </>
                     )}
                     {nexusAccount.status === 'connected' && (
                       <>
-                        <span className="material-symbols-outlined mt-px text-[#34d399]" style={{ fontSize: 16 }}>check_circle</span>
+                        <Icon name="check_circle" className="mt-px text-[#34d399]" style={{ fontSize: 16 }} />
                         <span className="text-[#cfe9dc]">
                           {t('welcome.nexus.connectedAs')} <span className="font-semibold text-white">{nexusAccount.data.name}</span>
                           {' '}({nexusAccount.data.isPremium ? t('common.premium') : t('common.free')})
@@ -632,7 +627,7 @@ export const WelcomeScreen: React.FC = () => {
                     )}
                     {nexusAccount.status === 'error' && (
                       <>
-                        <span className="material-symbols-outlined mt-px text-[#fcee09]" style={{ fontSize: 16 }}>error</span>
+                        <Icon name="error" className="mt-px text-[var(--status-warning)]" style={{ fontSize: 16 }} />
                         <span className="text-[#d8c98a]">{t('welcome.nexus.error')}</span>
                       </>
                     )}
@@ -644,7 +639,7 @@ export const WelcomeScreen: React.FC = () => {
             {/* Footer nav */}
             <div className="mt-6 flex items-center justify-between">
               <button onClick={goBack} className={`min-w-[108px] ${centeredStartIconButton}`}>
-                <span className={centeredStartIcon} style={{ fontSize: 18 }}>arrow_back</span>
+                <Icon name="arrow_back" className={centeredStartIcon} style={{ fontSize: 18 }} />
                 <span className={centeredButtonLabel}>{t('common.back')}</span>
               </button>
 
@@ -652,13 +647,13 @@ export const WelcomeScreen: React.FC = () => {
                 stepReady ? (
                   <button onClick={goNext} className={`min-w-[148px] ${centeredEndIconButton}`}>
                     <span className={centeredButtonLabel}>{t('common.continue')}</span>
-                    <span className={centeredEndIcon} style={{ fontSize: 18 }}>arrow_forward</span>
+                    <Icon name="arrow_forward" className={centeredEndIcon} style={{ fontSize: 18 }} />
                   </button>
                 ) : (
                   <Tooltip content={continueTooltip} side="top" wrapperClassName="inline-flex">
                     <button disabled className={`min-w-[148px] ${centeredEndIconButton}`}>
                       <span className={centeredButtonLabel}>{t('common.continue')}</span>
-                      <span className="material-symbols-outlined col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }}>arrow_forward</span>
+                      <Icon name="arrow_forward" className="col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }} />
                     </button>
                   </Tooltip>
                 )
@@ -670,13 +665,13 @@ export const WelcomeScreen: React.FC = () => {
                 >
                   {isInitializing ? (
                     <>
-                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 18 }}>progress_activity</span>
+                      <Icon name="progress_activity" className="animate-spin" style={{ fontSize: 18 }} />
                       {t('welcome.settingUp')}
                     </>
                   ) : (
                     <>
                       <span className={centeredButtonLabel}>{t('common.finishSetup')}</span>
-                      <span className="material-symbols-outlined col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }}>check</span>
+                      <Icon name="check" className="col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }} />
                     </>
                   )}
                 </button>
@@ -684,7 +679,7 @@ export const WelcomeScreen: React.FC = () => {
                 <Tooltip content={t('welcome.finishTooltip')} side="top" wrapperClassName="inline-flex">
                   <button disabled className={`min-w-[164px] ${centeredEndIconButton}`}>
                     <span className={centeredButtonLabel}>{t('common.finishSetup')}</span>
-                    <span className="material-symbols-outlined col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }}>check</span>
+                    <Icon name="check" className="col-start-3 justify-self-start leading-none" style={{ fontSize: 18 }} />
                   </button>
                 </Tooltip>
               )}

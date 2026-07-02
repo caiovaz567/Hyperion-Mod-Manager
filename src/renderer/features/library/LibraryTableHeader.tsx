@@ -1,5 +1,5 @@
 import React from 'react'
-import { HyperionSortHeader } from '../ui/HyperionPrimitives'
+import { HyperionSortHeader, HyperionSwitch } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
 import { LIBRARY_GRID_FALLBACK, type LibraryColumnWidths, type LibraryResizableColumnKey } from './libraryColumns'
 import { useTranslation } from '../../i18n/I18nContext'
@@ -45,7 +45,7 @@ const ColumnResizeHandle: React.FC<{
       className="group/resize absolute top-0 z-20 flex h-full w-4 cursor-col-resize items-center justify-center"
       style={{ left: '-24px' }}
     >
-      <span className="h-4 w-px bg-[#2a2a2a] transition-colors group-hover/resize:bg-[#fcee09]/70" />
+      <span className="h-4 w-px bg-[#2a2a2a] transition-colors group-hover/resize:bg-[var(--accent)]/70" />
     </span>
   )
 }
@@ -90,7 +90,7 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
   const { t } = useTranslation()
   return (
   <div
-    className="sticky top-0 z-10 grid w-full gap-4 px-5 border-b-[0.5px] border-[#1a1a1a] bg-[#070707]"
+    className="sticky top-0 z-10 grid w-full gap-4 px-5 border-b border-[var(--border)] bg-[var(--surface)]"
     onDragOver={showTopLevelHeaderDrop ? onTopLevelDragOver : undefined}
     onDragLeave={showTopLevelHeaderDrop ? onTopLevelDragLeave : undefined}
     onDrop={showTopLevelHeaderDrop ? onTopLevelDrop : undefined}
@@ -101,8 +101,8 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         aria-hidden="true"
         className={`pointer-events-none absolute inset-0 transition-[background-color,box-shadow,border-color] duration-150 ${
           topLevelDropActive
-            ? 'bg-[#06141a]/94 shadow-[inset_0_0_0_1px_rgba(79,216,255,0.42)]'
-            : 'bg-[#070707]/82 shadow-[inset_0_0_0_1px_rgba(79,216,255,0.16)]'
+            ? 'bg-[#06141a]/94 shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.42)]'
+            : 'bg-[#070707]/82 shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.16)]'
         }`}
       />
     )}
@@ -111,8 +111,8 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         <span
           className={`rounded-sm border-0 px-2.5 py-[4px] text-[10px] brand-font font-bold uppercase tracking-[0.16em] transition-colors ${
             topLevelDropActive
-              ? 'bg-[rgba(79,216,255,0.13)] text-[#7fe6ff]'
-              : 'bg-[#151515] text-[#8a8a8a]'
+              ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.13)] text-[#7fe6ff]'
+              : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
           }`}
         >
           {topLevelDropActive ? t('library.header.releaseTopLevel') : t('library.header.dragTopLevel')}
@@ -122,32 +122,17 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
     <div className="flex h-8 items-center pl-2">
       <Tooltip content={bulkToggleDisabled ? bulkToggleTooltip : isBulkToggling ? t('library.header.applying') : allVisibleEnabled ? t('library.header.disableAllVisible') : t('library.header.enableAllVisible')}>
         <span className="inline-flex">
-          <button
-            type="button"
-            onClick={onBulkToggle}
-            disabled={bulkToggleDisabled || isBulkToggling}
-            className={`relative h-4 w-8 rounded-full border-0 transition-all duration-200 ${
-              bulkToggleDisabled
-                ? 'cursor-not-allowed bg-[#101010]'
-                : isBulkToggling
-                  ? 'cursor-wait bg-[rgba(252,238,9,0.22)]'
-                  : allVisibleEnabled
-                    ? 'bg-[rgba(252,238,9,0.28)]'
-                    : 'bg-[#1d1d1d] hover:bg-[#262626]'
-            }`}
-          >
-            <div className={`absolute top-1/2 h-[12px] w-[12px] -translate-y-1/2 rounded-full transition-all duration-200 ${
-              bulkToggleDisabled
-                ? 'left-[2px] bg-[#2a2a2a]'
-                : allVisibleEnabled
-                  ? 'right-[1px] bg-[#fcee09]'
-                  : 'left-[2px] bg-[#5a5a5a]'
-            }`} />
-          </button>
+          <HyperionSwitch
+            size="sm"
+            isSelected={allVisibleEnabled}
+            onChange={() => onBulkToggle()}
+            isDisabled={bulkToggleDisabled || isBulkToggling}
+            aria-label={allVisibleEnabled ? t('library.header.disableAllVisible') : t('library.header.enableAllVisible')}
+          />
         </span>
       </Tooltip>
     </div>
-    <div className="flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+    <div className="flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">
       #
     </div>
     <HyperionSortHeader
@@ -160,7 +145,7 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
       className="justify-start gap-0.5"
       innerClassName="gap-0.5"
     />
-    <div className="relative flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">
+    <div className="relative flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">
       <span className="min-w-0 truncate whitespace-nowrap">{t('library.header.columnVersion')}</span>
       <ColumnResizeHandle columnKey="version" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
@@ -190,7 +175,7 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
       />
       <ColumnResizeHandle columnKey="date" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
-    <div className="flex h-8 min-w-0 items-center justify-start text-sm uppercase tracking-widest text-[#9d9d9d] brand-font font-bold">{t('library.header.columnActions')}</div>
+    <div className="flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">{t('library.header.columnActions')}</div>
   </div>
   )
 }

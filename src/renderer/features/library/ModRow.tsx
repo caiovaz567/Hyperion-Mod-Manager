@@ -1,4 +1,6 @@
 import React from 'react'
+import { Button } from '@heroui/react'
+import { HyperionSwitch } from '../ui/HyperionPrimitives'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
@@ -7,6 +9,7 @@ import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { getModCategoryLabel } from '../../utils/modCategoryDisplay'
 import { LIBRARY_GRID_TEMPLATE } from './LibraryTableHeader'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from '../ui/Icon'
 
 interface ModRowProps {
   mod: ModMetadata
@@ -44,7 +47,7 @@ interface ModRowProps {
   onSeparatorDrop?: (event: React.DragEvent, separator: ModMetadata) => void
 }
 
-const ACTIVE_COLOR = '#fcee09'
+const ACTIVE_COLOR = 'var(--accent)'
 const NESTED_ACCENT_COLOR = '#2f3f45'
 
 export const ModRow: React.FC<ModRowProps> = ({
@@ -122,18 +125,18 @@ export const ModRow: React.FC<ModRowProps> = ({
         onDragOver={(event) => onSeparatorDragOver?.(event, mod)}
         onDragLeave={(event) => onSeparatorDragLeave?.(event, mod)}
         onDrop={(event) => onSeparatorDrop?.(event, mod)}
-        className={`group relative overflow-hidden border-b-[0.5px] border-[#1a1a1a] transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${
+        className={`group relative overflow-hidden border-y border-[var(--border)] transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${
           separatorDropTarget
-            ? 'bg-[#04141b] shadow-[inset_0_0_0_1px_rgba(79,216,255,0.34)]'
+            ? 'bg-[#04141b] shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.34)]'
             : selected
-              ? 'bg-[#0b0f11]'
+              ? 'bg-[rgb(var(--accent-rgb)/0.18)]'
               : conflictSeparatorTone === 'win'
                 ? 'bg-[rgba(52,211,153,0.05)] hover:bg-[rgba(52,211,153,0.08)] shadow-[inset_0_0_0_1px_rgba(52,211,153,0.13)] hover:shadow-[inset_0_0_0_1px_rgba(52,211,153,0.22)]'
                 : conflictSeparatorTone === 'loss'
                   ? 'bg-[rgba(248,113,113,0.05)] hover:bg-[rgba(248,113,113,0.08)] shadow-[inset_0_0_0_1px_rgba(248,113,113,0.13)] hover:shadow-[inset_0_0_0_1px_rgba(248,113,113,0.22)]'
                   : conflictSeparatorTone === 'mixed'
                     ? 'bg-[rgba(252,238,9,0.04)] hover:bg-[rgba(252,238,9,0.07)] shadow-[inset_0_0_0_1px_rgba(252,238,9,0.11)] hover:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.19)]'
-                    : 'bg-[#070707] hover:border-[#19333c] hover:bg-[#0c1114] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(79,216,255,0.14)]'
+                    : 'bg-[var(--surface-secondary)] hover:bg-[color-mix(in_srgb,var(--surface-secondary),var(--text-primary)_5%)]'
         } ${dragEnabled ? 'cursor-default active:cursor-grabbing' : ''} ${dragging ? 'opacity-45 translate-x-1' : ''}`}
       >
         {rowDropPosition ? (
@@ -143,8 +146,8 @@ export const ModRow: React.FC<ModRowProps> = ({
               rowDropPosition === 'before' ? 'top-0' : 'bottom-0'
             }`}
             style={{
-              background: '#4fd8ff',
-              boxShadow: '0 0 10px rgba(79,216,255,0.55)',
+              background: 'var(--accent-cyber-blue)',
+              boxShadow: '0 0 10px rgb(var(--accent-cyber-blue-rgb)/0.55)',
             }}
           />
         ) : null}
@@ -153,17 +156,16 @@ export const ModRow: React.FC<ModRowProps> = ({
           className="absolute left-0 right-0 top-0 h-px opacity-70 transition-opacity duration-150 group-hover:opacity-100"
           style={{
             background: separatorDropTarget
-              ? 'rgba(79,216,255,0.7)'
-              : 'rgba(79,216,255,0.28)',
-            boxShadow: separatorDropTarget ? '0 0 8px rgba(79,216,255,0.28)' : 'none',
+              ? 'rgb(var(--accent-cyber-blue-rgb)/0.7)'
+              : 'rgb(var(--accent-rgb)/0.22)',
+            boxShadow: separatorDropTarget ? '0 0 8px rgb(var(--accent-cyber-blue-rgb)/0.28)' : 'none',
           }}
         />
         <div
           aria-hidden="true"
           className="absolute inset-y-0 left-0 w-[3px] transition-[background-color,box-shadow] duration-150"
           style={{
-            background: separatorDropTarget ? '#4fd8ff' : 'rgba(79,216,255,0.72)',
-            boxShadow: separatorDropTarget ? '0 0 10px rgba(79,216,255,0.45)' : '0 0 10px rgba(79,216,255,0.16)',
+            background: separatorDropTarget ? 'var(--accent-cyber-blue)' : 'rgb(var(--accent-rgb)/0.7)',
           }}
         />
         {!separatorDropTarget && !selected ? (
@@ -171,7 +173,7 @@ export const ModRow: React.FC<ModRowProps> = ({
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
             style={{
-              background: 'linear-gradient(90deg, rgba(79,216,255,0.08) 0%, rgba(79,216,255,0.03) 18%, rgba(255,255,255,0.012) 38%, rgba(255,255,255,0) 68%)',
+              background: 'rgb(var(--accent-rgb)/0.06)',
             }}
           />
         ) : null}
@@ -189,45 +191,38 @@ export const ModRow: React.FC<ModRowProps> = ({
                 if (event.key === 'Enter') onRenameSave()
                 if (event.key === 'Escape') onRenameCancel()
               }}
-              className="allow-text-selection h-9 w-full border-[0.5px] border-[#3d3d3d] bg-[#0a0a0a] px-3 text-[13px] font-semibold tracking-[0.01em] leading-none text-white focus:border-[#4fd8ff]/55 focus:outline-none"
+              className="allow-text-selection h-9 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 text-[13px] font-semibold tracking-[0.01em] leading-none text-[var(--text-primary)] focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.5)] focus:outline-none"
             />
           ) : (
             <div className="flex min-w-0 items-center gap-3 pl-[32px]">
-              <span className={`absolute left-[16px] top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-[#8fb8c4] transition-[transform,color] duration-200 group-hover:text-[#dff7ff] ${
-                separatorCollapsed ? '-rotate-90' : 'rotate-0'
-              }`}>
-                expand_more
-              </span>
+              <Icon name="expand_more" className={`absolute left-[16px] top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)] transition-[transform,color] duration-200 group-hover:text-[var(--text-primary)] ${ separatorCollapsed ? '-rotate-90' : 'rotate-0' }`} />
               <span
                 aria-hidden="true"
                 className="h-[8px] w-[8px] shrink-0 rounded-full transition-[background-color,box-shadow] duration-150"
-                style={{
-                  background: '#4fd8ff',
-                  boxShadow: separatorDropTarget ? '0 0 10px rgba(79,216,255,0.45)' : '0 0 8px rgba(79,216,255,0.2)',
-                }}
+                style={{ background: separatorDropTarget ? 'var(--accent-cyber-blue)' : 'var(--accent)' }}
               />
               <span
                 className={`truncate text-[13px] font-semibold tracking-[0.01em] transition-colors duration-150 ${
                   separatorDropTarget
-                    ? 'text-[#4fd8ff]'
+                    ? 'text-[var(--accent-cyber-blue)]'
                     : selected
-                      ? 'text-[#ffffff]'
-                      : 'text-[#f2f2f2] group-hover:text-[#ffffff]'
+                      ? 'text-[var(--text-primary)]'
+                      : 'text-[var(--text-primary)]'
                 }`}
               >
                 {mod.name}
               </span>
               {separatorChildCount > 0 ? (
-                <span className="shrink-0 rounded-sm border-0 bg-[#101719] px-2 py-[3px] text-[11px] font-mono uppercase tracking-[0.12em] text-[#8aa6af] transition-colors duration-150 group-hover:bg-[#142024] group-hover:text-[#c6edf8]">
+                <span className="shrink-0 rounded-md border-0 bg-[var(--surface-secondary)] px-2 py-[3px] text-[11px] font-medium text-[var(--text-secondary)] transition-colors duration-150">
                   {tn('library.row.modCount', separatorChildCount)}
                 </span>
               ) : null}
               {separatorCollapsed && separatorUpdateCount > 0 ? (
                 <span
-                  className="flex shrink-0 items-center gap-[3px] rounded-sm bg-[#061419] px-[6px] py-[3px] text-[11px] font-mono uppercase tracking-[0.1em] text-[#4fd8ff]"
+                  className="flex shrink-0 items-center gap-[3px] rounded-md bg-[rgb(var(--accent-cyber-blue-rgb)/0.14)] px-[6px] py-[3px] text-[11px] font-semibold tabular-nums text-[var(--accent-cyber-blue)]"
                   title={tn('library.row.separatorUpdateTitle', separatorUpdateCount)}
                 >
-                  <span className="material-symbols-outlined text-[13px] leading-none">upgrade</span>
+                  <Icon name="upgrade" className="text-[13px] leading-none" />
                   {separatorUpdateCount}
                 </span>
               ) : null}
@@ -236,10 +231,10 @@ export const ModRow: React.FC<ModRowProps> = ({
           <div className="flex shrink-0 items-center gap-3">
               {separatorMoveHint ? (
                 <span
-                  className={`rounded-sm border-0 px-2.5 py-[4px] text-[11px] brand-font font-bold uppercase tracking-[0.14em] ${
+                  className={`rounded-md border-0 px-2.5 py-[4px] text-[11px] font-medium ${
                     separatorDropTarget
-                    ? 'bg-[rgba(79,216,255,0.13)] text-[#7fe6ff]'
-                    : 'bg-[#151515] text-[#a4a4a4]'
+                    ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.13)] text-[#7fe6ff]'
+                    : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
                 }`}
               >
                 {separatorDropTarget ? t('library.row.dropSelectedHere') : separatorMoveHint}
@@ -317,17 +312,14 @@ export const ModRow: React.FC<ModRowProps> = ({
           ? 'loss'
           : 'none'
 
+  // Rows are transparent so the lighter HeroUI --surface panel shows through (the "zinc card"
+  // look from the mockup). Selection uses a slightly lighter surface; hover is the rounded
+  // overlay below. No more near-black zebra — the table reads as one elevated card.
   const baseRowBackgroundClass = selected
-    ? 'bg-[#0a0a0a]'
-    : mod.enabled
-      ? index % 2 === 0
-        ? 'bg-[#050505] hover:bg-[#141414]'
-        : 'bg-[#0a0a0a] hover:bg-[#161616]'
-      : index % 2 === 0
-        ? 'bg-[#040404] hover:bg-[#101010]'
-        : 'bg-[#080808] hover:bg-[#121212]'
+    ? 'bg-[rgb(var(--accent-rgb)/0.2)]'
+    : 'bg-transparent'
   const rowBackgroundClass = conflictTone === 'focus'
-    ? 'bg-[rgba(252,238,9,0.1)]'
+    ? 'bg-[rgb(var(--accent-rgb)/0.1)]'
     : conflictTone === 'win'
       ? 'bg-[rgba(52,211,153,0.1)]'
       : conflictTone === 'loss'
@@ -336,7 +328,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           ? 'bg-[rgba(252,238,9,0.08)]'
           : baseRowBackgroundClass
   const rowHoverClass = conflictTone === 'focus'
-    ? 'hover:border-[#5a5714] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_0_0_1px_rgba(252,238,9,0.12)]'
+    ? 'hover:border-[#5a5714] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_0_0_1px_rgb(var(--accent-rgb)/0.12)]'
     : conflictTone === 'win'
       ? 'hover:border-[#1f5133] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),inset_0_0_0_1px_rgba(52,211,153,0.11)]'
       : conflictTone === 'loss'
@@ -344,17 +336,15 @@ export const ModRow: React.FC<ModRowProps> = ({
         : conflictTone === 'mixed'
           ? 'hover:border-[#4b470d] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(252,238,9,0.1)]'
           : mod.enabled
-            ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgba(252,238,9,0.09)]'
+            ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgb(var(--accent-rgb)/0.09)]'
             : 'hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
-  const selectedRingClass = conflictTone === 'focus'
-    ? 'ring-1 ring-inset ring-[#fcee09]/42'
-    : navigationHighlight
-      ? 'ring-1 ring-inset ring-[#fcee09]/70'
-    : selected
-      ? 'ring-1 ring-inset ring-[#fcee09]/50'
-      : ''
+  // NOTE: Tailwind can't apply an opacity modifier (/50) to a var() color, so the ring must be
+  // written as rgb(var(--accent-rgb)/X) to actually render a visible accent ring.
+  // Selection reads through the accent fill + left accent bar (below), not a full-perimeter
+  // ring — a ring collides with the per-row separator lines and looks like a doubled border.
+  const selectedRingClass = ''
   const hoverGradient = conflictTone === 'focus'
-    ? 'linear-gradient(90deg, rgba(252,238,9,0.12) 0%, rgba(252,238,9,0.05) 18%, rgba(255,255,255,0.012) 34%, rgba(255,255,255,0) 66%)'
+    ? 'linear-gradient(90deg, rgb(var(--accent-rgb)/0.12) 0%, rgb(var(--accent-rgb)/0.05) 18%, rgba(255,255,255,0.012) 34%, rgba(255,255,255,0) 66%)'
     : conflictTone === 'win'
       ? 'linear-gradient(90deg, rgba(52,211,153,0.12) 0%, rgba(52,211,153,0.045) 18%, rgba(255,255,255,0.015) 36%, rgba(255,255,255,0) 68%)'
       : conflictTone === 'loss'
@@ -362,17 +352,17 @@ export const ModRow: React.FC<ModRowProps> = ({
         : conflictTone === 'mixed'
           ? 'linear-gradient(90deg, rgba(252,238,9,0.11) 0%, rgba(252,238,9,0.04) 18%, rgba(255,255,255,0.015) 36%, rgba(255,255,255,0) 68%)'
           : mod.enabled
-            ? 'linear-gradient(90deg, rgba(252,238,9,0.08) 0%, rgba(252,238,9,0.036) 15%, rgba(255,255,255,0.018) 34%, rgba(255,255,255,0) 66%)'
-            : 'linear-gradient(90deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 20%, rgba(255,255,255,0) 62%)'
+            ? 'rgb(var(--accent-rgb)/0.12)'
+            : 'rgba(255,255,255,0.06)'
   const indexTextClass = conflictTone === 'none'
     ? 'text-[#8a8a8a] group-hover:text-[#d0d0d0]'
     : 'text-[#c9c9c9]'
   const primaryTextClass = mod.enabled
     ? conflictTone === 'focus'
-      ? 'text-[#fcee09]'
+      ? 'text-[var(--accent)]'
       : conflictTone === 'none'
-        ? 'text-[#e5e2e1] group-hover:text-[#ffffff]'
-        : 'text-[#f2f2f2]'
+        ? 'text-[var(--text-primary-alt)] group-hover:text-[var(--text-primary)]'
+        : 'text-[var(--text-primary)]'
     : conflictTone === 'none'
       ? 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
       : 'text-[#b9b9b9] line-through'
@@ -380,7 +370,7 @@ export const ModRow: React.FC<ModRowProps> = ({
     ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]'
     : 'text-[#c7c7c7]'
   const leftRailColor = conflictTone === 'focus'
-    ? '#FCEE09'
+    ? 'var(--accent)'
     : conflictTone === 'win'
       ? '#34D399'
       : conflictTone === 'loss'
@@ -388,21 +378,43 @@ export const ModRow: React.FC<ModRowProps> = ({
         : conflictTone === 'mixed'
           ? '#FCEE09'
           : rowAccentColor
+  // rowAccentColor/leftRailColor may hold a CSS var() reference (e.g. var(--accent)) rather
+  // than a raw hex string, so alpha blends can't use hex-suffix string concatenation
+  // (`${color}55`) — that would emit an invalid `var(--accent)55`. Use explicit rgb()-with-
+  // opacity blends per branch instead.
+  const leftRailFadedColor = nested
+    ? `${NESTED_ACCENT_COLOR}88`
+    : 'rgb(var(--accent-rgb)/0.533)'
+  const leftRailToneFadedColor = conflictTone === 'focus'
+    ? 'rgb(var(--accent-rgb)/0.667)'
+    : conflictTone === 'win'
+      ? 'rgba(52,211,153,0.667)'
+      : conflictTone === 'loss'
+        ? 'rgba(248,113,113,0.667)'
+        : conflictTone === 'mixed'
+          ? 'rgba(252,238,9,0.667)'
+          : leftRailFadedColor
   const leftRailShadow = conflictTone === 'focus'
-    ? '0 0 12px rgba(252,238,9,0.24)'
+    ? '0 0 12px rgb(var(--accent-rgb)/0.24)'
     : conflictTone === 'win'
       ? '0 0 12px rgba(52,211,153,0.24)'
       : conflictTone === 'loss'
         ? '0 0 12px rgba(248,113,113,0.24)'
         : conflictTone === 'mixed'
           ? '0 0 12px rgba(252,238,9,0.2)'
-          : `0 0 10px ${rowAccentColor}55`
+          : nested
+            ? `0 0 10px ${NESTED_ACCENT_COLOR}55`
+            : '0 0 10px rgb(var(--accent-rgb)/0.333)'
 
-  const handleToggle = async (event: React.MouseEvent) => {
-    event.stopPropagation()
+  const doToggle = async () => {
     const result = mod.enabled ? await disableMod(mod.uuid) : await enableMod(mod.uuid)
     if (!result.ok) addToast(result.error ?? t('library.row.toggleFailed'), 'error')
   }
+  // Swallow click/dblclick inside interactive cells (switch, action buttons) so the row's
+  // own onClick(select)/onDoubleClick(open) never fires when the user hits a control. These
+  // are HeroUI (React Aria) controls whose press doesn't carry the old stopPropagation, so
+  // the wrapper does it.
+  const stopRowActivation = (event: React.MouseEvent) => event.stopPropagation()
 
   return (
     <div className={`relative ${animateOnEnter ? 'fade-up' : ''}`}>
@@ -418,7 +430,7 @@ export const ModRow: React.FC<ModRowProps> = ({
         onClick={onSelect}
         onDoubleClick={() => onOpenDetails(mod)}
         onContextMenu={(event) => onContextMenu(event, mod)}
-        className={`library-mod-row grid h-[38px] w-full gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[#1a1a1a] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${rowHoverClass} ${selectedRingClass} ${
+        className={`library-mod-row grid h-[48px] w-full gap-4 pl-5 pr-5 py-[5px] border-b-[0.5px] border-[var(--border-subtle)] relative overflow-hidden group cursor-default transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${rowBackgroundClass} ${rowHoverClass} ${selectedRingClass} ${
           navigationHighlight ? 'hyperion-row-attention' : ''
         } ${
           dragEnabled ? 'active:cursor-grabbing' : ''
@@ -434,8 +446,8 @@ export const ModRow: React.FC<ModRowProps> = ({
               rowDropPosition === 'before' ? 'top-0' : 'bottom-0'
             }`}
             style={{
-              background: '#4fd8ff',
-              boxShadow: '0 0 10px rgba(79,216,255,0.55)',
+              background: 'var(--accent-cyber-blue)',
+              boxShadow: '0 0 10px rgb(var(--accent-cyber-blue-rgb)/0.55)',
             }}
           />
         ) : null}
@@ -447,26 +459,22 @@ export const ModRow: React.FC<ModRowProps> = ({
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-          style={{ background: conflictTone === 'none' ? `${rowAccentColor}88` : `${leftRailColor}aa` }}
+          className={`pointer-events-none absolute inset-y-0 left-0 w-[3px] transition-opacity duration-150 group-hover:opacity-100 ${
+            selected || navigationHighlight ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{
+            background: selected && conflictTone === 'none' ? 'var(--accent)' : conflictTone === 'none' ? leftRailFadedColor : leftRailToneFadedColor,
+            boxShadow: selected && conflictTone === 'none' ? '0 0 10px rgb(var(--accent-rgb)/0.5)' : undefined,
+          }}
         />
 
-        <div className="flex items-center pl-2" onClick={handleToggle}>
-          <div
-            className={`relative h-4 w-8 rounded-full border-0 transition-all ${
-              mod.enabled
-                ? 'bg-[rgba(252,238,9,0.28)]'
-                : 'bg-[#1d1d1d] group-hover:bg-[#262626]'
-            }`}
-          >
-            <div
-              className={`absolute top-1/2 h-[12px] w-[12px] -translate-y-1/2 rounded-full ${
-                mod.enabled
-                  ? 'right-[1px] bg-[#fcee09]'
-                  : 'left-[1px] bg-[#7a7a7a]'
-              }`}
-            />
-          </div>
+        <div className="flex items-center pl-2" onClick={stopRowActivation} onDoubleClick={stopRowActivation}>
+          <HyperionSwitch
+            size="sm"
+            isSelected={mod.enabled}
+            onChange={() => { void doToggle() }}
+            aria-label={mod.enabled ? t('library.row.disableMod') : t('library.row.enableMod')}
+          />
         </div>
 
         <div className={`flex items-center text-[12px] font-mono transition-colors ${indexTextClass}`}>
@@ -487,7 +495,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                 if (event.key === 'Enter') onRenameSave()
                 if (event.key === 'Escape') onRenameCancel()
               }}
-              className="allow-text-selection h-8 w-full border-[0.5px] border-[#333] bg-[#0a0a0a] px-3 font-medium tracking-tight leading-none text-white focus:border-[#fcee09]/50 focus:outline-none"
+              className="allow-text-selection h-8 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 font-medium tracking-tight leading-none text-[var(--text-primary)] focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.45)] focus:outline-none"
             />
           ) : (
             <div className="flex min-w-0 items-center gap-2">
@@ -540,7 +548,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     )}
                     {isRedundant && (
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.12)] text-[#fcee09]">
-                        <span className="material-symbols-outlined text-[15px] leading-none">priority_high</span>
+                        <Icon name="priority_high" className="text-[15px] leading-none" />
                       </span>
                     )}
                   </button>
@@ -564,11 +572,9 @@ export const ModRow: React.FC<ModRowProps> = ({
                   if (updatingThisMod) return
                   void updateMod(mod.uuid)
                 }}
-                className="inline-flex shrink-0 items-center justify-center text-[#4fd8ff] transition-colors hover:text-[#c6f4ff] disabled:cursor-wait disabled:text-[#8fb8c4]"
+                className="inline-flex shrink-0 items-center justify-center text-[var(--accent-cyber-blue)] transition-colors hover:text-[#c6f4ff] disabled:cursor-wait disabled:text-[#8fb8c4]"
               >
-                <span className={`material-symbols-outlined text-[16px] ${updatingThisMod ? 'animate-spin' : ''}`}>
-                  {updatingThisMod ? 'progress_activity' : 'upgrade'}
-                </span>
+                <Icon name={updatingThisMod ? 'progress_activity' : 'upgrade'} className={`text-[16px] ${updatingThisMod ? 'animate-spin' : ''}`} />
               </button>
             </Tooltip>
           ) : null}
@@ -586,7 +592,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           <span className="truncate whitespace-nowrap">{formatWindowsDateTime(mod.installedAt)}</span>
         </div>
 
-        <div className="flex items-center justify-start gap-2">
+        <div className="flex items-center justify-start gap-2" onClick={stopRowActivation} onDoubleClick={stopRowActivation}>
           {isRenaming ? (
             <>
               <Tooltip content={t('library.row.saveName')}>
@@ -601,7 +607,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   }}
                   className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(52,211,153,0.13)] text-[#6fe3b1] transition-colors hover:bg-[#34d399] hover:text-[#04120d]"
                 >
-                  <span className="material-symbols-outlined text-[15px]">check</span>
+                  <Icon name="check" className="text-[15px]" />
                 </button>
               </Tooltip>
               <Tooltip content={t('library.row.cancelRename')}>
@@ -614,35 +620,37 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onRenameCancel()
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#9a9a9a] transition-colors hover:bg-[#222] hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-[var(--surface-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                 >
-                  <span className="material-symbols-outlined text-[15px]">close</span>
+                  <Icon name="close" className="text-[15px]" />
                 </button>
               </Tooltip>
             </>
           ) : (
             <>
               <Tooltip content={t('library.row.renameMod')}>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onRename(mod)
-                  }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[#151515] text-[#8a8a8a] transition-colors hover:bg-[rgba(252,238,9,0.12)] hover:text-[#fcee09]"
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="tertiary"
+                  onPress={() => onRename(mod)}
+                  aria-label={t('library.row.renameMod')}
+                  className="h-7 w-7 min-w-0 rounded-md"
                 >
-                  <span className="material-symbols-outlined text-[15px]">edit</span>
-                </button>
+                  <Icon name="edit" className="text-[15px]" />
+                </Button>
               </Tooltip>
               <Tooltip content={t('library.row.removeMod')}>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onDelete(mod)
-                  }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(248,113,113,0.13)] text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505]"
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="danger-soft"
+                  onPress={() => onDelete(mod)}
+                  aria-label={t('library.row.removeMod')}
+                  className="h-7 w-7 min-w-0 rounded-md"
                 >
-                  <span className="material-symbols-outlined text-[15px]">delete</span>
-                </button>
+                  <Icon name="delete" className="text-[15px]" />
+                </Button>
               </Tooltip>
             </>
           )}

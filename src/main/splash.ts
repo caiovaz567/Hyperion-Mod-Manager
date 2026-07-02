@@ -1,21 +1,29 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, nativeTheme } from 'electron'
+import { resolveAccent, type AccentPreset } from '../shared/theme/accents'
 
-function buildSplashHtml(): string {
+// HeroUI-style splash: a flat, borderless card (same surface language as the app, light or
+// dark following the user's uiMode), the brand mark tinted with the chosen accent color,
+// and a quiet rounded indeterminate progress bar. No glows, rotating frames, or beams.
+function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#050505" />
+    <meta name="theme-color" content="#0d0d10" />
     <title>Hyperion</title>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       :root {
-        --bg: #050505;
-        --text: #e5e2e1;
-        --accent: #fcee09;
+        --bg: ${dark ? '#0d0d10' : '#ffffff'};
+        --surface: ${dark ? '#17171c' : '#e9e9ec'};
+        --text: ${dark ? '#ececf1' : '#18181b'};
+        --edge: ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'};
+        --accent: ${accent.accent};
+        --accent-foreground: ${accent.foreground};
+        --accent-rgb: ${accent.rgb};
       }
 
       html, body {
@@ -30,7 +38,7 @@ function buildSplashHtml(): string {
         align-items: center;
         justify-content: center;
         color: var(--text);
-        font-family: "Segoe UI Variable Display", "Segoe UI", "Arial Narrow", sans-serif;
+        font-family: "Inter", "Segoe UI Variable Display", "Segoe UI", sans-serif;
         -webkit-app-region: drag;
         user-select: none;
         position: relative;
@@ -39,26 +47,12 @@ function buildSplashHtml(): string {
       .window-surface {
         position: absolute;
         inset: 0;
-        border-radius: 18px;
+        border-radius: 16px;
         overflow: hidden;
-        background:
-          radial-gradient(circle at 50% 42%, rgba(252,238,9,0.08), transparent 22%),
-          radial-gradient(circle at 50% 58%, rgba(255,255,255,0.025), transparent 30%),
-          #050505;
+        background: var(--bg);
         box-shadow:
-          0 18px 44px rgba(0,0,0,0.42),
-          inset 0 0 0 1px rgba(255,255,255,0.055);
-      }
-
-      .window-surface::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,0.012), transparent 24%),
-          linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.018) 50%, transparent 100%);
-        opacity: 0.55;
-        pointer-events: none;
+          0 18px 44px rgba(0,0,0,${dark ? '0.5' : '0.22'}),
+          inset 0 0 0 1px var(--edge);
       }
 
       .shell {
@@ -69,52 +63,14 @@ function buildSplashHtml(): string {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 18px;
-      }
-
-      .mark-frame {
-        position: relative;
-        width: 108px;
-        height: 108px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .mark-frame::before,
-      .mark-frame::after {
-        content: "";
-        position: absolute;
-        inset: 18px;
-        border: 1px solid rgba(255,255,255,0.055);
-        border-radius: 16px;
-        transform: rotate(45deg);
-      }
-
-      .mark-frame::after {
-        inset: 6px;
-        border-color: rgba(252,238,9,0.09);
-        animation: frame-breathe 2.2s ease-in-out infinite;
-      }
-
-      .mark-glow {
-        position: absolute;
-        width: 92px;
-        height: 92px;
-        border-radius: 999px;
-        background: radial-gradient(circle, rgba(252,238,9,0.22) 0%, rgba(252,238,9,0.08) 42%, transparent 72%);
-        filter: blur(10px);
-        animation: pulse-glow 2.1s ease-in-out infinite;
+        gap: 22px;
       }
 
       .logo-mark {
-        width: 52px;
-        height: 52px;
+        width: 64px;
+        height: 64px;
         display: block;
-        position: relative;
-        z-index: 1;
-        filter: drop-shadow(0 0 12px rgba(252,238,9,0.18));
-        animation: fade-in 0.38s ease forwards, float-mark 1.7s ease-in-out infinite;
+        animation: fade-in 0.35s ease forwards, float-mark 2s ease-in-out infinite;
         opacity: 0;
       }
 
@@ -122,30 +78,27 @@ function buildSplashHtml(): string {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
       }
 
       .title {
-        font-size: 30px;
-        font-weight: 800;
-        letter-spacing: 0.18em;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
         color: var(--text);
         line-height: 1;
         text-transform: uppercase;
-        text-shadow:
-          0 0 0 rgba(252,238,9,0),
-          0 0 18px rgba(252,238,9,0.06);
-        animation: fade-in 0.45s 0.16s ease forwards, title-glow 2s ease-in-out infinite;
+        animation: fade-in 0.4s 0.12s ease forwards;
         opacity: 0;
       }
 
       .progress-track {
-        width: 200px;
-        height: 2px;
-        margin-top: 10px;
+        width: 190px;
+        height: 5px;
         border-radius: 999px;
-        background: rgba(255,255,255,0.07);
+        background: var(--surface);
         position: relative;
+        overflow: hidden;
       }
 
       .progress-bar {
@@ -153,10 +106,8 @@ function buildSplashHtml(): string {
         inset: 0;
         border-radius: 999px;
         /* Fills from the left, then drains from the right — a calm, self-contained
-           loop that never travels outside the track, so its glow can't leak off the
-           edge the way a sweeping beam did. */
-        background: linear-gradient(90deg, rgba(252,238,9,0.55), #fffbe0);
-        box-shadow: 0 0 6px rgba(252,238,9,0.5);
+           loop that never travels outside the track. */
+        background: var(--accent);
         animation: indeterminate 1.5s ease-in-out infinite;
         will-change: transform;
       }
@@ -166,34 +117,8 @@ function buildSplashHtml(): string {
       }
 
       @keyframes float-mark {
-        0%, 100% { transform: translateY(0px) scale(1); }
-        50% { transform: translateY(-6px) scale(1.03); }
-      }
-
-      @keyframes pulse-glow {
-        0%, 100% { opacity: 0.62; transform: scale(0.96); }
-        50% { opacity: 1; transform: scale(1.06); }
-      }
-
-      @keyframes frame-breathe {
-        0%, 100% { opacity: 0.5; transform: rotate(45deg) scale(0.985); }
-        50% { opacity: 0.92; transform: rotate(45deg) scale(1.02); }
-      }
-
-      @keyframes title-glow {
-        0%, 100% {
-          color: rgba(239, 233, 180, 0.96);
-          text-shadow:
-            0 0 10px rgba(252,238,9,0.18),
-            0 0 24px rgba(252,238,9,0.1);
-        }
-        50% {
-          color: #fffde8;
-          text-shadow:
-            0 0 12px rgba(252,238,9,0.28),
-            0 0 28px rgba(252,238,9,0.24),
-            0 0 54px rgba(252,238,9,0.12);
-        }
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-4px); }
       }
 
       @keyframes indeterminate {
@@ -207,13 +132,10 @@ function buildSplashHtml(): string {
   <body>
     <div class="window-surface" aria-hidden="true"></div>
     <div class="shell">
-      <div class="mark-frame">
-        <div class="mark-glow"></div>
-        <svg class="logo-mark" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="6" y="6" width="32" height="32" rx="4" fill="#FCEE09"></rect>
-          <rect x="16" y="16" width="12" height="12" rx="2" fill="#050505"></rect>
-        </svg>
-      </div>
+      <svg class="logo-mark" width="64" height="64" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="6" y="6" width="32" height="32" rx="9" fill="var(--accent)"></rect>
+        <rect x="16" y="16" width="12" height="12" rx="3" fill="var(--accent-foreground)"></rect>
+      </svg>
       <div class="brand-lockup">
         <span class="title">Hyperion</span>
         <div class="progress-track">
@@ -225,7 +147,7 @@ function buildSplashHtml(): string {
 </html>`
 }
 
-export function createSplashWindow(): BrowserWindow {
+export function createSplashWindow(accentColorId?: string, uiMode?: 'light' | 'dark' | 'system'): BrowserWindow {
   const splash = new BrowserWindow({
     width: 480,
     height: 300,
@@ -244,7 +166,8 @@ export function createSplashWindow(): BrowserWindow {
     },
   })
 
-  const splashHtml = buildSplashHtml()
+  const dark = uiMode === 'dark' || (uiMode !== 'light' && nativeTheme.shouldUseDarkColors)
+  const splashHtml = buildSplashHtml(resolveAccent(accentColorId), dark)
   const splashUrl = `data:text/html;charset=UTF-8,${encodeURIComponent(splashHtml)}`
 
   let revealed = false

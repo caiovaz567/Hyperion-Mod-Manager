@@ -26,7 +26,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
   const { t } = useTranslation()
   return (
   <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[120] flex justify-center px-6">
-    <div data-bulk-actions="true" className="pointer-events-auto flex items-stretch gap-4 rounded-sm border-[0.5px] border-[#2e2e2e] bg-[#080808] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+    <div data-bulk-actions="true" className="pointer-events-auto flex items-stretch gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--overlay)] p-2 shadow-[0_16px_44px_rgba(0,0,0,0.5)]">
       <HyperionButton
         onClick={() => void onEnableSelected()}
         variant="toolbar"
@@ -78,7 +78,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
       >
         {t('library.bulk.uninstall')}
       </HyperionButton>
-      <div className="mx-1.5 h-5 self-center w-px bg-[#2a2a2a] shadow-[0_0_6px_rgba(255,255,255,0.06)]" />
+      <div className="mx-1.5 h-5 self-center w-px bg-[var(--border)]" />
       <HyperionIconButton
         icon="close"
         label={t('library.bulk.clearSelection')}

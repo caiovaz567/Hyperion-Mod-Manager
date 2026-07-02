@@ -26,11 +26,12 @@
   },
   "language": {
     "label": "Idioma",
-    "select": "Selecionar idioma"
+    "select": "Selecionar idioma",
+    "choose": "Escolha um idioma"
   },
   "shell": {
     "nav": {
-      "library": "Biblioteca de Mods",
+      "library": "Mods",
       "downloads": "Downloads",
       "settings": "Configurações"
     },
@@ -58,7 +59,11 @@
       "appLogs": "Registros do App",
       "minimize": "Minimizar",
       "maximize": "Maximizar",
-      "updateCheckFailed": "Falha ao verificar atualizações"
+      "updateCheckFailed": "Falha ao verificar atualizações",
+      "modeLight": "Modo claro",
+      "modeDark": "Modo escuro",
+      "modeSystem": "Seguir o sistema",
+      "modeAria": "Esquema de cores"
     },
     "update": {
       "downloading": "Baixando {progress}%",
@@ -117,7 +122,7 @@
       "tryAgain": "Tentar novamente",
       "waitingForScan": "Aguardando varredura",
       "resumeToContinue": "Retome para continuar",
-      "eta": "TEMPO REST."
+      "eta": "ETA"
     },
     "tooltip": {
       "resume": "Retomar download",
@@ -479,6 +484,8 @@
       "recentUpdated": "Atualizado",
       "recentDowngraded": "Rebaixado",
       "toggleFailed": "Falha na operação",
+      "enableMod": "Ativar mod",
+      "disableMod": "Desativar mod",
       "categoryTooltip": "Categoria: {category}",
       "saveName": "Salvar nome",
       "cancelRename": "Cancelar renomeação",
@@ -617,6 +624,11 @@
       "language": {
         "title": "Idioma",
         "description": "Escolha o idioma em que a interface do Hyperion é exibida."
+      },
+      "accent": {
+        "title": "Cor",
+        "description": "Escolha a cor de destaque usada em botões, switches e estados ativos. Aplica na hora.",
+        "select": "Selecionar cor"
       }
     },
     "header": {

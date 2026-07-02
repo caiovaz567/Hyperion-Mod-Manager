@@ -4,9 +4,11 @@ import { IpcService } from '../../services/IpcService'
 import { IPC, type IpcResult, type VfsOverwriteInfo } from '@shared/types'
 import { useAppVersion } from '../../hooks/useAppVersion'
 import { useNexusAccount } from '../../hooks/useNexusAccount'
-import { PathBox, SettingCard, StatusReadout, SurfaceTabRail, ValidationRow, uiButton } from './uiKit'
-import { LanguageSelect } from './LanguageSelect'
+import { PathBox, SettingCard, UnderlineTabs, ValidationRow, uiButton } from './uiKit'
+import { HyperionBadge, HyperionSwitch } from './HyperionPrimitives'
+import { AccentSelect } from './AccentSelect'
 import { useTranslation, type TranslationKey } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
 
 type SettingsTab = 'general' | 'paths' | 'nexus' | 'updates' | 'about'
 type FolderState = 'valid' | 'invalid' | 'empty'
@@ -47,22 +49,22 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-[12.5px]">
       {/* Free */}
-      <div className={`rounded-sm border-0 p-3 space-y-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)] ${isPremium === false ? 'bg-[rgba(96,165,250,0.10)]' : 'bg-[#101010]'}`}>
+      <div className={`rounded-xl border-0 p-3 space-y-2.5 ${isPremium === false ? 'bg-[rgba(96,165,250,0.10)]' : 'bg-[var(--surface-secondary)]'}`}>
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#555]'}`}>{t('common.free')}</div>
         {NEXUS_FREE_FEATURES.map((f) => (
           <div key={f.icon} className="flex items-start gap-2">
-            <span className={`material-symbols-outlined text-[14px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#444]'}`}>{f.icon}</span>
+            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#444]'}`} />
             <span className={isPremium === false ? 'text-[#c0c0c0]' : 'text-[#555]'}>{t(f.textKey)}</span>
           </div>
         ))}
       </div>
 
       {/* Premium */}
-      <div className={`rounded-sm border-0 p-3 space-y-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)] ${isPremium === true ? 'bg-[rgba(252,238,9,0.10)]' : 'bg-[#101010]'}`}>
+      <div className={`rounded-xl border-0 p-3 space-y-2.5 ${isPremium === true ? 'bg-[rgba(252,238,9,0.10)]' : 'bg-[var(--surface-secondary)]'}`}>
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#555]'}`}>{t('common.premium')}</div>
         {NEXUS_PREMIUM_FEATURES.map((f) => (
           <div key={f.icon} className="flex items-start gap-2">
-            <span className={`material-symbols-outlined text-[14px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#444]'}`}>{f.icon}</span>
+            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#444]'}`} />
             <span className={isPremium === true ? 'text-[#c0c0c0]' : 'text-[#555]'}>{t(f.textKey)}</span>
           </div>
         ))}
@@ -366,8 +368,10 @@ export const SettingsPage: React.FC = () => {
   }
 
   const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn } = uiButton
+  // Accent-tinted link buttons for the credit rows — they sit on --surface-secondary, so a
+  // neutral fill would blend in and stop reading as a button.
   const aboutActionBtn =
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[#171717] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#c9c9c9] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07),0_8px_18px_rgba(0,0,0,0.20)] transition-colors hover:bg-[rgba(252,238,9,0.16)] hover:text-[#fcee09] focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.42),0_8px_18px_rgba(0,0,0,0.20)] [&_.material-symbols-outlined]:text-current [&_.material-symbols-outlined]:leading-none'
+    'group inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-3.5 text-[13px] font-medium leading-none text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.42)]'
 
   const tabMeta: Array<{ id: SettingsTab; label: string; icon: string }> = [
     { id: 'general', label: t('settings.tabs.general'), icon: 'tune' },
@@ -386,17 +390,17 @@ export const SettingsPage: React.FC = () => {
   const nexusStatus = nexusAccount.status
   const nexusReadout =
     nexusStatus === 'connected'
-      ? { tone: 'good' as const, label: t('settings.nexus.status.connected') }
+      ? { tone: 'success' as const, label: t('settings.nexus.status.connected') }
       : nexusStatus === 'checking'
-      ? { tone: 'info' as const, label: t('settings.nexus.status.checking') }
+      ? { tone: 'accent' as const, label: t('settings.nexus.status.checking') }
       : nexusStatus === 'error'
-      ? { tone: 'error' as const, label: t('settings.nexus.status.invalidKey') }
+      ? { tone: 'danger' as const, label: t('settings.nexus.status.invalidKey') }
       : { tone: 'neutral' as const, label: t('settings.nexus.status.notConnected') }
 
   const updateReadout = updateDownloaded
-    ? { tone: 'good' as const, label: t('settings.updates.status.ready') }
+    ? { tone: 'success' as const, label: t('settings.updates.status.ready') }
     : updateAvailable
-    ? { tone: 'warn' as const, label: t('settings.updates.status.available') }
+    ? { tone: 'warning' as const, label: t('settings.updates.status.available') }
     : { tone: 'neutral' as const, label: `v${appVersion}` }
 
   const updateVersion = updateInfo?.version ?? ''
@@ -409,35 +413,29 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="stable-scroll-gutter h-full overflow-y-scroll pb-10 animate-settings-in sm:pb-16">
       <div className="mx-auto max-w-[960px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        <header className="mb-6 border-b-[0.5px] border-[#171717] pb-5">
+        <header className="mb-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="mb-2 flex items-center gap-2">
-                <span className="h-1.5 w-1.5 bg-[#fcee09]" />
-                <span className="ui-support-mono text-[11px] uppercase tracking-[0.16em] text-[#6f6f6f]">
-                  {t('settings.header.eyebrow')}
-                </span>
-              </div>
-              <h1 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
+              <h1 className="text-[1.5rem] font-bold tracking-[-0.01em] text-[var(--text-primary)]">
                 {t('settings.header.title')}
               </h1>
-              <p className="mt-3 max-w-[680px] text-[15px] leading-7 text-[#c0c0c0]">
+              <p className="mt-2 max-w-[680px] text-[15px] leading-7 text-[var(--text-support)]">
                 {t('settings.header.subtitle')}
               </p>
             </div>
-            <StatusReadout tone="neutral" label={`v${appVersion}`} />
+            <HyperionBadge tone="accent">v{appVersion}</HyperionBadge>
           </div>
         </header>
 
-        <SurfaceTabRail
+        <UnderlineTabs
           items={tabMeta}
           activeId={activeTab}
           onChange={setActiveTab}
           ariaLabel={t('settings.header.sectionsAria')}
         />
 
-        <div className="relative z-0 bg-[#050505] shadow-[inset_0_-1px_0_rgba(255,255,255,0.045)]">
-          <div key={activeTab}>
+        <div className="relative z-0">
+          <div key={activeTab} className="mt-5 space-y-4">
             {activeTab === 'general' && (
               <>
                 <SettingCard
@@ -447,35 +445,21 @@ export const SettingsPage: React.FC = () => {
                   className="fade-up"
                   style={{ animationDelay: '0ms' }}
                 >
-                <button
-                  type="button"
-                  onClick={() => {
-                    void updateSettings({ autoInstallDownloads: !(settings?.autoInstallDownloads ?? true) })
-                  }}
-                  className="flex w-full items-center justify-between gap-4 rounded-sm border-0 bg-[#101010] px-4 py-3 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.055)] transition-colors hover:bg-[#151515]"
-                >
+                <div className="flex w-full items-center justify-between gap-4 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3">
                   <span className="min-w-0">
-                    <span className="block text-[14px] font-semibold text-[#e5e2e1]">{t('settings.general.installBehavior.toggleTitle')}</span>
-                    <span className="mt-1 block text-[13px] leading-5 text-[#8f8f8f]">
+                    <span className="block text-[14px] font-semibold text-[var(--text-primary-alt)]">{t('settings.general.installBehavior.toggleTitle')}</span>
+                    <span className="mt-1 block text-[13px] leading-5 text-[var(--text-support)]">
                       {t('settings.general.installBehavior.toggleDescription')}
                     </span>
                   </span>
-                  <span
-                    className={`relative h-5 w-10 shrink-0 rounded-full border-0 transition-colors ${
-                      (settings?.autoInstallDownloads ?? true)
-                        ? 'bg-[rgba(252,238,9,0.28)]'
-                        : 'bg-[#1d1d1d]'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-full transition-all ${
-                        (settings?.autoInstallDownloads ?? true)
-                          ? 'right-[2px] bg-[#fcee09]'
-                          : 'left-[2px] bg-[#5a5a5a]'
-                      }`}
-                    />
-                  </span>
-                </button>
+                  <HyperionSwitch
+                    isSelected={settings?.autoInstallDownloads ?? true}
+                    onChange={(selected) => {
+                      void updateSettings({ autoInstallDownloads: selected })
+                    }}
+                    aria-label={t('settings.general.installBehavior.toggleTitle')}
+                  />
+                </div>
               </SettingCard>
 
               <SettingCard
@@ -497,7 +481,7 @@ export const SettingsPage: React.FC = () => {
                     onClick={() => void handleOpenRuntimeCaptures()}
                     className={`${secondaryBtn} w-full sm:w-auto`}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    <Icon name="folder_open" style={{ fontSize: 16 }} />
                     {t('common.openFolder')}
                   </button>
                   {runtimeCapturesInfo && runtimeCapturesInfo.fileCount > 0 && (
@@ -505,11 +489,9 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => void handleClearRuntimeCaptures()}
                       disabled={clearingCaptures}
-                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-sm border-0 bg-[rgba(248,113,113,0.13)] px-4 text-[10px] brand-font font-bold uppercase leading-none tracking-widest text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[#0d0404] disabled:text-[#7c4a4a] sm:w-auto [&_.material-symbols-outlined]:leading-none"
+                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(248_113_113/0.13)] px-4 text-[13px] font-semibold leading-none text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[#0d0404] disabled:text-[#7c4a4a] sm:w-auto"
                     >
-                      <span className={`material-symbols-outlined ${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }}>
-                        {clearingCaptures ? 'progress_activity' : 'delete_sweep'}
-                      </span>
+                      <Icon name={clearingCaptures ? 'progress_activity' : 'delete_sweep'} className={`${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }} />
                       {clearingCaptures ? t('settings.general.runtimeCaptures.clearing') : t('settings.general.runtimeCaptures.clear')}
                     </button>
                   )}
@@ -517,13 +499,13 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="language"
-                title={t('settings.general.language.title')}
-                description={t('settings.general.language.description')}
+                icon="colorize"
+                title={t('settings.general.accent.title')}
+                description={t('settings.general.accent.description')}
                 className="fade-up"
                 style={{ animationDelay: '120ms' }}
               >
-                <LanguageSelect align="left" buttonClassName="w-full justify-between sm:w-auto sm:justify-start" />
+                <AccentSelect />
               </SettingCard>
               </>
             )}
@@ -547,12 +529,12 @@ export const SettingsPage: React.FC = () => {
                     <button onClick={() => void autoDetectGame()} disabled={detectingGame} className={`${secondaryBtn} w-full sm:w-auto`}>
                       {detectingGame ? (
                         <>
-                          <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                          <Icon name="progress_activity" className="animate-spin" style={{ fontSize: 16 }} />
                           {t('common.detecting')}
                         </>
                       ) : (
                         <>
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>search</span>
+                          <Icon name="search" style={{ fontSize: 16 }} />
                           {t('common.detectAutomatically')}
                         </>
                       )}
@@ -561,7 +543,7 @@ export const SettingsPage: React.FC = () => {
                       onClick={() => void browseFolder(t('settings.paths.game.dialogTitle'), setGamePath)}
                       className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                      <Icon name="folder_open" style={{ fontSize: 16 }} />
                       {t('common.chooseFolder')}
                     </button>
                   </div>
@@ -582,14 +564,14 @@ export const SettingsPage: React.FC = () => {
                 />
                 <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                   <button onClick={applyDefaultLibraryPath} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                    <Icon name="bookmark" style={{ fontSize: 16 }} />
                     {t('common.useSuggested')}
                   </button>
                   <button
                     onClick={() => void browseFolder(t('settings.paths.library.dialogTitle'), setLibraryPath)}
                     className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    <Icon name="folder_open" style={{ fontSize: 16 }} />
                     {t('common.chooseFolder')}
                   </button>
                 </div>
@@ -606,14 +588,14 @@ export const SettingsPage: React.FC = () => {
                 <ValidationRow state="info" infoText={downloadsStatus.description} />
                 <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
                   <button onClick={applyDefaultDownloadPath} disabled={!defaultPaths} className={`${secondaryBtn} w-full sm:w-auto`}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bookmark</span>
+                    <Icon name="bookmark" style={{ fontSize: 16 }} />
                     {t('common.useSuggested')}
                   </button>
                   <button
                     onClick={() => void browseFolder(t('settings.paths.downloads.dialogTitle'), setDownloadPath)}
                     className={`${accentOutlineBtn} w-full sm:ml-auto sm:w-auto`}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>folder_open</span>
+                    <Icon name="folder_open" style={{ fontSize: 16 }} />
                     {t('common.chooseFolder')}
                   </button>
                 </div>
@@ -628,23 +610,21 @@ export const SettingsPage: React.FC = () => {
                 title={t('settings.nexus.connection.title')}
                 description={t('settings.nexus.connection.description')}
                 headerRight={
-                  <StatusReadout
-                    tone={nexusReadout.tone}
-                    label={nexusReadout.label}
-                    pulse={nexusStatus === 'checking'}
-                  />
+                  <HyperionBadge tone={nexusReadout.tone} className={nexusStatus === 'checking' ? 'animate-pulse' : ''}>
+                    {nexusReadout.label}
+                  </HyperionBadge>
                 }
                 className="fade-up"
                 style={{ animationDelay: '0ms' }}
               >
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
-                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-sm border-0 bg-[#101010] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_rgba(252,238,9,0.26)]">
+                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-xl border-0 bg-[var(--surface-secondary)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.26)]">
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}
                       onChange={(e) => setNexusApiKey(e.target.value)}
                       placeholder={t('settings.nexus.connection.placeholder')}
-                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[13px] text-[#e5e2e1] placeholder:text-[#595959] focus:outline-none"
+                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[13px] text-[var(--text-primary-alt)] placeholder:text-[#595959] focus:outline-none"
                       spellCheck={false}
                       autoComplete="off"
                     />
@@ -654,9 +634,7 @@ export const SettingsPage: React.FC = () => {
                       className="flex items-center self-stretch px-3 text-[#6a6a6a] transition-colors hover:text-[#e7e4e3]"
                       tabIndex={-1}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                        {showApiKey ? 'visibility_off' : 'visibility'}
-                      </span>
+                      <Icon name={showApiKey ? 'visibility_off' : 'visibility'} style={{ fontSize: 18 }} />
                     </button>
                   </div>
                   <button
@@ -665,12 +643,12 @@ export const SettingsPage: React.FC = () => {
                     disabled={!nexusApiKey.trim()}
                     className={`${secondaryBtn} w-full sm:w-auto`}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>backspace</span>
+                    <Icon name="backspace" style={{ fontSize: 16 }} />
                     {t('settings.nexus.connection.clearKey')}
                   </button>
                 </div>
                 {nexusStatus === 'error' && (
-                  <div className="mt-4 rounded-sm border-0 bg-[rgba(248,113,113,0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
+                  <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
                     {nexusAccount.error}
                   </div>
                 )}
@@ -682,10 +660,9 @@ export const SettingsPage: React.FC = () => {
                 description={t('settings.nexus.account.description')}
                 headerRight={
                   nexusStatus === 'connected' ? (
-                    <StatusReadout
-                      tone={nexusAccount.data.isPremium ? 'warn' : 'info'}
-                      label={nexusAccount.data.isPremium ? t('common.premium') : t('common.free')}
-                    />
+                    <HyperionBadge tone={nexusAccount.data.isPremium ? 'warning' : 'accent'}>
+                      {nexusAccount.data.isPremium ? t('common.premium') : t('common.free')}
+                    </HyperionBadge>
                   ) : undefined
                 }
                 className="fade-up"
@@ -719,11 +696,11 @@ export const SettingsPage: React.FC = () => {
               >
                 <div className="space-y-3 text-[13.5px] leading-relaxed text-[#b8b8b8]">
                   <div className="flex items-start gap-2.5">
-                    <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[#fcee09]" style={{ fontSize: 17 }}>subdirectory_arrow_right</span>
+                    <Icon name="subdirectory_arrow_right" className="mt-0.5 flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 17 }} />
                     <span>{t('settings.nexus.downloadFlow.bullet1')}</span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <span className="material-symbols-outlined mt-0.5 flex-shrink-0 text-[#fcee09]" style={{ fontSize: 17 }}>rule</span>
+                    <Icon name="rule" className="mt-0.5 flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 17 }} />
                     <span>{t('settings.nexus.downloadFlow.bullet2')}</span>
                   </div>
                 </div>
@@ -737,14 +714,14 @@ export const SettingsPage: React.FC = () => {
               title={t('settings.updates.title')}
               description={t('settings.updates.description')}
               headerRight={
-                <StatusReadout tone={updateReadout.tone} label={updateReadout.label} pulse={updateDownloading} />
+                <HyperionBadge tone={updateReadout.tone} className={updateDownloading ? 'animate-pulse' : ''}>{updateReadout.label}</HyperionBadge>
               }
               className="fade-up"
               style={{ animationDelay: '0ms' }}
             >
               <ValidationRow state={updateDownloaded || updateAvailable ? 'info' : 'valid'} validText={updateMessage} infoText={updateMessage} />
               {updateError ? (
-                <div className="mt-4 rounded-sm border-0 bg-[rgba(248,113,113,0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
+                <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
                   {updateError}
                 </div>
               ) : null}
@@ -757,12 +734,12 @@ export const SettingsPage: React.FC = () => {
                 >
                   {updateActionLoading === 'check' ? (
                     <>
-                      <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                      <Icon name="progress_activity" className="animate-spin" style={{ fontSize: 16 }} />
                       {t('settings.updates.checking')}
                     </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+                      <Icon name="refresh" style={{ fontSize: 16 }} />
                       {t('settings.updates.checkButton')}
                     </>
                   )}
@@ -776,12 +753,12 @@ export const SettingsPage: React.FC = () => {
                   >
                     {updateActionLoading === 'download' || updateDownloading ? (
                       <>
-                        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                        <Icon name="progress_activity" className="animate-spin" style={{ fontSize: 16 }} />
                         {t('settings.updates.downloading')}
                       </>
                     ) : (
                       <>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
+                        <Icon name="download" style={{ fontSize: 16 }} />
                         {t('settings.updates.downloadButton')}
                       </>
                     )}
@@ -789,7 +766,7 @@ export const SettingsPage: React.FC = () => {
                 )}
                 {updateDownloaded && (
                   <button type="button" onClick={installUpdate} className={`${primaryBtn} w-full sm:ml-auto sm:w-auto`}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>restart_alt</span>
+                    <Icon name="restart_alt" style={{ fontSize: 18 }} />
                     {t('settings.updates.installButton')}
                   </button>
                 )}
@@ -806,49 +783,34 @@ export const SettingsPage: React.FC = () => {
                 className="fade-up"
                 style={{ animationDelay: '0ms' }}
               >
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.12fr)_minmax(280px,0.88fr)]">
-                  <section className="rounded-sm border-0 bg-[#101010] px-4 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
-                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">{t('settings.about.projectLabel')}</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <StatusReadout tone="neutral" label={`v${appVersion}`} />
-                      <span className="inline-flex h-7 items-center rounded-sm border-0 bg-[#151515] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
-                        GPL-3.0
-                      </span>
-                      <span className="inline-flex h-7 items-center rounded-sm border-0 bg-[#151515] px-2.5 brand-font text-[10px] font-bold uppercase tracking-[0.16em] text-[#a0a0a0]">
-                        {t('settings.about.unofficial')}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-[13.5px] leading-6 text-[#b8b8b8]">
-                      {t('settings.about.projectBody')}
-                    </p>
-                    <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
-                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_GITHUB_URL)} className={`${aboutActionBtn} w-full sm:w-auto`}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>code</span>
-                        GitHub
-                      </button>
-                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_RELEASES_URL)} className={`${aboutActionBtn} w-full sm:w-auto`}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>new_releases</span>
-                        {t('settings.about.releases')}
-                      </button>
-                    </div>
-                  </section>
-
-                  <section className="rounded-sm border-0 bg-[#101010] px-4 py-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
-                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">{t('settings.about.supportLabel')}</div>
-                    <p className="mt-3 text-[13.5px] leading-6 text-[#b8b8b8]">
-                      {t('settings.about.supportBody')}
-                    </p>
-                    <div className="mt-4 grid gap-2">
-                      <button type="button" onClick={() => void handleOpenExternal(HYPERION_ISSUES_URL)} className={aboutActionBtn}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bug_report</span>
-                        {t('settings.about.reportIssue')}
-                      </button>
-                      <button type="button" onClick={() => void handleCopyDiagnostics()} className={accentOutlineBtn}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>content_copy</span>
-                        {t('settings.about.copyDiagnostics')}
-                      </button>
-                    </div>
-                  </section>
+                <div className="flex flex-wrap items-center gap-2">
+                  <HyperionBadge tone="accent">v{appVersion}</HyperionBadge>
+                  <HyperionBadge tone="neutral">GPL-3.0</HyperionBadge>
+                  <HyperionBadge tone="neutral">{t('settings.about.unofficial')}</HyperionBadge>
+                </div>
+                <p className="mt-3 max-w-[620px] text-[13.5px] leading-6 text-[var(--text-support)]">
+                  {t('settings.about.projectBody')}
+                </p>
+                <p className="mt-2 max-w-[620px] text-[13.5px] leading-6 text-[var(--text-support)]">
+                  {t('settings.about.supportBody')}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2.5">
+                  <button type="button" onClick={() => void handleOpenExternal(HYPERION_GITHUB_URL)} className={secondaryBtn}>
+                    <Icon name="code" style={{ fontSize: 16 }} />
+                    GitHub
+                  </button>
+                  <button type="button" onClick={() => void handleOpenExternal(HYPERION_RELEASES_URL)} className={secondaryBtn}>
+                    <Icon name="new_releases" style={{ fontSize: 16 }} />
+                    {t('settings.about.releases')}
+                  </button>
+                  <button type="button" onClick={() => void handleOpenExternal(HYPERION_ISSUES_URL)} className={secondaryBtn}>
+                    <Icon name="bug_report" style={{ fontSize: 16 }} />
+                    {t('settings.about.reportIssue')}
+                  </button>
+                  <button type="button" onClick={() => void handleCopyDiagnostics()} className={accentOutlineBtn}>
+                    <Icon name="content_copy" style={{ fontSize: 16 }} />
+                    {t('settings.about.copyDiagnostics')}
+                  </button>
                 </div>
               </SettingCard>
 
@@ -859,54 +821,61 @@ export const SettingsPage: React.FC = () => {
                 className="fade-up"
                 style={{ animationDelay: '60ms' }}
               >
-                <div className="overflow-hidden rounded-sm border-0 bg-[#101010] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]">
-                  <div className="grid gap-3 border-b-[0.5px] border-[#1a1a1a] px-4 py-4 lg:grid-cols-[116px_minmax(0,1fr)_174px] lg:items-center">
-                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#fcee09]">{t('settings.about.credits.coreVfsLabel')}</div>
-                    <div>
-                      <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">usvfs / Mod Organizer 2</div>
-                      <p className="mt-1 text-[13.5px] leading-6 text-[#a8a8a8]">
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
+                    <div className="min-w-0 max-w-[520px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[14px] font-semibold text-[var(--text-primary)]">usvfs / Mod Organizer 2</span>
+                        <HyperionBadge tone="accent">{t('settings.about.credits.coreVfsLabel')}</HyperionBadge>
+                      </div>
+                      <p className="mt-1 text-[13px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.coreVfsBody')}
                       </p>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                    <div className="flex shrink-0 gap-2">
                       <button type="button" onClick={() => void handleOpenExternal(USVFS_URL)} className={aboutActionBtn}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hub</span>
+                        <Icon name="hub" style={{ fontSize: 15 }} />
                         usvfs
                       </button>
                       <button type="button" onClick={() => void handleOpenExternal(MOD_ORGANIZER_URL)} className={aboutActionBtn}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+                        <Icon name="open_in_new" style={{ fontSize: 15 }} />
                         MO2
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid gap-3 border-b-[0.5px] border-[#1a1a1a] px-4 py-4 lg:grid-cols-[116px_minmax(0,1fr)_174px] lg:items-center">
-                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">{t('settings.about.credits.serviceApiLabel')}</div>
-                    <div>
-                      <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">Nexus Mods API</div>
-                      <p className="mt-1 text-[13.5px] leading-6 text-[#a8a8a8]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
+                    <div className="min-w-0 max-w-[520px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[14px] font-semibold text-[var(--text-primary)]">Nexus Mods API</span>
+                        <HyperionBadge tone="neutral">{t('settings.about.credits.serviceApiLabel')}</HyperionBadge>
+                      </div>
+                      <p className="mt-1 text-[13px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.serviceApiBody')}
                       </p>
                     </div>
-                    <div className="hidden lg:block" />
                   </div>
 
-                  <div className="grid gap-3 px-4 py-4 lg:grid-cols-[116px_minmax(0,1fr)_174px] lg:items-center">
-                    <div className="brand-font text-[10px] font-bold uppercase tracking-[0.18em] text-[#777]">{t('settings.about.credits.referenceLabel')}</div>
-                    <div>
-                      <div className="brand-font text-[11px] font-bold uppercase tracking-[0.14em] text-[#f4f1ee]">REDmodding ecosystem</div>
-                      <p className="mt-1 text-[13.5px] leading-6 text-[#a8a8a8]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
+                    <div className="min-w-0 max-w-[520px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[14px] font-semibold text-[var(--text-primary)]">REDmodding ecosystem</span>
+                        <HyperionBadge tone="neutral">{t('settings.about.credits.referenceLabel')}</HyperionBadge>
+                      </div>
+                      <p className="mt-1 text-[13px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.referenceBody')}
                       </p>
                     </div>
-                    <button type="button" onClick={() => void handleOpenExternal(REDMODDING_URL)} className={aboutActionBtn}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>menu_book</span>
-                      REDmodding
-                    </button>
+                    <div className="flex shrink-0 gap-2">
+                      <button type="button" onClick={() => void handleOpenExternal(REDMODDING_URL)} className={aboutActionBtn}>
+                        <Icon name="menu_book" style={{ fontSize: 15 }} />
+                        REDmodding
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <p className="mt-3 text-[12.5px] leading-5 text-[#7f7f7f]">
+                <p className="mt-3 text-[12.5px] leading-5 text-[var(--text-muted)]">
                   {t('settings.about.disclaimer')}
                 </p>
               </SettingCard>

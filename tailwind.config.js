@@ -7,18 +7,6 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
-      colors: {
-        'surface-dim':               '#050505',
-        'on-surface':                '#e5e2e1',
-        'on-surface-variant':        '#888888',
-        'outline-variant':           '#222222',
-        'surface-container':         '#0a0a0a',
-        'surface-bright':            '#1a1a1a',
-        'primary-fixed':             '#fcee09',
-        'surface-variant':           '#111111',
-        'surface-container-high':    '#111111',
-        'surface-container-highest': '#1a1a1a',
-      },
       fontFamily: {
         headline: ['Syne', 'sans-serif'],
         body:     ['DM Sans', 'sans-serif'],

@@ -26,13 +26,10 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
   const { t } = useTranslation()
   return (
   <div className="shrink-0 px-6 pt-6 pb-3 w-full">
-    <h1 className="screen-title-font text-[1.42rem] font-black uppercase tracking-[0.06em] text-white sm:text-[1.58rem]">
+    <h1 className="text-[1.32rem] font-bold tracking-[-0.01em] text-white sm:text-[1.44rem]">
       {t('downloads.title')}
     </h1>
-    <p
-      className="mt-1 flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]"
-      style={{ fontFamily: '"DM Sans", sans-serif' }}
-    >
+    <p className="mt-1.5 flex items-center gap-2 text-[13px] text-[var(--text-support)]">
       {t('downloads.summary.local')}: {localFileCount}
       {activeDownloadCount > 0 && <>&nbsp;|&nbsp; {t('downloads.summary.active')}: {activeDownloadCount}</>}
       {searchQuery.trim() && <>&nbsp;|&nbsp; {t('downloads.summary.shown')}: {totalRows}</>}

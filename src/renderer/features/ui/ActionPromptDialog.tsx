@@ -1,10 +1,14 @@
 import React from 'react'
-import { createPortal } from 'react-dom'
+import { Button } from '@heroui/react'
+import { HyperionModal } from './HyperionPrimitives'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Icon } from './Icon'
+
+type ActionPromptTone = 'accent' | 'danger'
 
 interface ActionPromptDialogProps {
-  accentColor: string
-  accentGlow: string
+  /** Primary-action color language. 'accent' follows the selected accent; 'danger' is semantic red. */
+  tone?: ActionPromptTone
   title: string
   description: string
   detailLabel?: string
@@ -13,7 +17,6 @@ interface ActionPromptDialogProps {
   primaryLabel: string
   secondaryLabel?: string
   cancelLabel?: string
-  primaryTextColor?: string
   onPrimary: () => void
   onSecondary?: () => void
   onCancel: () => void
@@ -23,8 +26,7 @@ interface ActionPromptDialogProps {
 }
 
 export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
-  accentColor,
-  accentGlow,
+  tone = 'accent',
   title,
   description,
   detailLabel,
@@ -33,7 +35,6 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
   primaryLabel,
   secondaryLabel,
   cancelLabel,
-  primaryTextColor = '#050505',
   onPrimary,
   onSecondary,
   onCancel,
@@ -43,43 +44,34 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
 }) => {
   const { t } = useTranslation()
   const resolvedCancelLabel = cancelLabel ?? t('common.cancel')
-  return createPortal(
-    <div
-      data-action-prompt="true"
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-3 backdrop-blur-sm sm:px-4"
-      onClick={(event) => {
-        event.stopPropagation()
-        onCancel()
-      }}
-    >
-      <div
-        className={`relative w-full ${maxWidthClassName ?? 'max-w-md'} border-[0.5px] border-[#222] bg-[#050505] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] sm:p-8 max-h-[min(92vh,760px)] overflow-y-auto hyperion-scrollbar`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div
-          className="absolute top-0 left-0 w-full h-[2px]"
-          style={{ background: accentColor, boxShadow: `0 0 10px ${accentGlow}` }}
-        />
+  const isDanger = tone === 'danger'
+  const iconChipClass = isDanger
+    ? 'bg-[rgb(248_113_113/0.14)] text-[var(--status-error)]'
+    : 'bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)]'
 
-        <div className="mb-5 flex items-start gap-3 sm:mb-6 sm:items-center" style={{ color: accentColor }}>
-          <span className="material-symbols-outlined text-2xl">{icon}</span>
-          <h2 className="brand-font text-lg font-bold tracking-tighter uppercase sm:text-xl">{title}</h2>
+  return (
+    <HyperionModal
+      onClose={onCancel}
+      zIndexClassName="z-[200]"
+      surfaceClassName={`max-h-[min(92vh,760px)] overflow-y-auto hyperion-scrollbar ${maxWidthClassName ?? 'max-w-md'}`}
+    >
+      <div className="p-6 sm:p-7">
+        <div className="mb-4 flex items-center gap-3">
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconChipClass}`}>
+            <Icon name={icon} className="text-[20px]" />
+          </span>
+          <h2 className="text-[1.05rem] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{title}</h2>
         </div>
 
-        <p className="text-[#9a9a9a] text-sm leading-relaxed mb-3">{description}</p>
+        <p className="mb-4 text-sm leading-relaxed text-[var(--text-support)]">{description}</p>
+
         {(detailContent || (detailLabel && detailValue)) && (
-          <div className="mb-6 overflow-hidden rounded-sm border-[0.5px] border-[#2a2a2a] bg-[#0b0b0b] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:mb-8">
-            <div
-              className="h-px w-full"
-              style={{ background: accentColor, boxShadow: `0 0 10px ${accentGlow}` }}
-            />
+          <div className="mb-6 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
             {detailContent ?? (
               <div className="px-4 py-3">
-                <div className="text-sm text-[#9a9a9a] font-mono">
-                  {detailLabel}
-                </div>
+                <div className="font-mono text-xs text-[var(--text-support)]">{detailLabel}</div>
                 <div
-                  className="mt-2 break-words text-sm font-semibold tracking-[0.01em] text-white"
+                  className="mt-1.5 break-words text-sm font-semibold tracking-[0.01em] text-[var(--text-primary)]"
                   title={detailValue}
                 >
                   {detailValue}
@@ -89,39 +81,25 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
           </div>
         )}
 
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={onPrimary}
-            disabled={submitting}
-            className="w-full font-bold py-3 text-xs tracking-widest uppercase transition-all rounded-sm disabled:opacity-60 hover:brightness-110 hover:shadow-[0_0_16px_rgba(255,255,255,0.08)]"
-            style={{
-              background: accentColor,
-              color: primaryTextColor,
-              boxShadow: `0 0 15px ${accentGlow}`,
-            }}
+        <div className="flex flex-col gap-2.5">
+          <Button
+            variant={isDanger ? 'danger' : 'primary'}
+            onPress={onPrimary}
+            isDisabled={submitting}
+            className="w-full"
           >
             {primaryLabel}
-          </button>
+          </Button>
           {secondaryLabel && onSecondary && (
-            <button
-              onClick={onSecondary}
-              disabled={submitting}
-              className="w-full bg-[#0a0a0a] border-[0.5px] border-[#7a7a7a] text-white font-bold py-3 text-xs tracking-widest uppercase rounded-sm disabled:opacity-60 hover:border-[#9a9a9a] hover:bg-[#111] hover:shadow-[0_0_12px_rgba(255,255,255,0.05)] transition-all"
-              style={{ '--hover-color': accentColor } as React.CSSProperties}
-            >
+            <Button variant="secondary" onPress={onSecondary} isDisabled={submitting} className="w-full">
               {secondaryLabel}
-            </button>
+            </Button>
           )}
-          <button
-            onClick={onCancel}
-            disabled={submitting}
-            className="w-full border-[0.5px] border-transparent text-[#8a8a8a] hover:text-white hover:border-[#222] hover:bg-[#0a0a0a] py-2 text-[10px] font-bold tracking-widest uppercase transition-all mt-2 disabled:opacity-60 rounded-sm"
-          >
+          <Button variant="ghost" onPress={onCancel} isDisabled={submitting} className="w-full">
             {resolvedCancelLabel}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>,
-    document.body
+    </HyperionModal>
   )
 }
