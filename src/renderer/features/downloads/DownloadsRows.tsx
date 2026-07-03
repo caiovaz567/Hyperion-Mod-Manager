@@ -603,7 +603,9 @@ const LocalDownloadRow: React.FC<{
   )
 }
 
-export const DownloadsRow: React.FC<DownloadsRowProps> = ({
+// Memoized so scrolling the windowed list only renders the rows entering the
+// viewport — with stable props, the ~30 already-visible rows are reused as-is.
+const DownloadsRowInner: React.FC<DownloadsRowProps> = ({
   row,
   rowIndex,
   gridTemplate,
@@ -679,3 +681,6 @@ export const DownloadsRow: React.FC<DownloadsRowProps> = ({
     />
   )
 }
+
+export const DownloadsRow = React.memo(DownloadsRowInner)
+DownloadsRow.displayName = 'DownloadsRow'

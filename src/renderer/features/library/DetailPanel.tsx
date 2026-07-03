@@ -296,6 +296,20 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const totalFileConflicts = winFileConflicts.length + lossFileConflicts.length
   const totalArchiveConflicts = winArchiveConflicts.length + lossArchiveConflicts.length
 
+  // When the panel opens straight onto Conflicts (badge click), land on the sub-tab
+  // that actually has content: archive-only conflicts open on `.archive`, anything
+  // with path conflicts (or both kinds) opens on Paths. Runs once per open/mod
+  // switch — deliberately NOT on every background conflict refresh, so it never
+  // yanks the user off a sub-tab they picked.
+  useEffect(() => {
+    if (initialTab === 'conflicts' && totalFileConflicts === 0 && totalArchiveConflicts > 0) {
+      setConflictSubTab('archives')
+    } else {
+      setConflictSubTab('files')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab, modId])
+
   // The conflict inspector is the only surface that shows archive-resource names. Indexing
   // resolves names from the in-memory DB only (fast); if any of this mod's archive conflicts
   // are still rendering a raw hash, resolve them lazily via the external tooling now that the

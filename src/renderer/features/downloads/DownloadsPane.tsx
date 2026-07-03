@@ -77,6 +77,105 @@ const shouldPreferReinstallTarget = (candidate: ModMetadata, current: ModMetadat
   return getInstalledTimestamp(candidate.installedAt) < getInstalledTimestamp(current.installedAt)
 }
 
+// Owns the windowing scroll state so scrolling re-renders ONLY this small list
+// component — never the whole DownloadsPane (toolbar, dialogs, context menu, sort
+// pipeline). Same isolation the mod library uses: before this split, the scroll
+// listener's state lived in the pane, so every scroll frame above the
+// virtualization threshold re-rendered the entire screen (~30fps with 120+ files).
+// With DownloadsRow memoized, a scroll frame renders just the rows entering the
+// overscan window.
+interface DownloadsRowListProps {
+  rows: DownloadListRow[]
+  scrollRef: React.RefObject<HTMLDivElement | null>
+  gridTemplate: string
+  installedBySourcePath: Map<string, ModMetadata>
+  newFilesSet: Set<string>
+  deletingDownloads: Record<string, { startedAt: number; entry: DownloadEntry }>
+  deleteProgressTick: number
+  installProgress: number
+  installStatus: string
+  installCurrentFile: string
+  onContextMenu: (event: React.MouseEvent, row: DownloadListRow) => void
+  onInstall: (entry: DownloadEntry) => void | Promise<void>
+  onDeleteRequest: (entry: DownloadEntry) => void
+  onMarkOld: (entry: DownloadEntry) => void
+  onPauseDownload: (id: string) => void | Promise<void>
+  onResumeDownload: (id: string) => void | Promise<void>
+  onCancelDownload: (id: string) => void | Promise<void>
+}
+
+const DownloadsRowList: React.FC<DownloadsRowListProps> = ({
+  rows,
+  scrollRef,
+  gridTemplate,
+  installedBySourcePath,
+  newFilesSet,
+  deletingDownloads,
+  deleteProgressTick,
+  installProgress,
+  installStatus,
+  installCurrentFile,
+  onContextMenu,
+  onInstall,
+  onDeleteRequest,
+  onMarkOld,
+  onPauseDownload,
+  onResumeDownload,
+  onCancelDownload,
+}) => {
+  const totalRows = rows.length
+  const virtualized = useVirtualRows({
+    containerRef: scrollRef,
+    count: totalRows,
+    rowHeight: DOWNLOAD_ROW_HEIGHT,
+    overscan: 12,
+    enabled: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD,
+  })
+  const visibleRows = useMemo(
+    () => rows.slice(virtualized.startIndex, virtualized.endIndex),
+    [rows, virtualized.endIndex, virtualized.startIndex]
+  )
+
+  return (
+    <div
+      style={{
+        paddingTop: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualized.paddingTop : 0,
+        paddingBottom: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualized.paddingBottom : 0,
+      }}
+    >
+      {visibleRows.map((row, visibleIndex) => {
+        const entry = row.kind === 'local' ? row.entry : null
+        const deletingState = entry ? deletingDownloads[entry.path] : undefined
+
+        return (
+          <DownloadsRow
+            key={row.key}
+            row={row}
+            rowIndex={virtualized.startIndex + visibleIndex}
+            gridTemplate={gridTemplate}
+            installedMod={entry ? installedBySourcePath.get(entry.path.toLowerCase()) : null}
+            isNew={entry ? newFilesSet.has(entry.path.toLowerCase()) : false}
+            isInstalling={false}
+            isDeleting={Boolean(deletingState)}
+            installProgress={installProgress}
+            installStatus={installStatus}
+            installCurrentFile={installCurrentFile}
+            deleteStartedAt={deletingState?.startedAt}
+            deleteProgressTick={deleteProgressTick}
+            onContextMenu={onContextMenu}
+            onInstall={onInstall}
+            onDeleteRequest={onDeleteRequest}
+            onMarkOld={onMarkOld}
+            onPauseDownload={onPauseDownload}
+            onResumeDownload={onResumeDownload}
+            onCancelDownload={onCancelDownload}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 export const DownloadsPane: React.FC = () => {
   const {
     settings,
@@ -588,22 +687,20 @@ export const DownloadsPane: React.FC = () => {
   }, [filteredRows, getRowStatus, getStatusSortRank, sortDirection, sortKey])
 
   const totalRows = sortedRows.length
-  const virtualizedDownloads = useVirtualRows({
-    containerRef: downloadsScrollRef,
-    count: totalRows,
-    rowHeight: DOWNLOAD_ROW_HEIGHT,
-    overscan: 12,
-    enabled: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD,
-  })
-  const visibleRows = useMemo(
-    () => sortedRows.slice(virtualizedDownloads.startIndex, virtualizedDownloads.endIndex),
-    [sortedRows, virtualizedDownloads.endIndex, virtualizedDownloads.startIndex]
-  )
   const downloadsGridTemplate = isFullscreenViewport
     ? DOWNLOADS_GRID_TEMPLATE_FULLSCREEN
     : isWideDownloadsViewport
     ? DOWNLOADS_GRID_TEMPLATE_WIDE
     : DOWNLOADS_GRID_TEMPLATE
+
+  // Stable identities so the memoized DownloadsRow rows aren't re-rendered by a
+  // fresh arrow function on every pane render.
+  const handleDeleteRequest = useCallback((downloadEntry: DownloadEntry) => {
+    setPendingDeleteDownload(downloadEntry)
+  }, [])
+  const handleMarkOld = useCallback((downloadEntry: DownloadEntry) => {
+    markFileAsOld(downloadEntry.path)
+  }, [markFileAsOld])
 
   const handleSort = useCallback((nextKey: DownloadSortKey) => {
     if (sortKey === nextKey) {
@@ -648,7 +745,7 @@ export const DownloadsPane: React.FC = () => {
         {/* Unified table */}
         <div className="flex-1 overflow-hidden px-6 pb-6 w-full">
           <HyperionPanel className="h-full overflow-hidden">
-            <div ref={downloadsScrollRef} className="hyperion-scrollbar h-full overflow-y-auto">
+            <div ref={downloadsScrollRef} className="hyperion-scrollbar h-full overflow-y-auto [will-change:scroll-position]">
 
               <DownloadsTableHeader
                 gridTemplate={downloadsGridTemplate}
@@ -684,42 +781,25 @@ export const DownloadsPane: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div
-                    style={{
-                      paddingTop: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingTop : 0,
-                      paddingBottom: totalRows > DOWNLOAD_VIRTUALIZATION_THRESHOLD ? virtualizedDownloads.paddingBottom : 0,
-                    }}
-                  >
-                    {visibleRows.map((row, visibleIndex) => {
-                      const entry = row.kind === 'local' ? row.entry : null
-                      const deletingState = entry ? deletingDownloads[entry.path] : undefined
-
-                      return (
-                        <DownloadsRow
-                          key={row.key}
-                          row={row}
-                          rowIndex={virtualizedDownloads.startIndex + visibleIndex}
-                          gridTemplate={downloadsGridTemplate}
-                          installedMod={entry ? installedBySourcePath.get(entry.path.toLowerCase()) : null}
-                          isNew={entry ? newFilesSet.has(entry.path.toLowerCase()) : false}
-                          isInstalling={false}
-                          isDeleting={Boolean(deletingState)}
-                          installProgress={installProgress}
-                          installStatus={installStatus}
-                          installCurrentFile={installCurrentFile}
-                          deleteStartedAt={deletingState?.startedAt}
-                          deleteProgressTick={deleteProgressTick}
-                          onContextMenu={handleDownloadRowContextMenu}
-                          onInstall={handleInstall}
-                          onDeleteRequest={(downloadEntry) => setPendingDeleteDownload(downloadEntry)}
-                          onMarkOld={(downloadEntry) => markFileAsOld(downloadEntry.path)}
-                          onPauseDownload={pauseDownload}
-                          onResumeDownload={resumeDownload}
-                          onCancelDownload={cancelDownload}
-                        />
-                      )
-                    })}
-                </div>
+                  <DownloadsRowList
+                    rows={sortedRows}
+                    scrollRef={downloadsScrollRef}
+                    gridTemplate={downloadsGridTemplate}
+                    installedBySourcePath={installedBySourcePath}
+                    newFilesSet={newFilesSet}
+                    deletingDownloads={deletingDownloads}
+                    deleteProgressTick={deleteProgressTick}
+                    installProgress={installProgress}
+                    installStatus={installStatus}
+                    installCurrentFile={installCurrentFile}
+                    onContextMenu={handleDownloadRowContextMenu}
+                    onInstall={handleInstall}
+                    onDeleteRequest={handleDeleteRequest}
+                    onMarkOld={handleMarkOld}
+                    onPauseDownload={pauseDownload}
+                    onResumeDownload={resumeDownload}
+                    onCancelDownload={cancelDownload}
+                  />
               )}
               </div>
             </div>
