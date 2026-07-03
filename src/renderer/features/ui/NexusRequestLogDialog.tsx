@@ -155,7 +155,7 @@ function getPrimitiveClassName(value: unknown): string {
   if (typeof value === 'string') return 'text-[var(--code-string)]'
   if (typeof value === 'number') return 'text-[var(--code-number)]'
   if (typeof value === 'boolean') return 'text-[var(--code-boolean)]'
-  return 'text-[#8a8a8a]'
+  return 'text-[var(--code-muted)]'
 }
 
 function formatPrimitiveLabel(value: unknown): string {
@@ -399,7 +399,7 @@ const PayloadNode: React.FC<{
           {/* Children with vertical guide line */}
           <div style={{ marginLeft: guideLeft, borderLeft: '1px solid var(--bg-subtle)' }}>
             {entries.length === 0 ? (
-              <div className="ui-support-mono py-[2px] pl-2 text-[#8a8a8a]">{t('logs.emptyNode')}</div>
+              <div className="ui-support-mono py-[2px] pl-2 text-[var(--code-muted)]">{t('logs.emptyNode')}</div>
             ) : (
               entries.map(([k, v], i) => (
                 <PayloadNode
@@ -594,7 +594,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             {formatStatusCode(entry)}
           </HyperionBadge>
           <span className="ui-support-mono truncate text-[var(--text-secondary)]">{formatDuration(entry.durationMs)}</span>
-          <Icon name="expand_more" className={`text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
+          <Icon name="expand_more" className={`text-[16px] text-[var(--text-support)] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
         </button>
         {expanded ? (
           <div className="border-t border-[var(--border)] px-6 py-5">
@@ -754,7 +754,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                         <HyperionBadge tone={generalLevelTone[entry.level]} size="sm" className="font-mono">{entry.level}</HyperionBadge>
                         <span className="ui-support-mono truncate uppercase tracking-[0.14em] text-[var(--text-secondary)]">{entry.source}</span>
                         <span className="ui-support-mono truncate text-[var(--text-primary-alt)]">{entry.message}</span>
-                        <Icon name="expand_more" className={`text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
+                        <Icon name="expand_more" className={`text-[16px] text-[var(--text-support)] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
                       </button>
                       {expanded ? (
                         <div className="border-t border-[var(--border)] px-4 py-5">

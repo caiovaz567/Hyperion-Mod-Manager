@@ -45,7 +45,7 @@ const ColumnResizeHandle: React.FC<{
       className="group/resize absolute top-0 z-20 flex h-full w-4 cursor-col-resize items-center justify-center"
       style={{ left: '-24px' }}
     >
-      <span className="h-4 w-px bg-[#2a2a2a] transition-colors group-hover/resize:bg-[var(--accent)]/70" />
+      <span className="h-4 w-px bg-[var(--border-strong)] transition-colors group-hover/resize:bg-[var(--accent)]/70" />
     </span>
   )
 }

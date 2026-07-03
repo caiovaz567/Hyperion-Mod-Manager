@@ -489,7 +489,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => void handleClearRuntimeCaptures()}
                       disabled={clearingCaptures}
-                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(248_113_113/0.13)] px-4 text-[13px] font-semibold leading-none text-[#ff9b9b] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[#0d0404] disabled:text-[#7c4a4a] sm:w-auto"
+                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(248_113_113/0.13)] px-4 text-[13px] font-semibold leading-none text-[var(--status-error-text)] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[rgb(248_113_113/0.08)] disabled:text-[rgb(248_113_113/0.45)] sm:w-auto"
                     >
                       <Icon name={clearingCaptures ? 'progress_activity' : 'delete_sweep'} className={`${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }} />
                       {clearingCaptures ? t('settings.general.runtimeCaptures.clearing') : t('settings.general.runtimeCaptures.clear')}
@@ -624,14 +624,14 @@ export const SettingsPage: React.FC = () => {
                       value={nexusApiKey}
                       onChange={(e) => setNexusApiKey(e.target.value)}
                       placeholder={t('settings.nexus.connection.placeholder')}
-                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[13px] text-[var(--text-primary-alt)] placeholder:text-[#595959] focus:outline-none"
+                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[13px] text-[var(--text-primary-alt)] placeholder:text-[var(--text-muted)] focus:outline-none"
                       spellCheck={false}
                       autoComplete="off"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey((value) => !value)}
-                      className="flex items-center self-stretch px-3 text-[#6a6a6a] transition-colors hover:text-[#e7e4e3]"
+                      className="flex items-center self-stretch px-3 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
                       tabIndex={-1}
                     >
                       <Icon name={showApiKey ? 'visibility_off' : 'visibility'} style={{ fontSize: 18 }} />
@@ -648,7 +648,7 @@ export const SettingsPage: React.FC = () => {
                   </button>
                 </div>
                 {nexusStatus === 'error' && (
-                  <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
+                  <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[var(--status-error-text)]">
                     {nexusAccount.error}
                   </div>
                 )}
@@ -672,7 +672,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <div className="text-[15px] font-semibold text-[var(--text-primary)]">{nexusAccount.data.name}</div>
-                      <div className="text-[13px] text-[#8a8a8a]">{t('settings.nexus.account.userLine', { email: nexusAccount.data.email, id: nexusAccount.data.userId })}</div>
+                      <div className="text-[13px] text-[var(--text-support)]">{t('settings.nexus.account.userLine', { email: nexusAccount.data.email, id: nexusAccount.data.userId })}</div>
                     </div>
                     <NexusTierComparison isPremium={nexusAccount.data.isPremium} />
                   </div>
@@ -694,7 +694,7 @@ export const SettingsPage: React.FC = () => {
                 className="fade-up"
                 style={{ animationDelay: '120ms' }}
               >
-                <div className="space-y-3 text-[13.5px] leading-relaxed text-[#b8b8b8]">
+                <div className="space-y-3 text-[13.5px] leading-relaxed text-[var(--text-secondary)]">
                   <div className="flex items-start gap-2.5">
                     <Icon name="subdirectory_arrow_right" className="mt-0.5 flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 17 }} />
                     <span>{t('settings.nexus.downloadFlow.bullet1')}</span>
@@ -721,7 +721,7 @@ export const SettingsPage: React.FC = () => {
             >
               <ValidationRow state={updateDownloaded || updateAvailable ? 'info' : 'valid'} validText={updateMessage} infoText={updateMessage} />
               {updateError ? (
-                <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[#ff9b9b]">
+                <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[var(--status-error-text)]">
                   {updateError}
                 </div>
               ) : null}

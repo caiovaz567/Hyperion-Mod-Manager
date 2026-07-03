@@ -762,7 +762,7 @@ export const DownloadsPane: React.FC = () => {
                   </div>
                 ) : totalRows === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
-                    <Icon name={searchQuery.trim() ? 'search_off' : 'download'} className="text-[48px] text-[#7a7a7a]" />
+                    <Icon name={searchQuery.trim() ? 'search_off' : 'download'} className="text-[48px] text-[var(--text-muted)]" />
                     <span className="text-[var(--text-muted)] text-sm tabular-nums">
                       {searchQuery.trim()
                         ? t('downloads.empty.noMatch')

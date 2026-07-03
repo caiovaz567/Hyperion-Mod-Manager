@@ -27,6 +27,11 @@
     "--accent-cyber-blue": "#0891b2",
     "--accent-cyber-blue-rgb": "8 145 178",
 
+    "--status-success-text": "#0f7a4d",
+    "--status-error-text": "#b3372f",
+    "--status-warning-text": "#8a6d00",
+    "--status-info-text": "#1d4ed8",
+
     "--tier-premium-text": "#8a5a00",
     "--tier-premium-bg": "rgba(217, 164, 6, 0.14)",
     "--tier-free-text": "#1d4ed8",

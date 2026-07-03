@@ -95,7 +95,7 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
               </div>
             </div>
           </div>
-          <div className="flex items-center text-[12px] font-mono text-[#9a9a9a]">
+          <div className="flex items-center text-[12px] font-mono text-[var(--text-support)]">
             ...
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-0.5 overflow-hidden">
@@ -120,7 +120,7 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
               {currentFile || appearance.detailFallback}
             </span>
           </div>
-          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          <div className="flex items-center text-sm font-mono tracking-tight text-[var(--text-secondary)]">
             {progress > 0 ? `${progress}%` : '...'}
           </div>
           <div className="flex items-center">
@@ -134,7 +134,7 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
               {appearance.label}
             </span>
           </div>
-          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          <div className="flex items-center text-sm font-mono tracking-tight text-[var(--text-secondary)]">
             {status || appearance.summary}
           </div>
           <div className="flex items-center justify-start">
@@ -222,11 +222,11 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
               <Icon name="progress_activity" className="animate-spin text-[15px]" style={{ color: appearance.accent }} />
             </div>
           </div>
-          <div className="flex items-center text-[12px] font-mono text-[#d8d8d8]">
+          <div className="flex items-center text-[12px] font-mono text-[var(--text-secondary)]">
             {mod.kind === 'separator' ? '...' : loadOrder ?? '...'}
           </div>
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-            <span className="font-medium tracking-tight truncate text-[#ffe1e1]">
+            <span className="font-medium tracking-tight truncate text-[var(--status-error-text)]">
               {mod.name}
             </span>
             <span
@@ -239,7 +239,7 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
               {t('library.progress.deleting')}
             </span>
           </div>
-          <div className="flex items-center text-sm font-mono tracking-tight text-[#d8d8d8]">
+          <div className="flex items-center text-sm font-mono tracking-tight text-[var(--text-secondary)]">
             {progress > 0 ? `${progress}%` : '...'}
           </div>
           <div className="flex items-center">
@@ -253,7 +253,7 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
               {mod.kind === 'separator' ? t('library.progress.deleting') : t('library.progress.deletingMod')}
             </span>
           </div>
-          <div className="flex items-center min-w-0 text-sm font-mono tracking-tight text-[#ffb4ab]">
+          <div className="flex items-center min-w-0 text-sm font-mono tracking-tight text-[var(--status-error-text)]">
             <span className="truncate">{summary}</span>
           </div>
           <div className="flex items-center justify-start">

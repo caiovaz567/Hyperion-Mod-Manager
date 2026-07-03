@@ -55,6 +55,16 @@
   --accent-cyber-blue-rgb: 79 216 255;
   --focus-ring:            rgb(0 111 238 / 0.6);
 
+  /* Status TEXT shades: readable companions to the fixed --status-* hues for text
+     sitting on tinted fills. The dark values are the light-tinted pastels the dark
+     UI always used; the light palette overrides them with dark AA shades (a pale
+     mint/rose on a near-white card is unreadable in light mode). Icons/bars keep
+     using the pure --status-* hues. */
+  --status-success-text: #7fd6ad;
+  --status-error-text:   #ff9b9b;
+  --status-warning-text: #e8d78a;
+  --status-info-text:    #8dbdff;
+
   /* Nexus subscription tier readouts (Settings > Nexus tier cards). Semantic like the
      status colors, but mode-aware: the light palette overrides them with darker,
      AA-readable amber/blue shades (pale gold on a pale card is unreadable in light). */

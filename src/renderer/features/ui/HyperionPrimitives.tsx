@@ -343,7 +343,7 @@ export function HyperionSortHeader<TSortKey extends string>({
           name={active ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
           className={cx(
             'shrink-0 text-[13px] leading-none',
-            active ? 'text-[var(--accent)]' : 'text-[#727272]'
+            active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
           )}
         />
       </div>

@@ -149,7 +149,7 @@ export const Header: React.FC = () => {
             <span className="brand-font font-black tracking-tighter text-2xl text-[var(--text-primary)]">
               HYPERION
             </span>
-            <span className="ui-support-mono pb-[2px] text-[10px] uppercase tracking-[0.16em] text-[#5f5f5f]">
+            <span className="ui-support-mono pb-[2px] text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
               {appVersion}
             </span>
           </div>

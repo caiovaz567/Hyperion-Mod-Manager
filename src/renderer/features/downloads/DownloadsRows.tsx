@@ -239,7 +239,7 @@ const ActiveDownloadRow: React.FC<{
               <Tooltip content={t('downloads.tooltip.cancel')}>
                 <button
                   onClick={() => void onCancelDownload(download.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[#ff9b9b]"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[var(--status-error-text)]"
                 >
                   <Icon name="close" className="text-[16px]" />
                 </button>
@@ -416,7 +416,7 @@ const DeletingDownloadRow: React.FC<{
       >
         <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium tracking-tight truncate text-[#ffe1e1]">
+            <span className="font-medium tracking-tight truncate text-[var(--status-error-text)]">
               {entry.name}
             </span>
             <span
@@ -453,7 +453,7 @@ const DeletingDownloadRow: React.FC<{
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
           <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
-          <span className="truncate text-[#ffb4ab]">
+          <span className="truncate text-[var(--status-error-text)]">
             {deleteProgress > 0 ? `${deleteProgress}% · ${deleteSummary}` : deleteSummary}
           </span>
         </div>
@@ -558,15 +558,15 @@ const LocalDownloadRow: React.FC<{
         </span>
       </div>
 
-      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[#c4c4c4] transition-colors">
+      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
         {entry.version ?? '—'}
       </div>
 
-      <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-support)] group-hover:text-[#c4c4c4] transition-colors">
+      <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
         {formatSize(entry.size)}
       </div>
 
-      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[#bdbdbd] transition-colors">
+      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
         {formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}
       </div>
 

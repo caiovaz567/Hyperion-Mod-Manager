@@ -73,7 +73,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           side="bottom"
           variant="help"
         >
-          <Icon name="help_outline" className="cursor-help text-[16px] text-[#4a4a4a] hover:text-[#7a7a7a] transition-colors mt-0.5" />
+          <Icon name="help_outline" className="cursor-help text-[16px] text-[var(--text-disabled)] hover:text-[var(--text-muted)] transition-colors mt-0.5" />
         </Tooltip>
         {showCustomOrderBadge && (
           <Tooltip

@@ -72,31 +72,31 @@ export const OverwriteConflictDialog: React.FC = () => {
     <div className="px-4 py-4 sm:px-5 sm:py-5">
       <div className="grid gap-3 sm:grid-cols-4">
         <div className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.incomingPriority')}</div>
+          <div className="ui-support-mono text-[var(--text-support)] uppercase tracking-[0.14em]">{t('dialogs.overwrite.incomingPriority')}</div>
           <div className="mt-2 text-lg font-semibold text-[var(--text-primary)]">#{incomingOrder}</div>
         </div>
         <div className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.wins')}</div>
+          <div className="ui-support-mono text-[var(--text-support)] uppercase tracking-[0.14em]">{t('dialogs.overwrite.wins')}</div>
           <div className="mt-2 text-lg font-semibold text-[#34d399]">{winningOverwrites.length}</div>
         </div>
         <div className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.stillOverridden')}</div>
-          <div className="mt-2 text-lg font-semibold text-[#fcee09]">{losingOverwrites.length}</div>
+          <div className="ui-support-mono text-[var(--text-support)] uppercase tracking-[0.14em]">{t('dialogs.overwrite.stillOverridden')}</div>
+          <div className="mt-2 text-lg font-semibold text-[var(--status-warning-text)]">{losingOverwrites.length}</div>
         </div>
         <div className="rounded-xl bg-[var(--surface-secondary)] px-4 py-3">
-          <div className="ui-support-mono text-[#8d8d8d] uppercase tracking-[0.14em]">{t('dialogs.overwrite.affectedMods')}</div>
+          <div className="ui-support-mono text-[var(--text-support)] uppercase tracking-[0.14em]">{t('dialogs.overwrite.affectedMods')}</div>
           <div className="mt-2 text-lg font-semibold text-[var(--text-primary)]">{affectedMods}</div>
         </div>
       </div>
 
       {archiveConflicts.length > 0 ? (
-        <div className="mt-4 rounded-xl bg-[rgb(248_113_113/0.08)] px-4 py-3 text-sm leading-relaxed text-[#f3b8b8]">
+        <div className="mt-4 rounded-xl bg-[rgb(248_113_113/0.08)] px-4 py-3 text-sm leading-relaxed text-[var(--status-error-text)]">
           {tn('dialogs.overwrite.archiveConflictNote', archiveConflicts.length)}
         </div>
       ) : null}
 
       {losingOverwrites.length > 0 ? (
-        <div className="mt-4 rounded-xl bg-[rgb(252_238_9/0.08)] px-4 py-3 text-sm leading-relaxed text-[#efe3a4]">
+        <div className="mt-4 rounded-xl bg-[rgb(252_238_9/0.08)] px-4 py-3 text-sm leading-relaxed text-[var(--status-warning-text)]">
           {t('dialogs.overwrite.priorityNote')}
         </div>
       ) : null}
@@ -112,10 +112,10 @@ export const OverwriteConflictDialog: React.FC = () => {
             const archiveHash = getArchiveConflictHash(conflict)
             const showArchiveHash = Boolean(archiveHash && archiveHash !== conflict.resourcePath)
             const tone = conflict.kind === 'archive-resource'
-              ? 'bg-[rgb(248_113_113/0.14)] text-[#f3b8b8]'
+              ? 'bg-[rgb(248_113_113/0.14)] text-[var(--status-error-text)]'
               : conflict.incomingWins
                 ? 'bg-[rgb(52_211_153/0.14)] text-[#34d399]'
-                : 'bg-[rgb(252_238_9/0.14)] text-[#fcee09]'
+                : 'bg-[rgb(252_238_9/0.14)] text-[var(--status-warning-text)]'
             const label = conflict.kind === 'archive-resource'
               ? t('dialogs.overwrite.tagArchive')
               : conflict.incomingWins
@@ -132,18 +132,18 @@ export const OverwriteConflictDialog: React.FC = () => {
                     {label}
                   </span>
                 </div>
-                <div className="min-w-0 text-sm text-[#f1eeea]">
+                <div className="min-w-0 text-sm text-[var(--text-primary)]">
                   <div className="break-all">{conflict.resourcePath}</div>
                   {showArchiveHash ? (
-                    <div className="mt-1 break-all text-xs text-[#8d8d8d]">
+                    <div className="mt-1 break-all text-xs text-[var(--text-support)]">
                       {t('dialogs.overwrite.archiveResource', { hash: archiveHash ?? '' })}
                     </div>
                   ) : null}
                 </div>
-                <div className="min-w-0 text-sm text-[#c9c5c2]">
-                  <div className="truncate text-[#f1eeea]">{conflict.existingModName}</div>
+                <div className="min-w-0 text-sm text-[var(--text-secondary)]">
+                  <div className="truncate text-[var(--text-primary)]">{conflict.existingModName}</div>
                   {typeof conflict.existingOrder === 'number' ? (
-                    <div className="mt-1 text-xs text-[#8d8d8d]">#{conflict.existingOrder + 1}</div>
+                    <div className="mt-1 text-xs text-[var(--text-support)]">#{conflict.existingOrder + 1}</div>
                   ) : null}
                 </div>
               </div>
@@ -153,7 +153,7 @@ export const OverwriteConflictDialog: React.FC = () => {
       </div>
 
       {hiddenCount > 0 ? (
-        <div className="mt-3 text-sm text-[#8d8d8d]">
+        <div className="mt-3 text-sm text-[var(--text-support)]">
           {tn('dialogs.overwrite.moreOverlaps', hiddenCount)}
         </div>
       ) : null}

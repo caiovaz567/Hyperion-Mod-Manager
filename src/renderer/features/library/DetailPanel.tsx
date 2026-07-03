@@ -704,7 +704,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       />
                     ))
                   ) : (
-                    <div className="px-5 py-14 text-center text-sm text-[#8d8d8d]">
+                    <div className="px-5 py-14 text-center text-sm text-[var(--text-support)]">
                       {t('library.detail.noFilesMatched')}
                     </div>
                   )}

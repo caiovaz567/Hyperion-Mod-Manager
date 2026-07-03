@@ -427,10 +427,10 @@ export const WelcomeScreen: React.FC = () => {
                     <Icon name={s.icon} className="flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 20 }} />
                     <div className="min-w-0">
                       <div className="text-[13.5px] font-semibold text-[var(--text-primary)]">{t(`welcome.steps.${s.key}.label`)}</div>
-                      <div className="truncate text-[12.5px] text-[#8a8a8a]">{t(`welcome.steps.${s.key}.preview`)}</div>
+                      <div className="truncate text-[12.5px] text-[var(--text-support)]">{t(`welcome.steps.${s.key}.preview`)}</div>
                     </div>
                     {s.optional && (
-                      <span className="ml-auto flex-shrink-0 text-[11px] font-medium text-[#6a6a6a]">{t('common.optional')}</span>
+                      <span className="ml-auto flex-shrink-0 text-[11px] font-medium text-[var(--text-muted)]">{t('common.optional')}</span>
                     )}
                   </div>
                 ))}
@@ -445,7 +445,7 @@ export const WelcomeScreen: React.FC = () => {
                 <Icon name="arrow_forward" className={centeredEndIcon} style={{ fontSize: 18 }} />
               </button>
 
-              <div className="fade-up mt-7 text-[11.5px] text-[#5a5a5a]" style={{ animationDelay: '250ms' }}>
+              <div className="fade-up mt-7 text-[11.5px] text-[var(--text-muted)]" style={{ animationDelay: '250ms' }}>
                 {t('welcome.version', { version: appVersion })}
               </div>
             </div>
@@ -458,7 +458,7 @@ export const WelcomeScreen: React.FC = () => {
             {/* Header row */}
             <div className="fade-up mb-7 flex items-center justify-between">
               <BrandMark />
-              <span className="text-[12.5px] font-medium text-[#6a6a6a]">
+              <span className="text-[12.5px] font-medium text-[var(--text-muted)]">
                 {t('welcome.stepCounter', { current: currentStep + 1, total: SETUP_STEPS.length })}
               </span>
             </div>
@@ -486,7 +486,7 @@ export const WelcomeScreen: React.FC = () => {
 
               <p className="mb-5 text-[14px] leading-relaxed text-[var(--text-support)]">{t(`welcome.steps.${step.key}.description`)}</p>
 
-              <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">{t('common.selectedFolder')}</div>
+              <div className="mb-1 text-[12px] font-medium text-[var(--text-muted)]">{t('common.selectedFolder')}</div>
 
               {currentStep === 0 && (
                 <>
@@ -579,7 +579,7 @@ export const WelcomeScreen: React.FC = () => {
                     {t('welcome.nexus.openApiPage')}
                   </button>
 
-                  <div className="mb-1 text-[12px] font-medium text-[#6a6a6a]">{t('welcome.nexus.apiKeyLabel')}</div>
+                  <div className="mb-1 text-[12px] font-medium text-[var(--text-muted)]">{t('welcome.nexus.apiKeyLabel')}</div>
                   <div className="relative">
                     <input
                       type={showApiKey ? 'text' : 'password'}
@@ -594,7 +594,7 @@ export const WelcomeScreen: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowApiKey((value) => !value)}
-                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-[#777777] transition-colors hover:bg-[var(--surface)] hover:text-[#cfcfcf]"
+                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-secondary)]"
                         aria-label={showApiKey ? t('welcome.nexus.hideKey') : t('welcome.nexus.showKey')}
                       >
                         <Icon name={showApiKey ? 'visibility_off' : 'visibility'} className="text-[17px] leading-none" />
@@ -619,7 +619,7 @@ export const WelcomeScreen: React.FC = () => {
                     {nexusAccount.status === 'connected' && (
                       <>
                         <Icon name="check_circle" className="mt-px text-[#34d399]" style={{ fontSize: 16 }} />
-                        <span className="text-[#cfe9dc]">
+                        <span className="text-[var(--status-success-text)]">
                           {t('welcome.nexus.connectedAs')} <span className="font-semibold text-white">{nexusAccount.data.name}</span>
                           {' '}({nexusAccount.data.isPremium ? t('common.premium') : t('common.free')})
                         </span>
@@ -628,7 +628,7 @@ export const WelcomeScreen: React.FC = () => {
                     {nexusAccount.status === 'error' && (
                       <>
                         <Icon name="error" className="mt-px text-[var(--status-warning)]" style={{ fontSize: 16 }} />
-                        <span className="text-[#d8c98a]">{t('welcome.nexus.error')}</span>
+                        <span className="text-[var(--status-warning-text)]">{t('welcome.nexus.error')}</span>
                       </>
                     )}
                   </div>

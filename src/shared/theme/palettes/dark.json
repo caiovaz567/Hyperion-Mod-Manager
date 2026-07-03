@@ -33,6 +33,11 @@
     "--accent-cyber-blue-rgb": "79 216 255",
     "--focus-ring": "rgb(0 111 238 / 0.5)",
 
+    "--status-success-text": "#7fd6ad",
+    "--status-error-text": "#ff9b9b",
+    "--status-warning-text": "#e8d78a",
+    "--status-info-text": "#8dbdff",
+
     "--tier-premium-text": "#f7d154",
     "--tier-premium-bg": "rgba(252, 238, 9, 0.10)",
     "--tier-free-text": "#60A5FA",

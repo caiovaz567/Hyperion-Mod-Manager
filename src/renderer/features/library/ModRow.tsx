@@ -290,14 +290,14 @@ export const ModRow: React.FC<ModRowProps> = ({
         </div>
       ) : null}
       {isRedundant ? (
-        <div className="flex items-center gap-2 text-[#fcee09]">
+        <div className="flex items-center gap-2 text-[var(--status-warning-text)]">
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.14)] font-mono text-[12px] font-bold leading-none">
             !
           </span>
           <span>{t('library.conflict.redundantFull')}</span>
         </div>
       ) : null}
-      <div className="border-t border-[#242424] pt-1 text-[#858585]">
+      <div className="border-t border-[var(--border-strong)] pt-1 text-[var(--text-support)]">
         {t('library.conflict.clickToInspect')}
       </div>
     </div>
@@ -362,8 +362,8 @@ export const ModRow: React.FC<ModRowProps> = ({
             ? 'rgb(var(--accent-rgb)/0.12)'
             : 'rgba(255,255,255,0.06)'
   const indexTextClass = conflictTone === 'none'
-    ? 'text-[#8a8a8a] group-hover:text-[#d0d0d0]'
-    : 'text-[#c9c9c9]'
+    ? 'text-[var(--text-support)] group-hover:text-[var(--text-secondary)]'
+    : 'text-[var(--text-secondary)]'
   const primaryTextClass = mod.enabled
     ? conflictTone === 'focus'
       ? 'text-[var(--accent)]'
@@ -371,11 +371,11 @@ export const ModRow: React.FC<ModRowProps> = ({
         ? 'text-[var(--text-primary-alt)] group-hover:text-[var(--text-primary)]'
         : 'text-[var(--text-primary)]'
     : conflictTone === 'none'
-      ? 'text-[#8a8a8a] line-through group-hover:text-[#b0b0b0]'
-      : 'text-[#b9b9b9] line-through'
+      ? 'text-[var(--text-support)] line-through group-hover:text-[var(--text-secondary)]'
+      : 'text-[var(--text-secondary)] line-through'
   const secondaryTextClass = conflictTone === 'none'
-    ? 'text-[#9a9a9a] group-hover:text-[#c4c4c4]'
-    : 'text-[#c7c7c7]'
+    ? 'text-[var(--text-support)] group-hover:text-[var(--text-secondary)]'
+    : 'text-[var(--text-secondary)]'
   const leftRailColor = conflictTone === 'focus'
     ? 'var(--accent)'
     : conflictTone === 'win'
@@ -554,7 +554,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                       </span>
                     )}
                     {isRedundant && (
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.12)] text-[#fcee09]">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.12)] text-[var(--status-warning-text)]">
                         <Icon name="priority_high" className="text-[15px] leading-none" />
                       </span>
                     )}
@@ -579,7 +579,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   if (updatingThisMod) return
                   void updateMod(mod.uuid)
                 }}
-                className="inline-flex shrink-0 items-center justify-center text-[var(--accent-cyber-blue)] transition-colors hover:text-[#c6f4ff] disabled:cursor-wait disabled:text-[#8fb8c4]"
+                className="inline-flex shrink-0 items-center justify-center text-[rgb(var(--accent-cyber-blue-rgb)/0.9)] transition-colors hover:text-[var(--accent-cyber-blue)] disabled:cursor-wait disabled:text-[rgb(var(--accent-cyber-blue-rgb)/0.5)]"
               >
                 <Icon name={updatingThisMod ? 'progress_activity' : 'upgrade'} className={`text-[16px] ${updatingThisMod ? 'animate-spin' : ''}`} />
               </button>
@@ -612,7 +612,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                     event.stopPropagation()
                     onRenameSave()
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(52,211,153,0.13)] text-[#6fe3b1] transition-colors hover:bg-[#34d399] hover:text-[#04120d]"
+                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(52,211,153,0.13)] text-[var(--status-success-text)] transition-colors hover:bg-[#34d399] hover:text-[#04120d]"
                 >
                   <Icon name="check" className="text-[15px]" />
                 </button>

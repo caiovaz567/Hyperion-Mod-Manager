@@ -192,10 +192,10 @@ export const SettingCard: React.FC<{
 export type StatusTone = 'good' | 'warn' | 'info' | 'error' | 'neutral'
 
 const readoutTone: Record<StatusTone, string> = {
-  good: 'bg-[rgba(52,211,153,0.13)] text-[#55e0ad]',
-  warn: 'bg-[rgba(252,238,9,0.12)] text-[#fcee09]',
-  info: 'bg-[rgba(96,165,250,0.13)] text-[#8dbdff]',
-  error: 'bg-[rgba(248,113,113,0.14)] text-[#ff9b9b]',
+  good: 'bg-[rgba(52,211,153,0.13)] text-[var(--status-success-text)]',
+  warn: 'bg-[rgba(252,238,9,0.12)] text-[var(--status-warning-text)]',
+  info: 'bg-[rgba(96,165,250,0.13)] text-[var(--status-info-text)]',
+  error: 'bg-[rgba(248,113,113,0.14)] text-[var(--status-error-text)]',
   neutral: 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]',
 }
 
@@ -225,7 +225,7 @@ export const PathBox: React.FC<{ value: string; placeholder: string; emphasize?:
       emphasize ? 'bg-[rgb(var(--accent-rgb)/0.06)] shadow-[inset_0_0_0_1px_var(--accent-dim)]' : 'bg-[var(--surface-secondary)]'
     }`}
   >
-    <div className="break-all">{value || <span className="text-[#6b6b6b]">{placeholder}</span>}</div>
+    <div className="break-all">{value || <span className="text-[var(--text-muted)]">{placeholder}</span>}</div>
   </div>
 )
 
@@ -242,30 +242,30 @@ export const ValidationRow: React.FC<{
     return (
       <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
         <Icon name="check_circle" className="mt-[1px] text-[#34d399]" style={{ fontSize: 17 }} />
-        <span className="text-[#7fd6ad]">{validText}</span>
+        <span className="text-[var(--status-success-text)]">{validText}</span>
       </div>
     )
   }
   if (state === 'invalid') {
     return (
       <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
-        <Icon name="error" className="mt-[1px] text-[#fcee09]" style={{ fontSize: 17 }} />
-        <span className="text-[#d8ca7b]">{invalidText}</span>
+        <Icon name="error" className="mt-[1px] text-[var(--status-warning-text)]" style={{ fontSize: 17 }} />
+        <span className="text-[var(--status-warning-text)]">{invalidText}</span>
       </div>
     )
   }
   if (state === 'info') {
     return (
       <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
-        <Icon name="info" className="mt-[1px] text-[#7a7a7a]" style={{ fontSize: 17 }} />
+        <Icon name="info" className="mt-[1px] text-[var(--text-muted)]" style={{ fontSize: 17 }} />
         <span className="text-[var(--text-support)]">{infoText}</span>
       </div>
     )
   }
   return (
     <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
-      <Icon name="radio_button_unchecked" className="mt-[1px] text-[#5f5f5f]" style={{ fontSize: 17 }} />
-      <span className="text-[#777777]">{emptyLabel}</span>
+      <Icon name="radio_button_unchecked" className="mt-[1px] text-[var(--text-muted)]" style={{ fontSize: 17 }} />
+      <span className="text-[var(--text-muted)]">{emptyLabel}</span>
     </div>
   )
 }
