@@ -37,7 +37,7 @@ const DOWNLOAD_EXTENSIONS = new Set(['.zip', '.rar', '.7z'])
 const GAME_EXECUTABLE_RELATIVE_PATH = path.join('bin', 'x64', 'Cyberpunk2077.exe')
 const BOOTSTRAP_ROOT_EXTENSIONS = new Set(['.dll', '.asi', '.ini', '.cfg', '.toml', '.json'])
 const BOOTSTRAP_PLUGIN_EXTENSIONS = new Set(['.dll', '.asi', '.ini', '.cfg', '.toml', '.json'])
-const BOOTSTRAP_TEMP_DIR_MARKER = '.hyperion-vfs-bootstrap.json'
+const BOOTSTRAP_TEMP_DIR_MARKER = '.hyperion-vfs-bootstrap'
 const VFS_OVERWRITE_DIR_NAME = 'Overwrite'
 const LEGACY_VFS_OVERWRITE_DIR_NAME = 'vfs-overwrite'
 const USVFS_AUXILIARY_PROCESS_BLACKLIST = [
@@ -103,6 +103,7 @@ let stagedBootstrapOverrideDirs: string[] = []
 let stagedBootstrapTempDirs: BootstrapTempDir[] = []
 let activeVfsLaunchContext: ActiveVfsLaunchContext | null = null
 let vfsLaunchCancelRequested = false
+let vfsLaunchInProgress = false
 
 function unmountVfsIfMounted(): void {
   if (gameExitTimer) {
@@ -123,7 +124,7 @@ function unmountVfsIfMounted(): void {
 
 function isGameProcessRunning(): Promise<boolean> {
   return new Promise((resolve) => {
-    exec('tasklist /FI "IMAGENAME eq Cyberpunk2077.exe" /NH /FO CSV', (err, stdout) => {
+    exec('tasklist /FI "IMAGENAME eq Cyberpunk2077.exe" /NH /FO CSV', { windowsHide: true }, (err, stdout) => {
       resolve(!err && stdout.includes('"Cyberpunk2077.exe"'))
     })
   })
@@ -133,7 +134,7 @@ function isProcessRunningByPid(pid?: number): Promise<boolean> {
   if (!pid || !Number.isFinite(pid)) return Promise.resolve(false)
 
   return new Promise((resolve) => {
-    exec(`tasklist /FI "PID eq ${Math.trunc(pid)}" /NH /FO CSV`, (err, stdout) => {
+    exec(`tasklist /FI "PID eq ${Math.trunc(pid)}" /NH /FO CSV`, { windowsHide: true }, (err, stdout) => {
       resolve(!err && stdout.includes(`"${Math.trunc(pid)}"`))
     })
   })
@@ -1117,7 +1118,7 @@ function stageVfsBootstrapFiles(
     if (fs.existsSync(dir)) continue
     tempDirs.set(key, {
       dir,
-      markerPath: path.join(dir, '.hyperion-vfs-bootstrap'),
+      markerPath: path.join(dir, BOOTSTRAP_TEMP_DIR_MARKER),
       deployPath: managedRoot,
     })
   }
@@ -1202,12 +1203,129 @@ function bootstrapFileStillMatches(entry: BootstrapStageEntry): boolean {
   }
 }
 
+// ─── Bootstrap staging crash-recovery manifest ────────────────────────────────
+// The staged-file lists above live in memory, so a crash (or a quit while the
+// game is still attached to the VFS) would orphan the physically staged loader
+// files in the game folder forever — cleanup only ever removes entries it staged
+// itself ('copied'), and a later launch re-stages them as 'already-present'.
+// Persisting the lists lets the next session replay the exact same cleanup.
+interface BootstrapStagingManifest {
+  savedAt?: string
+  entries?: BootstrapStageEntry[]
+  overrideDirs?: string[]
+  tempDirs?: BootstrapTempDir[]
+}
+
+function getBootstrapStagingManifestPath(): string {
+  return path.join(app.getPath('userData'), 'vfs-bootstrap-staged.json')
+}
+
+function readBootstrapStagingManifest(): BootstrapStagingManifest | null {
+  try {
+    const manifestPath = getBootstrapStagingManifestPath()
+    if (!fs.existsSync(manifestPath)) return null
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as BootstrapStagingManifest
+  } catch {
+    return null
+  }
+}
+
+function removeBootstrapStagingManifest(): void {
+  try {
+    fs.rmSync(getBootstrapStagingManifestPath(), { force: true })
+  } catch {
+    // Best-effort bookkeeping; a stale manifest is re-validated before use.
+  }
+}
+
+function persistBootstrapStagingManifest(): void {
+  try {
+    if (
+      stagedBootstrapEntries.length === 0
+      && stagedBootstrapOverrideDirs.length === 0
+      && stagedBootstrapTempDirs.length === 0
+    ) {
+      removeBootstrapStagingManifest()
+      return
+    }
+    fs.writeFileSync(
+      getBootstrapStagingManifestPath(),
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        entries: stagedBootstrapEntries,
+        overrideDirs: stagedBootstrapOverrideDirs,
+        tempDirs: stagedBootstrapTempDirs,
+      } satisfies BootstrapStagingManifest, null, 2),
+      'utf8'
+    )
+  } catch {
+    // Crash-recovery bookkeeping must never block a launch.
+  }
+}
+
+// Merge staging left by a previous session (from the manifest) with this run's
+// fresh staging. Keyed on dest so a re-staged file keeps its newest entry; only
+// 'copied' entries matter — cleanup ignores every other status.
+function mergeStagedBootstrapEntries(
+  previous: BootstrapStageEntry[] | undefined,
+  current: BootstrapStageEntry[]
+): BootstrapStageEntry[] {
+  const byDest = new Map<string, BootstrapStageEntry>()
+  for (const entry of [...(previous ?? []), ...current]) {
+    if (entry?.status !== 'copied' || !entry.dest) continue
+    byDest.set(pathKey(entry.dest), entry)
+  }
+  return [...byDest.values()]
+}
+
+function mergeStagedTempDirs(
+  previous: BootstrapTempDir[] | undefined,
+  current: BootstrapTempDir[]
+): BootstrapTempDir[] {
+  const byDir = new Map<string, BootstrapTempDir>()
+  for (const tempDir of [...(previous ?? []), ...current]) {
+    if (!tempDir?.dir || !tempDir.markerPath) continue
+    byDir.set(pathKey(tempDir.dir), tempDir)
+  }
+  return [...byDir.values()]
+}
+
+// Replays the bootstrap cleanup a previous session never got to run (crash, kill,
+// or quit while the game was attached to the VFS). Runs once at startup; while
+// the game is running it defers — the next launch folds the leftover manifest
+// into its own staging lists instead.
+async function sweepLeftoverBootstrapStaging(): Promise<void> {
+  const manifest = readBootstrapStagingManifest()
+  if (!manifest) return
+  if (vfsLaunchInProgress || vfsMounted) return
+  if (await isGameProcessRunning()) {
+    appendVfsLaunchLog('leftover bootstrap staging sweep deferred: game is running', {
+      entries: manifest.entries?.length ?? 0,
+    })
+    return
+  }
+  if (vfsLaunchInProgress || vfsMounted) return
+
+  stagedBootstrapEntries = mergeStagedBootstrapEntries(manifest.entries, [])
+  stagedBootstrapTempDirs = mergeStagedTempDirs(manifest.tempDirs, [])
+  stagedBootstrapOverrideDirs = [...new Set(manifest.overrideDirs ?? [])]
+  appendVfsLaunchLog('sweeping leftover bootstrap staging from a previous session', {
+    entries: stagedBootstrapEntries.length,
+    tempDirs: stagedBootstrapTempDirs.length,
+    overrideDirs: stagedBootstrapOverrideDirs.length,
+  })
+  cleanupStagedBootstrapFiles()
+}
+
 function cleanupStagedBootstrapFiles(): void {
   if (
     stagedBootstrapEntries.length === 0
     && stagedBootstrapOverrideDirs.length === 0
     && stagedBootstrapTempDirs.length === 0
-  ) return
+  ) {
+    removeBootstrapStagingManifest()
+    return
+  }
 
   const cleanupEntries = stagedBootstrapEntries
   const cleanupOverrideDirs = stagedBootstrapOverrideDirs
@@ -1271,6 +1389,7 @@ function cleanupStagedBootstrapFiles(): void {
     }
   }
 
+  removeBootstrapStagingManifest()
   appendVfsLaunchLog('vfs bootstrap cleanup result', {
     entries: results,
     tempDirs: tempDirResults,
@@ -1323,7 +1442,10 @@ function startGameExitMonitor(launchedPid?: number): void {
         running,
         vfsProcessCount,
       })
-      if (missingChecks >= 1) {
+      // Require two consecutive misses (8 s) before tearing down: a single
+      // transient tasklist failure paired with a bridge hiccup must not clear
+      // the virtual mappings under a game that is actually still running.
+      if (missingChecks >= 2) {
         unmountVfsIfMounted()
       }
     })
@@ -2062,7 +2184,7 @@ function registerGlobalHandlers(): void {
     return { ok: true }
   })
 
-  ipcMain.handle(IPC.LAUNCH_GAME, async () => {
+  const runVfsLaunch = async (): Promise<{ ok: boolean; cancelled?: boolean; error?: string }> => {
     vfsLaunchCancelRequested = false
     const settings = loadSettings()
     if (!settings.gamePath) return { ok: false, error: 'Game path not configured' }
@@ -2304,8 +2426,16 @@ function registerGlobalHandlers(): void {
         ? stageVfsBootstrapFiles(gameRoot, settings.libraryPath, enabledMods)
         : { ok: true, entries: [], tempDirs: [] }
       appendVfsLaunchLog('vfs bootstrap staging result', bootstrapStage)
-      stagedBootstrapEntries = bootstrapStage.entries.filter((entry) => entry.status === 'copied')
-      stagedBootstrapTempDirs = bootstrapStage.tempDirs
+      // Fold in staging left by a previous session that never ran its cleanup
+      // (crash, kill, or quit while the game was attached), so those files are
+      // removed on this run's game exit instead of lingering in the game folder.
+      const leftoverStaging = readBootstrapStagingManifest()
+      stagedBootstrapEntries = mergeStagedBootstrapEntries(
+        leftoverStaging?.entries,
+        bootstrapStage.entries.filter((entry) => entry.status === 'copied')
+      )
+      stagedBootstrapTempDirs = mergeStagedTempDirs(leftoverStaging?.tempDirs, bootstrapStage.tempDirs)
+      persistBootstrapStagingManifest()
       const bootstrapCancelled = cancelledLaunchResult(64)
       if (bootstrapCancelled) return bootstrapCancelled
       if (!bootstrapStage.ok) {
@@ -2328,7 +2458,10 @@ function registerGlobalHandlers(): void {
       }
 
       const bootstrapOverrides = createBootstrapOverrideLinks(bootstrapStage.entries)
-      stagedBootstrapOverrideDirs = bootstrapOverrides.dirs
+      stagedBootstrapOverrideDirs = [
+        ...new Set([...(leftoverStaging?.overrideDirs ?? []), ...bootstrapOverrides.dirs]),
+      ]
+      persistBootstrapStagingManifest()
       if (bootstrapOverrides.links.length > 0) {
         links = [...links, ...bootstrapOverrides.links]
         appendVfsLaunchLog('vfs bootstrap override links', {
@@ -2631,19 +2764,42 @@ function registerGlobalHandlers(): void {
       })
       return { ok: false, error: makeVfsLaunchError(message) }
     }
+  }
+
+  ipcMain.handle(IPC.LAUNCH_GAME, async () => {
+    // Re-entry guard: mounting again while a hooked game is attached would reset
+    // the shared usvfs state under it (usvfsCreateVFS re-creates the VFS), so a
+    // second Launch — double-click or a stale renderer state — must never reach
+    // the mount path while a launch is in flight or the game is running.
+    if (vfsLaunchInProgress) {
+      return { ok: false, error: 'A game launch is already in progress' }
+    }
+
+    let attachedToVfs = false
+    try {
+      attachedToVfs = vfsMounted && (loadVfsBridge()?.vfsProcesses?.() ?? []).length > 0
+    } catch {
+      attachedToVfs = false
+    }
+    if (attachedToVfs || await isGameProcessRunning()) {
+      return { ok: false, error: 'Cyberpunk 2077 is already running. Close the game before launching again.' }
+    }
+
+    vfsLaunchInProgress = true
+    try {
+      return await runVfsLaunch()
+    } finally {
+      vfsLaunchInProgress = false
+    }
   })
 
   ipcMain.handle(IPC.GAME_RUNNING, (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      exec('tasklist /FI "IMAGENAME eq Cyberpunk2077.exe" /NH /FO CSV', (err, stdout) => {
-        resolve(!err && stdout.includes('"Cyberpunk2077.exe"'))
-      })
-    })
+    return isGameProcessRunning()
   })
 
   ipcMain.handle(IPC.KILL_GAME, (): Promise<{ ok: boolean }> => {
     return new Promise((resolve) => {
-      exec('taskkill /F /IM Cyberpunk2077.exe /T', (err) => {
+      exec('taskkill /F /IM Cyberpunk2077.exe /T', { windowsHide: true }, (err) => {
         // Wait for the process to fully release file handles before running
         // residue migration — taskkill completes before the OS fully tears
         // down the process, so an immediate unmount races with locked files.
@@ -2797,6 +2953,10 @@ app.whenReady().then(async () => {
     fs.mkdirSync(settings.libraryPath, { recursive: true })
   }
   const cleanedInstallerTempDirs = cleanupInstallerTempDirs(settings)
+  // Replay any bootstrap cleanup a previous session never ran (crash/kill/quit
+  // while the game was attached), so staged loader files don't linger in the
+  // game folder.
+  void sweepLeftoverBootstrapStaging()
 
   // Create main window (hidden)
   mainWindow = createMainWindow()
@@ -2871,8 +3031,23 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', () => {
-  // Tear down any active VFS so usvfs shared state doesn't outlive the controller.
-  unmountVfsIfMounted()
+  // Tear down any active VFS so usvfs shared state doesn't outlive the controller —
+  // but NEVER while the game is still attached: clearing the virtual mappings under
+  // a running hooked process would make every mod file vanish mid-session. In that
+  // case leave the VFS resident (the game's own handle keeps the shared memory
+  // alive) and let the startup sweep / next launch reconcile staged bootstrap
+  // files and runtime residue from the persisted manifest.
+  let attachedToVfs = false
+  try {
+    attachedToVfs = vfsMounted && (loadVfsBridge()?.vfsProcesses?.() ?? []).length > 0
+  } catch {
+    attachedToVfs = false
+  }
+  if (attachedToVfs) {
+    appendVfsLaunchLog('app quitting with game attached to VFS — leaving VFS resident')
+  } else {
+    unmountVfsIfMounted()
+  }
   stopDownloadsWatcher()
   stopLibraryWatcher()
   try {
