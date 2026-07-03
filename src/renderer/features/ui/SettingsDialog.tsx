@@ -671,7 +671,7 @@ export const SettingsPage: React.FC = () => {
                 {nexusStatus === 'connected' ? (
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <div className="text-[15px] font-semibold text-white">{nexusAccount.data.name}</div>
+                      <div className="text-[15px] font-semibold text-[var(--text-primary)]">{nexusAccount.data.name}</div>
                       <div className="text-[13px] text-[#8a8a8a]">{t('settings.nexus.account.userLine', { email: nexusAccount.data.email, id: nexusAccount.data.userId })}</div>
                     </div>
                     <NexusTierComparison isPremium={nexusAccount.data.isPremium} />

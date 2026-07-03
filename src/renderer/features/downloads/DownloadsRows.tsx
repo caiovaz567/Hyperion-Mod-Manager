@@ -205,12 +205,12 @@ const ActiveDownloadRow: React.FC<{
           {download.version ?? '—'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm tabular-nums text-[#d8d8d8]">
+        <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
           {formatSize(Math.max(download.totalBytes, download.downloadedBytes))}
         </div>
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
-          <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(download.startedAt)}</span>
+          <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(download.startedAt)}</span>
           <span className="truncate text-[var(--text-support)]">{speedSummary}</span>
         </div>
 
@@ -230,7 +230,7 @@ const ActiveDownloadRow: React.FC<{
                 <Tooltip content={t('downloads.tooltip.pause')}>
                   <button
                     onClick={() => void onPauseDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[#c9c9c9] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
                   >
                     <Icon name="pause" className="text-[16px]" />
                   </button>
@@ -239,7 +239,7 @@ const ActiveDownloadRow: React.FC<{
               <Tooltip content={t('downloads.tooltip.cancel')}>
                 <button
                   onClick={() => void onCancelDownload(download.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[#8a8a8a] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[#ff9b9b]"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[#ff9b9b]"
                 >
                   <Icon name="close" className="text-[16px]" />
                 </button>
@@ -333,21 +333,21 @@ const InstallingDownloadRow: React.FC<{
           >
             {installAppearance.label}
           </span>
-          <span className="truncate text-sm tabular-nums text-[#d8d8d8]">
+          <span className="truncate text-sm tabular-nums text-[var(--text-primary-alt)]">
             {progressSummary}
           </span>
         </div>
 
-        <div className="flex items-center text-sm tabular-nums text-[#d8d8d8]">
+        <div className="flex items-center text-sm tabular-nums text-[var(--text-primary-alt)]">
           {entry.version ?? '—'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm tabular-nums text-[#d8d8d8]">
+        <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
           {formatSize(entry.size)}
         </div>
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
-          <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
+          <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
           <span className="truncate text-[var(--text-support)]">{installAppearance.summary}</span>
         </div>
 
@@ -443,16 +443,16 @@ const DeletingDownloadRow: React.FC<{
           </span>
         </div>
 
-        <div className="flex items-center text-sm tabular-nums text-[#d8d8d8]">
+        <div className="flex items-center text-sm tabular-nums text-[var(--text-primary-alt)]">
           {entry.version ?? '—'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm tabular-nums text-[#d8d8d8]">
+        <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
           {formatSize(entry.size)}
         </div>
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
-          <span className="truncate text-[#d8d8d8]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
+          <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
           <span className="truncate text-[#ffb4ab]">
             {deleteProgress > 0 ? `${deleteProgress}% · ${deleteSummary}` : deleteSummary}
           </span>
@@ -535,7 +535,7 @@ const LocalDownloadRow: React.FC<{
 
       <div className="flex items-center overflow-hidden">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)] group-hover:text-white transition-colors">
+          <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)] group-hover:text-[var(--text-primary)] transition-colors">
             {entry.name}
           </span>
           {isNew && (

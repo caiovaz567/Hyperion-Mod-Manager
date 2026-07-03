@@ -167,8 +167,8 @@ export const HyperionPanel = React.forwardRef<HTMLDivElement, HyperionPanelProps
       ref={ref}
       className={cx(
         // Elevated card floating on the app canvas — HeroUI tokens so it follows
-        // light/dark mode instead of a fixed charcoal.
-        'rounded-2xl border border-[var(--border)] shadow-[0_10px_34px_rgba(0,0,0,0.3)]',
+        // light/dark mode instead of a fixed charcoal. Shadow stays subtle.
+        'rounded-2xl border border-[var(--border)] shadow-[0_2px_8px_rgba(0,0,0,0.10)]',
         tone === 'base' ? 'bg-[var(--overlay)]' : 'bg-[var(--background)]',
         className
       )}
@@ -334,7 +334,7 @@ export function HyperionSortHeader<TSortKey extends string>({
       <div className={cx('flex min-w-0 items-center gap-2', innerClassName)}>
         <span className={cx(
           'min-w-0 truncate whitespace-nowrap text-[11px] uppercase tracking-[0.07em] font-medium',
-          active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-white'
+          active ? 'text-[var(--accent)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
         )}>
           {label}
         </span>

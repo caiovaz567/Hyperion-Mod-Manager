@@ -65,7 +65,7 @@ export const LanguageSelect: React.FC<{
         >
           <Icon name="language" className="text-[var(--text-support)]" style={{ fontSize: 17 }} />
           <span className="truncate">{current.nativeLabel}</span>
-          <Icon name="expand_more" className={`text-[#777777] transition-transform duration-150 ${open ? 'rotate-180' : ''}`} style={{ fontSize: 18 }} />
+          <Icon name="expand_more" className={`text-[var(--text-muted)] transition-transform duration-150 ${open ? 'rotate-180' : ''}`} style={{ fontSize: 18 }} />
         </button>
       )}
 
@@ -92,7 +92,7 @@ export const LanguageSelect: React.FC<{
                   setOpen(false)
                 }}
                 className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors ${
-                  active ? 'text-[var(--text-primary)]' : 'text-[#cfcfcf] hover:bg-[var(--surface-secondary)] hover:text-white'
+                  active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 <span className="flex w-4 shrink-0 items-center justify-center">
@@ -101,7 +101,7 @@ export const LanguageSelect: React.FC<{
                 <span className="flex min-w-0 flex-col">
                   <span className={`truncate text-[13px] ${active ? 'font-semibold' : 'font-medium'}`}>{locale.nativeLabel}</span>
                   {locale.label !== locale.nativeLabel && (
-                    <span className="truncate text-[11px] text-[#777777]">
+                    <span className="truncate text-[11px] text-[var(--text-muted)]">
                       {locale.label}
                     </span>
                   )}

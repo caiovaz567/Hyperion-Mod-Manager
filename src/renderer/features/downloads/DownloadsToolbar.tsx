@@ -26,7 +26,7 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
   const { t } = useTranslation()
   return (
   <div className="shrink-0 px-6 pt-6 pb-3 w-full">
-    <h1 className="text-[1.32rem] font-bold tracking-[-0.01em] text-white sm:text-[1.44rem]">
+    <h1 className="text-[1.32rem] font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-[1.44rem]">
       {t('downloads.title')}
     </h1>
     <p className="mt-1.5 flex items-center gap-2 text-[13px] text-[var(--text-support)]">

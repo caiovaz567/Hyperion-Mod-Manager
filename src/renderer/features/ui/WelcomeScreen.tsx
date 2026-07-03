@@ -46,7 +46,7 @@ const BrandMark: React.FC<{ size?: 'sm' | 'lg' }> = ({ size = 'sm' }) => {
       >
         <span className={`rounded-[3px] bg-[var(--bg-base-deep)] ${isLarge ? 'h-[18px] w-[18px]' : 'h-[10px] w-[10px]'}`} />
       </span>
-      <span className={`brand-font font-black tracking-tighter text-white ${isLarge ? 'text-3xl' : 'text-base'}`}>
+      <span className={`brand-font font-black tracking-tighter text-[var(--text-primary)] ${isLarge ? 'text-3xl' : 'text-base'}`}>
         HYPERION
       </span>
     </div>
@@ -91,7 +91,7 @@ const StepProgress: React.FC<{
             </span>
             <span
               className={`hidden text-[12.5px] font-medium transition-colors duration-200 sm:inline ${
-                isActive ? 'text-white' : isCompleted ? 'text-[var(--text-support)] group-hover:text-white' : 'text-[#5a5a5a]'
+                isActive ? 'text-[var(--text-primary)]' : isCompleted ? 'text-[var(--text-support)] group-hover:text-[var(--text-primary)]' : 'text-[var(--text-muted)]'
               }`}
             >
               {t(`welcome.steps.${step.key}.label`)}
@@ -403,7 +403,7 @@ export const WelcomeScreen: React.FC = () => {
               </div>
 
               <h1
-                className="fade-up text-[28px] font-bold leading-tight tracking-[-0.02em] text-white sm:text-[32px]"
+                className="fade-up text-[28px] font-bold leading-tight tracking-[-0.02em] text-[var(--text-primary)] sm:text-[32px]"
                 style={{ animationDelay: '50ms' }}
               >
                 {t('welcome.headline')}
@@ -426,7 +426,7 @@ export const WelcomeScreen: React.FC = () => {
                     </div>
                     <Icon name={s.icon} className="flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 20 }} />
                     <div className="min-w-0">
-                      <div className="text-[13.5px] font-semibold text-white">{t(`welcome.steps.${s.key}.label`)}</div>
+                      <div className="text-[13.5px] font-semibold text-[var(--text-primary)]">{t(`welcome.steps.${s.key}.label`)}</div>
                       <div className="truncate text-[12.5px] text-[#8a8a8a]">{t(`welcome.steps.${s.key}.preview`)}</div>
                     </div>
                     {s.optional && (
@@ -479,7 +479,7 @@ export const WelcomeScreen: React.FC = () => {
                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border-0 bg-[rgb(var(--accent-rgb)/0.12)]">
                   <Icon name={step.icon} className="text-[var(--accent)]" style={{ fontSize: 22 }} />
                 </div>
-                <h2 className="text-[18px] font-semibold leading-snug tracking-[-0.01em] text-white sm:text-[19px]">
+                <h2 className="text-[18px] font-semibold leading-snug tracking-[-0.01em] text-[var(--text-primary)] sm:text-[19px]">
                   {t(`welcome.steps.${step.key}.heading`)}
                 </h2>
               </div>

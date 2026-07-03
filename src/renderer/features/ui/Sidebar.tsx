@@ -89,8 +89,8 @@ export const Sidebar: React.FC = () => {
     active
       ? 'text-[var(--accent)] bg-[var(--bg-base)] before:absolute before:left-0 before:w-[2px] before:h-8 before:bg-[var(--accent)] before:top-1/2 before:-translate-y-1/2'
       : disabled
-        ? 'text-[var(--text-muted)]'
-        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-base)]'
+        ? 'text-[var(--text-disabled)]'
+        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-base)]'
   }`
 
   // Same grid as the account block above (18px inset + 44px icon column), so the avatar,
@@ -98,8 +98,10 @@ export const Sidebar: React.FC = () => {
   const itemInnerClass =
     'grid h-12 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4'
 
+  // Explicit label color (not inherited from the HeroUI Button) so inactive items keep
+  // readable contrast in both light and dark modes.
   const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 tracking-wider ${
-    active ? 'text-[var(--accent)]' : disabled ? 'text-[#8a8a8a]' : ''
+    active ? 'text-[var(--accent)]' : disabled ? 'text-[var(--text-disabled)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
   }`
 
   const [launching, setLaunching] = useState(false)
@@ -190,7 +192,7 @@ export const Sidebar: React.FC = () => {
             <HyperionBadge tone={subscriptionTone} size="sm">
               {accountLabel}
             </HyperionBadge>
-            <span className="text-[10px] tracking-widest text-[var(--text-muted)]">{accountSubLabel}</span>
+            <span className="text-[10px] tracking-widest text-[var(--text-support)]">{accountSubLabel}</span>
           </div>
         </div>
       </div>

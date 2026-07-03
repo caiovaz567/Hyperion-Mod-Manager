@@ -8,6 +8,14 @@
     "--bg-surface": "#111111",
     "--bg-elevated": "#161616",
     "--bg-subtle": "#1C1C1C",
+    "--bg-overlay": "rgba(0, 0, 0, 0.7)",
+
+    "--text-primary": "#F2F2F2",
+    "--text-primary-alt": "#E5E2E1",
+    "--text-secondary": "rgba(242, 242, 242, 0.72)",
+    "--text-muted": "rgba(242, 242, 242, 0.5)",
+    "--text-disabled": "rgba(242, 242, 242, 0.46)",
+    "--text-support": "#9A9A9A",
 
     "--border-default": "rgba(255, 255, 255, 0.06)",
     "--border-subtle": "rgba(255, 255, 255, 0.04)",

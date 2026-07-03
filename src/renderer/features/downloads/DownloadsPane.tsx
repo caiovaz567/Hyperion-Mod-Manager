@@ -660,13 +660,13 @@ export const DownloadsPane: React.FC = () => {
               {/* Rows */}
               <div className="relative" onContextMenu={handleDownloadsBlankContextMenu}>
                 {loading ? (
-                  <div className="flex items-center justify-center py-24 text-[#8a8a8a] tabular-nums text-sm">
+                  <div className="flex items-center justify-center py-24 text-[var(--text-muted)] tabular-nums text-sm">
                     {t('downloads.empty.scanning')}
                   </div>
                 ) : totalRows === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <Icon name={searchQuery.trim() ? 'search_off' : 'download'} className="text-[48px] text-[#7a7a7a]" />
-                    <span className="text-[#8a8a8a] text-sm tabular-nums">
+                    <span className="text-[var(--text-muted)] text-sm tabular-nums">
                       {searchQuery.trim()
                         ? t('downloads.empty.noMatch')
                         : settings?.downloadPath

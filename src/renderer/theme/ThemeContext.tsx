@@ -25,10 +25,15 @@ const ThemeContext = createContext<ThemeValue | null>(null)
 function applyThemeTokens(resolvedMode: 'light' | 'dark', accentOverlay: Record<string, string>): void {
   const root = document.documentElement
   root.classList.toggle('dark', resolvedMode === 'dark')
-  const merged = {
+  const merged: Record<string, string> = {
     ...BASE_THEME_TOKENS,
     ...(resolvedMode === 'light' ? LIGHT_THEME_TOKENS : {}),
     ...accentOverlay,
+  }
+  // Clear any inline token a previous mode set that this mode doesn't cover — a light-only
+  // key left behind after switching back to dark would keep light text on dark surfaces.
+  for (const key of Object.keys(LIGHT_THEME_TOKENS)) {
+    if (!(key in merged)) root.style.removeProperty(key)
   }
   for (const [key, value] of Object.entries(merged)) {
     root.style.setProperty(key, value)
