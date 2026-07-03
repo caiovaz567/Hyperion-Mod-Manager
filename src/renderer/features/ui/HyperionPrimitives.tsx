@@ -167,8 +167,9 @@ export const HyperionPanel = React.forwardRef<HTMLDivElement, HyperionPanelProps
       ref={ref}
       className={cx(
         // Elevated card floating on the app canvas — HeroUI tokens so it follows
-        // light/dark mode instead of a fixed charcoal. Shadow stays subtle.
-        'rounded-2xl border border-[var(--border)] shadow-[0_2px_8px_rgba(0,0,0,0.10)]',
+        // light/dark mode instead of a fixed charcoal. No drop shadow: the border +
+        // surface contrast carry the elevation.
+        'rounded-2xl border border-[var(--border)]',
         tone === 'base' ? 'bg-[var(--overlay)]' : 'bg-[var(--background)]',
         className
       )}
