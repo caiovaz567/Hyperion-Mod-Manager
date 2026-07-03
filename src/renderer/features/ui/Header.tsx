@@ -129,10 +129,10 @@ export const Header: React.FC = () => {
       ? 'autorenew'
       : 'download_for_offline'
   const updateToneClass = updateDownloaded
-    ? 'bg-[rgb(var(--accent-rgb)/0.14)] text-[#fff6a8]'
+    ? 'bg-[rgb(var(--accent-rgb)/0.16)] text-[var(--accent)]'
     : updateDownloading
       ? 'bg-[rgb(var(--accent-rgb)/0.10)] text-[var(--accent)]'
-      : 'bg-[rgb(var(--accent-rgb)/0.10)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--bg-base-deep)]'
+      : 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
 
   return (
     <header
@@ -167,7 +167,7 @@ export const Header: React.FC = () => {
               onPress={() => void handleUpdateAction()}
               isDisabled={updateDownloading || updateDownloaded}
               variant="tertiary"
-              className={`group relative flex h-10 min-w-[204px] items-center justify-center overflow-hidden rounded-md px-4 text-[10px] uppercase tracking-[0.18em] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-colors ${updateToneClass} ${
+              className={`group relative flex h-9 min-w-[180px] items-center justify-center overflow-hidden rounded-lg border-0 px-4 text-[13px] font-medium transition-colors ${updateToneClass} ${
                 updateDownloading || updateDownloaded ? 'cursor-default' : ''
               }`}
             >
@@ -178,8 +178,8 @@ export const Header: React.FC = () => {
                 />
               )}
 
-              <span className="relative z-10 flex items-center gap-2 brand-font font-bold">
-                <Icon name={updateIcon} className={`text-[18px] ${updateDownloading || updateDownloaded ? 'animate-pulse' : ''}`} />
+              <span className="relative z-10 flex items-center gap-2">
+                <Icon name={updateIcon} className={`text-[17px] ${updateDownloading || updateDownloaded ? 'animate-pulse' : ''}`} />
                 <span>{updateActionLabel}</span>
               </span>
             </Button>

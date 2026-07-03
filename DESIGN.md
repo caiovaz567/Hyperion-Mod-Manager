@@ -270,15 +270,14 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 
 - When a mod archive contains `fomod/ModuleConfig.xml`, the install flow pauses and opens the FOMOD Installer wizard instead of proceeding automatically. During the initial archive analysis phase (`detecting` state, before the wizard opens), a centered blocking overlay matching the install overlay style is shown with title "PREPARING INSTALLER", a description, progress bar, and current file — but without the "interface locked" warning since no write operations are happening yet.
 - Modal: `min(860px, calc(100vw - 32px))` wide, `calc(100vh - 48px)` max height; rendered via `createPortal(_, document.body)`.
-- A slim accent progress bar tracks step completion (the old decorative top accent bar was removed).
-- Header row: `install_desktop` icon + "FOMOD INSTALLER" label (accent-colored) + mod name + step counter (`Step N / N`, right-aligned).
+- The wizard uses the shared HeroUI modal language. Header: accent icon tile (rounded square, `install_desktop`) + the mod name as a sentence-case title with a small "FOMOD Installer" support line, and on the right the step counter (`Step N / N`, Inter tabular) beside a slim rounded accent progress track, plus the shared CloseButton. No uppercase brand label, no absolute accent line on the modal edge.
 - Optional module image banner shown on the first step only when `<moduleImage>` is defined, using `object-contain` with full-slot scaling (no decorative background fill) and roughly `180-240px` visible height so landscape art stays readable.
 - Step name displayed as a 16px semibold heading below the banner.
-- Content area is scrollable; when the current step has plugin images, the dialog expands wider and a right-side **preview panel** (about `420px` wide) appears with a larger image slot that uses full-size `object-contain` rendering and no added background behind the art.
-- Groups render as labeled sections with a dark bordered card (`#080808` surface). Group label is 10px uppercase muted.
-- `SelectExactlyOne` / `SelectAtMostOne` → custom radio controls (accent fill dot); `SelectAny` / `SelectAll` → custom checkboxes (accent fill with check icon).
-- `Required` plugins are always checked and show a small "required" badge; `NotUsable` plugins are greyed out and cannot be toggled.
-- Footer: left = Cancel (secondary button with `border-[0.5px]` border, `text-sm` font, `rounded-sm`, muted text that brightens on hover — same language as Back); right = Back chevron button + Next / Install primary accent button.
+- Content area is scrollable; when the current step has plugin images, the dialog expands wider and a right-side **preview panel** (about `420px` wide) appears with a larger image slot that uses full-size `object-contain` rendering and no added background behind the art. Panel labels ("Preview", group names) are 13px sentence-case secondary text — no uppercase microtype.
+- Groups render as labeled sections on a borderless `--surface` card; option rows hover/check onto `--surface-secondary`.
+- `SelectExactlyOne` / `SelectAtMostOne` → custom radio controls (accent fill dot); `SelectAny` / `SelectAll` → custom checkboxes (accent fill with check icon) — 18px, token-driven borders.
+- `Required` plugins are always checked and show an accent HeroUI chip; group-wide "All selected" is a neutral chip; `NotUsable` plugins are greyed out and cannot be toggled.
+- Footer: left = Cancel (HeroUI secondary surface fill — the tertiary/ghost variant washed out in light mode); right = Back (secondary) + Next / Install (primary accent).
 - Install button is disabled until all `SelectExactlyOne` groups have exactly one selection.
 - On the last step, "Next" becomes "Install" with a `download` icon.
 - Corners follow the HeroUI rounding used across the app.

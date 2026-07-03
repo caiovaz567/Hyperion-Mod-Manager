@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '@heroui/react'
-import { HyperionSwitch } from '../ui/HyperionPrimitives'
+import { HyperionBadge, HyperionSwitch } from '../ui/HyperionPrimitives'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
@@ -127,7 +127,7 @@ export const ModRow: React.FC<ModRowProps> = ({
         onDrop={(event) => onSeparatorDrop?.(event, mod)}
         className={`group relative overflow-hidden border-y border-[var(--border)] transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 ${
           separatorDropTarget
-            ? 'bg-[#04141b] shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.34)]'
+            ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.14)] shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.34)]'
             : selected
               ? 'bg-[rgb(var(--accent-rgb)/0.18)]'
               : conflictSeparatorTone === 'win'
@@ -213,9 +213,12 @@ export const ModRow: React.FC<ModRowProps> = ({
                 {mod.name}
               </span>
               {separatorChildCount > 0 ? (
-                <span className="shrink-0 rounded-md border-0 bg-[var(--surface-secondary)] px-2 py-[3px] text-[11px] font-medium text-[var(--text-secondary)] transition-colors duration-150">
+                // Real HeroUI chip in the accent tone: the old --surface-secondary span sat
+                // on a row that IS --surface-secondary, so the "N mods" tag melted into the
+                // separator bar; the accent tint keeps it visible and follows the user's color.
+                <HyperionBadge tone="accent" size="sm" className="shrink-0 normal-case tracking-normal">
                   {tn('library.row.modCount', separatorChildCount)}
-                </span>
+                </HyperionBadge>
               ) : null}
               {separatorCollapsed && separatorUpdateCount > 0 ? (
                 <span
@@ -233,8 +236,8 @@ export const ModRow: React.FC<ModRowProps> = ({
                 <span
                   className={`rounded-md border-0 px-2.5 py-[4px] text-[11px] font-medium ${
                     separatorDropTarget
-                    ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.13)] text-[#7fe6ff]'
-                    : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
+                    ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.16)] text-[var(--accent-cyber-blue)]'
+                    : 'bg-[var(--surface)] text-[var(--text-secondary)]'
                 }`}
               >
                 {separatorDropTarget ? t('library.row.dropSelectedHere') : separatorMoveHint}

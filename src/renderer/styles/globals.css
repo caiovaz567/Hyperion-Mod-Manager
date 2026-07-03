@@ -355,10 +355,11 @@ a[href]) {
 
 ::selection { background: rgb(var(--accent-rgb) / 0.28); }
 
+/* The outline follows the element's own border-radius; never force a radius here —
+   a global `border-radius: 3px` squared off every focused pill/rounded control. */
 *:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 3px;
 }
 
 /* Text-entry elements match :focus-visible even on mouse click (unlike buttons),

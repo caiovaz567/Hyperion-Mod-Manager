@@ -129,11 +129,11 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             <button
               type="button"
               onClick={() => onStatusFilterChange('all')}
-              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-sm border-0 bg-[rgb(var(--accent-rgb)/0.10)] px-3 text-[11px] brand-font font-bold uppercase tracking-[0.14em] text-[var(--accent)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.16)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.16)]"
+              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-sm font-medium text-[var(--accent)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.18)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.18)]"
             >
               <Icon name={activeStatusNotice.icon} className="text-[16px] text-current" />
               <span>{activeStatusNotice.label}</span>
-              <Icon name="close" className="ml-1 text-[15px] text-[rgb(var(--accent-rgb)/0.55)] transition-colors group-hover:text-[var(--accent)]" />
+              <Icon name="close" className="ml-1 text-[15px] opacity-60 transition-opacity group-hover:opacity-100" />
             </button>
           </Tooltip>
         ) : null}

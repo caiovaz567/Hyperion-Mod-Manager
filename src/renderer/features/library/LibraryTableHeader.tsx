@@ -101,18 +101,18 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         aria-hidden="true"
         className={`pointer-events-none absolute inset-0 transition-[background-color,box-shadow,border-color] duration-150 ${
           topLevelDropActive
-            ? 'bg-[#06141a]/94 shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.42)]'
-            : 'bg-[#070707]/82 shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.16)]'
+            ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.14)] shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.42)]'
+            : 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.05)] shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.16)]'
         }`}
       />
     )}
     {showTopLevelHeaderDrop && (
       <div className="pointer-events-none absolute inset-y-0 right-6 z-20 flex items-center">
         <span
-          className={`rounded-sm border-0 px-2.5 py-[4px] text-[10px] brand-font font-bold uppercase tracking-[0.16em] transition-colors ${
+          className={`rounded-md border-0 px-2.5 py-[4px] text-[11px] font-semibold transition-colors ${
             topLevelDropActive
-              ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.13)] text-[#7fe6ff]'
-              : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]'
+              ? 'bg-[rgb(var(--accent-cyber-blue-rgb)/0.16)] text-[var(--accent-cyber-blue)]'
+              : 'bg-[var(--surface)] text-[var(--text-secondary)]'
           }`}
         >
           {topLevelDropActive ? t('library.header.releaseTopLevel') : t('library.header.dragTopLevel')}
