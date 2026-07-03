@@ -1,9 +1,14 @@
 name: Release
 
+# Releases are cut ONLY by pushing a version tag (vX.Y.Z). Triggering on every
+# push to main rebuilt and re-published the current version's release assets on
+# unrelated commits (docs pushes, fixes without a release intent) — and since
+# action-gh-release creates missing tags, a version bump pushed to main could
+# mint a release by itself. The checkout below builds exactly the tagged commit.
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*'
 
 permissions:
   contents: write
