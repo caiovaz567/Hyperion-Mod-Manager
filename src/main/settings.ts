@@ -19,7 +19,14 @@ interface PersistedSettings extends Partial<AppSettings> {
 
 function canUseSafeStorage(): boolean {
   try {
-    return app.isReady() && safeStorage.isEncryptionAvailable()
+    // Packaged only. In dev the app redirects `sessionData` to a per-PID temp dir
+    // (see index.ts), and Chromium's OSCrypt master key lives in that dir's
+    // `Local State` file — so every `npm run dev` run gets a fresh throwaway key and
+    // can NEVER decrypt a key encrypted by a previous run ("Error while decrypting
+    // the ciphertext"). Packaged builds use a stable userData dir, so encryption
+    // round-trips correctly there. Gating on isPackaged means dev persists the key
+    // as plaintext (a developer's own machine) while shipped builds encrypt at rest.
+    return app.isPackaged && app.isReady() && safeStorage.isEncryptionAvailable()
   } catch {
     return false
   }
