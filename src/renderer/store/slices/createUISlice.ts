@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
-import { v4 as uuidv4 } from 'uuid'
 import type { Toast, ToastSeverity } from '../../../shared/types'
+import { pushHeroToast } from '../../features/ui/toastQueue'
 
 type StringListUpdater = string[] | ((current: string[]) => string[])
 
@@ -55,23 +55,16 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   collapsedLibrarySeparatorIds: [],
   conflictHighlight: { active: false, focusModId: null, wins: [], losses: [] },
 
+  // Toasts render through HeroUI's ToastProvider (features/ui/ToastContainer +
+  // toastQueue). The action keeps its historical signature so every call site is
+  // untouched; the store no longer tracks toast state itself.
   addToast: (message, severity = 'info', duration = 4000) => {
-    const id = uuidv4()
-    set((state) => ({
-      toasts: [...state.toasts, { id, message, severity, duration }]
-    }))
-    // Auto-remove after duration
-    setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((t) => t.id !== id)
-      }))
-    }, duration)
+    pushHeroToast(message, severity, duration)
   },
 
-  removeToast: (id) =>
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id)
-    })),
+  removeToast: () => {
+    // Dismissal is owned by the HeroUI toast queue (close button / timeout).
+  },
 
   openDialog: (name) =>
     set((state) => ({

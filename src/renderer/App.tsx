@@ -6,6 +6,7 @@ import { IPC } from '../shared/types'
 import { Header } from './features/ui/Header'
 import { Sidebar } from './features/ui/Sidebar'
 import { ToastContainer } from './features/ui/ToastContainer'
+import { LaunchProgressCard } from './features/ui/LaunchProgressCard'
 import { DuplicateDownloadDialog } from './features/ui/DuplicateDownloadDialog'
 import { DuplicateInstallDialog } from './features/ui/DuplicateInstallDialog'
 import { VersionMismatchDialog } from './features/ui/VersionMismatchDialog'
@@ -43,11 +44,13 @@ async function waitForCriticalFonts(): Promise<void> {
   const fontSet = document.fonts
   if (!fontSet) return
 
+  // The families the shell actually renders (self-hosted, so these resolve from
+  // disk in milliseconds). DM Sans and the Material Symbols icon font were removed
+  // from the project — waiting on them was a no-op at best.
   const fontLoads = [
-    fontSet.load('600 16px "DM Sans"'),
+    fontSet.load('600 16px "Inter"'),
     fontSet.load('700 16px "Syne"'),
-    fontSet.load('600 16px "Oxanium"'),
-    fontSet.load('400 18px "Material Symbols Outlined"'),
+    fontSet.load('400 14px "JetBrains Mono"'),
   ]
 
   await Promise.race([
@@ -325,6 +328,7 @@ export const App: React.FC = () => {
             </div>
           </div>
         )}
+        <LaunchProgressCard />
         <ToastContainer />
       </div>
     </div>

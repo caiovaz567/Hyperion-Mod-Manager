@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { BASE_THEME_TOKENS, LIGHT_THEME_TOKENS } from './themes'
 import { ACCENT_PRESETS, accentTokens, resolveAccent, type AccentPreset } from './accents'
@@ -64,7 +64,24 @@ export const AppThemeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => media.removeEventListener('change', onChange)
   }, [])
 
+  const previousResolvedModeRef = useRef<'light' | 'dark'>(resolvedMode)
+
   useEffect(() => {
+    // Light↔dark cross-fades via the View Transitions API: the compositor snapshots
+    // the old frame and fades to the new one on the GPU — one repaint total. (A CSS
+    // `transition` on every element animated paint properties across the whole tree
+    // and visibly chugged.) Only MODE changes animate; accent changes and the first
+    // mount apply instantly.
+    const modeChanged = previousResolvedModeRef.current !== resolvedMode
+    previousResolvedModeRef.current = resolvedMode
+
+    const doc = document as Document & { startViewTransition?: (callback: () => void) => unknown }
+    if (modeChanged && typeof doc.startViewTransition === 'function') {
+      doc.startViewTransition(() => {
+        applyThemeTokens(resolvedMode, accentTokens(resolvedAccent))
+      })
+      return
+    }
     applyThemeTokens(resolvedMode, accentTokens(resolvedAccent))
   }, [resolvedMode, resolvedAccent])
 

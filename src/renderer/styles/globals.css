@@ -355,6 +355,25 @@ a[href]) {
 
 ::selection { background: rgb(var(--accent-rgb) / 0.28); }
 
+/* Light↔dark switches cross-fade through the View Transitions API (ThemeContext
+   wraps the token swap in document.startViewTransition): the compositor fades a
+   snapshot of the old frame into the new one on the GPU — smooth regardless of DOM
+   size. These rules just tune the fade length. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: ease;
+}
+
+/* HeroUI toasts follow the app-wide floating-surface language: --overlay fill +
+   fine border (their default surface melted into the page background in both
+   modes), and no drop shadow like every other floating surface. */
+[data-slot='toast'] {
+  box-shadow: none !important;
+  background-color: var(--overlay) !important;
+  border: 1px solid var(--border-strong) !important;
+}
+
 /* The outline follows the element's own border-radius; never force a radius here —
    a global `border-radius: 3px` squared off every focused pill/rounded control. */
 *:focus-visible {
@@ -388,9 +407,13 @@ select:focus-visible,
   color: var(--accent);
 }
 
-/* Unchecked switch visibility in light mode: HeroUI's pale default track melts into
-   the light --surface-secondary rows, leaving a white knob on a near-white pill.
-   Darken the track (the knob stays white) so the off state reads at a glance. */
+/* Unchecked switch visibility: HeroUI's default track melts into the
+   --surface-secondary rows in BOTH modes (near-white pill on a light row, near-black
+   pill on a dark row), leaving just a floating knob. Give the off track clear
+   contrast against the row so the state reads at a glance. */
 html:not(.dark) .switch:not([aria-checked='true']):not([data-selected='true']) {
   --switch-control-bg: rgba(0, 0, 0, 0.26);
+}
+html.dark .switch:not([aria-checked='true']):not([data-selected='true']) {
+  --switch-control-bg: rgba(255, 255, 255, 0.18);
 }

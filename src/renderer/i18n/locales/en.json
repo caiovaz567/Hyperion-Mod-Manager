@@ -913,5 +913,22 @@
     "occurred": "Occurred",
     "details": "Details",
     "noDetails": "No structured details"
+  },
+  "launch": {
+    "step": {
+      "scan": "Scanning enabled mods",
+      "map": "Building the virtual file map",
+      "bridge": "Loading the mod engine",
+      "overwrite": "Preparing the overwrite layer",
+      "bootstrap": "Staging loader files",
+      "mount": "Mounting the virtual file system",
+      "redmod": "Compiling REDmods",
+      "launch": "Starting Cyberpunk 2077",
+      "launched": "Game launched",
+      "cancelled": "Launch cancelled",
+      "error": "Launch failed",
+      "cancelling": "Cancelling launch...",
+      "redmodHint": "Starting redMod.exe — the first launch can take a couple of minutes"
+    }
   }
 }

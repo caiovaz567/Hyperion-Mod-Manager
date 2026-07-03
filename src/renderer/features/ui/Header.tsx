@@ -36,13 +36,13 @@ const ModeToggle: React.FC = () => {
               aria-checked={active}
               aria-label={option.label}
               onClick={() => setMode(option.id)}
-              className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+              className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
                 active
                   ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Icon name={option.icon} className="text-[15px]" />
+              <Icon name={option.icon} className="text-[16px]" />
             </button>
           </Tooltip>
         )

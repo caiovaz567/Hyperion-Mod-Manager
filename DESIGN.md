@@ -49,6 +49,7 @@ Accessibility:
 ### Color mode & accent color
 
 - The header hosts a **light / dark / system segmented toggle** (sun / moon / monitor, HeroUI-docs style). Default is **system**, following the OS scheme live. Light mode mirrors HeroUI's light scheme: a light-gray page canvas with white elevated cards - not a plain white page
+- Switching light↔dark cross-fades over ~220ms via the View Transitions API (the theme provider wraps the token swap in `document.startViewTransition`, so the compositor fades a GPU snapshot — smooth on any DOM size; never use a global CSS `transition` on `*` for this, it repaints the whole tree per frame). Accent changes stay instant
 - Hyperion has one base look per mode; the only visual customization is the **accent color**, chosen in **Settings > General -> "Color"**: a swatch row (blue, cyan, green, yellow, orange, red, pink, purple) that recolors every button, switch, tab and highlight across the whole app instantly (including the setup screen) and persists across sessions. Default is the HeroUI blue (`#006FEE`)
 - There is **no theme selector, no Themes folder, and no community-theme JSON support** - that system was removed in favor of the single accent-color axis
 - Status colors (`--status-success/warning/error/info`), the Nexus **Premium gold**, and per-mod-type colors are **never** recolored by the accent - they carry fixed meaning. The Nexus **Free** tier marker follows the accent color
@@ -59,6 +60,7 @@ Accessibility:
 
 - Syne (`brand-font`): the HYPERION logo/wordmark and a few remaining uppercase brand moments only - never new body/UI copy
 - Inter: primary UI font for labels, panels, forms, lists, dialogs, helper copy, buttons, and readable support text (it is also HeroUI's default typeface)
+- All font families are **self-hosted** (bundled `@fontsource` packages imported in `main.tsx`); the renderer never fetches fonts (or anything else) from the network at boot, and the CSP allows no external font/style hosts
 - Oxanium (`screen-title-font`) remains loaded only for legacy screen-title accents; do not spread it further - new headings are Inter sentence-case
 - Monospace is reserved for clearly technical values only, such as code-like payload inspection or highly technical diagnostics
 - Do not use monospace for small helper copy, explanatory paragraphs, or secondary UI descriptions; those should use Inter instead
@@ -115,11 +117,17 @@ Sidebar behavior:
 - Launch Game is icon-only while collapsed and reveals text on sidebar hover
 - Launch Game motion must remain stable: no backward jitter before moving forward
 
-Launch Game states:
-- **Ready**: primary accent button (`bg-[var(--accent)] text-[var(--accent-foreground)]`), `play_arrow` icon, label `LAUNCH GAME`
-- **Disabled** (path not set): muted dark button, `cursor-not-allowed`
-- **In Game**: secondary success-tinted button (`bg-[#0c1410] border-[0.5px] border-[#34D399]/30 text-[#34D399]`), `sports_esports` icon, label `IN GAME`, `cursor-default` (not clickable)
-- When In Game, a second **Close Game** destructive button appears below, same `py-3` height, `power_settings_new` icon, label `CLOSE GAME`, uses error-red tone (`text-[#f87272]`, dark bg, `/20` → `/40` border on hover)
+Launch progress card:
+- Clicking Launch Game surfaces a **floating, non-blocking status card** (bottom-center, HeroUI overlay surface: border + `--overlay` fill, accent icon tile with spinner, translated step label, detail line, percent and a slim rounded progress bar) that narrates the launch pipeline — scanning mods, building/mounting the VFS, **compiling REDmods** (which can take minutes on the first run), starting the game
+- While a step is cancellable it shows a quiet Cancel action; success/cancel states auto-dismiss after a moment, errors persist with a close button and the main-process error detail
+- Step labels are translated via `launch.step.*` keys carried on the progress events (`GameLaunchProgress.key`); unknown keys fall back to the main process's English step text
+
+Launch Game states (all borderless HeroUI fills, `rounded-lg`, 13px semibold — no outline boxes, no glow):
+- **Ready**: primary accent button (`bg-[var(--accent)] text-[var(--accent-foreground)]`, hover `--accent-hover`), `play_arrow` icon
+- **Launching**: accent-tinted fill (`rgb(var(--accent-rgb)/0.12)` + accent text) with an inline spinner in `currentColor`, `cursor-default`
+- **Disabled** (path not set): `--surface-secondary` fill with `--text-disabled`, `cursor-not-allowed`
+- **In Game**: success-tinted fill (`rgba(52,211,153,0.14)` + `#34D399` text), `sports_esports` icon, `cursor-default` (not clickable)
+- When In Game, a second **Close Game** destructive button appears below, same `py-3` height, `power_settings_new` icon, error-tinted fill (`rgba(248,113,113,0.12)` + `--status-error` text, deeper tint on hover)
 - Game running state is polled every 5 seconds via `IPC.GAME_RUNNING` (`tasklist`); `IPC.KILL_GAME` (`taskkill /F`) handles force close
 - Mod installation is blocked while the game is running (toast: `Close Cyberpunk 2077 before installing mods`)
 
@@ -430,9 +438,9 @@ Tooltips:
 
 ### Toasts
 
-- Compact stacked notifications
-- Clear severity via border/accent, not giant badges
-- Short text, no gimmick labels
+- Real HeroUI `Toast` components: the store's `addToast(message, severity, duration)` pushes into a single global HeroUI `ToastQueue` (`features/ui/toastQueue.ts`) and `ToastContainer` renders it via `<ToastProvider placement="bottom end">` — no hand-rolled toast markup
+- Severity maps to HeroUI variants: success → `success`, error → `danger`, warning → `warning`, info → `accent` (informational toasts follow the user's accent color)
+- Compact stacked notifications, short text, no gimmick labels. globals.css pins the floating-surface language on the toast slot: `--overlay` fill + `--border-strong` border, `box-shadow: none` (HeroUI's default surface melted into the page in both modes)
 
 ### Lists and panels
 

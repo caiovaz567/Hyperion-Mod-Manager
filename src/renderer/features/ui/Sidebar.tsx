@@ -124,7 +124,13 @@ export const Sidebar: React.FC = () => {
 
     try {
       const result = await IpcService.invoke<{ ok: boolean; error?: string; cancelled?: boolean }>(IPC.LAUNCH_GAME)
-      if (!result.ok && !result.cancelled) {
+      if (result.cancelled) {
+        // Cancelled launches are terminal: stop the spinner right away instead of
+        // falling through to the 30s "wait for the game to appear" grace timer.
+        setLaunching(false)
+        return
+      }
+      if (!result.ok) {
         setLaunching(false)
         addToast(result.error ?? t('shell.game.launchFailed'), 'error')
         return
@@ -248,19 +254,19 @@ export const Sidebar: React.FC = () => {
           isDisabled={isLaunchDisabled && !gameRunning && !launching}
           fullWidth
           variant={!gameRunning && !launching && !isLaunchDisabled ? 'primary' : 'tertiary'}
-          className={`h-auto min-w-0 w-full overflow-hidden rounded-md px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap transition-[background-color,color,border-color,box-shadow] duration-150 ${
+          className={`h-auto min-w-0 w-full overflow-hidden rounded-lg border-0 px-2 py-3 text-[13px] font-semibold whitespace-nowrap transition-[background-color,color] duration-150 ${
             gameRunning
-              ? 'bg-[#0c1410] border-[0.5px] border-[#34D399]/30 text-[#34D399] cursor-default'
+              ? 'bg-[rgba(52,211,153,0.14)] text-[#34D399] cursor-default'
               : launching
-                ? 'bg-[#1a1600] border-[0.5px] border-[rgb(var(--accent-rgb)/0.3)] text-[rgb(var(--accent-rgb)/0.6)] cursor-default'
+                ? 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)] cursor-default'
                 : isLaunchDisabled
-                  ? 'bg-[#262626] text-[#8a8a8a] cursor-not-allowed'
-                  : 'bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90 shadow-[0_0_20px_rgb(var(--accent-rgb)/0.15)]'
+                  ? 'bg-[var(--surface-secondary)] text-[var(--text-disabled)] cursor-not-allowed'
+                  : 'bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent-hover)]'
           }`}
         >
           <span className="flex items-center justify-center">
             {launching ? (
-              <svg className="shrink-0 animate-spin text-[rgb(var(--accent-rgb)/0.6)]" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <svg className="shrink-0 animate-spin text-current" width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
@@ -279,7 +285,7 @@ export const Sidebar: React.FC = () => {
             onPress={handleKillGame}
             fullWidth
             variant="danger-soft"
-            className="h-auto min-w-0 w-full overflow-hidden rounded-md px-2 py-3 text-xs font-bold tracking-widest whitespace-nowrap border-[0.5px] border-[#f87272]/20 bg-[#0d0808] text-[#f87272] hover:bg-[#150a0a] hover:border-[#f87272]/40 transition-[background-color,border-color] duration-150"
+            className="h-auto min-w-0 w-full overflow-hidden rounded-lg border-0 px-2 py-3 text-[13px] font-semibold whitespace-nowrap bg-[rgba(248,113,113,0.12)] text-[var(--status-error)] hover:bg-[rgba(248,113,113,0.2)] transition-[background-color] duration-150"
           >
             <span className="flex items-center justify-center">
               <Icon name="power_settings_new" className="shrink-0 text-[18px]" />
