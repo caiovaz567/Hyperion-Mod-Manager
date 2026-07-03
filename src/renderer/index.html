@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0A0A0A" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: hyperion-local:;" />
+    <!-- Fonts are self-hosted (@fontsource imports in main.tsx), so the CSP allows no
+         external font/style hosts and a cold start never waits on the network. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: hyperion-local:;" />
     <title>Hyperion</title>
     <style>
       html, body, #root {
@@ -16,9 +18,6 @@
         color: #F2F2F2;
       }
     </style>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Syne:wght@400;600;700;800&family=Oxanium:wght@500;600;700&family=JetBrains+Mono:wght@400&display=block" rel="stylesheet" />
   </head>
   <body style="background:#0A0A0A;color:#F2F2F2;">
     <div id="root"></div>

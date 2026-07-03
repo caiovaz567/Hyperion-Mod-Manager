@@ -45,6 +45,10 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/oxanium": "^5.2.8",
+    "@fontsource/syne": "^5.2.7",
     "@heroui/react": "^3.2.1",
     "@heroui/styles": "^3.2.1",
     "adm-zip": "^0.5.16",
