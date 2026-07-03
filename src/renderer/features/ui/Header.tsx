@@ -38,7 +38,7 @@ const ModeToggle: React.FC = () => {
               onClick={() => setMode(option.id)}
               className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
                 active
-                  ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                  ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)]'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >

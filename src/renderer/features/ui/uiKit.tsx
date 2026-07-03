@@ -121,7 +121,7 @@ export const SegmentedTabs = <T extends string,>({
           onClick={() => onChange(item.id)}
           className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
             active
-              ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+              ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)]'
               : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
           }`}
         >

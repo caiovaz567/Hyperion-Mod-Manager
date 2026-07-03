@@ -102,7 +102,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
                 onClick={() => onStatusFilterChange(option.filter)}
                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-[12.5px] font-medium transition-colors focus:outline-none ${
                   active
-                    ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                    ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
