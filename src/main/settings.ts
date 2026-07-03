@@ -1,10 +1,39 @@
-import { app } from 'electron'
+import { app, safeStorage } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import type { AppSettings } from '../shared/types'
 import type { PathDefaults } from '../shared/types'
 
 const settingsPath = path.join(app.getPath('userData'), 'settings.json')
+
+// ─── Nexus API key at-rest encryption ─────────────────────────────────────────
+// The key is persisted OS-encrypted (DPAPI on Windows via Electron safeStorage)
+// under `nexusApiKeyEncrypted` instead of plaintext. In memory (and over IPC to
+// the renderer) AppSettings keeps the decrypted `nexusApiKey` so every consumer
+// stays unchanged. Legacy plaintext files migrate on first load; if decryption
+// ever fails (settings.json copied to another machine/user profile), the key
+// resolves to empty and the user simply re-enters it in Settings > Nexus.
+interface PersistedSettings extends Partial<AppSettings> {
+  nexusApiKeyEncrypted?: string
+}
+
+function canUseSafeStorage(): boolean {
+  try {
+    return app.isReady() && safeStorage.isEncryptionAvailable()
+  } catch {
+    return false
+  }
+}
+
+function decryptStoredApiKey(encrypted?: string): string | null {
+  if (!encrypted) return null
+  try {
+    if (!canUseSafeStorage()) return null
+    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
+  } catch {
+    return null
+  }
+}
 
 function getManagedRoot(): string {
   return path.join(app.getPath('documents'), 'Hyperion')
@@ -120,8 +149,16 @@ export function loadSettings(): AppSettings {
   try {
     if (fs.existsSync(settingsPath)) {
       const raw = fs.readFileSync(settingsPath, 'utf-8')
-      const parsed = normalizeSettings(JSON.parse(raw) as Partial<AppSettings>)
+      const stored = JSON.parse(raw) as PersistedSettings
+      const hadPlaintextKey = Boolean(stored.nexusApiKey?.trim()) && !stored.nexusApiKeyEncrypted
+      const decryptedKey = decryptStoredApiKey(stored.nexusApiKeyEncrypted)
+      if (decryptedKey !== null) stored.nexusApiKey = decryptedKey
+      const parsed = normalizeSettings(stored)
       ensureManagedDirectories(parsed)
+      // One-time migration: re-save a legacy plaintext key in encrypted form.
+      if (hadPlaintextKey && parsed.nexusApiKey && canUseSafeStorage()) {
+        saveSettings(parsed)
+      }
       return parsed
     }
   } catch {
@@ -135,7 +172,18 @@ export function loadSettings(): AppSettings {
 export function saveSettings(settings: AppSettings): void {
   const normalized = normalizeSettings(settings)
   ensureManagedDirectories(normalized)
+  const persisted: PersistedSettings = { ...normalized }
+  if (normalized.nexusApiKey && canUseSafeStorage()) {
+    try {
+      persisted.nexusApiKeyEncrypted = safeStorage
+        .encryptString(normalized.nexusApiKey)
+        .toString('base64')
+      persisted.nexusApiKey = ''
+    } catch {
+      // Encryption hiccup: fall back to plaintext rather than losing the key.
+    }
+  }
   const dir = path.dirname(settingsPath)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(settingsPath, JSON.stringify(normalized, null, 2), 'utf-8')
+  fs.writeFileSync(settingsPath, JSON.stringify(persisted, null, 2), 'utf-8')
 }

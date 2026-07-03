@@ -67,7 +67,12 @@ function buildErrorDetails(error: unknown, extra?: Record<string, unknown>): Rec
   }
 }
 
-function createLoggedSecretValue(value: unknown): LoggedSecretValue {
+// `retainRawValue` controls whether the App Logs "reveal" toggle can show the
+// real secret. Short-lived tokens (the nxm one-time `key`, which expires in
+// minutes and is useless without the account key) keep the raw value for
+// debugging; the long-lived account API key is NEVER carried into the log
+// store — even revealed it stays masked.
+function createLoggedSecretValue(value: unknown, retainRawValue = false): LoggedSecretValue {
   const text = typeof value === 'string' ? value : String(value ?? '')
   const masked = text.length <= 8
     ? '[hidden]'
@@ -76,7 +81,7 @@ function createLoggedSecretValue(value: unknown): LoggedSecretValue {
   return {
     __hyperionSecret: true,
     masked,
-    value: text,
+    value: retainRawValue ? text : masked,
   }
 }
 
@@ -107,8 +112,11 @@ function sanitizePayload(payload: Record<string, unknown> | undefined): Record<s
   if (!payload) return null
 
   const sanitizedEntries = Object.entries(payload).map(([key, value]) => {
-    if (key === 'apiKey' || key === 'key' || key === 'apikey') {
+    if (key === 'apiKey' || key === 'apikey') {
       return [key, createLoggedSecretValue(value)]
+    }
+    if (key === 'key') {
+      return [key, createLoggedSecretValue(value, true)]
     }
     if ((key === 'endpoint' || key === 'url') && typeof value === 'string') {
       return [key, maskSensitiveUrl(value)]
@@ -141,6 +149,20 @@ function summarizeNexusFileEntryForLog(file: NexusFileEntry): Record<string, unk
 }
 
 function summarizeNexusResponseForLog(endpoint: string, data: unknown): unknown {
+  // The validate.json RESPONSE echoes the account API key back in its `key`
+  // field — mask it before it can enter the log store (masked-only, like the
+  // request-side apiKey fields; the reveal toggle never exposes it).
+  if (
+    endpoint.includes('/users/validate.json') &&
+    data && typeof data === 'object' && !Array.isArray(data)
+  ) {
+    const record = data as Record<string, unknown>
+    if (typeof record.key === 'string' && record.key) {
+      return { ...record, key: createLoggedSecretValue(record.key) }
+    }
+    return data
+  }
+
   if (
     endpoint.includes('/files.json') &&
     data &&
@@ -204,6 +226,11 @@ async function nexusGet<T>(
     try {
       const response = await net.fetch(url, {
         signal: controller.signal,
+        // Fail closed on redirects: the Nexus v1 API never redirects, and custom
+        // headers (unlike Authorization) are NOT stripped by fetch on a
+        // cross-origin redirect — following one could hand the apikey header to
+        // another host.
+        redirect: 'error',
         headers: {
           apikey: apiKey,
           'User-Agent': USER_AGENT,
@@ -213,28 +240,41 @@ async function nexusGet<T>(
         },
       })
       const durationMs = Date.now() - startedAt
+      // Nexus rate-limit headers (hourly + daily buckets) — surfaced in the
+      // request log so quota exhaustion is diagnosable from App Logs.
+      const rateLimit = {
+        hourlyRemaining: response.headers.get('x-rl-hourly-remaining') ?? undefined,
+        dailyRemaining: response.headers.get('x-rl-daily-remaining') ?? undefined,
+      }
+      const loggedContext = rateLimit.hourlyRemaining || rateLimit.dailyRemaining
+        ? { ...requestContext, rateLimit }
+        : requestContext
       if (!response.ok) {
-        const text = await response.text().catch(() => response.statusText)
+        const text = (await response.text().catch(() => response.statusText)).slice(0, 600)
+        const retryAfter = response.headers.get('retry-after')
+        const errorMessage = response.status === 429
+          ? `Nexus API rate limit reached (429).${retryAfter ? ` Retry in ${retryAfter}s.` : ' Try again later.'}`
+          : `Nexus API ${response.status}: ${text}`
         pushRequestLog(mainWindow, {
           method: 'GET',
           endpoint: loggedEndpoint,
           url: loggedUrl,
-          requestContext,
+          requestContext: loggedContext,
           requestBody: null,
           responseBody: text,
           status: 'error',
           statusCode: response.status,
           durationMs,
-          error: text,
+          error: errorMessage,
         })
-        return { ok: false, error: `Nexus API ${response.status}: ${text}` }
+        return { ok: false, error: errorMessage }
       }
       const data = await response.json() as T
       pushRequestLog(mainWindow, {
         method: 'GET',
         endpoint: loggedEndpoint,
         url: loggedUrl,
-        requestContext,
+        requestContext: loggedContext,
         requestBody: null,
         responseBody: summarizeNexusResponseForLog(endpoint, data),
         status: 'success',
@@ -305,11 +345,12 @@ export async function validateNexusApiKey(
   apiKey: string,
   mainWindow: BrowserWindow | null,
 ): Promise<IpcResult<NexusValidateResult>> {
+  // Note: the key itself is deliberately NOT passed as request payload — the
+  // account API key must never enter the log store, even in masked form.
   const result = await nexusGet<RawNexusValidateResult>(
     '/users/validate.json',
     apiKey,
     mainWindow,
-    { apiKey },
   )
 
   if (!result.ok || !result.data) {
@@ -617,12 +658,15 @@ async function fetchDownloadUrl(
 
 // ─── File Downloader ──────────────────────────────────────────────────────────
 
+const MAX_DOWNLOAD_REDIRECTS = 10
+
 function downloadFile(
   url: string,
   destPath: string,
   onProgress: (downloaded: number, total: number, speedBps: number) => void,
   signal: AbortSignal,
   startByte = 0,
+  redirectCount = 0,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let prevBytes = startByte
@@ -676,10 +720,14 @@ function downloadFile(
       responseStream = response
 
       if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-        // Follow redirect
+        // Follow redirect (bounded, so a misbehaving CDN can't loop forever)
         req?.destroy()
         cleanup()
-        downloadFile(response.headers.location, destPath, onProgress, signal, startByte).then(settleResolve, settleReject)
+        if (redirectCount >= MAX_DOWNLOAD_REDIRECTS) {
+          settleReject(new Error('Too many redirects'))
+          return
+        }
+        downloadFile(response.headers.location, destPath, onProgress, signal, startByte, redirectCount + 1).then(settleResolve, settleReject)
         return
       }
       if (response.statusCode === 416) {
