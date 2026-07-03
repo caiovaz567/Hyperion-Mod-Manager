@@ -49,23 +49,23 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-[12.5px]">
       {/* Free */}
-      <div className={`rounded-xl border-0 p-3 space-y-2.5 ${isPremium === false ? 'bg-[rgba(96,165,250,0.10)]' : 'bg-[var(--surface-secondary)]'}`}>
-        <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#555]'}`}>{t('common.free')}</div>
+      <div className={`rounded-xl border-0 p-3 space-y-2.5 ${isPremium === false ? 'bg-[var(--tier-free-bg)]' : 'bg-[var(--surface-secondary)]'}`}>
+        <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[var(--tier-free-text)]' : 'text-[var(--text-muted)]'}`}>{t('common.free')}</div>
         {NEXUS_FREE_FEATURES.map((f) => (
           <div key={f.icon} className="flex items-start gap-2">
-            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[#60A5FA]' : 'text-[#444]'}`} />
-            <span className={isPremium === false ? 'text-[#c0c0c0]' : 'text-[#555]'}>{t(f.textKey)}</span>
+            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[var(--tier-free-text)]' : 'text-[var(--text-disabled)]'}`} />
+            <span className={isPremium === false ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>{t(f.textKey)}</span>
           </div>
         ))}
       </div>
 
       {/* Premium */}
-      <div className={`rounded-xl border-0 p-3 space-y-2.5 ${isPremium === true ? 'bg-[rgba(252,238,9,0.10)]' : 'bg-[var(--surface-secondary)]'}`}>
-        <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#555]'}`}>{t('common.premium')}</div>
+      <div className={`rounded-xl border-0 p-3 space-y-2.5 ${isPremium === true ? 'bg-[var(--tier-premium-bg)]' : 'bg-[var(--surface-secondary)]'}`}>
+        <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[var(--tier-premium-text)]' : 'text-[var(--text-muted)]'}`}>{t('common.premium')}</div>
         {NEXUS_PREMIUM_FEATURES.map((f) => (
           <div key={f.icon} className="flex items-start gap-2">
-            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[#f7d154]' : 'text-[#444]'}`} />
-            <span className={isPremium === true ? 'text-[#c0c0c0]' : 'text-[#555]'}>{t(f.textKey)}</span>
+            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[var(--tier-premium-text)]' : 'text-[var(--text-disabled)]'}`} />
+            <span className={isPremium === true ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>{t(f.textKey)}</span>
           </div>
         ))}
       </div>
@@ -618,7 +618,7 @@ export const SettingsPage: React.FC = () => {
                 style={{ animationDelay: '0ms' }}
               >
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-stretch">
-                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-xl border-0 bg-[var(--surface-secondary)] transition-shadow focus-within:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.26)]">
+                  <div className="flex min-h-10 min-w-0 flex-1 items-center rounded-lg border-0 bg-[var(--surface-secondary)] transition-colors focus-within:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)]">
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}

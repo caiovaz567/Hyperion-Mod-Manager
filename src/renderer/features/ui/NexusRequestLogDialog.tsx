@@ -15,6 +15,7 @@ import { formatWindowsDateTime } from '../../utils/dateFormat'
 import { Tooltip } from './Tooltip'
 import { useTranslation } from '../../i18n/I18nContext'
 import { Icon } from './Icon'
+import { HyperionBadge } from './HyperionPrimitives'
 import { UnderlineTabs } from './uiKit'
 
 interface AppLogsDialogProps {
@@ -30,19 +31,23 @@ interface LoggedSecretValue {
   value: string
 }
 
-// Soft filled chips (no harsh outline) — semantic per HTTP method / log level.
-const requestMethodBadgeClass: Record<NexusApiLogEntry['method'], string> = {
-  GET: 'bg-[rgb(252_238_9/0.14)] text-[#fcee09]',
-  POST: 'bg-[rgb(96_165_250/0.16)] text-[#60a5fa]',
-  PUT: 'bg-[rgb(52_211_153/0.16)] text-[#34d399]',
-  PATCH: 'bg-[rgb(251_146_60/0.16)] text-[#fb923c]',
-  DELETE: 'bg-[rgb(248_113_113/0.16)] text-[#f87171]',
+// Method / level / status tags are real HeroUI chips (HyperionBadge), so they stay
+// readable in BOTH color modes — the old hand-rolled dark-palette fills (pale yellow
+// text on pale yellow) were invisible in light mode.
+type BadgeTone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger'
+
+const requestMethodTone: Record<NexusApiLogEntry['method'], BadgeTone> = {
+  GET: 'warning',
+  POST: 'accent',
+  PUT: 'success',
+  PATCH: 'warning',
+  DELETE: 'danger',
 }
 
-const generalLevelBadgeClass: Record<AppGeneralLogEntry['level'], string> = {
-  info: 'bg-[var(--surface-secondary)] text-[var(--text-secondary)]',
-  warn: 'bg-[rgb(252_238_9/0.14)] text-[#fcee09]',
-  error: 'bg-[rgb(248_113_113/0.16)] text-[#f87171]',
+const generalLevelTone: Record<AppGeneralLogEntry['level'], BadgeTone> = {
+  info: 'neutral',
+  warn: 'warning',
+  error: 'danger',
 }
 
 const inlineBadgeClass = 'inline-flex h-5 items-center rounded-md px-2 text-[10px] font-mono uppercase tracking-[0.14em]'
@@ -79,7 +84,7 @@ const LabeledPanel: React.FC<{
       <div className="flex items-center justify-between gap-2 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Icon name={icon} className={`text-[16px] ${isError ? 'text-[var(--status-error)]' : 'text-[var(--accent)]'}`} />
-          <span className={`${metaLabelClass} ${isError ? 'text-[#fca5a5]' : ''}`}>{label}</span>
+          <span className={`${metaLabelClass} ${isError ? 'text-[var(--status-error)]' : ''}`}>{label}</span>
         </div>
         {headerRight}
       </div>
@@ -147,9 +152,9 @@ function stringifyPayload(value: unknown, revealSecrets: boolean): string {
 function getPrimitiveClassName(value: unknown): string {
   // Strings use a fixed, readable warm tone (not the accent — a low-opacity blue/etc. accent
   // reads too dark on the code surface). Numbers/booleans/null keep their semantic colors.
-  if (typeof value === 'string') return 'text-[#e0af68]'
-  if (typeof value === 'number') return 'text-[#7aa2f7]'
-  if (typeof value === 'boolean') return 'text-[#9ece6a]'
+  if (typeof value === 'string') return 'text-[var(--code-string)]'
+  if (typeof value === 'number') return 'text-[var(--code-number)]'
+  if (typeof value === 'boolean') return 'text-[var(--code-boolean)]'
   return 'text-[#8a8a8a]'
 }
 
@@ -176,6 +181,43 @@ function buildInlinePreview(value: unknown, revealSecrets: boolean, depth = 0): 
     .map(([key, entryValue]) => `${key}: ${buildInlinePreview(entryValue, revealSecrets, depth + 1)}`)
     .join(', ')
   return `${preview}${entries.length > 3 ? ', ...' : ''}`
+}
+
+// Defense-in-depth: even if a payload reaches the viewer with a raw secret in a
+// suggestively-named string field (older log entries, a future endpoint echoing a
+// key back), wrap it into a masked LoggedSecretValue at ingestion. The masked form
+// is all the viewer, reveal toggle, and copy actions ever see.
+const SECRET_FIELD_NAME = /^(key|api_?key|token|secret|password)$/i
+
+function maskSecretText(text: string): string {
+  return text.length <= 8 ? '[hidden]' : `${text.slice(0, 4)}...${text.slice(-4)}`
+}
+
+function maskSecretFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(maskSecretFields)
+  if (value && typeof value === 'object') {
+    if (isLoggedSecretValue(value)) return value
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, innerValue]) => {
+        if (SECRET_FIELD_NAME.test(key) && typeof innerValue === 'string' && innerValue) {
+          const masked = maskSecretText(innerValue)
+          return [key, { __hyperionSecret: true, masked, value: masked } satisfies LoggedSecretValue]
+        }
+        return [key, maskSecretFields(innerValue)]
+      })
+    )
+  }
+  return value
+}
+
+function maskRequestLogEntry(entry: NexusApiLogEntry): NexusApiLogEntry {
+  return {
+    ...entry,
+    requestContext: maskSecretFields(entry.requestContext),
+    requestBody: maskSecretFields(entry.requestBody),
+    responseBody: maskSecretFields(entry.responseBody),
+    payload: maskSecretFields((entry as { payload?: unknown }).payload),
+  } as NexusApiLogEntry
 }
 
 function payloadHasSecrets(value: unknown): boolean {
@@ -260,7 +302,9 @@ const StructuredDataPanel: React.FC<{
         value === null || value === undefined ? (
           <div className="px-4 py-3 text-[13px] text-[var(--text-muted)]">{emptyLabel}</div>
           ) : (
-          <div className="border-t border-[var(--border)] bg-[rgb(0_0_0/0.28)] px-3 py-2.5">
+          <div className="border-t border-[var(--border)] bg-[var(--code-bg)] px-3 py-2.5">
+            {/* Mode-aware code surface: dark editor tones in dark mode, a light
+                editor scheme in light mode (see the --code-* tokens). */}
             <PayloadNode value={value} revealSecrets={revealSecrets} />
           </div>
         )
@@ -287,19 +331,19 @@ const PayloadNode: React.FC<{
   // Key label: array indices unquoted, object keys quoted
   const KeyEl = !isRoot ? (
     <span className="shrink-0 font-mono">
-      <span className="text-[#9cacbc]">{isArrayIdx ? name : `"${name}"`}</span>
-      <span className="text-[#6f6f6f]">: </span>
+      <span className="text-[var(--code-key)]">{isArrayIdx ? name : `"${name}"`}</span>
+      <span className="text-[var(--code-punct)]">: </span>
     </span>
   ) : null
 
-  const TrailingComma = !isLast ? <span className="text-[#505050]">,</span> : null
+  const TrailingComma = !isLast ? <span className="text-[var(--code-punct)]">,</span> : null
 
   if (isLoggedSecretValue(value)) {
     const shown = revealSecrets ? value.value : value.masked
     return (
-      <div className="ui-support-mono flex items-baseline gap-0 py-[2px] hover:bg-[#111111]" style={{ paddingLeft: rowPl }}>
+      <div className="ui-support-mono flex items-baseline gap-0 py-[2px] hover:bg-[var(--code-hover)]" style={{ paddingLeft: rowPl }}>
         {KeyEl}
-        <span className="break-all text-[#e0af68]">"{shown}"</span>
+        <span className="break-all text-[var(--code-string)]">"{shown}"</span>
         {TrailingComma}
       </div>
     )
@@ -307,7 +351,7 @@ const PayloadNode: React.FC<{
 
   if (isPayloadPrimitive(value)) {
     return (
-      <div className="ui-support-mono flex items-baseline gap-0 py-[2px] hover:bg-[#111111]" style={{ paddingLeft: rowPl }}>
+      <div className="ui-support-mono flex items-baseline gap-0 py-[2px] hover:bg-[var(--code-hover)]" style={{ paddingLeft: rowPl }}>
         {KeyEl}
         <span className={`break-all ${getPrimitiveClassName(value)}`}>{formatPrimitiveLabel(value)}</span>
         {TrailingComma}
@@ -333,18 +377,18 @@ const PayloadNode: React.FC<{
       <div
         role="button"
         tabIndex={0}
-        className="ui-support-mono flex cursor-pointer items-baseline gap-0 py-[2px] hover:bg-[#111111] focus:outline-none"
+        className="ui-support-mono flex cursor-pointer items-baseline gap-0 py-[2px] hover:bg-[var(--code-hover)] focus:outline-none"
         style={{ paddingLeft: rowPl }}
         onClick={toggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggle() }}
       >
-        <Icon name="expand_more" className={`mr-[5px] mt-[1px] shrink-0 select-none text-[#636363] transition-transform ${expanded ? '' : '-rotate-90'}`} style={{ fontSize: '12px' }} />
+        <Icon name="expand_more" className={`mr-[5px] mt-[1px] shrink-0 select-none text-[var(--code-punct)] transition-transform ${expanded ? '' : '-rotate-90'}`} style={{ fontSize: '12px' }} />
         {KeyEl}
-        <span className="text-[#6f6f6f]">{openBrace}</span>
+        <span className="text-[var(--code-punct)]">{openBrace}</span>
         {!expanded ? (
           <>
-            <span className="mx-[6px] truncate text-[#7a7a7a]">{preview}</span>
-            <span className="text-[#6f6f6f]">{closeBrace}</span>
+            <span className="mx-[6px] truncate text-[var(--code-muted)]">{preview}</span>
+            <span className="text-[var(--code-punct)]">{closeBrace}</span>
             {TrailingComma}
           </>
         ) : null}
@@ -372,7 +416,7 @@ const PayloadNode: React.FC<{
           </div>
           {/* Closing brace aligned with opening brace character */}
           <div className="ui-support-mono py-[2px]" style={{ paddingLeft: guideLeft }}>
-            <span className="text-[#6f6f6f]">{closeBrace}</span>
+            <span className="text-[var(--code-punct)]">{closeBrace}</span>
             {TrailingComma}
           </div>
         </>
@@ -402,7 +446,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
       .then((result) => {
         if (!mounted || !result.ok || !result.data) return
         setGeneralEntries(result.data.general)
-        setRequestEntries(result.data.requests)
+        setRequestEntries(result.data.requests.map(maskRequestLogEntry))
       })
       .finally(() => {
         if (mounted) setLoading(false)
@@ -414,7 +458,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
         setGeneralEntries((current) => [update.entry, ...current].slice(0, 200))
         return
       }
-      setRequestEntries((current) => [update.entry, ...current].slice(0, 120))
+      setRequestEntries((current) => [maskRequestLogEntry(update.entry as NexusApiLogEntry), ...current].slice(0, 120))
     })
 
     return () => {
@@ -534,7 +578,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           }`}
         >
           <span className="ui-support-mono">{formatWindowsDateTime(entry.timestamp)}</span>
-          <span className={`${inlineBadgeClass} justify-center ${requestMethodBadgeClass[entry.method]}`}>{entry.method}</span>
+          <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="justify-self-start font-mono">{entry.method}</HyperionBadge>
           <span className="min-w-0">
             <span className="mb-1 flex items-center gap-2">
               <span className="block truncate font-mono text-sm text-[var(--text-primary-alt)]">{entry.endpoint}</span>
@@ -546,14 +590,10 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             </span>
             <span className="ui-support-mono block truncate">{entry.url}</span>
           </span>
-          <span className={`${inlineBadgeClass} justify-center ${
-            entry.status === 'success'
-              ? 'bg-[rgb(52_211_153/0.16)] text-[#34d399]'
-              : 'bg-[rgb(248_113_113/0.16)] text-[#f87171]'
-          }`}>
+          <HyperionBadge tone={entry.status === 'success' ? 'success' : 'danger'} size="sm" className="justify-self-start font-mono">
             {formatStatusCode(entry)}
-          </span>
-          <span className="ui-support-mono truncate text-[#cfcfcf]">{formatDuration(entry.durationMs)}</span>
+          </HyperionBadge>
+          <span className="ui-support-mono truncate text-[var(--text-secondary)]">{formatDuration(entry.durationMs)}</span>
           <Icon name="expand_more" className={`text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
         </button>
         {expanded ? (
@@ -567,7 +607,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             ) : null}
             <div className="mb-4 grid gap-3 md:grid-cols-4">
               <MetaCard label={t('logs.method')}>
-                <span className={`${inlineBadgeClass} ${requestMethodBadgeClass[entry.method]}`}>{entry.method}</span>
+                <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="font-mono">{entry.method}</HyperionBadge>
               </MetaCard>
               <MetaCard label={t('logs.endpoint')}>
                 <div className="font-mono text-[13px] text-[var(--text-primary)] break-all">{entry.endpoint}</div>
@@ -589,7 +629,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             {entry.error ? (
               <div className="mb-4">
                 <LabeledPanel icon="error" label={t('logs.error')} tone="error">
-                  <div className="px-4 pb-3 font-mono text-[13px] text-[#fca5a5]">
+                  <div className="px-4 pb-3 font-mono text-[13px] text-[var(--status-error)]">
                     {entry.error}
                   </div>
                 </LabeledPanel>
@@ -629,7 +669,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
 
   return createPortal(
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
-      <div className="relative flex h-[88vh] w-[min(94vw,1760px)] max-w-none flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_24px_70px_rgba(0,0,0,0.7)]">
+      <div className="relative flex h-[88vh] w-[min(94vw,1760px)] max-w-none flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)]">
         <div className="flex items-start justify-between gap-6 px-6 pt-5 pb-2">
           <div className="min-w-0">
             <div className="mb-1.5 flex items-center gap-3">
@@ -711,8 +751,8 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                         }`}
                       >
                         <span className="ui-support-mono">{formatWindowsDateTime(entry.timestamp)}</span>
-                        <span className={`${inlineBadgeClass} ${generalLevelBadgeClass[entry.level]}`}>{entry.level}</span>
-                        <span className="ui-support-mono truncate uppercase tracking-[0.14em] text-[#cfcfcf]">{entry.source}</span>
+                        <HyperionBadge tone={generalLevelTone[entry.level]} size="sm" className="font-mono">{entry.level}</HyperionBadge>
+                        <span className="ui-support-mono truncate uppercase tracking-[0.14em] text-[var(--text-secondary)]">{entry.source}</span>
                         <span className="ui-support-mono truncate text-[var(--text-primary-alt)]">{entry.message}</span>
                         <Icon name="expand_more" className={`text-[16px] text-[#8a8a8a] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
                       </button>

@@ -72,7 +72,7 @@ export const LanguageSelect: React.FC<{
       {open && (
         <div
           role="listbox"
-          className={`absolute z-50 mt-1 min-w-[210px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--overlay)] py-1.5 shadow-[0_14px_32px_rgba(0,0,0,0.55)] ${
+          className={`absolute z-50 mt-1 min-w-[210px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--overlay)] py-1.5 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >

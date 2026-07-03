@@ -424,7 +424,7 @@ export const FomodInstallerDialog: React.FC = () => {
       onClick={clearFomodPrompt}
     >
         <div
-        className="relative flex flex-col overflow-hidden rounded-2xl bg-[var(--background)] border border-[var(--border)] shadow-[0_24px_70px_rgba(0,0,0,0.7)]"
+        className="relative flex flex-col overflow-hidden rounded-2xl bg-[var(--background)] border border-[var(--border)]"
         style={{
           width: hasPreviewImages ? 'min(1180px, calc(100vw - 32px))' : 'min(860px, calc(100vw - 32px))',
           height: 'min(82vh, 840px)',

@@ -33,6 +33,20 @@
     "--accent-cyber-blue-rgb": "79 216 255",
     "--focus-ring": "rgb(0 111 238 / 0.5)",
 
+    "--tier-premium-text": "#f7d154",
+    "--tier-premium-bg": "rgba(252, 238, 9, 0.10)",
+    "--tier-free-text": "#60A5FA",
+    "--tier-free-bg": "rgba(96, 165, 250, 0.10)",
+
+    "--code-bg": "#0d0d10",
+    "--code-hover": "rgba(255, 255, 255, 0.05)",
+    "--code-key": "#9cacbc",
+    "--code-string": "#e0af68",
+    "--code-number": "#7aa2f7",
+    "--code-boolean": "#9ece6a",
+    "--code-muted": "#8a8a8a",
+    "--code-punct": "#6f6f6f",
+
     "--scrollbar-thumb": "rgba(255, 255, 255, 0.14)",
     "--scrollbar-thumb-hover": "rgba(255, 255, 255, 0.24)"
   }

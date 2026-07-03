@@ -26,7 +26,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
   const { t } = useTranslation()
   return (
   <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[120] flex justify-center px-6">
-    <div data-bulk-actions="true" className="pointer-events-auto flex items-stretch gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--overlay)] p-2 shadow-[0_16px_44px_rgba(0,0,0,0.5)]">
+    <div data-bulk-actions="true" className="pointer-events-auto flex items-stretch gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--overlay)] p-2">
       <HyperionButton
         onClick={() => void onEnableSelected()}
         variant="toolbar"

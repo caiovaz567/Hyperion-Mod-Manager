@@ -286,7 +286,7 @@ export const App: React.FC = () => {
         )}
         {(detecting || installing) && (
           <div className="fixed inset-0 z-[260] flex cursor-wait items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="relative w-full max-w-[540px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] px-7 py-6 shadow-[0_24px_60px_rgba(0,0,0,0.62)]">
+            <div className="relative w-full max-w-[540px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] px-7 py-6">
               <div className="mb-4 flex items-center gap-2.5">
                 <span
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"

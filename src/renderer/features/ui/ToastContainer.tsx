@@ -21,7 +21,7 @@ export const ToastContainer: React.FC = () => {
         return (
           <div
             key={toast.id}
-            className="fade-up pointer-events-auto relative flex min-w-[360px] max-w-[460px] items-center gap-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--overlay)] px-4 py-3 shadow-[0_12px_44px_rgba(0,0,0,0.5)]"
+            className="fade-up pointer-events-auto relative flex min-w-[360px] max-w-[460px] items-center gap-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--overlay)] px-4 py-3"
           >
             <span
               aria-hidden="true"

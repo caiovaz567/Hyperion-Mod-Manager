@@ -121,7 +121,7 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   return createPortal(
     <div
       ref={menuRef}
-      className="fixed z-[100] min-w-[224px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.55)]"
+      className="fixed z-[100] min-w-[224px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5"
       style={{ left: menu.x, top: menu.y }}
       onClick={(event) => event.stopPropagation()}
     >

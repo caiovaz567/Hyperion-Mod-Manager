@@ -421,9 +421,13 @@ Destructive:
 
 Tooltips:
 - Use a shared Hyperion tooltip component instead of browser-native `title` tooltips
-- Tooltip treatment should stay compact: dark surface, fine border, uppercase micro-label, restrained shadow
+- Tooltip treatment should stay compact: dark surface, fine border, no drop shadow
 - Disabled controls that need explanation should expose that explanation through the same shared tooltip component
 - Tooltips that describe multi-state badges may use compact colored rows matching the badge colors, but should remain scannable and avoid paragraph-style copy
+
+### Floating surfaces (modals, menus, popovers, toasts)
+
+- **No drop shadows anywhere, in either color mode.** Modals, context menus, popovers, toasts, tooltips and floating bars separate from the page through their fine border and the dimmed backdrop, never through a cast shadow. Inset rings used as input boundaries or focus indicators are allowed
 
 ### Toasts
 

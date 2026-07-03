@@ -730,7 +730,7 @@ export const DownloadsPane: React.FC = () => {
       {contextMenu && createPortal(
         <div
           ref={contextMenuRef}
-          className="fixed z-[100] min-w-[224px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.55)]"
+          className="fixed z-[100] min-w-[224px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >

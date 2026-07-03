@@ -327,17 +327,21 @@ export const ModRow: React.FC<ModRowProps> = ({
         : conflictTone === 'mixed'
           ? 'bg-[rgba(252,238,9,0.08)]'
           : baseRowBackgroundClass
+  // Hover border follows each tone's own semantic color. The focused row is
+  // accent-tinted — the old #5a5714 olive was a leftover from the yellow-accent
+  // era and read as a stray yellow hairline between the selected mod and its
+  // conflict-highlighted neighbors. Yellow remains only on 'mixed' (redundant).
   const rowHoverClass = conflictTone === 'focus'
-    ? 'hover:border-[#5a5714] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_0_0_1px_rgb(var(--accent-rgb)/0.12)]'
+    ? 'hover:border-[rgb(var(--accent-rgb)/0.35)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_0_0_1px_rgb(var(--accent-rgb)/0.12)]'
     : conflictTone === 'win'
-      ? 'hover:border-[#1f5133] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),inset_0_0_0_1px_rgba(52,211,153,0.11)]'
+      ? 'hover:border-[rgba(52,211,153,0.35)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),inset_0_0_0_1px_rgba(52,211,153,0.11)]'
       : conflictTone === 'loss'
-        ? 'hover:border-[#5a2020] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(248,113,113,0.1)]'
+        ? 'hover:border-[rgba(248,113,113,0.35)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(248,113,113,0.1)]'
         : conflictTone === 'mixed'
-          ? 'hover:border-[#4b470d] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(252,238,9,0.1)]'
+          ? 'hover:border-[rgba(252,238,9,0.3)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_0_0_1px_rgba(252,238,9,0.1)]'
           : mod.enabled
-            ? 'hover:border-[#363636] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgb(var(--accent-rgb)/0.09)]'
-            : 'hover:border-[#2c2c2c] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+            ? 'hover:border-[var(--border-strong)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.025),inset_0_0_0_1px_rgb(var(--accent-rgb)/0.09)]'
+            : 'hover:border-[var(--border-strong)] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
   // NOTE: Tailwind can't apply an opacity modifier (/50) to a var() color, so the ring must be
   // written as rgb(var(--accent-rgb)/X) to actually render a visible accent ring.
   // Selection reads through the accent fill + left accent bar (below), not a full-perimeter

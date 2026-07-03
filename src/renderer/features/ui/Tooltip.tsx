@@ -34,7 +34,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       placement={side}
       // Explicit surface/text tokens so the tooltip stays readable in both modes
       // (dark text on light surfaces, light text on dark) regardless of HeroUI defaults.
-      className={`z-[240] whitespace-pre-line border border-[var(--border)] bg-[var(--overlay)] text-[12px] font-medium leading-5 text-[var(--text-primary)] shadow-[0_6px_18px_rgba(0,0,0,0.25)] ${
+      className={`z-[240] whitespace-pre-line border border-[var(--border)] bg-[var(--overlay)] text-[12px] font-medium leading-5 text-[var(--text-primary)] shadow-none ${
         variant === 'help' ? 'max-w-[420px]' : 'max-w-[320px]'
       } ${contentClassName ?? ''}`}
     >

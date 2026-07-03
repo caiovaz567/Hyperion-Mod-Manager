@@ -471,7 +471,7 @@ export const WelcomeScreen: React.FC = () => {
             {/* Step card */}
             <div
               key={currentStep}
-              className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.3)] sm:p-7 ${
+              className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-7 ${
                 stepDirection === 'forward' ? 'slide-in-right' : 'slide-in-left'
               }`}
             >
@@ -588,7 +588,7 @@ export const WelcomeScreen: React.FC = () => {
                       placeholder={t('welcome.nexus.apiKeyPlaceholder')}
                       spellCheck={false}
                       autoComplete="off"
-                      className="h-11 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 pr-11 text-[13.5px] text-white outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.45)] focus-visible:outline-none"
+                      className="h-11 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 pr-11 text-[13.5px] text-[var(--text-primary)] outline-none transition-colors focus:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)] focus-visible:outline-none"
                     />
                     {nexusApiKey && (
                       <button

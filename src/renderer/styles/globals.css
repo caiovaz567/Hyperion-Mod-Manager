@@ -55,6 +55,26 @@
   --accent-cyber-blue-rgb: 79 216 255;
   --focus-ring:            rgb(0 111 238 / 0.6);
 
+  /* Nexus subscription tier readouts (Settings > Nexus tier cards). Semantic like the
+     status colors, but mode-aware: the light palette overrides them with darker,
+     AA-readable amber/blue shades (pale gold on a pale card is unreadable in light). */
+  --tier-premium-text: #f7d154;
+  --tier-premium-bg:   rgba(252, 238, 9, 0.10);
+  --tier-free-text:    #60A5FA;
+  --tier-free-bg:      rgba(96, 165, 250, 0.10);
+
+  /* App Logs payload-inspector code surface. Mode-aware syntax palette: dark editor
+     tones by default, a light editor scheme in light mode (the light palette overrides
+     these) so the inspector matches the surrounding UI instead of a black block. */
+  --code-bg:      #0d0d10;
+  --code-hover:   rgba(255, 255, 255, 0.05);
+  --code-key:     #9cacbc;
+  --code-string:  #e0af68;
+  --code-number:  #7aa2f7;
+  --code-boolean: #9ece6a;
+  --code-muted:   #8a8a8a;
+  --code-punct:   #6f6f6f;
+
   /* Atmosphere (.hyperion-bg gradient/dot-pattern color stops) */
   --bg-glow-tint-1: rgba(252, 238, 9, 0.03);
   --bg-glow-tint-2: rgba(255, 255, 255, 0.018);
@@ -175,24 +195,28 @@ a[href]) {
   50%      { opacity: 1; }
 }
 
+/* One-shot "you landed here" cue for the GO jump (conflict overlay → mod row):
+   a strong accent background flash + inset ring that decays to nothing. Loud on
+   purpose — it must be unmistakable in both light and dark modes — but single-run
+   and quick, so it stays a purposeful cue rather than ambient pulsing. */
 @keyframes row-attention {
   0% {
+    background-color: rgb(var(--accent-rgb) / 0.38);
     box-shadow:
-      inset 0 0 0 1px rgb(var(--accent-rgb) / 0.9),
-      inset 3px 0 0 var(--accent),
-      0 0 0 rgb(var(--accent-rgb) / 0);
+      inset 0 0 0 2px rgb(var(--accent-rgb) / 0.95),
+      inset 3px 0 0 var(--accent);
   }
-  38% {
+  60% {
+    background-color: rgb(var(--accent-rgb) / 0.16);
     box-shadow:
-      inset 0 0 0 1px rgb(var(--accent-rgb) / 0.72),
-      inset 3px 0 0 var(--accent),
-      0 0 22px rgb(var(--accent-rgb) / 0.22);
+      inset 0 0 0 2px rgb(var(--accent-rgb) / 0.6),
+      inset 3px 0 0 var(--accent);
   }
   100% {
+    background-color: rgb(var(--accent-rgb) / 0);
     box-shadow:
-      inset 0 0 0 1px rgb(var(--accent-rgb) / 0.22),
-      inset 3px 0 0 rgb(var(--accent-rgb) / 0.55),
-      0 0 0 rgb(var(--accent-rgb) / 0);
+      inset 0 0 0 2px rgb(var(--accent-rgb) / 0),
+      inset 3px 0 0 rgb(var(--accent-rgb) / 0);
   }
 }
 
@@ -329,12 +353,23 @@ a[href]) {
   contain: layout paint style;
 }
 
-::selection { background: rgba(252, 238, 9, 0.2); color: #fff; }
+::selection { background: rgb(var(--accent-rgb) / 0.28); }
 
 *:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+/* Text-entry elements match :focus-visible even on mouse click (unlike buttons),
+   so the global ring drew a boxy outline around every clicked input. Fields carry
+   their own focus feedback (background shift), so the ring is keyboard-only UI
+   they don't need. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable='true']:focus-visible {
+  outline: none;
 }
 
 .hyperion-filter-button:focus,
@@ -350,4 +385,11 @@ a[href]) {
 .switch[data-selected='true'] .switch__thumb {
   background-color: #ffffff;
   color: var(--accent);
+}
+
+/* Unchecked switch visibility in light mode: HeroUI's pale default track melts into
+   the light --surface-secondary rows, leaving a white knob on a near-white pill.
+   Darken the track (the knob stays white) so the off state reads at a glance. */
+html:not(.dark) .switch:not([aria-checked='true']):not([data-selected='true']) {
+  --switch-control-bg: rgba(0, 0, 0, 0.26);
 }

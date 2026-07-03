@@ -271,7 +271,7 @@ export const HyperionModal: React.FC<HyperionModalProps> = ({
         className={cx(
           // Dark modal shell (--background is darker than --surface, so inner --surface/
           // --surface-secondary cards lift off it cleanly without needing borders).
-          'relative w-full overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--background)] text-[var(--text-primary)] shadow-[0_24px_70px_rgba(0,0,0,0.62)]',
+          'relative w-full overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--background)] text-[var(--text-primary)]',
           surfaceClassName
         )}
         onClick={(event) => event.stopPropagation()}

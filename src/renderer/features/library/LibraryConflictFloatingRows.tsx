@@ -221,7 +221,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
       >
         <div className={`flex flex-col ${side === 'top' ? '' : 'flex-col-reverse'}`}>
           {hiddenCount > 0 ? (
-            <div className="mx-2 mb-1 inline-flex h-6 w-fit items-center rounded-md bg-[var(--surface)] px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9a9586] shadow-[0_10px_24px_rgba(0,0,0,0.58)]">
+            <div className="mx-2 mb-1 inline-flex h-6 w-fit items-center rounded-md bg-[var(--surface-secondary)] px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-support)]">
               {side === 'top' ? t('library.conflict.moreAbove', { count: hiddenCount }) : t('library.conflict.moreBelow', { count: hiddenCount })}
             </div>
           ) : null}
@@ -240,14 +240,14 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                   gridTemplateColumns: LIBRARY_GRID_TEMPLATE,
                   background: `linear-gradient(90deg, ${accent}20 0, var(--surface) 86px, var(--surface) 100%)`,
                   borderColor: `${accent}36`,
-                  boxShadow: `inset 3px 0 0 ${accent}, inset 0 0 0 1px rgba(255,255,255,0.035), 0 14px 32px rgba(0,0,0,0.72)`,
+                  boxShadow: `inset 3px 0 0 ${accent}`,
                 }}
                 title={t('library.conflict.goTo', { name: row.mod.name })}
               >
                 <div className="flex items-center pl-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: accent, boxShadow: `0 0 10px ${accent}88` }} />
+                  <span className="h-2 w-2 rounded-full" style={{ background: accent }} />
                 </div>
-                <div className="flex items-center font-mono text-[12px] text-[#8a8a8a]">
+                <div className="flex items-center font-mono text-[12px] text-[var(--text-muted)]">
                   {loadOrder ?? row.mod.order + 1}
                 </div>
                 <div className="flex min-w-0 items-center gap-2">
@@ -257,28 +257,28 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                   >
                     {row.tone === 'win' ? '+' : '-'}{row.conflictCount}
                   </span>
-                  <span className="min-w-0 truncate text-[13px] font-semibold text-[#f1ede8]">
+                  <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--text-primary)]">
                     {row.mod.name}
                   </span>
                   {row.hiddenInSeparator ? (
-                    <span className="shrink-0 rounded-md bg-[rgb(var(--accent-cyber-blue-rgb)/0.10)] px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-[0.14em] text-[#7fe6ff]">
+                    <span className="shrink-0 rounded-md bg-[rgb(var(--accent-cyber-blue-rgb)/0.10)] px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-cyber-blue)]">
                       {row.hiddenInSeparator}
                     </span>
                   ) : null}
                 </div>
-                <div className="truncate font-mono text-[12px] text-[#aaa]">
+                <div className="truncate font-mono text-[12px] text-[var(--text-secondary)]">
                   {row.mod.version ?? '-'}
                 </div>
-                <div className="truncate text-[12px] text-[#8d8d8d]">
+                <div className="truncate text-[12px] text-[var(--text-secondary)]">
                   {category}
                 </div>
-                <div className="flex min-w-0 items-center font-mono text-[12px] text-[#908b80]">
+                <div className="flex min-w-0 items-center font-mono text-[12px] text-[var(--text-support)]">
                   <span className="truncate whitespace-nowrap">
                     {row.tone === 'win' ? t('library.conflict.losesToSelected') : t('library.conflict.winsOverSelected')}
                   </span>
                 </div>
                 <div className="flex items-center justify-end">
-                  <span className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-md bg-[rgb(var(--accent-rgb)/0.18)] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] shadow-[0_0_14px_rgb(var(--accent-rgb)/0.10)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)] group-hover:shadow-none">
+                  <span className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-md bg-[rgb(var(--accent-rgb)/0.18)] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)]">
                     <Icon name={row.side === 'top' ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'} className="text-[15px] leading-none text-current" />
                     {t('library.conflict.go')}
                   </span>

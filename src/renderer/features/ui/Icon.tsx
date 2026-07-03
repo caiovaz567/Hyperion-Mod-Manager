@@ -73,7 +73,9 @@ const ICONS: Record<string, LucideIcon> = {
   hub: Network,
   info: Info,
   install_desktop: MonitorDown,
-  inventory_2: Boxes,
+  // Package (single box) instead of Boxes: the three-box glyph packs far more stroke than
+  // the gear/download icons beside it in the sidebar, so it optically read as "more black".
+  inventory_2: Package,
   key: Key,
   keyboard_double_arrow_down: ChevronsDown,
   keyboard_double_arrow_up: ChevronsUp,

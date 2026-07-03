@@ -588,7 +588,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_32px_80px_rgba(0,0,0,0.6)]"
+        className="relative flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)]"
         style={detailPanelFrameStyle}
         onClick={(event) => event.stopPropagation()}
       >
@@ -745,7 +745,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       {treeContextMenu && createPortal(
         <div
           ref={treeContextMenuRef}
-          className="fixed z-[205] min-w-[228px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.55)]"
+          className="fixed z-[205] min-w-[228px] rounded-xl border border-[var(--border)] bg-[var(--overlay)] p-1.5"
           style={{ left: treeContextMenu.x, top: treeContextMenu.y }}
           onClick={(event) => event.stopPropagation()}
         >
