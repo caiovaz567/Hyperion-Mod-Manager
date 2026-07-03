@@ -29,6 +29,14 @@ export interface ModMetadata {
   sourceModifiedAt?: string
   fileSize?: number
   files: string[]
+  /**
+   * Number of unique tracked resources (deploy paths + archive resources) this mod
+   * contributes to conflict detection. Computed in the main process when a mod is
+   * slimmed for the renderer (files/archiveResources stripped from bulk IPC
+   * payloads), so the renderer's optimistic conflict recompute can still derive
+   * the "fully redundant" denominator without the per-file arrays.
+   */
+  trackedResourceCount?: number
   emptyDirs?: string[]
   hashes?: string[]
   archiveResources?: ArchiveResourceEntry[]
@@ -294,6 +302,12 @@ export interface InstallProgress {
 
 export interface GameLaunchProgress {
   step: string
+  /**
+   * Stable identifier for the running step so the renderer can translate the
+   * label (`launch.step.<key>`); the English `step` text is the fallback for
+   * unknown keys. Error/done/cancelled states are inferred from `state`.
+   */
+  key?: string
   percent: number
   detail?: string
   current?: number

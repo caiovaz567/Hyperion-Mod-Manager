@@ -24,7 +24,19 @@ function getRegistryPath(): string {
   return path.join(app.getPath('userData'), 'nexus-downloads.json')
 }
 
-function loadRegistry(): NexusDownloadRegistryShape {
+// The registry is cached in memory with a lazily-built path index. Lookups used to
+// re-read + re-parse the JSON from disk AND existsSync-check every record on every
+// call — and the Downloads refresh performs one lookup per archive file, so a large
+// folder (4000 files × 4000 records) turned one refresh into millions of stat calls.
+// All writes go through this module, so the in-memory copy is authoritative.
+let cachedRegistry: NexusDownloadRegistryShape | null = null
+let recordsByPath: Map<string, NexusDownloadRecord> | null = null
+
+function normalizePathKey(filePath: string): string {
+  return path.normalize(filePath).toLowerCase()
+}
+
+function loadRegistryFromDisk(): NexusDownloadRegistryShape {
   const registryPath = getRegistryPath()
   try {
     if (!fs.existsSync(registryPath)) {
@@ -47,51 +59,76 @@ function loadRegistry(): NexusDownloadRegistryShape {
   }
 }
 
-function saveRegistry(registry: NexusDownloadRegistryShape): void {
+function getRegistry(): NexusDownloadRegistryShape {
+  if (!cachedRegistry) {
+    cachedRegistry = loadRegistryFromDisk()
+  }
+  return cachedRegistry
+}
+
+function getRecordsByPath(): Map<string, NexusDownloadRecord> {
+  if (!recordsByPath) {
+    recordsByPath = new Map()
+    // Later records never shadow earlier ones (upsert unshifts the newest first).
+    for (const record of getRegistry().records) {
+      const key = normalizePathKey(record.filePath)
+      if (!recordsByPath.has(key)) recordsByPath.set(key, record)
+    }
+  }
+  return recordsByPath
+}
+
+function persistRegistry(records: NexusDownloadRecord[]): void {
+  cachedRegistry = { records }
+  recordsByPath = null
   const registryPath = getRegistryPath()
   fs.mkdirSync(path.dirname(registryPath), { recursive: true })
-  fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2), 'utf-8')
-}
-
-function pruneMissingRecords(records: NexusDownloadRecord[]): NexusDownloadRecord[] {
-  return records.filter((record) => fs.existsSync(record.filePath))
-}
-
-function writePrunedRegistry(registry: NexusDownloadRegistryShape): NexusDownloadRegistryShape {
-  const pruned = { records: pruneMissingRecords(registry.records) }
-  if (pruned.records.length !== registry.records.length) {
-    saveRegistry(pruned)
-  }
-  return pruned
+  fs.writeFileSync(registryPath, JSON.stringify(cachedRegistry, null, 2), 'utf-8')
 }
 
 export function findNexusDownloadRecord(modId: number, fileId: number): NexusDownloadRecord | null {
-  const registry = writePrunedRegistry(loadRegistry())
-  return registry.records.find((record) => record.modId === modId && record.fileId === fileId) ?? null
+  const records = getRegistry().records
+  // Validate only the matched record's file (one stat), not the whole registry —
+  // a hit whose archive was deleted outside the app must not count as a duplicate.
+  const deadPaths = new Set<string>()
+  let match: NexusDownloadRecord | null = null
+  for (const record of records) {
+    if (record.modId !== modId || record.fileId !== fileId) continue
+    if (fs.existsSync(record.filePath)) {
+      match = record
+      break
+    }
+    deadPaths.add(normalizePathKey(record.filePath))
+  }
+  if (deadPaths.size > 0) {
+    persistRegistry(records.filter((record) => !deadPaths.has(normalizePathKey(record.filePath))))
+  }
+  return match
 }
 
 export function findNexusDownloadRecordByPath(filePath: string): NexusDownloadRecord | null {
-  const normalizedPath = path.normalize(filePath).toLowerCase()
-  const registry = writePrunedRegistry(loadRegistry())
-  return registry.records.find((record) => path.normalize(record.filePath).toLowerCase() === normalizedPath) ?? null
+  // Callers pass paths of files they just enumerated/are installing, so no
+  // existence pruning is needed on this path — it's the per-file hot lookup.
+  return getRecordsByPath().get(normalizePathKey(filePath)) ?? null
 }
 
 export function upsertNexusDownloadRecord(record: NexusDownloadRecord): void {
-  const registry = writePrunedRegistry(loadRegistry())
-  const filtered = registry.records.filter(
-    (entry) => path.normalize(entry.filePath).toLowerCase() !== path.normalize(record.filePath).toLowerCase()
+  const recordKey = normalizePathKey(record.filePath)
+  // A completed download is a natural (and rare) point to sweep dead records.
+  const filtered = getRegistry().records.filter(
+    (entry) => normalizePathKey(entry.filePath) !== recordKey && fs.existsSync(entry.filePath)
   )
   filtered.unshift(record)
-  saveRegistry({ records: filtered })
+  persistRegistry(filtered)
 }
 
 export function removeNexusDownloadRecordByPath(filePath: string): void {
-  const normalizedPath = path.normalize(filePath).toLowerCase()
-  const registry = loadRegistry()
-  const nextRecords = registry.records.filter(
-    (record) => path.normalize(record.filePath).toLowerCase() !== normalizedPath
+  const normalizedPath = normalizePathKey(filePath)
+  const records = getRegistry().records
+  const nextRecords = records.filter(
+    (record) => normalizePathKey(record.filePath) !== normalizedPath
   )
-  if (nextRecords.length !== registry.records.length) {
-    saveRegistry({ records: nextRecords })
+  if (nextRecords.length !== records.length) {
+    persistRegistry(nextRecords)
   }
 }

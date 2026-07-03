@@ -164,6 +164,10 @@ export function writeArchiveSidecar(modDir: string, resources: ArchiveResourceEn
     JSON.stringify({ version, resources }, null, 2),
     'utf-8'
   )
+  // The sidecar feeds the composed meta (archiveResources), so a cached entry is
+  // now stale — drop it and let the next read recompose. (The metadata read cache
+  // is declared later in this file; invalidation is a plain map delete.)
+  invalidateMetadataCacheEntry(modDir)
 }
 
 const GAME_ROOT_DIRS = new Set(['archive', 'bin', 'engine', 'mods', 'r6', 'red4ext'])
@@ -356,6 +360,21 @@ export function getDeployRelativePath(mod: ModMetadata, relFile: string): string
   }
 
   if (isRedmodContent(mod, normalized)) {
+    // Nested REDmod layout: the file lives inside a top-level folder that is
+    // itself a REDmod (`<Dir>/info.json` present in this mod). Deploy the tree
+    // as `mods/<Dir>/...` so the author's mod id is preserved — wrapping it in
+    // the library folder name would double-nest and hide the manifest from
+    // redMod (it only reads `mods/<x>/info.json`). Covers multi-REDmod archives
+    // and wrappers the installer couldn't flatten.
+    const firstSegment = parts[0]
+    if (
+      firstSegment &&
+      parts.length > 1 &&
+      Array.isArray(mod.files) &&
+      mod.files.some((file) => normalizeRelativePath(file).toLowerCase() === `${firstSegment.toLowerCase()}${path.sep}info.json`)
+    ) {
+      return path.join('mods', normalized)
+    }
     return path.join('mods', modFolderKey, normalized)
   }
 
@@ -389,15 +408,119 @@ export function getDeployRelativePath(mod: ModMetadata, relFile: string): string
   return normalized
 }
 
-export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
-  if (Array.isArray(mod.deployedPaths) && mod.deployedPaths.length > 0) {
-    return mod.deployedPaths.filter((relFile) => !isHyperionInternalFile(relFile))
+// ─── Tracked deploy-path cache ─────────────────────────────────────────────────
+// Deploy paths are pure string derivations of (files, type, folderName) — but the
+// conflict pass recomputes them for EVERY enabled mod on EVERY run (2k mods ×
+// hundreds of files = ~1M path joins per pass). Because the metadata cache above
+// returns the SAME meta object across scans, a WeakMap keyed on the meta amortizes
+// this to a lookup; the fingerprint check catches in-place mutations (scan
+// normalizations replace `files` with a new array only when contents changed).
+interface TrackedPathsCacheEntry {
+  filesRef: unknown
+  deployedPathsRef: unknown
+  type: ModMetadata['type']
+  folderKey: string
+  paths: string[]
+  normalizedConflictPaths: string[]
+}
+
+const trackedPathsCache = new WeakMap<ModMetadata, TrackedPathsCacheEntry>()
+
+function computeTrackedPathsEntry(mod: ModMetadata): TrackedPathsCacheEntry {
+  const paths = (Array.isArray(mod.deployedPaths) && mod.deployedPaths.length > 0
+    ? mod.deployedPaths.filter((relFile) => !isHyperionInternalFile(relFile))
+    : Array.isArray(mod.files)
+      ? mod.files
+        .filter((relFile) => !isHyperionInternalFile(relFile))
+        .map((relFile) => getDeployRelativePath(mod, relFile))
+      : [])
+
+  // Pre-normalized, load-ordered-archive-filtered paths — exactly what the
+  // conflict pass and the tracked-resource count consume.
+  const normalizedConflictPaths: string[] = []
+  for (const rel of paths) {
+    const normalized = normalizeRelativePath(rel)
+    if (!normalized) continue
+    if (isLoadOrderedArchiveDeployPath(normalized)) continue
+    normalizedConflictPaths.push(normalized)
   }
 
-  if (!Array.isArray(mod.files)) return []
-  return mod.files
-    .filter((relFile) => !isHyperionInternalFile(relFile))
-    .map((relFile) => getDeployRelativePath(mod, relFile))
+  return {
+    filesRef: mod.files,
+    deployedPathsRef: mod.deployedPaths,
+    type: mod.type,
+    folderKey: getModFolderKey(mod),
+    paths,
+    normalizedConflictPaths,
+  }
+}
+
+function getTrackedPathsEntry(mod: ModMetadata): TrackedPathsCacheEntry {
+  const cached = trackedPathsCache.get(mod)
+  if (
+    cached &&
+    cached.filesRef === mod.files &&
+    cached.deployedPathsRef === mod.deployedPaths &&
+    cached.type === mod.type &&
+    cached.folderKey === getModFolderKey(mod)
+  ) {
+    return cached
+  }
+  const entry = computeTrackedPathsEntry(mod)
+  trackedPathsCache.set(mod, entry)
+  return entry
+}
+
+export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
+  return getTrackedPathsEntry(mod).paths
+}
+
+/** Normalized deploy paths minus load-ordered archives — the conflict-pass view. */
+export function getNormalizedConflictPaths(mod: ModMetadata): string[] {
+  return getTrackedPathsEntry(mod).normalizedConflictPaths
+}
+
+/** True when any of the mod's files deploy under the game's REDmod folder (`mods/`). */
+export function modHasRedmodContent(mod: ModMetadata): boolean {
+  if (mod.kind !== 'mod') return false
+  const redmodPrefix = `mods${path.sep}`
+  return getTrackedDeploymentPaths(mod).some((rel) => normalizeRelativePath(rel).toLowerCase().startsWith(redmodPrefix))
+}
+
+/**
+ * Unique tracked resources (conflict-relevant deploy paths + archive resource keys).
+ * This is the denominator for "fully redundant" — shipped to the renderer as
+ * `trackedResourceCount` so bulk IPC payloads can drop the per-file arrays.
+ */
+export function computeTrackedResourceCount(mod: ModMetadata): number {
+  if (mod.kind !== 'mod') return 0
+  const keys = new Set<string>()
+  for (const normalized of getNormalizedConflictPaths(mod)) {
+    keys.add(`overwrite:${normalized}`)
+  }
+  for (const resource of getStoredArchiveResources(mod)) {
+    for (const key of getArchiveResourceKeys(resource)) {
+      keys.add(`archive:${key}`)
+    }
+  }
+  return keys.size
+}
+
+/**
+ * Slims a mod for the renderer: the per-file payloads (`files`, `emptyDirs`,
+ * `archiveResources`, legacy `hashes`, unused `deployedPaths`) stay in the main
+ * process — with 2k mods they are tens of MB of strings serialized over IPC on
+ * every scan and held resident in the renderer store. The renderer surfaces that
+ * genuinely need a file list (mod-details Files tab, tree edit ops) receive the
+ * FULL mod from their dedicated single-mod IPCs (REFRESH_MOD_FILES, MOD_TREE_*).
+ */
+export function toRendererMod(meta: ModMetadata): ModMetadata {
+  const slim: ModMetadata = { ...meta, files: [], trackedResourceCount: computeTrackedResourceCount(meta) }
+  delete slim.emptyDirs
+  delete slim.hashes
+  delete slim.archiveResources
+  delete slim.deployedPaths
+  return slim
 }
 
 // Removes Runtime Captures left behind by mods that no longer exist. The Overwrite
@@ -710,10 +833,84 @@ export async function buildEnabledModLinks(
 
 // ─── Metadata helpers ─────────────────────────────────────────────────────────
 
+// ─── Metadata read cache ───────────────────────────────────────────────────────
+// Every scan used to read + JSON.parse `_metadata.json` AND the archive sidecar for
+// every mod — 2 disk reads × N mods × every scan (boot, install, delete, toggle,
+// redeploy). The cache keys on the on-disk identity (mtimeMs + size) of BOTH files,
+// so out-of-band writes (Explorer edits, the raw category write in nexusDownloader,
+// sidecar unlinks) are picked up naturally, and a scan of an unchanged library costs
+// two stat calls per mod instead of two reads + parses.
+//
+// INVARIANT: the cached object is shared between calls. Callers may mutate the
+// returned meta ONLY if they persist it via writeMetadata afterwards (which is what
+// every current mutation site does) — writeMetadata re-stamps the cache entry.
+interface MetadataCacheEntry {
+  metaMtimeMs: number
+  metaSize: number
+  sidecarMtimeMs: number
+  sidecarSize: number
+  meta: ModMetadata
+}
+
+const metadataCache = new Map<string, MetadataCacheEntry>()
+// Best-effort uuid → modDir hint so findModDir can usually skip the full library walk.
+const uuidDirHints = new Map<string, string>()
+
+function invalidateMetadataCacheEntry(modDir: string): void {
+  metadataCache.delete(cacheKeyForDir(modDir))
+}
+
+function statIdentity(filePath: string): { mtimeMs: number; size: number } | null {
+  try {
+    const stat = fs.statSync(filePath)
+    return { mtimeMs: stat.mtimeMs, size: stat.size }
+  } catch {
+    return null
+  }
+}
+
+function cacheKeyForDir(modDir: string): string {
+  return path.normalize(modDir).toLowerCase()
+}
+
+function rememberMetadata(modDir: string, meta: ModMetadata): void {
+  const metaIdentity = statIdentity(path.join(modDir, METADATA_FILE))
+  if (!metaIdentity) return
+  const sidecarIdentity = statIdentity(path.join(modDir, ARCHIVE_SIDECAR_FILE))
+  metadataCache.set(cacheKeyForDir(modDir), {
+    metaMtimeMs: metaIdentity.mtimeMs,
+    metaSize: metaIdentity.size,
+    sidecarMtimeMs: sidecarIdentity?.mtimeMs ?? -1,
+    sidecarSize: sidecarIdentity?.size ?? -1,
+    meta,
+  })
+  if (meta.uuid) uuidDirHints.set(meta.uuid, modDir)
+}
+
 function readMetadata(modDir: string): ModMetadata | null {
   const metaPath = path.join(modDir, '_metadata.json')
   try {
-    if (!fs.existsSync(metaPath)) return null
+    const metaIdentity = statIdentity(metaPath)
+    if (!metaIdentity) {
+      metadataCache.delete(cacheKeyForDir(modDir))
+      return null
+    }
+
+    const cached = metadataCache.get(cacheKeyForDir(modDir))
+    if (
+      cached &&
+      cached.metaMtimeMs === metaIdentity.mtimeMs &&
+      cached.metaSize === metaIdentity.size
+    ) {
+      const sidecarIdentity = statIdentity(path.join(modDir, ARCHIVE_SIDECAR_FILE))
+      if (
+        cached.sidecarMtimeMs === (sidecarIdentity?.mtimeMs ?? -1) &&
+        cached.sidecarSize === (sidecarIdentity?.size ?? -1)
+      ) {
+        return cached.meta
+      }
+    }
+
     const raw: ModMetadata = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
 
     // Migrate old format: move archive data to sidecar if not already there
@@ -729,6 +926,7 @@ function readMetadata(modDir: string): ModMetadata | null {
       delete clean.hashes
       delete clean.archiveResources
       delete clean.archiveResourceIndexVersion
+      suppressLibraryWatch()
       fs.writeFileSync(metaPath, JSON.stringify(clean, null, 2), 'utf-8')
     }
 
@@ -742,9 +940,11 @@ function readMetadata(modDir: string): ModMetadata | null {
       meta.archiveResourceIndexVersion = sidecar.version
     }
 
+    rememberMetadata(modDir, meta)
     return meta
   } catch {
     // corrupt metadata
+    metadataCache.delete(cacheKeyForDir(modDir))
   }
   return null
 }
@@ -762,6 +962,8 @@ function writeMetadata(modDir: string, meta: ModMetadata): void {
     JSON.stringify(clean, null, 2),
     'utf-8'
   )
+  // Re-stamp the cache with the freshly written state so the next read is a cache hit.
+  rememberMetadata(modDir, meta)
 }
 
 function normalizeEmptyDirs(value: unknown): string[] {
@@ -1016,6 +1218,17 @@ async function deleteModTreeEntry(
 // Finds the actual directory of a mod by scanning for its UUID in metadata
 export function findModDir(libraryPath: string, uuid: string): { mod: ModMetadata; dir: string } | null {
   if (!fs.existsSync(libraryPath)) return null
+
+  // Fast path: the uuid → dir hint recorded on every successful metadata read.
+  // Validated by re-reading the hinted dir (cheap — usually a cache hit), so a
+  // stale hint (renamed/deleted folder) just falls through to the full walk.
+  const hintedDir = uuidDirHints.get(uuid)
+  if (hintedDir && isInsidePathForHint(hintedDir, libraryPath)) {
+    const hintedMeta = readMetadata(hintedDir)
+    if (hintedMeta?.uuid === uuid) return { mod: hintedMeta, dir: hintedDir }
+    uuidDirHints.delete(uuid)
+  }
+
   const entries = fs.readdirSync(libraryPath, { withFileTypes: true })
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
@@ -1024,6 +1237,12 @@ export function findModDir(libraryPath: string, uuid: string): { mod: ModMetadat
     if (meta && meta.uuid === uuid) return { mod: meta, dir }
   }
   return null
+}
+
+// The hint may date from a previous library path; only trust it inside the current one.
+function isInsidePathForHint(childPath: string, parentPath: string): boolean {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(childPath))
+  return Boolean(relative) && !relative.startsWith('..') && !path.isAbsolute(relative)
 }
 
 export async function scanMods(
@@ -1324,7 +1543,8 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       const mods = await scanMods(settings.libraryPath, {
         refreshFileMetadata: options?.refreshFileMetadata === true,
       })
-      return { ok: true, data: mods }
+      // Bulk payloads cross the IPC boundary slimmed (no per-file arrays) — see toRendererMod.
+      return { ok: true, data: mods.map(toRendererMod) }
     } catch (error) {
       return {
         ok: false,
@@ -1393,7 +1613,9 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
     IPC.RESTORE_ENABLED_MODS,
     async (): Promise<IpcResult<ModMetadata[]>> => {
       const settings = loadSettings()
-      return redeployEnabledMods(settings.gamePath, settings.libraryPath)
+      const result = await redeployEnabledMods(settings.gamePath, settings.libraryPath)
+      if (!result.ok || !result.data) return result
+      return { ok: true, data: result.data.map(toRendererMod) }
     }
   )
 
@@ -1576,10 +1798,10 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         const archiveOwners = new Map<string, Array<{ modId: string; name: string; order: number; resource: ArchiveResourceEntry }>>()
 
         for (const mod of mods.filter((m) => m.kind === 'mod' && m.enabled)) {
-          for (const rel of getTrackedDeploymentPaths(mod)) {
-            const normalized = normalizeRelativePath(rel)
-            if (!normalized) continue
-            if (isLoadOrderedArchiveDeployPath(normalized)) continue
+          // Pre-normalized + cached per meta object (see getTrackedPathsEntry) — the
+          // pass over an unchanged library reuses the derived paths instead of
+          // recomputing ~1M deploy-path joins.
+          for (const normalized of getNormalizedConflictPaths(mod)) {
             const owners = pathOwners.get(normalized) ?? []
             if (!owners.find((o) => o.modId === mod.uuid)) {
               owners.push({ modId: mod.uuid, name: mod.name, order: mod.order })

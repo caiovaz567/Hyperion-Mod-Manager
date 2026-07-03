@@ -116,20 +116,35 @@ export function detectModType(modDir: string): ModType {
   const relativeFiles = files.map((filePath) => normalizeForDetection(path.relative(modDir, filePath)))
   const dirs = getTopLevelDirs(modDir)
 
+  // REDmod: a TOP-LEVEL info.json manifest next to any REDmod payload folder.
+  // `archives/` is only one of them — script-only mods ship `scripts/`, tweak-only
+  // ship `tweaks/`, audio mods ship `sounds/`. The top-level requirement matters:
+  // CET mods carry their own nested `info.json` deep inside
+  // `cyber_engine_tweaks/mods/<x>/`, which must never trip this.
+  const redmodPayloadDirs = ['archives', 'scripts', 'tweaks', 'sounds', 'customsounds']
+  const flatRedmodLayout =
+    relativeFiles.includes('info.json') &&
+    dirs.some((dir) => redmodPayloadDirs.includes(dir))
+  // Nested layout: one or more top-level folders that are EACH a REDmod
+  // (`<Dir>/info.json`) — covers multi-REDmod archives and wrappers that the
+  // single-folder unwrap couldn't flatten (e.g. a stray readme at the root).
+  // Requiring EVERY top-level dir to be a REDmod keeps hybrid archives
+  // (game-root folders mixed with a REDmod folder) out of this branch.
+  const nestedRedmodLayout =
+    !flatRedmodLayout &&
+    dirs.length > 0 &&
+    dirs.every((dir) => relativeFiles.includes(`${dir}/info.json`))
+  const isRedmodLayout = flatRedmodLayout || nestedRedmodLayout
+
   // archive mod: has .archive files in archive/pc/mod or root
   if (relativeFiles.some((f) => f.endsWith('.archive'))) {
-    // Check if it also contains mod.json (redmod)
-    if (relativeFiles.some((f) => path.basename(f) === 'info.json') && dirs.includes('archives')) {
+    if (isRedmodLayout) {
       return 'redmod'
     }
     return 'archive'
   }
 
-  // redmod: contains info.json + archives/ folder
-  if (
-    relativeFiles.some((f) => path.basename(f) === 'info.json') &&
-    dirs.includes('archives')
-  ) {
+  if (isRedmodLayout) {
     return 'redmod'
   }
 

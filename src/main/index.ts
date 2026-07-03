@@ -11,6 +11,7 @@ import {
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import crypto from 'crypto'
 import { spawn, exec, execFile } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings } from './settings'
 import { createSplashWindow } from './splash'
@@ -19,10 +20,11 @@ import {
   registerModManagerHandlers,
   buildEnabledModLinks,
   getDeployRelativePath,
+  modHasRedmodContent,
   normalizeRelativePath,
   scanMods,
 } from './ipc/modManager'
-import { getVfsBridgeDiagnostics, loadVfsBridge, type VfsLink } from './vfsBridge'
+import { getVfsBridgeDiagnostics, loadVfsBridge, type UsvfsBridge, type VfsLink } from './vfsBridge'
 import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
@@ -1401,6 +1403,200 @@ function makeVfsLaunchError(message: string): string {
   return `${message}. See ${getVfsLaunchLogPath()}`
 }
 
+// ─── REDmod deploy (virtual) ─────────────────────────────────────────────────
+// REDmods don't load by merely existing under `mods/` — the game only sees them
+// after `tools/redmod/bin/redMod.exe deploy` compiles scripts/tweaks/sounds into
+// `r6/cache/modded`, and only when launched with `-modded`. Hyperion runs that
+// deploy as a VFS-HOOKED process AFTER mounting: redMod reads the *virtual* mods/
+// tree (enabled REDmods mapped from the library) and its writes to r6/cache/modded
+// are redirected into the Runtime Captures overwrite folder — the real game dir
+// stays clean. The compiled output is remounted as read overlays on later launches,
+// and a fingerprint of the enabled REDmod set skips the (slow) deploy when nothing
+// changed. On any failure the launch continues WITHOUT -modded so non-REDmod mods
+// still work.
+const REDMOD_DEPLOY_TIMEOUT_MS = 8 * 60_000
+// Tight poll: this is also the cancel-latency ceiling for the Cancel button.
+const REDMOD_DEPLOY_POLL_MS = 300
+
+interface RedmodDeployOutcome {
+  modded: boolean
+  skipped?: boolean
+  cancelled?: boolean
+  failed?: string
+}
+
+function getRedmodToolPath(gameRoot: string): string {
+  return path.join(gameRoot, 'tools', 'redmod', 'bin', 'redMod.exe')
+}
+
+function getRedmodDeployStatePath(): string {
+  return path.join(app.getPath('userData'), 'redmod-deploy-state.json')
+}
+
+function readRedmodDeployState(): { fingerprint?: string } | null {
+  try {
+    return JSON.parse(fs.readFileSync(getRedmodDeployStatePath(), 'utf8')) as { fingerprint?: string }
+  } catch {
+    return null
+  }
+}
+
+function writeRedmodDeployState(state: { fingerprint: string; deployedAt: string }): void {
+  try {
+    fs.writeFileSync(getRedmodDeployStatePath(), JSON.stringify(state, null, 2), 'utf8')
+  } catch {
+    // Losing the state only means an extra redeploy next launch.
+  }
+}
+
+// Identity of the enabled REDmod set: which mods, and whether their payload
+// changed (size/count/source timestamps). Order is irrelevant — redMod deploys
+// the virtual mods/ folder alphabetically, same as the stock REDlauncher.
+function computeRedmodFingerprint(enabledRedmods: ModMetadata[]): string {
+  const identity = enabledRedmods
+    .map((mod) => ({
+      folder: (mod.folderName ?? mod.uuid).toLowerCase(),
+      size: mod.fileSize ?? 0,
+      count: Array.isArray(mod.files) ? mod.files.length : 0,
+      stamp: mod.sourceModifiedAt ?? mod.installedAt ?? '',
+    }))
+    .sort((left, right) => left.folder.localeCompare(right.folder))
+  return crypto.createHash('sha1').update(JSON.stringify(identity)).digest('hex')
+}
+
+async function deployRedmodsUnderVfs(
+  bridge: UsvfsBridge,
+  gameRoot: string,
+  overwriteDir: string,
+  enabledRedmods: ModMetadata[],
+  emitProgress: (progress: GameLaunchProgress) => void
+): Promise<RedmodDeployOutcome> {
+  const toolPath = getRedmodToolPath(gameRoot)
+  if (!fs.existsSync(toolPath)) {
+    appendVfsLaunchLog('redmod deploy skipped: redMod.exe not found', { toolPath })
+    return { modded: false, failed: 'REDmod tool not installed (enable the free REDmod DLC on the game store)' }
+  }
+
+  const fingerprint = computeRedmodFingerprint(enabledRedmods)
+  const artifactDir = path.join(overwriteDir, 'r6', 'cache', 'modded')
+  const artifactsPresent = fs.existsSync(artifactDir) && collectFilesRecursive(artifactDir).length > 0
+  if (readRedmodDeployState()?.fingerprint === fingerprint && artifactsPresent) {
+    appendVfsLaunchLog('redmod deploy skipped: fingerprint unchanged', { fingerprint, redmods: enabledRedmods.length })
+    return { modded: true, skipped: true }
+  }
+
+  emitProgress({
+    step: 'Deploying REDmods',
+    key: 'redmod',
+    percent: 84,
+    cancellable: true,
+    detail: `${enabledRedmods.length} REDmod(s) — starting redMod.exe`,
+  })
+
+  // Route redMod's console output to a log file (via a hooked cmd.exe redirect):
+  // detached hooked launches expose neither stdout nor an exit code, and in the
+  // packaged app there is no console for the output to inherit. Tailing this file
+  // lets the launch card narrate the real deploy stages, and its final lines are
+  // the authoritative success/failure signal ("Commandlet deploy has succeeded").
+  const deployLogPath = path.join(app.getPath('userData'), 'logs', 'redmod-deploy.log')
+  try {
+    fs.mkdirSync(path.dirname(deployLogPath), { recursive: true })
+    fs.rmSync(deployLogPath, { force: true })
+  } catch {
+    // Best-effort; the artifact fallback below still validates the deploy.
+  }
+  const cmdExePath = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe')
+
+  const startedAt = Date.now()
+  const launch = bridge.launchHookedProcess({
+    appPath: cmdExePath,
+    // Hooked into the VFS: redMod reads the virtual mods/ tree and its writes
+    // land in the overwrite capture instead of the real game folder.
+    commandLine: `"${cmdExePath}" /s /c ""${toolPath}" deploy -root="${gameRoot}" > "${deployLogPath}" 2>&1"`,
+    cwd: path.dirname(toolPath),
+    capture: false,
+    waitMs: 0,
+  })
+  appendVfsLaunchLog('redmod deploy started', { ...launch, fingerprint, redmods: enabledRedmods.length, deployLogPath })
+  if (!launch.ok || !launch.pid) {
+    return { modded: false, failed: `REDmod deploy failed to start (${launch.stage ?? 'unknown stage'})` }
+  }
+
+  const readDeployLog = (): string => {
+    try {
+      return fs.readFileSync(deployLogPath, 'utf8')
+    } catch {
+      return ''
+    }
+  }
+
+  // Poll (never block the main thread) until redMod exits, honoring cancellation
+  // and narrating the tool's own progress lines in the launch card.
+  let lastDetail = ''
+  for (;;) {
+    if (vfsLaunchCancelRequested) {
+      exec(`taskkill /PID ${launch.pid} /T /F`, { windowsHide: true }, () => undefined)
+      return { modded: false, cancelled: true }
+    }
+    if (Date.now() - startedAt > REDMOD_DEPLOY_TIMEOUT_MS) {
+      exec(`taskkill /PID ${launch.pid} /T /F`, { windowsHide: true }, () => undefined)
+      appendVfsLaunchLog('redmod deploy timed out', { pid: launch.pid })
+      return { modded: false, failed: 'REDmod deploy timed out' }
+    }
+
+    const logContent = readDeployLog()
+    const stageMatches = [...logContent.matchAll(/\[DEPLOY\] Stage (\d+)\/(\d+) - (.+)/g)]
+    const lastStage = stageMatches[stageMatches.length - 1]
+    const foundMods = logContent.match(/^Found mod .+$/gm)?.length ?? 0
+    if (lastStage) {
+      const stageNumber = Number.parseInt(lastStage[1], 10)
+      const stageTotal = Math.max(1, Number.parseInt(lastStage[2], 10))
+      const detail = `Stage ${lastStage[1]}/${lastStage[2]} — ${lastStage[3].trim()}${foundMods > 0 ? ` · ${foundMods} mod(s)` : ''}`
+      if (detail !== lastDetail) {
+        lastDetail = detail
+        emitProgress({
+          step: 'Deploying REDmods',
+          key: 'redmod',
+          percent: Math.min(90, 84 + Math.round((stageNumber / stageTotal) * 6)),
+          cancellable: true,
+          detail,
+        })
+      }
+    }
+
+    if (!(await isProcessRunningByPid(launch.pid))) break
+    await new Promise((resolve) => setTimeout(resolve, REDMOD_DEPLOY_POLL_MS))
+  }
+
+  const finalLog = readDeployLog()
+  const logSaysSuccess = /deploy has succeeded/i.test(finalLog)
+  const logSaysFailure = /deploy has failed|\bfatal\b/i.test(finalLog)
+  // Fallback (log unreadable): compiled output landing in the capture this run.
+  const produced = fs.existsSync(artifactDir) && collectFilesRecursive(artifactDir).some((filePath) => {
+    try {
+      return fs.statSync(filePath).mtimeMs >= startedAt - 2000
+    } catch {
+      return false
+    }
+  })
+  appendVfsLaunchLog('redmod deploy finished', {
+    durationMs: Date.now() - startedAt,
+    logSaysSuccess,
+    logSaysFailure,
+    produced,
+    artifactDir,
+    logTail: finalLog.slice(-1500),
+  })
+  const succeeded = logSaysSuccess || (!logSaysFailure && (produced || artifactsPresent))
+  if (!succeeded) {
+    const tailLine = finalLog.trim().split(/\r?\n/).filter(Boolean).pop() ?? 'no output'
+    return { modded: false, failed: `REDmod deploy failed: ${tailLine.slice(0, 200)}` }
+  }
+
+  writeRedmodDeployState({ fingerprint, deployedAt: new Date().toISOString() })
+  return { modded: true }
+}
+
 // Poll for the launched game PID: once it disappears and no process remains
 // attached to the VFS, tear down staging promptly.
 function startGameExitMonitor(launchedPid?: number): void {
@@ -1474,7 +1670,10 @@ function isUsableDirectoryPath(targetPath?: string): boolean {
   }
 }
 
-function collectDownloadEntries(dirPath: string, limit = 500): Array<{
+// The cap is a guard against pathological folders, not a working size — the renderer
+// windows its rows, and the per-file registry lookup is an O(1) in-memory index, so
+// thousands of archives enumerate fine.
+function collectDownloadEntries(dirPath: string, limit = 10000): Array<{
   path: string
   name: string
   size: number
@@ -2225,6 +2424,7 @@ function registerGlobalHandlers(): void {
       try {
         emitLaunchProgress({
           step: 'Launching game',
+          key: 'launch',
           percent: 88,
           cancellable: false,
           detail: reason,
@@ -2296,6 +2496,7 @@ function registerGlobalHandlers(): void {
     try {
       emitLaunchProgress({
         step: 'Scanning enabled mods',
+        key: 'scan',
         percent: 10,
         detail: settings.libraryPath ?? 'No library path configured',
       })
@@ -2306,6 +2507,7 @@ function registerGlobalHandlers(): void {
 
       emitLaunchProgress({
         step: 'Building VFS map',
+        key: 'map',
         percent: 26,
         current: enabledMods.length,
         total: mods.filter((mod) => mod.kind === 'mod').length,
@@ -2319,6 +2521,7 @@ function registerGlobalHandlers(): void {
 
       emitLaunchProgress({
         step: 'Loading usvfs bridge',
+        key: 'bridge',
         percent: 46,
         current: links.length,
         total: Math.max(links.length, 1),
@@ -2397,6 +2600,7 @@ function registerGlobalHandlers(): void {
       if (settings.libraryPath) {
         emitLaunchProgress({
           step: 'Preparing overwrite layer',
+          key: 'overwrite',
           percent: 54,
           detail: 'Moving runtime files out of the game folder',
         })
@@ -2419,6 +2623,7 @@ function registerGlobalHandlers(): void {
 
       emitLaunchProgress({
         step: 'Preparing bootstrap files',
+        key: 'bootstrap',
         percent: 58,
         detail: 'Staging import-time loader files when needed',
       })
@@ -2525,6 +2730,7 @@ function registerGlobalHandlers(): void {
 
       emitLaunchProgress({
         step: 'Mounting usvfs',
+        key: 'mount',
         percent: 74,
         current: links.length,
         total: Math.max(links.length, 1),
@@ -2604,16 +2810,43 @@ function registerGlobalHandlers(): void {
         appendVfsLaunchLog('vfs tree dump failed', error)
       }
 
+      // REDmod deploy: run redMod.exe hooked into the mounted VFS so it compiles the
+      // virtual mods/ tree into r6/cache/modded (captured into the Overwrite folder —
+      // the real game dir stays clean), then launch the game with -modded so the
+      // compiled output is actually used. Failure degrades to a normal launch.
+      let launchModded = false
+      const enabledRedmods = enabledMods.filter((mod) => modHasRedmodContent(mod))
+      if (enabledRedmods.length > 0) {
+        const redmodOutcome = await deployRedmodsUnderVfs(
+          bridge,
+          gameRoot,
+          overwriteDir,
+          enabledRedmods,
+          emitLaunchProgress
+        )
+        if (redmodOutcome.cancelled) return finishCancelledLaunch(86)
+        launchModded = redmodOutcome.modded
+        if (!redmodOutcome.modded && redmodOutcome.failed) {
+          pushGeneralLog(mainWindow, {
+            level: 'warn',
+            source: 'launcher',
+            message: 'REDmod deploy failed — launching without -modded (REDmods will not load)',
+            details: { error: redmodOutcome.failed, redmods: enabledRedmods.length, logPath: getVfsLaunchLogPath() },
+          })
+        }
+      }
+
       emitLaunchProgress({
         step: 'Launching Cyberpunk2077.exe',
+        key: 'launch',
         percent: 92,
         state: 'running',
         cancellable: false,
-        detail: `${mount.linked ?? 0} VFS link(s) mounted`,
+        detail: `${mount.linked ?? 0} VFS link(s) mounted${launchModded ? ' · REDmod enabled' : ''}`,
       })
       const launch = bridge.launchHookedProcess({
         appPath: launchTarget,
-        commandLine: `"${launchTarget}"`,
+        commandLine: `"${launchTarget}"${launchModded ? ' -modded' : ''}`,
         cwd: launchDir,
         capture: false,
         waitMs: 0,

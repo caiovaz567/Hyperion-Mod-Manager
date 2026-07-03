@@ -96,6 +96,18 @@ function getModResourceSummaryKeys(mod: ModMetadata): Set<string> {
   return keys
 }
 
+// The redundant denominator. Bulk-scanned mods arrive slimmed (no files /
+// archiveResources) with a main-computed `trackedResourceCount`; mods that still
+// carry their arrays (single-mod IPC results) fall back to deriving the keys
+// locally, exactly as before.
+function getModResourceBaseCount(mod: ModMetadata, localKeys: Set<string>): number {
+  if (mod.kind !== 'mod' || !mod.enabled) return 0
+  if (typeof mod.trackedResourceCount === 'number') {
+    return Math.max(mod.trackedResourceCount, localKeys.size)
+  }
+  return localKeys.size
+}
+
 export const recomputeConflictStateFromExistingConflicts = (
   mods: ModMetadata[],
   existingConflicts: ConflictInfo[]
@@ -117,9 +129,12 @@ export const recomputeConflictStateFromExistingConflicts = (
 
   const summaryMap = new Map<string, { overwrites: Set<string>; overwrittenBy: Set<string> }>()
   const resourceKeysByMod = new Map<string, Set<string>>()
+  const baseCountByMod = new Map<string, number>()
   for (const mod of mods) {
     summaryMap.set(mod.uuid, { overwrites: new Set<string>(), overwrittenBy: new Set<string>() })
-    resourceKeysByMod.set(mod.uuid, getModResourceSummaryKeys(mod))
+    const localKeys = getModResourceSummaryKeys(mod)
+    resourceKeysByMod.set(mod.uuid, localKeys)
+    baseCountByMod.set(mod.uuid, getModResourceBaseCount(mod, localKeys))
   }
 
   const resourceGroups = new Map<string, ResourceGroup>()
@@ -209,7 +224,14 @@ export const recomputeConflictStateFromExistingConflicts = (
   return {
     conflicts: recomputedConflicts,
     summaries: Array.from(summaryMap.entries()).map(([modId, summary]) => {
-      const resourceCount = resourceKeysByMod.get(modId)?.size ?? 0
+      // Denominator: the main-computed tracked count when the mod arrived slimmed,
+      // widened by any conflict-derived keys observed locally (belt and braces —
+      // a mod can never be "fully redundant" against fewer resources than the
+      // conflicts we can actually see).
+      const resourceCount = Math.max(
+        baseCountByMod.get(modId) ?? 0,
+        resourceKeysByMod.get(modId)?.size ?? 0
+      )
       return {
         modId,
         overwrites: summary.overwrites.size,
