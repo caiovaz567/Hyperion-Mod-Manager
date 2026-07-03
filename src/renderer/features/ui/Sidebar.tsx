@@ -100,7 +100,7 @@ export const Sidebar: React.FC = () => {
 
   // Inter (the app's primary font — the nav no longer inherits the Syne brand font) with an
   // explicit color, so inactive items keep readable contrast in both light and dark modes.
-  const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap text-[13.5px] font-medium opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 ${
+  const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap text-[14.5px] font-medium opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 ${
     active ? 'text-[var(--accent)] font-semibold' : disabled ? 'text-[var(--text-disabled)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
   }`
 
