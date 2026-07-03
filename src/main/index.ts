@@ -20,6 +20,7 @@ import {
   registerModManagerHandlers,
   buildEnabledModLinks,
   getDeployRelativePath,
+  getRedmodFolderNames,
   modHasRedmodContent,
   normalizeRelativePath,
   scanMods,
@@ -1449,18 +1450,21 @@ function writeRedmodDeployState(state: { fingerprint: string; deployedAt: string
   }
 }
 
-// Identity of the enabled REDmod set: which mods, and whether their payload
-// changed (size/count/source timestamps). Order is irrelevant — redMod deploys
-// the virtual mods/ folder alphabetically, same as the stock REDlauncher.
-function computeRedmodFingerprint(enabledRedmods: ModMetadata[]): string {
-  const identity = enabledRedmods
-    .map((mod) => ({
-      folder: (mod.folderName ?? mod.uuid).toLowerCase(),
-      size: mod.fileSize ?? 0,
-      count: Array.isArray(mod.files) ? mod.files.length : 0,
-      stamp: mod.sourceModifiedAt ?? mod.installedAt ?? '',
-    }))
-    .sort((left, right) => left.folder.localeCompare(right.folder))
+// Identity of the enabled REDmod set: which mods, whether their payload changed
+// (size/count/source timestamps), and the resolved `-mod=` load order — a pure
+// reorder must trigger a redeploy because the compiled output depends on it.
+function computeRedmodFingerprint(enabledRedmods: ModMetadata[], orderedModNames: string[]): string {
+  const identity = {
+    mods: enabledRedmods
+      .map((mod) => ({
+        folder: (mod.folderName ?? mod.uuid).toLowerCase(),
+        size: mod.fileSize ?? 0,
+        count: Array.isArray(mod.files) ? mod.files.length : 0,
+        stamp: mod.sourceModifiedAt ?? mod.installedAt ?? '',
+      }))
+      .sort((left, right) => left.folder.localeCompare(right.folder)),
+    order: orderedModNames.map((name) => name.toLowerCase()),
+  }
   return crypto.createHash('sha1').update(JSON.stringify(identity)).digest('hex')
 }
 
@@ -1477,7 +1481,18 @@ async function deployRedmodsUnderVfs(
     return { modded: false, failed: 'REDmod tool not installed (enable the free REDmod DLC on the game store)' }
   }
 
-  const fingerprint = computeRedmodFingerprint(enabledRedmods)
+  // Explicit `-mod=` load order following the library: ascending priority, so a
+  // later entry overrides earlier ones in redMod exactly like Hyperion's
+  // higher-#-wins rule. Duplicated REDmod ids (installed copies) keep only their
+  // LAST (winning) slot.
+  const orderedNamesRaw = [...enabledRedmods]
+    .sort((left, right) => left.order - right.order)
+    .flatMap((mod) => getRedmodFolderNames(mod))
+  const lastIndexByName = new Map<string, number>()
+  orderedNamesRaw.forEach((name, index) => lastIndexByName.set(name.toLowerCase(), index))
+  const orderedModNames = orderedNamesRaw.filter((name, index) => lastIndexByName.get(name.toLowerCase()) === index)
+
+  const fingerprint = computeRedmodFingerprint(enabledRedmods, orderedModNames)
   const artifactDir = path.join(overwriteDir, 'r6', 'cache', 'modded')
   const artifactsPresent = fs.existsSync(artifactDir) && collectFilesRecursive(artifactDir).length > 0
   if (readRedmodDeployState()?.fingerprint === fingerprint && artifactsPresent) {
@@ -1499,28 +1514,7 @@ async function deployRedmodsUnderVfs(
   // lets the launch card narrate the real deploy stages, and its final lines are
   // the authoritative success/failure signal ("Commandlet deploy has succeeded").
   const deployLogPath = path.join(app.getPath('userData'), 'logs', 'redmod-deploy.log')
-  try {
-    fs.mkdirSync(path.dirname(deployLogPath), { recursive: true })
-    fs.rmSync(deployLogPath, { force: true })
-  } catch {
-    // Best-effort; the artifact fallback below still validates the deploy.
-  }
   const cmdExePath = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe')
-
-  const startedAt = Date.now()
-  const launch = bridge.launchHookedProcess({
-    appPath: cmdExePath,
-    // Hooked into the VFS: redMod reads the virtual mods/ tree and its writes
-    // land in the overwrite capture instead of the real game folder.
-    commandLine: `"${cmdExePath}" /s /c ""${toolPath}" deploy -root="${gameRoot}" > "${deployLogPath}" 2>&1"`,
-    cwd: path.dirname(toolPath),
-    capture: false,
-    waitMs: 0,
-  })
-  appendVfsLaunchLog('redmod deploy started', { ...launch, fingerprint, redmods: enabledRedmods.length, deployLogPath })
-  if (!launch.ok || !launch.pid) {
-    return { modded: false, failed: `REDmod deploy failed to start (${launch.stage ?? 'unknown stage'})` }
-  }
 
   const readDeployLog = (): string => {
     try {
@@ -1530,67 +1524,125 @@ async function deployRedmodsUnderVfs(
     }
   }
 
-  // Poll (never block the main thread) until redMod exits, honoring cancellation
-  // and narrating the tool's own progress lines in the launch card.
-  let lastDetail = ''
-  for (;;) {
-    if (vfsLaunchCancelRequested) {
-      exec(`taskkill /PID ${launch.pid} /T /F`, { windowsHide: true }, () => undefined)
-      return { modded: false, cancelled: true }
-    }
-    if (Date.now() - startedAt > REDMOD_DEPLOY_TIMEOUT_MS) {
-      exec(`taskkill /PID ${launch.pid} /T /F`, { windowsHide: true }, () => undefined)
-      appendVfsLaunchLog('redmod deploy timed out', { pid: launch.pid })
-      return { modded: false, failed: 'REDmod deploy timed out' }
+  type DeployAttempt =
+    | { status: 'succeeded' }
+    | { status: 'cancelled' }
+    | { status: 'failed'; failedLine: string }
+
+  const attemptDeploy = async (modListArgs: string): Promise<DeployAttempt> => {
+    try {
+      fs.mkdirSync(path.dirname(deployLogPath), { recursive: true })
+      fs.rmSync(deployLogPath, { force: true })
+    } catch {
+      // Best-effort; the artifact fallback below still validates the deploy.
     }
 
-    const logContent = readDeployLog()
-    const stageMatches = [...logContent.matchAll(/\[DEPLOY\] Stage (\d+)\/(\d+) - (.+)/g)]
-    const lastStage = stageMatches[stageMatches.length - 1]
-    const foundMods = logContent.match(/^Found mod .+$/gm)?.length ?? 0
-    if (lastStage) {
-      const stageNumber = Number.parseInt(lastStage[1], 10)
-      const stageTotal = Math.max(1, Number.parseInt(lastStage[2], 10))
-      const detail = `Stage ${lastStage[1]}/${lastStage[2]} — ${lastStage[3].trim()}${foundMods > 0 ? ` · ${foundMods} mod(s)` : ''}`
-      if (detail !== lastDetail) {
-        lastDetail = detail
-        emitProgress({
-          step: 'Deploying REDmods',
-          key: 'redmod',
-          percent: Math.min(90, 84 + Math.round((stageNumber / stageTotal) * 6)),
-          cancellable: true,
-          detail,
-        })
+    const startedAt = Date.now()
+    const launch = bridge.launchHookedProcess({
+      appPath: cmdExePath,
+      // Hooked into the VFS: redMod reads the virtual mods/ tree and its writes
+      // land in the overwrite capture instead of the real game folder.
+      commandLine: `"${cmdExePath}" /s /c ""${toolPath}" deploy -root="${gameRoot}"${modListArgs} > "${deployLogPath}" 2>&1"`,
+      cwd: path.dirname(toolPath),
+      capture: false,
+      waitMs: 0,
+    })
+    appendVfsLaunchLog('redmod deploy started', {
+      ...launch,
+      fingerprint,
+      redmods: enabledRedmods.length,
+      modListArgs: modListArgs || '(default: all mods, alphabetical)',
+      deployLogPath,
+    })
+    if (!launch.ok || !launch.pid) {
+      return { status: 'failed', failedLine: `failed to start (${launch.stage ?? 'unknown stage'})` }
+    }
+
+    // Poll (never block the main thread) until redMod exits, honoring cancellation
+    // and narrating the tool's own progress lines in the launch card.
+    let lastDetail = ''
+    for (;;) {
+      if (vfsLaunchCancelRequested) {
+        exec(`taskkill /PID ${launch.pid} /T /F`, { windowsHide: true }, () => undefined)
+        return { status: 'cancelled' }
       }
+      if (Date.now() - startedAt > REDMOD_DEPLOY_TIMEOUT_MS) {
+        exec(`taskkill /PID ${launch.pid} /T /F`, { windowsHide: true }, () => undefined)
+        appendVfsLaunchLog('redmod deploy timed out', { pid: launch.pid })
+        return { status: 'failed', failedLine: 'timed out' }
+      }
+
+      const logContent = readDeployLog()
+      const stageMatches = [...logContent.matchAll(/\[DEPLOY\] Stage (\d+)\/(\d+) - (.+)/g)]
+      const lastStage = stageMatches[stageMatches.length - 1]
+      const foundMods = logContent.match(/^Found mod .+$/gm)?.length ?? 0
+      if (lastStage) {
+        const stageNumber = Number.parseInt(lastStage[1], 10)
+        const stageTotal = Math.max(1, Number.parseInt(lastStage[2], 10))
+        const detail = `Stage ${lastStage[1]}/${lastStage[2]} — ${lastStage[3].trim()}${foundMods > 0 ? ` · ${foundMods} mod(s)` : ''}`
+        if (detail !== lastDetail) {
+          lastDetail = detail
+          emitProgress({
+            step: 'Deploying REDmods',
+            key: 'redmod',
+            percent: Math.min(90, 84 + Math.round((stageNumber / stageTotal) * 6)),
+            cancellable: true,
+            detail,
+          })
+        }
+      }
+
+      if (!(await isProcessRunningByPid(launch.pid))) break
+      await new Promise((resolve) => setTimeout(resolve, REDMOD_DEPLOY_POLL_MS))
     }
 
-    if (!(await isProcessRunningByPid(launch.pid))) break
-    await new Promise((resolve) => setTimeout(resolve, REDMOD_DEPLOY_POLL_MS))
+    const finalLog = readDeployLog()
+    const logSaysSuccess = /deploy has succeeded/i.test(finalLog)
+    const logSaysFailure = /deploy has failed|\bfatal\b/i.test(finalLog)
+    // Fallback (log unreadable): compiled output landing in the capture this run.
+    const produced = fs.existsSync(artifactDir) && collectFilesRecursive(artifactDir).some((filePath) => {
+      try {
+        return fs.statSync(filePath).mtimeMs >= startedAt - 2000
+      } catch {
+        return false
+      }
+    })
+    appendVfsLaunchLog('redmod deploy finished', {
+      durationMs: Date.now() - startedAt,
+      logSaysSuccess,
+      logSaysFailure,
+      produced,
+      artifactDir,
+      logTail: finalLog.slice(-1500),
+    })
+    if (logSaysSuccess || (!logSaysFailure && (produced || artifactsPresent))) {
+      return { status: 'succeeded' }
+    }
+    const tailLine = finalLog.trim().split(/\r?\n/).filter(Boolean).pop() ?? 'no output'
+    return { status: 'failed', failedLine: tailLine.slice(0, 200) }
   }
 
-  const finalLog = readDeployLog()
-  const logSaysSuccess = /deploy has succeeded/i.test(finalLog)
-  const logSaysFailure = /deploy has failed|\bfatal\b/i.test(finalLog)
-  // Fallback (log unreadable): compiled output landing in the capture this run.
-  const produced = fs.existsSync(artifactDir) && collectFilesRecursive(artifactDir).some((filePath) => {
-    try {
-      return fs.statSync(filePath).mtimeMs >= startedAt - 2000
-    } catch {
-      return false
-    }
-  })
-  appendVfsLaunchLog('redmod deploy finished', {
-    durationMs: Date.now() - startedAt,
-    logSaysSuccess,
-    logSaysFailure,
-    produced,
-    artifactDir,
-    logTail: finalLog.slice(-1500),
-  })
-  const succeeded = logSaysSuccess || (!logSaysFailure && (produced || artifactsPresent))
-  if (!succeeded) {
-    const tailLine = finalLog.trim().split(/\r?\n/).filter(Boolean).pop() ?? 'no output'
-    return { modded: false, failed: `REDmod deploy failed: ${tailLine.slice(0, 200)}` }
+  const modListArgs = orderedModNames.map((name) => ` -mod= "${name}"`).join('')
+  let attempt = await attemptDeploy(modListArgs)
+
+  // Older/newer redMod builds may reject the -mod list syntax; retry once with
+  // the default (all mods in the virtual folder, alphabetical) rather than
+  // failing the whole launch over a load-order refinement.
+  if (attempt.status === 'failed' && modListArgs) {
+    appendVfsLaunchLog('redmod deploy retrying without explicit -mod list', { failedLine: attempt.failedLine })
+    emitProgress({
+      step: 'Deploying REDmods',
+      key: 'redmod',
+      percent: 84,
+      cancellable: true,
+      detail: 'Retrying with the default load order',
+    })
+    attempt = await attemptDeploy('')
+  }
+
+  if (attempt.status === 'cancelled') return { modded: false, cancelled: true }
+  if (attempt.status === 'failed') {
+    return { modded: false, failed: `REDmod deploy failed: ${attempt.failedLine}` }
   }
 
   writeRedmodDeployState({ fingerprint, deployedAt: new Date().toISOString() })

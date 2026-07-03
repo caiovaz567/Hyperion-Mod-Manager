@@ -488,6 +488,29 @@ export function modHasRedmodContent(mod: ModMetadata): boolean {
 }
 
 /**
+ * The REDmod folder names this mod deploys under `mods/` (usually one; nested
+ * multi-REDmod archives contribute several). These are the ids `redMod.exe
+ * deploy -mod=` expects, in the mod's own internal order.
+ */
+export function getRedmodFolderNames(mod: ModMetadata): string[] {
+  if (mod.kind !== 'mod') return []
+  const prefix = `mods${path.sep}`
+  const seen = new Set<string>()
+  const names: string[] = []
+  for (const rel of getTrackedDeploymentPaths(mod)) {
+    const normalized = normalizeRelativePath(rel)
+    if (!normalized.toLowerCase().startsWith(prefix)) continue
+    const name = normalized.split(path.sep)[1]
+    if (!name) continue
+    const key = name.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    names.push(name)
+  }
+  return names
+}
+
+/**
  * Unique tracked resources (conflict-relevant deploy paths + archive resource keys).
  * This is the denominator for "fully redundant" — shipped to the renderer as
  * `trackedResourceCount` so bulk IPC payloads can drop the per-file arrays.
