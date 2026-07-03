@@ -98,7 +98,7 @@ export const Sidebar: React.FC = () => {
   const itemInnerClass =
     'grid h-12 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4'
 
-  // Inter (the app's primary font — the nav no longer inherits the Syne brand font) with an
+  // Inter (the app's primary font - the nav no longer inherits the Syne brand font) with an
   // explicit color, so inactive items keep readable contrast in both light and dark modes.
   const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap text-[14.5px] font-medium opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 ${
     active ? 'text-[var(--accent)] font-semibold' : disabled ? 'text-[var(--text-disabled)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'

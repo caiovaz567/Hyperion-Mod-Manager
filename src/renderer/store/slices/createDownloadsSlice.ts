@@ -334,7 +334,7 @@ async function installCompletedModUpdate(
       state.addToast?.(translate('downloads.toast.updatedActivated', { name: result.data.mod.name }), 'success')
     }
     state.setRecentLibraryBadge?.(result.data.mod.uuid, 'updated')
-    // We just installed this mod's latest file — clear its update flag locally,
+    // We just installed this mod's latest file - clear its update flag locally,
     // no Nexus request needed.
     state.clearModUpdate?.(result.data.mod.uuid)
   }
@@ -849,7 +849,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       return
     }
 
-    // FOMOD conflict retry — re-use the already-extracted tempDir
+    // FOMOD conflict retry - re-use the already-extracted tempDir
     if (prompt.fomodRequest) {
       await get().fomodInstall({ ...prompt.fomodRequest, allowOverwriteConflicts: true })
       return

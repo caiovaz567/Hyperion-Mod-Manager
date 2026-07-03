@@ -1,4 +1,4 @@
-/* Tailwind CSS v4 + HeroUI v3. Import order matters — tailwindcss first, then HeroUI styles
+/* Tailwind CSS v4 + HeroUI v3. Import order matters - tailwindcss first, then HeroUI styles
    (HeroUI's default theme layers on top of Tailwind). HeroUI v3 needs no provider; its
    components read theme variables (--accent, --background, --surface, …) straight from the
    root element, so the Hyperion theme system below drives them by overriding those vars. */
@@ -40,17 +40,17 @@
   --text-support:     #9A9A9A;
   --text-accent:      #338EF7;
 
-  /* Accent — shared name with HeroUI v3's own --accent token, so overriding it here
+  /* Accent - shared name with HeroUI v3's own --accent token, so overriding it here
      recolors both HeroUI components and Hyperion's legacy UI in one shot. Default is the
      HeroUI blue; the Settings accent-color selector overrides these at runtime. */
   --accent:            #006FEE;
   --accent-foreground: #FFFFFF; /* text/icon color on top of --accent (read by HeroUI) */
   --accent-hover:      #338EF7;
   --accent-dim:        rgb(0 111 238 / 0.12);
-  --accent-rgb:        0 111 238; /* SPACE-separated companion to --accent for rgb(var(--accent-rgb)/opacity) blends. Must be space-separated — commas + slash is invalid CSS (renders transparent). */
+  --accent-rgb:        0 111 238; /* SPACE-separated companion to --accent for rgb(var(--accent-rgb)/opacity) blends. Must be space-separated - commas + slash is invalid CSS (renders transparent). */
 
   /* Punctual secondary accent (focus ring, active list items, active tab underline).
-     Stays a small, deliberate footprint — never the primary interactive color. */
+     Stays a small, deliberate footprint - never the primary interactive color. */
   --accent-cyber-blue:     #4FD8FF;
   --accent-cyber-blue-rgb: 79 216 255;
   --focus-ring:            rgb(0 111 238 / 0.6);
@@ -96,11 +96,11 @@
   /* Flat app canvas behind everything (.hyperion-bg) */
   --bg-canvas: #070709;
 
-  /* Scrollbar (.hyperion-scrollbar thumb) — neutral gray, never tinted by the accent */
+  /* Scrollbar (.hyperion-scrollbar thumb) - neutral gray, never tinted by the accent */
   --scrollbar-thumb:       rgba(255, 255, 255, 0.14);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.24);
 
-  /* Mod type colors — never themed, semantic per file type */
+  /* Mod type colors - never themed, semantic per file type */
   --type-archive:   #60A5FA;
   --type-redmod:    #34D399;
   --type-cet:       #F0F0F0;
@@ -112,7 +112,7 @@
   --type-r6:        #60A5FA;
   --type-unknown:   #64748B;
 
-  /* Status — never themed, semantic across the whole app */
+  /* Status - never themed, semantic across the whole app */
   --status-success: #34D399;
   --status-warning: #FCEE09;
   --status-error:   #F87171;
@@ -122,7 +122,7 @@
 /* The values above are the dark-mode factory defaults and the compiled-in fallback used
    before the runtime tokens apply. AppThemeProvider overwrites these custom properties as
    inline styles on the root element: the dark palette (src/shared/theme/palettes/dark.json),
-   overlaid with the light palette in light mode, plus the accent-color overlay last — see
+   overlaid with the light palette in light mode, plus the accent-color overlay last - see
    CLAUDE.md → "UI Theming". */
 
 * { box-sizing: border-box; }
@@ -148,7 +148,7 @@ select,
   user-select: text;
 }
 
-/* Native <button>/role=button default to the arrow cursor per CSS spec — make every enabled
+/* Native <button>/role=button default to the arrow cursor per CSS spec - make every enabled
    button/link/interactive control show the pointer hand. Rows that intentionally use the arrow
    are <div>s with an explicit cursor-default class, so they're unaffected. */
 :where(button:not(:disabled):not([aria-disabled='true']),
@@ -207,7 +207,7 @@ a[href]) {
 
 /* One-shot "you landed here" cue for the GO jump (conflict overlay → mod row):
    a strong accent background flash + inset ring that decays to nothing. Loud on
-   purpose — it must be unmistakable in both light and dark modes — but single-run
+   purpose - it must be unmistakable in both light and dark modes - but single-run
    and quick, so it stays a purposeful cue rather than ambient pulsing. */
 @keyframes row-attention {
   0% {
@@ -269,13 +269,13 @@ a[href]) {
   pointer-events: none;
   z-index: 0;
   contain: strict;
-  /* Flat, solid canvas (a single color — no gradient glow, dot texture, or vignette) so
+  /* Flat, solid canvas (a single color - no gradient glow, dot texture, or vignette) so
      elevated --surface panels float cleanly. Token-driven so light mode can flip it;
      never accent-tinted so the canvas doesn't pull toward the selected color. */
   background: var(--bg-canvas, #070709);
 }
 
-/* Atmospheric pseudo-layers removed — the canvas is now a single flat color. */
+/* Atmospheric pseudo-layers removed - the canvas is now a single flat color. */
 .hyperion-bg::before,
 .hyperion-bg::after {
   content: none;
@@ -290,7 +290,7 @@ a[href]) {
 .brand-font { font-family: 'Syne', sans-serif; }
 .screen-title-font { font-family: 'Oxanium', sans-serif; }
 
-/* Icons are now HeroUI-style Lucide SVGs (see features/ui/Icon.tsx) — the Material Symbols
+/* Icons are now HeroUI-style Lucide SVGs (see features/ui/Icon.tsx) - the Material Symbols
    font was removed. */
 
 /* ── Scrollbar ── */
@@ -354,7 +354,7 @@ a[href]) {
   /* Per-row containment so a hover/selection repaint stays local to the row instead of
      invalidating the whole list.
      We deliberately DO NOT use `content-visibility: auto` here. It skips painting
-     off-screen rows, but it also RENDERS them on-demand as they enter the viewport — so
+     off-screen rows, but it also RENDERS them on-demand as they enter the viewport - so
      dragging the scrollbar fast turns into a burst of layout+paint on every frame, which
      froze the whole app while scrolling. Without it, all rows paint once into the
      container's composited scroll layer (the container sets `will-change: scroll-position`)
@@ -367,7 +367,7 @@ a[href]) {
 
 /* Light↔dark switches cross-fade through the View Transitions API (ThemeContext
    wraps the token swap in document.startViewTransition): the compositor fades a
-   snapshot of the old frame into the new one on the GPU — smooth regardless of DOM
+   snapshot of the old frame into the new one on the GPU - smooth regardless of DOM
    size. These rules just tune the fade length. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -384,7 +384,7 @@ a[href]) {
   border: 1px solid var(--border-strong) !important;
 }
 
-/* The outline follows the element's own border-radius; never force a radius here —
+/* The outline follows the element's own border-radius; never force a radius here -
    a global `border-radius: 3px` squared off every focused pill/rounded control. */
 *:focus-visible {
   outline: 1px solid var(--focus-ring);

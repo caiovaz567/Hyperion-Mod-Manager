@@ -32,7 +32,7 @@ interface LoggedSecretValue {
 }
 
 // Method / level / status tags are real HeroUI chips (HyperionBadge), so they stay
-// readable in BOTH color modes — the old hand-rolled dark-palette fills (pale yellow
+// readable in BOTH color modes - the old hand-rolled dark-palette fills (pale yellow
 // text on pale yellow) were invisible in light mode.
 type BadgeTone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger'
 
@@ -70,7 +70,7 @@ const MetaCard: React.FC<{ label: string; children: React.ReactNode }> = ({ labe
   </div>
 )
 
-// Labeled panel (Request URL / Error / structured payloads) — soft rounded surface, readable header.
+// Labeled panel (Request URL / Error / structured payloads) - soft rounded surface, readable header.
 const LabeledPanel: React.FC<{
   icon: string
   label: string
@@ -150,7 +150,7 @@ function stringifyPayload(value: unknown, revealSecrets: boolean): string {
 }
 
 function getPrimitiveClassName(value: unknown): string {
-  // Strings use a fixed, readable warm tone (not the accent — a low-opacity blue/etc. accent
+  // Strings use a fixed, readable warm tone (not the accent - a low-opacity blue/etc. accent
   // reads too dark on the code surface). Numbers/booleans/null keep their semantic colors.
   if (typeof value === 'string') return 'text-[var(--code-string)]'
   if (typeof value === 'number') return 'text-[var(--code-number)]'
@@ -373,7 +373,7 @@ const PayloadNode: React.FC<{
 
   return (
     <div>
-      {/* Opening row — chevron + optional key + opening brace */}
+      {/* Opening row - chevron + optional key + opening brace */}
       <div
         role="button"
         tabIndex={0}

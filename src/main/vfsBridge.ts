@@ -65,7 +65,7 @@ export interface VfsBridgeDiagnostics {
   error?: string
 }
 
-// Bypass the bundler's static require analysis — this is a runtime-only,
+// Bypass the bundler's static require analysis - this is a runtime-only,
 // platform-specific native binary that must not be inlined by electron-vite.
 const runtimeRequire: NodeRequire = eval('require')
 

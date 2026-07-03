@@ -58,7 +58,7 @@ const clearConflictState = (set: LibrarySet) => {
 const runConflictRefresh = async (
   set: LibrarySet,
   // Fires as soon as conflict badges are visible (after the cheap first pass), so an
-  // awaiter — notably the splash/boot — is released BEFORE the slow deep pass. The deep
+  // awaiter - notably the splash/boot - is released BEFORE the slow deep pass. The deep
   // pass can parse .archive files and run external hash tooling (per-archive LXRS /
   // kark resolution), which can take many seconds on a large library or a first-run
   // re-index; blocking the window on it is what froze the splash.
@@ -90,7 +90,7 @@ const runConflictRefresh = async (
     const quickState = await requestConflictState({ refreshArchiveResources: false })
     if (quickState) {
       applyConflictState(set, quickState.summaries ?? [], quickState.conflicts ?? [])
-      // Badges are on screen now — release the awaiter before the potentially slow
+      // Badges are on screen now - release the awaiter before the potentially slow
       // deep pass so the window never waits on archive (re)indexing.
       signalBadgesVisible()
 
@@ -103,7 +103,7 @@ const runConflictRefresh = async (
       return
     }
 
-    // Quick pass produced nothing — don't keep the awaiter blocked on the deep pass.
+    // Quick pass produced nothing - don't keep the awaiter blocked on the deep pass.
     signalBadgesVisible()
     const deepState = await requestConflictState({ refreshArchiveResources: true })
     if (deepState) {
@@ -150,7 +150,7 @@ export const scheduleConflictRefresh = (
       }
 
       // Resolve the scheduled promise as soon as badges are visible (after the cheap
-      // first pass), not after the slow deep pass — so awaiters such as the splash/boot
+      // first pass), not after the slow deep pass - so awaiters such as the splash/boot
       // aren't blocked on archive (re)indexing. The deep refine still runs to completion
       // as the active refresh; calling `finalize` again below is a harmless no-op.
       activeConflictRefresh = runConflictRefresh(set, finalize ?? undefined)

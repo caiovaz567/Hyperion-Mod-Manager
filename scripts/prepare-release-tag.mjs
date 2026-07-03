@@ -45,7 +45,7 @@ function runNpmVersion(type) {
 function rollChangelog(version) {
   const changelogPath = path.join(repoRoot, 'CHANGELOG.md')
   if (!fs.existsSync(changelogPath)) {
-    console.warn('[release] CHANGELOG.md not found — skipping changelog roll.')
+    console.warn('[release] CHANGELOG.md not found - skipping changelog roll.')
     return false
   }
 
@@ -56,14 +56,14 @@ function rollChangelog(version) {
   const marker = '## [Unreleased]'
   const start = text.indexOf(marker)
   if (start === -1) {
-    console.warn('[release] No [Unreleased] section — skipping changelog roll.')
+    console.warn('[release] No [Unreleased] section - skipping changelog roll.')
     return false
   }
 
   const afterHeading = start + marker.length
   const sepMatch = /\n---[ \t]*\n/.exec(text.slice(afterHeading))
   if (!sepMatch) {
-    console.warn('[release] No separator after [Unreleased] — skipping changelog roll.')
+    console.warn('[release] No separator after [Unreleased] - skipping changelog roll.')
     return false
   }
 
@@ -116,7 +116,7 @@ function headIsUnpushed() {
     const ahead = runGit(['rev-list', '--count', `origin/${branch}..HEAD`])
     return Number.parseInt(ahead, 10) > 0
   } catch {
-    // No origin/<branch> ref locally — be conservative and don't amend.
+    // No origin/<branch> ref locally - be conservative and don't amend.
     return false
   }
 }
@@ -141,6 +141,6 @@ try {
   runGit(['push', '--follow-tags', 'origin', branch], { stdio: 'inherit' })
   console.log(`[release] Pushed ${branch} with ${tagName}. The Release workflow will build and publish.`)
 } catch {
-  console.error(`[release] Push failed. Commit + tag are local — push manually:\n    git push --follow-tags origin ${branch}`)
+  console.error(`[release] Push failed. Commit + tag are local - push manually:\n    git push --follow-tags origin ${branch}`)
   process.exit(1)
 }

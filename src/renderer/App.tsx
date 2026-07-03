@@ -46,7 +46,7 @@ async function waitForCriticalFonts(): Promise<void> {
 
   // The families the shell actually renders (self-hosted, so these resolve from
   // disk in milliseconds). DM Sans and the Material Symbols icon font were removed
-  // from the project — waiting on them was a no-op at best.
+  // from the project - waiting on them was a no-op at best.
   const fontLoads = [
     fontSet.load('600 16px "Inter"'),
     fontSet.load('700 16px "Syne"'),
@@ -142,7 +142,7 @@ export const App: React.FC = () => {
       const cleanupUpdates = setupUpdateListeners()
       const cleanupNxm = setupNxmListeners()
       // External change inside the mod library (files added/removed in a mod folder via
-      // Explorer, a folder dropped in, etc.) — re-scan with a forced file-metadata refresh
+      // Explorer, a folder dropped in, etc.) - re-scan with a forced file-metadata refresh
       // so the library and the Files tab reflect what's actually on disk.
       const unsubLibraryChanged = IpcService.on(IPC.LIBRARY_CHANGED, () => {
         void useAppStore.getState().scanMods({ refreshFileMetadata: true })
@@ -166,7 +166,7 @@ export const App: React.FC = () => {
 
       // Refresh Nexus update status on launch, but cheaply: this is the bulk path, so
       // it's one `updated.json` request (window adapts to time since the last check)
-      // plus a deep check only for the few mods that changed since then — never one
+      // plus a deep check only for the few mods that changed since then - never one
       // request per mod. Cached indicators already show instantly (hydrated above);
       // this runs in the background (non-blocking, silent) and refreshes them shortly
       // after the window opens. The toolbar button still does an on-demand re-check.
@@ -179,7 +179,7 @@ export const App: React.FC = () => {
       updateBootStatus('Checking mod conflicts...')
       // Await (do NOT fire-and-forget) so the splash holds until the +N/-N/! badges are
       // on screen. Firing this off with `void` reveals the window first and the icons pop
-      // in a moment later — the startup "icons appear after a while" regression vs 0.28.0.
+      // in a moment later - the startup "icons appear after a while" regression vs 0.28.0.
       // This resolves after the cheap first pass (already-indexed sidecars), so it's fast
       // for an established library; the slow deep archive re-index continues in the
       // background afterwards and must NOT block boot (awaiting it froze the splash). The

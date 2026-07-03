@@ -22,7 +22,7 @@ export type LibraryStatusFilter = 'all' | 'enabled' | 'disabled'
 
 // Persist Nexus update statuses across sessions so the app doesn't re-query every
 // installed mod on every launch. The cache lives in the main process (userData) so it
-// survives restarts in both dev and packaged builds — renderer localStorage would be
+// survives restarts in both dev and packaged builds - renderer localStorage would be
 // wiped on every dev restart (sessionData is namespaced per process id in dev). The
 // store hydrates from it asynchronously on boot via hydrateModUpdates().
 function persistModUpdates(statuses: Record<string, ModUpdateStatus>, checkedAt: string | null): void {
@@ -43,7 +43,7 @@ function pickUpdatedPeriod(lastCheckedAt: string | null): '1d' | '1w' | '1m' {
 
 // Per-session guards for lazy archive-name resolution (see resolveArchiveNames): at most
 // one in-flight request per mod, and never re-attempt a mod whose names were already
-// resolved (or proven unresolvable) this session — the external tooling is expensive.
+// resolved (or proven unresolvable) this session - the external tooling is expensive.
 const archiveNamesResolveInFlight = new Set<string>()
 const archiveNamesResolvedThisSession = new Set<string>()
 
@@ -116,7 +116,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       // Only rebuild + re-persist the cache when a mod actually went away (e.g. delete);
       // a plain enable/disable/reorder scan shouldn't trigger a cache write.
       const prunedModUpdates = removedSome ? Object.fromEntries(keptEntries) : previousModUpdates
-      // conflictSummary is renderer-only derived state — SCAN_MODS reads from disk and never
+      // conflictSummary is renderer-only derived state - SCAN_MODS reads from disk and never
       // carries it, so a plain replace would blank every conflict badge until the async refresh
       // lands. The refresh can be delayed (it serializes behind a slow first-run deep archive
       // pass), which is why reinstalling a mod made its badges vanish "for a while". Carry the
@@ -129,7 +129,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       })
       set({ mods: mergedMods, modUpdates: prunedModUpdates })
       if (removedSome) persistModUpdates(prunedModUpdates, get().modUpdatesCheckedAt)
-      // Update status is never fetched automatically — not on scan, install, or delete.
+      // Update status is never fetched automatically - not on scan, install, or delete.
       // Cached indicators persist and refreshing is fully user-driven via per-mod
       // "Check for Update" or the "Check Updates" toolbar button.
       if (options?.refreshConflicts !== false) {
@@ -298,7 +298,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       // the DB/LXRS/kark) doesn't re-trigger the slow tooling every time it's reopened.
       archiveNamesResolvedThisSession.add(uuid)
       if (result.ok && result.data && result.data.resolved > 0) {
-        // The sidecar now carries resolved names — recompute so the inspector shows them.
+        // The sidecar now carries resolved names - recompute so the inspector shows them.
         await scheduleConflictRefresh(set, true)
       }
     } catch {
@@ -344,7 +344,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         nexusCategoryName: mod.nexusCategoryName,
       }))
     if (inputs.length === 0) {
-      // No Nexus mods at all — clear the cache (but never from a scoped check).
+      // No Nexus mods at all - clear the cache (but never from a scoped check).
       if (!modIds) {
         const clearedAt = new Date().toISOString()
         set({ modUpdates: {}, modUpdatesCheckedAt: clearedAt })
@@ -363,7 +363,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         { mods: inputs, force, full, modIds, period }
       )
       if (result.ok && result.data) {
-        // No API key means no check actually ran — don't advance the cache or its
+        // No API key means no check actually ran - don't advance the cache or its
         // last-checked timestamp (doing so would make the launch recency gate skip
         // real checks once a key is added). Just nudge the user if asked.
         if (result.data.skippedReason === 'no-api-key') {
@@ -373,7 +373,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         const previousUpdates = get().modUpdates
         // A full pass inspects every mod and replaces the cache. Bulk and scoped checks
         // only return the mods they actually deep-checked, so they merge into the cache
-        // (untouched mods keep their known status — no per-mod request needed).
+        // (untouched mods keep their known status - no per-mod request needed).
         const replace = full && !modIds
         const map: Record<string, ModUpdateStatus> = replace ? {} : { ...previousUpdates }
         for (const status of result.data.statuses) {
@@ -402,7 +402,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
               single ? 'info' : 'success'
             )
           } else {
-            // Count across the whole (merged) cache — a bulk check only returns the
+            // Count across the whole (merged) cache - a bulk check only returns the
             // mods that changed, so counting just the response would undercount.
             const count = Object.values(map).filter((status) => status.state === 'update-available').length
             notify(
@@ -432,7 +432,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     })
   },
   clearModUpdate: (uuid) => {
-    // Locally drop a mod's update flag without any Nexus request — used right after
+    // Locally drop a mod's update flag without any Nexus request - used right after
     // updating a mod in place, since we just installed its latest file.
     const current = get().modUpdates
     if (!current[uuid]) return

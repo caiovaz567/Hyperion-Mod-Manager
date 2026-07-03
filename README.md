@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/caiovaz567/Hyperion-Mod-Manager?color=00a6ff&label=release&cacheSeconds=300" alt="Latest release" />
+  <img src="https://img.shields.io/github/v/release/caiovaz567/Hyperion-Mod-Manager?color=006FEE&label=release&cacheSeconds=300" alt="Latest release" />
   <img src="https://img.shields.io/badge/game-Cyberpunk%202077-fcee09" alt="Game: Cyberpunk 2077" />
   <img src="https://img.shields.io/badge/platform-Windows-ff3b30" alt="Platform: Windows" />
   <img src="https://img.shields.io/github/license/caiovaz567/Hyperion-Mod-Manager?color=34d399" alt="License: GPL-3.0" />
@@ -17,10 +17,11 @@
 
 ---
 
-Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps your mod library organized, lets you install and reinstall from original sources, and launches the game — all from one place.
+Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps your mod library organized, installs mods without touching the game folder, detects conflicts, and launches the game - all from one place.
 
+<!-- Hero image: a single showcase shot (e.g. the library in several accent colors / light & dark). Replace the src below. -->
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e0458ebb-aad1-4ff5-90d1-38c10bbeba0e" alt="Hyperion mod library" width="900" />
+  <img src="https://github.com/user-attachments/assets/e0458ebb-aad1-4ff5-90d1-38c10bbeba0e" alt="Hyperion" width="900" />
 </p>
 
 ## Why Hyperion Exists
@@ -31,74 +32,67 @@ Since then, Hyperion has become the manager I use for my own Cyberpunk 2077 mod 
 
 ## Features
 
-- **Full mod library management** — enable/disable per mod or in bulk, group mods with separators, and reorder load priority by drag-and-drop (higher order wins on shared paths)
-- **Virtual deployment (usvfs)** — mods are mapped over the game tree at launch using usvfs, the same User-Space VFS behind Mod Organizer 2. Hyperion avoids full mod deployment into the game folder and keeps the library as the source of truth, with only small runtime bootstrap files staged when needed. Your mod library, downloads folder, and game installation can each live on different drives — an SSD for the game, a large HDD for mods, wherever makes sense
-- **Runtime captures** — files written by mod tools during gameplay are captured in Hyperion's managed Overwrite folder and replayed on future launches, keeping the game folder cleaner between sessions
-- **Nexus Mods integration** — install via `nxm://` links, automatic update detection scoped to each file's own lineage, and Premium/Free aware download handling
-- **FOMOD installer** — full wizard support for conditional installs (body type, textures, options) with image previews
-- **Conflict detection** — flags both file-path overwrites and archive-resource conflicts (internal RED4 hash collisions across `.archive` files), with a per-mod win/loss breakdown
-- **Archive support** — install from `.zip`, `.rar`, and `.7z`, with live extraction progress and reinstall from the original source at any time
-- **Downloads inspection** — browse your downloads folder and inspect archives before installing
-- **Launch & monitor** — start Cyberpunk 2077 directly from the app
-- **Automatic updates** — delivered through GitHub Releases
+### Library
+- **Full mod library management** - enable/disable per mod or in bulk, group mods with collapsible separators, and reorder load priority by drag-and-drop (higher order wins on shared paths)
+- **Conflict detection** - flags both file-path overwrites and archive-resource conflicts (internal RED4 hash collisions across `.archive` files), with a per-mod win/loss breakdown and one-click jump to the winning/losing mod
+- **FOMOD installer** - full wizard support for conditional installs (body type, textures, options) with image previews
+- **Archive support** - install from `.zip`, `.rar`, and `.7z`, with live extraction progress and reinstall from the original source at any time
+- **Built to scale** - stays fast and light on memory with thousands of mods and downloads
+
+### Game folder stays clean
+- **Virtual deployment (usvfs)** - mods are mapped over the game tree at launch using usvfs, the same User-Space VFS behind Mod Organizer 2. Nothing is copied or linked into the game folder; the library stays the source of truth, and only tiny runtime bootstrap files are staged when needed. Game, library, and downloads can each live on different drives
+- **REDmod support** - REDmods are compiled and loaded entirely inside the virtual file system: Hyperion runs `redMod deploy` against the virtual `mods/` tree, captures the compiled output outside the game folder, respects your library load order, and launches the game with `-modded`
+- **Runtime captures** - files written by mod tools during gameplay (CET keybindings, generated configs, logs) are captured in a managed Overwrite folder and replayed on future launches, so settings persist while the game folder stays untouched
+
+### Nexus Mods
+- **One-click installs** via `nxm://` links, with automatic install after download
+- **Update detection** scoped to each installed file's own lineage - an optional file is never flagged against an unrelated main release
+- **Premium/Free aware** download handling, plus MD5 identity recovery for manually downloaded archives
+
+### Interface
+- **Modern UI** built with HeroUI - dark and light modes (or follow the system), with eight accent colors that re-skin the entire app live
+- **Multilingual** - English and Brazilian Portuguese, switchable live; the architecture is ready for community translations
+- **Live launch feedback** - a progress card narrates the whole launch pipeline (mod scan, VFS mount, REDmod compilation, game start) with real tool output
+- **App logs** - built-in inspector for runtime events and Nexus API traffic, with masked credentials
+- **Automatic updates** - delivered through GitHub Releases with one-click install
 
 ## Requirements
 
 - Windows 10 / 11 (64-bit)
 - A copy of Cyberpunk 2077
 
-## First-run setup
+## Getting started
 
-The first time you launch Hyperion, a one-time setup walks you through everything it needs before the main window appears. It opens on a short welcome screen, then a four-step wizard:
+Download the latest Windows installer from the [Releases](https://github.com/caiovaz567/Hyperion-Mod-Manager/releases/latest) page.
 
-1. **Game** — where Cyberpunk 2077 is installed. Hyperion auto-detects this in the background, so the step usually opens already valid.
-2. **Mod library** — the folder Hyperion uses as the source of truth for your installed mods.
-3. **Downloads** — the folder Hyperion watches for archives (optional).
-4. **Nexus** — paste your personal Nexus Mods API key to enable downloads and update checks (optional). The step walks you through getting the key (open [API Key Settings](https://www.nexusmods.com/settings/api-keys), copy your **Personal API Key**, paste it) with a live "Connected as …" check. You can also add it later in **Settings > Nexus**.
+On first launch, a one-time setup wizard walks you through everything Hyperion needs:
 
-Each path is validated inline, and you can finish without the optional steps — anything you skip can be set later in **Settings**. The setup reappears automatically if a required path ever goes missing or becomes invalid.
+1. **Game** - where Cyberpunk 2077 is installed (auto-detected in the background)
+2. **Mod library** - the folder that holds your installed mods
+3. **Downloads** - the folder Hyperion watches for archives (optional)
+4. **Nexus** - your personal [Nexus Mods API key](https://www.nexusmods.com/settings/api-keys) for downloads and update checks (optional)
 
+Every path is validated inline, and anything you skip can be set later in **Settings**.
 
-![Hyperion first-run setup](https://github.com/user-attachments/assets/11b6cf8c-0e1f-4916-a316-5c5815ede701)
+## Tech stack
 
-## Download
-
-Get the latest Windows installer from the [Releases](https://github.com/caiovaz567/Hyperion-Mod-Manager/releases/latest) page.
+| Layer | Technology |
+|---|---|
+| Shell | [Electron](https://www.electronjs.org/) (main process in TypeScript) |
+| UI | [React 19](https://react.dev/) + [HeroUI v3](https://heroui.com/) + [Tailwind CSS v4](https://tailwindcss.com/) |
+| State | [Zustand](https://zustand-demo.pmnd.rs/) |
+| Virtual file system | [usvfs](https://github.com/ModOrganizer2/usvfs) via a native Node.js bridge |
+| Packaging & updates | electron-builder + GitHub Releases |
 
 ## Building from source
 
 ```bash
 npm install
-npm run dev      # run in development
-npm run build    # build a local installer
+npm run fetch:usvfs   # fetch the pinned usvfs binaries
+npm run build:native  # build the usvfs native bridge
+npm run dev           # run in development
+npm run build         # build a local installer
 ```
-
-## Demonstrations
-
-### FOMOD Installer
-Conditional install wizard with image previews — choose body type, textures, and options before anything lands in the library.
-
-![FOMOD installer](https://github.com/user-attachments/assets/3aae9f60-69f4-40bf-8c87-bb9b4b237ba6)
-
-### Conflict Inspector
-See exactly which files and archive resources a mod wins or loses against the rest of your load order.
-
-![Conflict inspector](https://github.com/user-attachments/assets/6a87969d-3563-44be-99a2-0b46ebf6cb06)
-
-### Downloads
-Browse, search, and install from your downloads folder — with live extraction progress.
-
-![Downloads](https://github.com/user-attachments/assets/40df2af6-d2af-4ef2-b916-269e0be99989)
-
-### Settings
-Set your game, mod library, downloads, Nexus integration, update preferences, and diagnostic paths from one place. Each core folder can live on a different drive, and Nexus account settings stay nearby.
-
-![Settings](https://github.com/user-attachments/assets/cc0d870b-43ed-4564-85d5-0cb9a85a691c)
-
-### App Logs
-Inspect live diagnostic events from Hyperion. The **General** tab captures launcher, VFS, install, and runtime messages, while **Requests** shows Nexus API request details and payloads for troubleshooting.
-
-![App logs](https://github.com/user-attachments/assets/d2b96bd3-f7f7-4857-8adf-ee70b8978bb3)
 
 ## License
 

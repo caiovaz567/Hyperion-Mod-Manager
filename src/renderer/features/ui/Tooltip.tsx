@@ -15,7 +15,7 @@ interface TooltipProps {
 
 // Thin wrapper over the real HeroUI Tooltip (React Aria) keeping the legacy
 // `<Tooltip content=...>` call-site API. Copy uses Inter sentence-case at a readable
-// size — no brand-font uppercase micro-labels.
+// size - no brand-font uppercase micro-labels.
 export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,

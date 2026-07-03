@@ -253,7 +253,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   const rowAccentColor = nested ? NESTED_ACCENT_COLOR : ACTIVE_COLOR
   const conflictSummary = mod.conflictSummary ?? { overwrites: 0, overwrittenBy: 0, redundant: false }
   const isRedundant = mod.enabled && Boolean(conflictSummary.redundant)
-  // Conflicts only exist between enabled mods in the active deployment stack — a disabled
+  // Conflicts only exist between enabled mods in the active deployment stack - a disabled
   // mod deploys nothing, so its conflict icon would be misleading.
   const hasConflictSummary = mod.enabled && (conflictSummary.overwrites > 0 || conflictSummary.overwrittenBy > 0 || isRedundant)
   const hasModUpdate = modUpdate?.state === 'update-available'
@@ -317,7 +317,7 @@ export const ModRow: React.FC<ModRowProps> = ({
 
   // Rows are transparent so the lighter HeroUI --surface panel shows through (the "zinc card"
   // look from the mockup). Selection uses a slightly lighter surface; hover is the rounded
-  // overlay below. No more near-black zebra — the table reads as one elevated card.
+  // overlay below. No more near-black zebra - the table reads as one elevated card.
   const baseRowBackgroundClass = selected
     ? 'bg-[rgb(var(--accent-rgb)/0.2)]'
     : 'bg-transparent'
@@ -331,7 +331,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           ? 'bg-[rgba(252,238,9,0.08)]'
           : baseRowBackgroundClass
   // Hover border follows each tone's own semantic color. The focused row is
-  // accent-tinted — the old #5a5714 olive was a leftover from the yellow-accent
+  // accent-tinted - the old #5a5714 olive was a leftover from the yellow-accent
   // era and read as a stray yellow hairline between the selected mod and its
   // conflict-highlighted neighbors. Yellow remains only on 'mixed' (redundant).
   const rowHoverClass = conflictTone === 'focus'
@@ -348,7 +348,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   // NOTE: Tailwind can't apply an opacity modifier (/50) to a var() color, so the ring must be
   // written as rgb(var(--accent-rgb)/X) to actually render a visible accent ring.
   // Selection reads through the accent fill + left accent bar (below), not a full-perimeter
-  // ring — a ring collides with the per-row separator lines and looks like a doubled border.
+  // ring - a ring collides with the per-row separator lines and looks like a doubled border.
   const selectedRingClass = ''
   const hoverGradient = conflictTone === 'focus'
     ? 'linear-gradient(90deg, rgb(var(--accent-rgb)/0.12) 0%, rgb(var(--accent-rgb)/0.05) 18%, rgba(255,255,255,0.012) 34%, rgba(255,255,255,0) 66%)'
@@ -387,7 +387,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           : rowAccentColor
   // rowAccentColor/leftRailColor may hold a CSS var() reference (e.g. var(--accent)) rather
   // than a raw hex string, so alpha blends can't use hex-suffix string concatenation
-  // (`${color}55`) — that would emit an invalid `var(--accent)55`. Use explicit rgb()-with-
+  // (`${color}55`) - that would emit an invalid `var(--accent)55`. Use explicit rgb()-with-
   // opacity blends per branch instead.
   const leftRailFadedColor = nested
     ? `${NESTED_ACCENT_COLOR}88`
@@ -567,7 +567,7 @@ export const ModRow: React.FC<ModRowProps> = ({
 
         <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-sm font-mono tracking-tight">
           <span className={`truncate transition-colors ${hasModUpdate ? 'text-[#f87171]' : secondaryTextClass}`}>
-            {mod.version ?? '—'}
+            {mod.version ?? '-'}
           </span>
           {hasModUpdate ? (
             <Tooltip content={modUpdateTooltip} side="bottom" variant="help">

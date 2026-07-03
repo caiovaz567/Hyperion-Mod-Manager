@@ -4,7 +4,7 @@ import { IPC } from '../shared/types'
 import { safeSendToWindow } from './logStore'
 
 // Cache the latest "update available" result so a check that resolves during the splash
-// (before the renderer mounts its listeners) is not lost — it is re-emitted on APP_READY.
+// (before the renderer mounts its listeners) is not lost - it is re-emitted on APP_READY.
 let cachedUpdateInfo: { version: string; releaseNotes: unknown } | null = null
 let updatesWindow: BrowserWindow | null = null
 
@@ -72,7 +72,7 @@ export function initializeUpdates(mainWindow: BrowserWindow): void {
 
 // Kick off the self-update check immediately at startup so the GitHub round-trip
 // overlaps with the splash and the header button is ready when the window opens.
-// Errors are swallowed here — they still reach the renderer via the error event.
+// Errors are swallowed here - they still reach the renderer via the error event.
 export async function checkForUpdatesOnStartup(): Promise<void> {
   try {
     await autoUpdater.checkForUpdates()

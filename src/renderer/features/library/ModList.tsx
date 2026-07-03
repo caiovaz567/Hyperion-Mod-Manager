@@ -52,7 +52,7 @@ const MOD_ROW_HEIGHT = 48
 // Above this many rows the list windows (renders only the visible slice + overscan),
 // so the first paint and every scroll frame touch ~30-50 rows instead of all of them.
 // The scroll-position state that drives windowing now lives INSIDE <LibraryRows>, so a
-// scroll re-renders only that small row list — never this large ModList. That isolation
+// scroll re-renders only that small row list - never this large ModList. That isolation
 // is what makes a low threshold safe: the old warning ("re-renders the whole ModList on
 // every scroll frame") no longer applies. Kept modest so a normal large library (100+
 // mods) windows and starts up fast, while tiny libraries still render every row.
@@ -449,7 +449,7 @@ export const ModList: React.FC = () => {
   const hasInsertAfterInstallRow = installing && installPlacement === 'insert-after'
 
   // Windowing now lives inside <LibraryRows> (it owns the scroll-position state), so
-  // scrolling re-renders only that row list — never this large ModList. That's the
+  // scrolling re-renders only that row list - never this large ModList. That's the
   // isolation the threshold note below depends on.
   const virtualizationEnabled = displayedMods.length > MOD_VIRTUALIZATION_THRESHOLD
   const selectedConflictMod = selectedIds.length === 1
@@ -755,7 +755,7 @@ export const ModList: React.FC = () => {
         updateCount={updateCount}
       />
 
-        {/* Table — has its own scroll, toolbar stays fixed above */}
+        {/* Table - has its own scroll, toolbar stays fixed above */}
       <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
         <HyperionPanel
           className="relative h-full overflow-hidden"

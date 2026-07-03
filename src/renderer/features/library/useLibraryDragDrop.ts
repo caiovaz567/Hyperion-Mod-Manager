@@ -109,7 +109,7 @@ export function useLibraryDragDrop({
   // valid drop target. The browser paints the "no-drop" block cursor on any
   // dragenter/dragover that isn't cancelled. The KEY culprit behind the constant
   // flicker is `dragenter`: it fires every time the cursor crosses into a new
-  // element (and a row is full of small ones — cells, icons, spans), so leaving
+  // element (and a row is full of small ones - cells, icons, spans), so leaving
   // it uncancelled flashes the block cursor on every micro-movement, even though
   // `dragover` is cancelled a moment later. Per MDN, allowing a drop requires
   // cancelling BOTH events. We do it once at the document level so every element
@@ -147,7 +147,7 @@ export function useLibraryDragDrop({
   // Visible grouping derived from what is actually rendered (respects collapsed
   // separators and active filters). For each visible row it records the section
   // it belongs to, its index among that section's visible mods, the section's
-  // visible-mod count, and the section's last visible mod — everything needed to
+  // visible-mod count, and the section's last visible mod - everything needed to
   // snap a dragged separator to a whole-section boundary.
   const visibleGroups = useMemo(() => {
     const sections: { headerId: string | null; childIds: string[] }[] = [{ headerId: null, childIds: [] }]
@@ -301,7 +301,7 @@ export function useLibraryDragDrop({
     const movingIds = getDraggedIdsFromEvent(event)
     if (movingIds.length === 0) return
 
-    // Any internal drag over a row is a valid drop zone — preventDefault here so
+    // Any internal drag over a row is a valid drop zone - preventDefault here so
     // the cursor stays "move" instead of the browser's no-drop icon. This must
     // run BEFORE the own-row check below, otherwise hovering the dragged
     // separator's own (dimmed) child mods would skip preventDefault and flicker
@@ -383,7 +383,7 @@ export function useLibraryDragDrop({
       const cursorInBottomHalf = event.clientY >= rect.top + rect.height / 2
 
       // Snap to the section boundary so the bar reads as "above this section"
-      // (top half) or "below this whole section" (bottom half) — concise, and
+      // (top half) or "below this whole section" (bottom half) - concise, and
       // consistent with where the drop will land.
       const next = boundaryToRowDropTarget(resolveSeparatorBoundary(separator.uuid, cursorInBottomHalf))
       if (!rowDropTarget || rowDropTarget.targetId !== next.targetId || rowDropTarget.position !== next.position) {
@@ -480,7 +480,7 @@ export function useLibraryDragDrop({
     // top-level handlers didn't claim (e.g. over a dragged row, row gaps, the
     // toolbar/header, or panel padding) bubbles here. We gate on our own drag
     // ref rather than dataTransfer.types because the protected drag-data store
-    // doesn't reliably expose custom types during dragover — so the type check
+    // doesn't reliably expose custom types during dragover - so the type check
     // could miss and leave the area marked invalid (the browser's no-drop block
     // cursor). Marking it a valid drop target keeps the cursor "move" throughout.
     if (draggedModIdsRef.current.length > 0) {

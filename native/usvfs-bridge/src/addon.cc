@@ -1,4 +1,4 @@
-// usvfs-bridge — native bridge between Hyperion (Electron/Node) and usvfs.
+// usvfs-bridge - native bridge between Hyperion (Electron/Node) and usvfs.
 //
 // PHASE 3a: the real lifecycle the app will use.
 //   mountVfs({ instanceName, links: [{source, dest}] })
@@ -144,7 +144,7 @@ Napi::Value MountVfs(const Napi::CallbackInfo& info) {
       std::wstring source = ToWide(link.Get("source"));
       std::wstring dest = ToWide(link.Get("dest"));
       const bool isDir = link.Has("dir") && link.Get("dir").ToBoolean().Value();
-      // createTarget redirects file creation/writes in `dest` to `source` — used
+      // createTarget redirects file creation/writes in `dest` to `source` - used
       // for a writable overwrite folder so mods/the game can write logs, configs
       // and caches (e.g. red4ext/logs, r6/cache) into virtual game folders.
       const bool createTarget =
@@ -269,7 +269,7 @@ Napi::Value UnmountVfs(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   // We intentionally do NOT call usvfsDisconnectVFS: it crashes usvfs 0.5.7.2
   // when a CREATETARGET (overwrite) link is active. Leaving the VFS resident is
-  // harmless once the game has exited — no other process is hooked into it — and
+  // harmless once the game has exited - no other process is hooked into it - and
   // the next mountVfs resets it via usvfsCreateVFS. The OS reclaims everything
   // when the controller (main) process exits.
   if (EnsureUsvfsLoaded() && g_mounted) {
@@ -298,7 +298,7 @@ Napi::Value DumpVfsTree(const Napi::CallbackInfo& info) {
 // forceLoadLibrary(processName, libraryPath) -> { ok }
 // Register a DLL to be force-loaded (through the VFS) when usvfs injects the
 // named process. This is how import-time proxy/loader DLLs (CET's version.dll,
-// RED4ext's winmm.dll) load from a VIRTUAL bin/x64 — usvfs loads them while its
+// RED4ext's winmm.dll) load from a VIRTUAL bin/x64 - usvfs loads them while its
 // hooks are active, so the module binds to the virtual file, and the game's
 // static import then resolves to the already-loaded module. No physical staging
 // into the game folder, so no admin is needed. Call after mountVfs and before

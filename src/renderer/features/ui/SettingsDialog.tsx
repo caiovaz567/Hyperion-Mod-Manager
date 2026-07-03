@@ -368,7 +368,7 @@ export const SettingsPage: React.FC = () => {
   }
 
   const { primary: primaryBtn, secondary: secondaryBtn, accentOutline: accentOutlineBtn } = uiButton
-  // Accent-tinted link buttons for the credit rows — they sit on --surface-secondary, so a
+  // Accent-tinted link buttons for the credit rows - they sit on --surface-secondary, so a
   // neutral fill would blend in and stop reading as a button.
   const aboutActionBtn =
     'group inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-3.5 text-[13px] font-medium leading-none text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.42)]'

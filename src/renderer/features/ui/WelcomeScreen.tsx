@@ -297,7 +297,7 @@ export const WelcomeScreen: React.FC = () => {
 
   const applyDownloadsDefault = async () => {
     // Use the independent suggested downloads folder, not one derived from the
-    // current library path — clicking this must only set the downloads path.
+    // current library path - clicking this must only set the downloads path.
     const nextDownloadPath =
       defaultPaths?.downloadPath?.trim() || resolveDownloadPath(defaultPaths?.libraryPath || '')
     setDownloadPath(nextDownloadPath)
@@ -558,7 +558,7 @@ export const WelcomeScreen: React.FC = () => {
 
               {currentStep === 3 && (
                 <>
-                  {/* How to get the key — mirrors the README */}
+                  {/* How to get the key - mirrors the README */}
                   <ol className="mb-5 space-y-2.5">
                     {[
                       t('welcome.nexus.instruction1'),

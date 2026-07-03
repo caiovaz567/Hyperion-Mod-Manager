@@ -11,7 +11,7 @@ const root = process.cwd()
 const moduleDir = path.join(root, 'native', 'usvfs-bridge')
 
 if (process.platform !== 'win32') {
-  console.log('[build-native] not Windows — skipping usvfs-bridge build.')
+  console.log('[build-native] not Windows - skipping usvfs-bridge build.')
   process.exit(0)
 }
 

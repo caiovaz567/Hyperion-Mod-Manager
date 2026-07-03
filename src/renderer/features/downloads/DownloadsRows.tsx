@@ -24,20 +24,20 @@ export const getDownloadRowSize = (row: DownloadListRow): number =>
 const clampPercent = (value: number, max = 100): number => Math.max(0, Math.min(value, max))
 
 const formatSpeed = (bps: number): string => {
-  if (bps <= 0) return '—'
+  if (bps <= 0) return '-'
   if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`
   return `${(bps / 1024 / 1024).toFixed(1)} MB/s`
 }
 
 const formatSize = (bytes: number): string => {
-  if (bytes <= 0) return '—'
+  if (bytes <= 0) return '-'
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
 const formatETA = (downloaded: number, total: number, speed: number): string => {
-  if (speed <= 0 || total <= 0 || downloaded >= total) return '—'
+  if (speed <= 0 || total <= 0 || downloaded >= total) return '-'
   const seconds = Math.round((total - downloaded) / speed)
   if (seconds < 60) return `${seconds}s`
   const minutes = Math.floor(seconds / 60)
@@ -202,7 +202,7 @@ const ActiveDownloadRow: React.FC<{
         </div>
 
         <div className="flex items-center text-sm tabular-nums text-[var(--text-support)]">
-          {download.version ?? '—'}
+          {download.version ?? '-'}
         </div>
 
         <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
@@ -339,7 +339,7 @@ const InstallingDownloadRow: React.FC<{
         </div>
 
         <div className="flex items-center text-sm tabular-nums text-[var(--text-primary-alt)]">
-          {entry.version ?? '—'}
+          {entry.version ?? '-'}
         </div>
 
         <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
@@ -444,7 +444,7 @@ const DeletingDownloadRow: React.FC<{
         </div>
 
         <div className="flex items-center text-sm tabular-nums text-[var(--text-primary-alt)]">
-          {entry.version ?? '—'}
+          {entry.version ?? '-'}
         </div>
 
         <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
@@ -559,7 +559,7 @@ const LocalDownloadRow: React.FC<{
       </div>
 
       <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
-        {entry.version ?? '—'}
+        {entry.version ?? '-'}
       </div>
 
       <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
@@ -604,7 +604,7 @@ const LocalDownloadRow: React.FC<{
 }
 
 // Memoized so scrolling the windowed list only renders the rows entering the
-// viewport — with stable props, the ~30 already-visible rows are reused as-is.
+// viewport - with stable props, the ~30 already-visible rows are reused as-is.
 const DownloadsRowInner: React.FC<DownloadsRowProps> = ({
   row,
   rowIndex,

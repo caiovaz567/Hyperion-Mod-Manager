@@ -40,7 +40,7 @@
       "launching": "LAUNCHING...",
       "inGame": "IN GAME",
       "close": "CLOSE GAME",
-      "notConfigured": "Game path not configured — check Settings",
+      "notConfigured": "Game path not configured - check Settings",
       "launchFailed": "Could not launch game",
       "closeFailed": "Could not close game"
     },
@@ -216,7 +216,7 @@
       "deleteFailedCount_other": "{count} downloads could not be deleted",
       "fileNotAvailable": "Download file is not available yet",
       "autoInstallFailed": "Auto-install failed",
-      "installedNotActivatedNamed": "{name} installed — couldn't activate: {error}",
+      "installedNotActivatedNamed": "{name} installed - couldn't activate: {error}",
       "updateFailed": "Could not update {name}",
       "updatedNotActivated": "Updated but couldn't activate: {error}",
       "updatedActivated": "{name} updated & activated",
@@ -230,7 +230,7 @@
   },
   "welcome": {
     "headline": "Let's set up your workspace",
-    "subtitle": "A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods live — it takes less than a minute.",
+    "subtitle": "A quick, one-time setup. Point Hyperion to Cyberpunk 2077 and choose where your mods live - it takes less than a minute.",
     "version": "Hyperion {version}",
     "stepCounter": "Step {current} of {total}",
     "settingUp": "Setting things up…",
@@ -246,13 +246,13 @@
       "library": {
         "label": "Mod library",
         "heading": "Where should your mods live?",
-        "description": "Every mod you add is kept here — organized, staged, and ready to enable whenever you want.",
+        "description": "Every mod you add is kept here - organized, staged, and ready to enable whenever you want.",
         "preview": "Where your managed mods are stored"
       },
       "downloads": {
         "label": "Downloads",
         "heading": "Where do new downloads land?",
-        "description": "Hyperion picks up new mod archives from this folder. We've suggested one next to your library — change it anytime.",
+        "description": "Hyperion picks up new mod archives from this folder. We've suggested one next to your library - change it anytime.",
         "preview": "Where new mod archives are picked up"
       },
       "nexus": {
@@ -263,13 +263,13 @@
       }
     },
     "game": {
-      "placeholder": "No folder selected — detect or browse below",
-      "valid": "Cyberpunk 2077 found — you're good to go.",
+      "placeholder": "No folder selected - detect or browse below",
+      "valid": "Cyberpunk 2077 found - you're good to go.",
       "invalid": "We couldn't find Cyberpunk 2077 in this folder.",
       "continueTooltip": "Select a valid Cyberpunk 2077 folder to continue"
     },
     "library": {
-      "placeholder": "No folder selected — use the suggestion or browse",
+      "placeholder": "No folder selected - use the suggestion or browse",
       "valid": "This folder is ready to use.",
       "invalid": "This folder can't be used as a mod library.",
       "continueTooltip": "Select a valid mod library folder to continue"
@@ -287,7 +287,7 @@
       "apiKeyPlaceholder": "Paste your Nexus Mods API key",
       "showKey": "Show API key",
       "hideKey": "Hide API key",
-      "optionalInfo": "Optional — you can add this later in Settings > Nexus.",
+      "optionalInfo": "Optional - you can add this later in Settings > Nexus.",
       "validating": "Validating your API key…",
       "connectedAs": "Connected as",
       "error": "We couldn't validate this key. Double-check you copied the Personal API Key."
@@ -420,7 +420,7 @@
       "updatesAvailable_other": "{count} mod updates available.",
       "allUpToDate": "All Nexus mods are up to date.",
       "checkUpdatesError": "Could not check for mod updates.",
-      "openedOnNexus": "Opened on Nexus — use \"Mod Manager Download\" to update this mod.",
+      "openedOnNexus": "Opened on Nexus - use \"Mod Manager Download\" to update this mod.",
       "noNexusLink": "No Nexus link stored for this mod",
       "noOriginalSource": "Original source is not stored for this mod",
       "noEntriesToDelete": "No library entries to delete",
@@ -857,7 +857,7 @@
       "keep": "Keep {version}",
       "keepHelper": "Keep the current install and ignore this older archive.",
       "addToLibrary": "Add to Library",
-      "addToLibraryHelper": "Keep both — add this version as a separate entry.",
+      "addToLibraryHelper": "Keep both - add this version as a separate entry.",
       "updateTo": "Update to {version}",
       "switchTo": "Switch to {version}",
       "replaceHelper": "Replace the installed mod with this version.",
@@ -928,7 +928,7 @@
       "cancelled": "Launch cancelled",
       "error": "Launch failed",
       "cancelling": "Cancelling launch...",
-      "redmodHint": "Starting redMod.exe — the first launch can take a couple of minutes"
+      "redmodHint": "Starting redMod.exe - the first launch can take a couple of minutes"
     }
   }
 }

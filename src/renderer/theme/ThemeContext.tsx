@@ -30,7 +30,7 @@ function applyThemeTokens(resolvedMode: 'light' | 'dark', accentOverlay: Record<
     ...(resolvedMode === 'light' ? LIGHT_THEME_TOKENS : {}),
     ...accentOverlay,
   }
-  // Clear any inline token a previous mode set that this mode doesn't cover — a light-only
+  // Clear any inline token a previous mode set that this mode doesn't cover - a light-only
   // key left behind after switching back to dark would keep light text on dark surfaces.
   for (const key of Object.keys(LIGHT_THEME_TOKENS)) {
     if (!(key in merged)) root.style.removeProperty(key)
@@ -68,7 +68,7 @@ export const AppThemeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     // Light↔dark cross-fades via the View Transitions API: the compositor snapshots
-    // the old frame and fades to the new one on the GPU — one repaint total. (A CSS
+    // the old frame and fades to the new one on the GPU - one repaint total. (A CSS
     // `transition` on every element animated paint properties across the whole tree
     // and visibly chugged.) Only MODE changes animate; accent changes and the first
     // mount apply instantly.

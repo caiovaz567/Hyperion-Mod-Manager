@@ -21,7 +21,7 @@ function canUseSafeStorage(): boolean {
   try {
     // Packaged only. In dev the app redirects `sessionData` to a per-PID temp dir
     // (see index.ts), and Chromium's OSCrypt master key lives in that dir's
-    // `Local State` file — so every `npm run dev` run gets a fresh throwaway key and
+    // `Local State` file - so every `npm run dev` run gets a fresh throwaway key and
     // can NEVER decrypt a key encrypted by a previous run ("Error while decrypting
     // the ciphertext"). Packaged builds use a stable userData dir, so encryption
     // round-trips correctly there. Gating on isPackaged means dev persists the key
@@ -97,7 +97,7 @@ export function getInstallDir(): string | null {
 /**
  * Suggested data locations. By design these live INSIDE the Hyperion install directory
  * (a `Mods` and `Downloads` folder beside the executable) for a self-contained, portable
- * layout. This is only safe because the NSIS uninstaller is surgical — it removes only
+ * layout. This is only safe because the NSIS uninstaller is surgical - it removes only
  * Hyperion's own files (see build/installer.nsh + scripts/after-pack.cjs), so updating or
  * uninstalling never touches these folders or any other user content placed alongside the app.
  * In dev (unpackaged) we fall back to Documents/Hyperion so we never scatter files in node_modules.

@@ -113,7 +113,7 @@ export const LaunchProgressCard: React.FC = () => {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
             {/* Never truncate: this card exists to tell the user exactly what is
-                happening — long step titles/details wrap instead of ellipsizing. */}
+                happening - long step titles/details wrap instead of ellipsizing. */}
             <span className="min-w-0 break-words text-[13.5px] font-semibold leading-snug text-[var(--text-primary)]">{title}</span>
             {isRunning ? (
               <span className="shrink-0 text-[12px] tabular-nums text-[var(--text-muted)]">{percent}%</span>

@@ -1,6 +1,6 @@
 # usvfs-bridge
 
-Native Node.js addon that bridges Hyperion (Electron) to **usvfs** — the User-Space Virtual File System from Mod Organizer 2. Enabled mods are mapped over the Cyberpunk 2077 game tree at launch time, while the mod library remains the source of truth.
+Native Node.js addon that bridges Hyperion (Electron) to **usvfs** - the User-Space Virtual File System from Mod Organizer 2. Enabled mods are mapped over the Cyberpunk 2077 game tree at launch time, while the mod library remains the source of truth.
 
 Most mod payload stays virtual. Hyperion still has two intentional write paths around the VFS:
 
@@ -19,10 +19,10 @@ Most mod payload stays virtual. Hyperion still has two intentional write paths a
 
 ## Build
 
-This module has no own `package.json` — its build deps (`node-addon-api`, `node-gyp`) live in the repo root. Run all commands from the repo root:
+This module has no own `package.json` - its build deps (`node-addon-api`, `node-gyp`) live in the repo root. Run all commands from the repo root:
 
 ```bash
-npm install           # once — installs node-addon-api + node-gyp
+npm install           # once - installs node-addon-api + node-gyp
 npm run fetch:usvfs   # downloads the pinned usvfs SDK into vendor/ (sha256-checked)
 npm run build:native  # compiles for the project's Electron ABI → build/Release
 ```

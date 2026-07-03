@@ -1,11 +1,11 @@
 // Shared suppression window so the recursive mod-library watcher (startLibraryWatcher in
-// index.ts) ignores the filesystem events caused by Hyperion's OWN writes — chiefly the
+// index.ts) ignores the filesystem events caused by Hyperion's OWN writes - chiefly the
 // `_metadata.json` and `_archive_resources.json` files written during scans and conflict
 // refreshes.
 //
 // The watcher already skips events whose filename is one of those bookkeeping files, but
 // writing a file inside a mod folder ALSO produces a directory-level change event (the
-// folder's own mtime), whose filename is the folder — which the name filter can't catch.
+// folder's own mtime), whose filename is the folder - which the name filter can't catch.
 // That escaped event made a metadata-refreshing scan write files -> watcher fires
 // LIBRARY_CHANGED -> renderer re-scans (refreshFileMetadata) -> writes again -> an infinite
 // loop that froze the app (confirmed via render counters).

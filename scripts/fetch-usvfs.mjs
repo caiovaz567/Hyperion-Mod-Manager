@@ -1,6 +1,6 @@
 // Downloads the pinned, unmodified usvfs release and extracts its SDK into
 // native/usvfs-bridge/vendor (gitignored). Verifies the SHA-256 so the build is
-// reproducible. usvfs is GPL-3.0 (+ section-7 FOSS permission) — see
+// reproducible. usvfs is GPL-3.0 (+ section-7 FOSS permission) - see
 // native/usvfs-bridge/THIRD_PARTY_LICENSES.md.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'

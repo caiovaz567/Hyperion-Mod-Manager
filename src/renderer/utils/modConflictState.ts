@@ -225,7 +225,7 @@ export const recomputeConflictStateFromExistingConflicts = (
     conflicts: recomputedConflicts,
     summaries: Array.from(summaryMap.entries()).map(([modId, summary]) => {
       // Denominator: the main-computed tracked count when the mod arrived slimmed,
-      // widened by any conflict-derived keys observed locally (belt and braces —
+      // widened by any conflict-derived keys observed locally (belt and braces -
       // a mod can never be "fully redundant" against fewer resources than the
       // conflicts we can actually see).
       const resourceCount = Math.max(

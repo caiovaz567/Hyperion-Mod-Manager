@@ -37,6 +37,6 @@ export function saveModUpdateCache(cache: ModUpdateCache): void {
     const checkedAt = typeof cache?.checkedAt === 'string' ? cache.checkedAt : null
     fs.writeFileSync(cachePath, JSON.stringify({ statuses, checkedAt }, null, 2), 'utf-8')
   } catch {
-    /* best-effort — the cache is a performance aid, not source of truth */
+    /* best-effort - the cache is a performance aid, not source of truth */
   }
 }

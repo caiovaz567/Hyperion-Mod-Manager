@@ -218,7 +218,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const fileTreeEntries = useMemo(() => {
     if (!mod) return []
 
-    // The Files tab is a faithful 1:1 mirror of the mod's real folder on disk — exactly
+    // The Files tab is a faithful 1:1 mirror of the mod's real folder on disk - exactly
     // the files and folders you'd see in Explorer, so any rename/add/remove on disk shows
     // up verbatim. We build straight from the source paths and do NOT transform them into
     // the inferred game-deployment layout. (Hyperion's own bookkeeping files are hidden.)
@@ -299,7 +299,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // When the panel opens straight onto Conflicts (badge click), land on the sub-tab
   // that actually has content: archive-only conflicts open on `.archive`, anything
   // with path conflicts (or both kinds) opens on Paths. Runs once per open/mod
-  // switch — deliberately NOT on every background conflict refresh, so it never
+  // switch - deliberately NOT on every background conflict refresh, so it never
   // yanks the user off a sub-tab they picked.
   useEffect(() => {
     if (initialTab === 'conflicts' && totalFileConflicts === 0 && totalArchiveConflicts > 0) {
@@ -329,7 +329,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Keep both subtabs visible; user prefers renaming rather than hiding.
 
   // When a mod's details open, re-read its files from disk so anything added or removed in
-  // the mod folder via Explorer appears in the Files tab — routine scans reuse the stored
+  // the mod folder via Explorer appears in the Files tab - routine scans reuse the stored
   // file list and never re-walk the folder.
   useEffect(() => {
     if (mod?.uuid) void refreshModFiles(mod.uuid)
@@ -582,7 +582,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       nextSelectedNodeId = nextName ? replaceTreeNodeName(targetNode.id, nextName) : null
     }
 
-    // Refresh ONLY the edited mod so the Files tree updates instantly — re-scanning
+    // Refresh ONLY the edited mod so the Files tree updates instantly - re-scanning
     // the whole library here (and recomputing every mod's conflicts) is what made
     // each create/rename/delete feel slow. A full sync still runs in the background,
     // unawaited, to keep conflict badges current without blocking the action.

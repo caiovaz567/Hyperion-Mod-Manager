@@ -1,11 +1,11 @@
-// Accent color presets — the single user-facing visual customization axis
+// Accent color presets - the single user-facing visual customization axis
 // (see AppSettings.accentColor). Shared between the renderer (AppThemeProvider /
 // the Settings "Color" selector) and the main process (the splash screen tints
 // its brand mark and progress bar with the chosen accent).
 
 export interface AccentPreset {
   id: string
-  /** Human label — shown in the Settings selector (kept short; not translated). */
+  /** Human label - shown in the Settings selector (kept short; not translated). */
   label: string
   /** Base accent (hex). */
   accent: string

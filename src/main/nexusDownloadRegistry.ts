@@ -26,7 +26,7 @@ function getRegistryPath(): string {
 
 // The registry is cached in memory with a lazily-built path index. Lookups used to
 // re-read + re-parse the JSON from disk AND existsSync-check every record on every
-// call — and the Downloads refresh performs one lookup per archive file, so a large
+// call - and the Downloads refresh performs one lookup per archive file, so a large
 // folder (4000 files × 4000 records) turned one refresh into millions of stat calls.
 // All writes go through this module, so the in-memory copy is authoritative.
 let cachedRegistry: NexusDownloadRegistryShape | null = null
@@ -88,7 +88,7 @@ function persistRegistry(records: NexusDownloadRecord[]): void {
 
 export function findNexusDownloadRecord(modId: number, fileId: number): NexusDownloadRecord | null {
   const records = getRegistry().records
-  // Validate only the matched record's file (one stat), not the whole registry —
+  // Validate only the matched record's file (one stat), not the whole registry -
   // a hit whose archive was deleted outside the app must not count as a duplicate.
   const deadPaths = new Set<string>()
   let match: NexusDownloadRecord | null = null
@@ -108,7 +108,7 @@ export function findNexusDownloadRecord(modId: number, fileId: number): NexusDow
 
 export function findNexusDownloadRecordByPath(filePath: string): NexusDownloadRecord | null {
   // Callers pass paths of files they just enumerated/are installing, so no
-  // existence pruning is needed on this path — it's the per-file hot lookup.
+  // existence pruning is needed on this path - it's the per-file hot lookup.
   return getRecordsByPath().get(normalizePathKey(filePath)) ?? null
 }
 

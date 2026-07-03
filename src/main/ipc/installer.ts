@@ -165,7 +165,7 @@ function readTextFileAuto(filePath: string): string {
       return buf.slice(2).toString('utf16le')
     }
 
-    // UTF-16 BE BOM — swap bytes then decode as utf16le
+    // UTF-16 BE BOM - swap bytes then decode as utf16le
     if (buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF) {
       const swapped = Buffer.allocUnsafe(buf.length - 2)
       for (let i = 2; i + 1 < buf.length; i += 2) {
@@ -175,11 +175,11 @@ function readTextFileAuto(filePath: string): string {
       return swapped.toString('utf16le')
     }
 
-    // Heuristic: UTF-16 LE without BOM — XML starts with '<' as bytes 0x3C 0x00
+    // Heuristic: UTF-16 LE without BOM - XML starts with '<' as bytes 0x3C 0x00
     if (buf.length >= 4 && buf[0] === 0x3C && buf[1] === 0x00) {
       return buf.toString('utf16le')
     }
-    // Heuristic: UTF-16 BE without BOM — XML starts with '<' as bytes 0x00 0x3C
+    // Heuristic: UTF-16 BE without BOM - XML starts with '<' as bytes 0x00 0x3C
     if (buf.length >= 4 && buf[0] === 0x00 && buf[1] === 0x3C) {
       const swapped = Buffer.allocUnsafe(buf.length)
       for (let i = 0; i + 1 < buf.length; i += 2) {
@@ -189,7 +189,7 @@ function readTextFileAuto(filePath: string): string {
       return swapped.toString('utf16le')
     }
 
-    // No BOM — try utf8 first, fall back to utf16le if replacement chars present
+    // No BOM - try utf8 first, fall back to utf16le if replacement chars present
     let text = buf.toString('utf8')
     if (text.indexOf('\uFFFD') !== -1) {
       const maybe = buf.toString('utf16le')
@@ -400,7 +400,7 @@ function extractDirectoryFromArchive(
 
 /**
  * Extracts a list of specific files / patterns from an archive in a single
- * 7z call (recursive — patterns may match files at any depth). Files that
+ * 7z call (recursive - patterns may match files at any depth). Files that
  * don't exist in the archive are silently skipped.
  */
 function extractFilesFromArchive(
@@ -417,7 +417,7 @@ function extractFilesFromArchive(
     let stderr = ''
     proc.stderr.on('data', (chunk: Buffer) => { stderr = `${stderr}${chunk.toString()}`.slice(-2000) })
     proc.on('close', (code) => {
-      // Code 1 means "warning" (e.g., some patterns matched nothing) — that's OK.
+      // Code 1 means "warning" (e.g., some patterns matched nothing) - that's OK.
       if (code === 0 || code === 1 || code === null) resolve()
       else reject(new Error(`Multi-file extract failed (${code}): ${stderr.slice(-200)}`))
     })
@@ -426,8 +426,8 @@ function extractFilesFromArchive(
 }
 
 /**
- * Scans FOMOD XML for image references — `<image path="..."/>` and
- * `<moduleImage path="..."/>` — and returns the deduplicated list of paths.
+ * Scans FOMOD XML for image references - `<image path="..."/>` and
+ * `<moduleImage path="..."/>` - and returns the deduplicated list of paths.
  */
 function extractFomodImagePaths(xml: string): string[] {
   const seen = new Set<string>()
@@ -865,7 +865,7 @@ async function installMod(
               // Brute-force extract every common image type anywhere in the archive
               // alongside the XML-referenced ones. FOMOD images can live in many places
               // (fomod/images/, screenshots/, Images/, etc.) and the regex parser may
-              // miss unusual XML formats — extracting all images is the safest catch-all
+              // miss unusual XML formats - extracting all images is the safest catch-all
               // and is cheap because they're typically small thumbnails.
               const xmlImageCount = extractFomodImagePaths(fomodXml).length
               try {
@@ -886,14 +886,14 @@ async function installMod(
                   xmlImageRefCount: xmlImageCount,
                 },
               })
-              // tempDir holds only the XML — full extraction happens in FOMOD_INSTALL
+              // tempDir holds only the XML - full extraction happens in FOMOD_INSTALL
               return {
                 ok: true,
                 data: { status: 'fomod', fomod: { xml: fomodXml, tempDir, extractRoot: fomodFound.fomodRoot, needsExtraction: true } },
               }
             }
           }
-        } catch { /* single-file extract failed — fall through to full extraction */ }
+        } catch { /* single-file extract failed - fall through to full extraction */ }
 
         if (!earlyOk) {
           // Clean up the partial mini-dir and reset for full extraction
@@ -938,7 +938,7 @@ async function installMod(
             message: `FOMOD package detected: ${normalizedName}`,
             details: { filePath, tempDir, extractRoot: fomodFound.fomodRoot },
           })
-          // tempDir already has the full extraction — no needsExtraction
+          // tempDir already has the full extraction - no needsExtraction
           return {
             ok: true,
             data: { status: 'fomod', fomod: { xml: fomodXml, tempDir, extractRoot: fomodFound.fomodRoot } },
@@ -1053,7 +1053,7 @@ async function installMod(
     copyDirSync(extractRoot, modDir)
     removeInstallerTempDir(tempDir, settings)
     const nexusRecord = findNexusDownloadRecordByPath(filePath)
-    // Manual installs carry no download record — recover Nexus identity from a
+    // Manual installs carry no download record - recover Nexus identity from a
     // bundled meta.ini so the "Open on Nexus" action still works.
     const metaIniInfo = nexusRecord ? null : findNexusInfoFromMetaIni(modDir)
     // Last-resort fallback: when there's still no Nexus id, hash the source
@@ -1425,7 +1425,7 @@ async function installFromFomod(
     const { conflicts, archiveResources } = await checkConflicts(stagingDir, previewMeta, enabledMods)
 
     if (conflicts.length > 0 && !request.allowOverwriteConflicts) {
-      // Keep tempDir alive so the renderer can retry — only clean staging
+      // Keep tempDir alive so the renderer can retry - only clean staging
       fs.rmSync(stagingDir, { recursive: true, force: true })
       sendProgress(win, 'Conflicts detected', 100)
       return { ok: true, data: { status: 'conflict', mod: previewMeta, conflicts } }
@@ -1598,7 +1598,7 @@ export function registerInstallerHandlers(getMainWindow: GetMainWindow): void {
 
   // Lightweight pre-check so the renderer can validate the reinstall source
   // (now resolved against the current Downloads folder) before opening the
-  // Reinstall dialog — avoids letting the user click Replace just to hit an error.
+  // Reinstall dialog - avoids letting the user click Replace just to hit an error.
   ipcMain.handle(
     IPC.REINSTALL_SOURCE_CHECK,
     async (_event, sourcePath: string): Promise<IpcResult> => {

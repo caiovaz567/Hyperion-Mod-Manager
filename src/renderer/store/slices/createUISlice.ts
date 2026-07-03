@@ -132,7 +132,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
       // Zustand performs no update and no subscriber re-renders. The library highlight
       // effect re-derives fresh `wins`/`losses` arrays on every render, so without this
       // guard a single unstable dependency upstream turned "set highlight" into an
-      // infinite render loop — every mod row re-rendering thousands of times per second.
+      // infinite render loop - every mod row re-rendering thousands of times per second.
       const current = state.conflictHighlight
       if (
         current.active &&

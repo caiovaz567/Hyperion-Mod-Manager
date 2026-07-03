@@ -71,7 +71,7 @@ function buildErrorDetails(error: unknown, extra?: Record<string, unknown>): Rec
 // real secret. Short-lived tokens (the nxm one-time `key`, which expires in
 // minutes and is useless without the account key) keep the raw value for
 // debugging; the long-lived account API key is NEVER carried into the log
-// store — even revealed it stays masked.
+// store - even revealed it stays masked.
 function createLoggedSecretValue(value: unknown, retainRawValue = false): LoggedSecretValue {
   const text = typeof value === 'string' ? value : String(value ?? '')
   const masked = text.length <= 8
@@ -150,7 +150,7 @@ function summarizeNexusFileEntryForLog(file: NexusFileEntry): Record<string, unk
 
 function summarizeNexusResponseForLog(endpoint: string, data: unknown): unknown {
   // The validate.json RESPONSE echoes the account API key back in its `key`
-  // field — mask it before it can enter the log store (masked-only, like the
+  // field - mask it before it can enter the log store (masked-only, like the
   // request-side apiKey fields; the reveal toggle never exposes it).
   if (
     endpoint.includes('/users/validate.json') &&
@@ -228,7 +228,7 @@ async function nexusGet<T>(
         signal: controller.signal,
         // Fail closed on redirects: the Nexus v1 API never redirects, and custom
         // headers (unlike Authorization) are NOT stripped by fetch on a
-        // cross-origin redirect — following one could hand the apikey header to
+        // cross-origin redirect - following one could hand the apikey header to
         // another host.
         redirect: 'error',
         headers: {
@@ -240,7 +240,7 @@ async function nexusGet<T>(
         },
       })
       const durationMs = Date.now() - startedAt
-      // Nexus rate-limit headers (hourly + daily buckets) — surfaced in the
+      // Nexus rate-limit headers (hourly + daily buckets) - surfaced in the
       // request log so quota exhaustion is diagnosable from App Logs.
       const rateLimit = {
         hourlyRemaining: response.headers.get('x-rl-hourly-remaining') ?? undefined,
@@ -345,7 +345,7 @@ export async function validateNexusApiKey(
   apiKey: string,
   mainWindow: BrowserWindow | null,
 ): Promise<IpcResult<NexusValidateResult>> {
-  // Note: the key itself is deliberately NOT passed as request payload — the
+  // Note: the key itself is deliberately NOT passed as request payload - the
   // account API key must never enter the log store, even in masked form.
   const result = await nexusGet<RawNexusValidateResult>(
     '/users/validate.json',
@@ -557,7 +557,7 @@ export async function lookupNexusModByMd5(
   if (!result.ok || !Array.isArray(result.data) || result.data.length === 0) return null
 
   // An MD5 collision across different mods is effectively impossible for real
-  // archives, but the endpoint returns an array — take the first usable entry.
+  // archives, but the endpoint returns an array - take the first usable entry.
   const match = result.data.find((entry) => {
     const id = entry?.mod?.mod_id
     return typeof id === 'number' && id > 0
@@ -575,7 +575,7 @@ export async function lookupNexusModByMd5(
   const rawCategoryId = match.mod.category_id
   if (typeof rawCategoryId === 'number' && Number.isFinite(rawCategoryId)) {
     categoryId = rawCategoryId
-    // Category resolution is secondary — never let it throw away the mod id.
+    // Category resolution is secondary - never let it throw away the mod id.
     try {
       const categoryMap = await getGameCategoryMap(apiKey, mainWindow)
       categoryName = categoryMap.get(rawCategoryId) ?? undefined
@@ -1170,7 +1170,7 @@ export async function checkModUpdates(
 
     if (mod.nexusFileId) {
       // Authoritative: trace the installed file's own update lineage. Only a genuine
-      // successor of THIS file counts — never the page's latest MAIN release.
+      // successor of THIS file counts - never the page's latest MAIN release.
       const latestFileId = findLatestFileIdInLineage(fileUpdates, mod.nexusFileId)
       const lineageSuccessor =
         latestFileId !== mod.nexusFileId
@@ -1200,7 +1200,7 @@ export async function checkModUpdates(
           state = 'up-to-date'
         }
       } else {
-        // Installed file id is gone from the page and not in any chain — can't be sure.
+        // Installed file id is gone from the page and not in any chain - can't be sure.
         state = 'unknown'
       }
     } else {
@@ -1243,7 +1243,7 @@ export async function checkModUpdates(
 
   let statuses: ModUpdateStatus[]
   if (restrictIds || request.full) {
-    // Scoped check (specific mod ids) or a manual full pass — deep-check each mod
+    // Scoped check (specific mod ids) or a manual full pass - deep-check each mod
     // directly. The scoped path skips the updated.json bulk call entirely, so
     // refreshing one freshly-installed mod costs a single files.json request.
     statuses = await mapWithConcurrency(mods, MOD_UPDATE_DEEP_CHECK_CONCURRENCY, deepCheckMod)
@@ -1285,7 +1285,7 @@ export async function checkModUpdates(
       if (status.nexusCategoryName) raw.nexusCategoryName = status.nexusCategoryName
       fs.writeFileSync(metaPath, JSON.stringify(raw, null, 2), 'utf-8')
     } catch {
-      // Non-fatal — category will be fetched again on the next check
+      // Non-fatal - category will be fetched again on the next check
     }
   }
 

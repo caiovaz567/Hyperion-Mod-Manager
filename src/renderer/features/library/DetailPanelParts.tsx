@@ -8,7 +8,7 @@ import { Icon } from '../ui/Icon'
 export const detailTitleClass = 'text-[1.12rem] font-bold leading-[1.08] tracking-[-0.01em] text-[var(--text-primary)] sm:text-[1.18rem]'
 export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-[13px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
 
-// Same metrics/treatment as the shared UnderlineTabs in uiKit — one tab pattern app-wide.
+// Same metrics/treatment as the shared UnderlineTabs in uiKit - one tab pattern app-wide.
 export const TabButton: React.FC<{
   active: boolean
   label: string
@@ -98,7 +98,7 @@ export const ConflictSection: React.FC<{
         <Icon name="expand_more" className="shrink-0 text-[16px] text-[var(--text-muted)] transition-transform duration-150" style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
       </button>
 
-      {/* Table — header lives inside the scroll container so column widths
+      {/* Table - header lives inside the scroll container so column widths
           (and therefore the header labels) stay aligned with the rows even
           when the vertical scrollbar narrows the content area. */}
       {!collapsed && (count > 0 ? (
@@ -133,7 +133,7 @@ export const ConflictSection: React.FC<{
                     </span>
                   </div>
 
-                  {/* Other mod — full name, wraps, never truncated */}
+                  {/* Other mod - full name, wraps, never truncated */}
                   <div className="min-w-0 border-l border-[var(--border)] px-5 py-2 flex items-center gap-2">
                     <span
                       className="min-w-0 text-[13px] font-medium text-[var(--text-secondary)] break-words leading-snug"

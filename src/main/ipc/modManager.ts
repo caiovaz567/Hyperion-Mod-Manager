@@ -165,7 +165,7 @@ export function writeArchiveSidecar(modDir: string, resources: ArchiveResourceEn
     'utf-8'
   )
   // The sidecar feeds the composed meta (archiveResources), so a cached entry is
-  // now stale — drop it and let the next read recompose. (The metadata read cache
+  // now stale - drop it and let the next read recompose. (The metadata read cache
   // is declared later in this file; invalidation is a plain map delete.)
   invalidateMetadataCacheEntry(modDir)
 }
@@ -362,7 +362,7 @@ export function getDeployRelativePath(mod: ModMetadata, relFile: string): string
   if (isRedmodContent(mod, normalized)) {
     // Nested REDmod layout: the file lives inside a top-level folder that is
     // itself a REDmod (`<Dir>/info.json` present in this mod). Deploy the tree
-    // as `mods/<Dir>/...` so the author's mod id is preserved — wrapping it in
+    // as `mods/<Dir>/...` so the author's mod id is preserved - wrapping it in
     // the library folder name would double-nest and hide the manifest from
     // redMod (it only reads `mods/<x>/info.json`). Covers multi-REDmod archives
     // and wrappers the installer couldn't flatten.
@@ -409,7 +409,7 @@ export function getDeployRelativePath(mod: ModMetadata, relFile: string): string
 }
 
 // ─── Tracked deploy-path cache ─────────────────────────────────────────────────
-// Deploy paths are pure string derivations of (files, type, folderName) — but the
+// Deploy paths are pure string derivations of (files, type, folderName) - but the
 // conflict pass recomputes them for EVERY enabled mod on EVERY run (2k mods ×
 // hundreds of files = ~1M path joins per pass). Because the metadata cache above
 // returns the SAME meta object across scans, a WeakMap keyed on the meta amortizes
@@ -435,7 +435,7 @@ function computeTrackedPathsEntry(mod: ModMetadata): TrackedPathsCacheEntry {
         .map((relFile) => getDeployRelativePath(mod, relFile))
       : [])
 
-  // Pre-normalized, load-ordered-archive-filtered paths — exactly what the
+  // Pre-normalized, load-ordered-archive-filtered paths - exactly what the
   // conflict pass and the tracked-resource count consume.
   const normalizedConflictPaths: string[] = []
   for (const rel of paths) {
@@ -475,7 +475,7 @@ export function getTrackedDeploymentPaths(mod: ModMetadata): string[] {
   return getTrackedPathsEntry(mod).paths
 }
 
-/** Normalized deploy paths minus load-ordered archives — the conflict-pass view. */
+/** Normalized deploy paths minus load-ordered archives - the conflict-pass view. */
 export function getNormalizedConflictPaths(mod: ModMetadata): string[] {
   return getTrackedPathsEntry(mod).normalizedConflictPaths
 }
@@ -512,7 +512,7 @@ export function getRedmodFolderNames(mod: ModMetadata): string[] {
 
 /**
  * Unique tracked resources (conflict-relevant deploy paths + archive resource keys).
- * This is the denominator for "fully redundant" — shipped to the renderer as
+ * This is the denominator for "fully redundant" - shipped to the renderer as
  * `trackedResourceCount` so bulk IPC payloads can drop the per-file arrays.
  */
 export function computeTrackedResourceCount(mod: ModMetadata): number {
@@ -532,7 +532,7 @@ export function computeTrackedResourceCount(mod: ModMetadata): number {
 /**
  * Slims a mod for the renderer: the per-file payloads (`files`, `emptyDirs`,
  * `archiveResources`, legacy `hashes`, unused `deployedPaths`) stay in the main
- * process — with 2k mods they are tens of MB of strings serialized over IPC on
+ * process - with 2k mods they are tens of MB of strings serialized over IPC on
  * every scan and held resident in the renderer store. The renderer surfaces that
  * genuinely need a file list (mod-details Files tab, tree edit ops) receive the
  * FULL mod from their dedicated single-mod IPCs (REFRESH_MOD_FILES, MOD_TREE_*).
@@ -547,12 +547,12 @@ export function toRendererMod(meta: ModMetadata): ModMetadata {
 }
 
 // Removes Runtime Captures left behind by mods that no longer exist. The Overwrite
-// folder is otherwise a single always-mounted catch-all — captures are
+// folder is otherwise a single always-mounted catch-all - captures are
 // never moved or parked based on enable/disable state. This only runs when a mod is
 // DELETED, and only deletes leftovers inside that gone mod's own private per-mod
 // folder (CET-mod / red4ext-plugin slot); framework roots and shared captures are
 // always kept. `remainingMods` must be a fresh, complete scan of the still-installed
-// mods. Best-effort — never let it block or fail a mod removal.
+// mods. Best-effort - never let it block or fail a mod removal.
 function cleanDeletedModCaptures(libraryPath: string, remainingMods: ModMetadata[], window: BrowserWindow | null): void {
   const overwritePath = getOverwritePathForLibrary(libraryPath)
   if (!overwritePath) return
@@ -639,18 +639,18 @@ async function refreshArchiveResourceMetadata(
     return false
   }
 
-  // Already indexed at the current version — treat it as final: skip the hash DB and any
+  // Already indexed at the current version - treat it as final: skip the hash DB and any
   // external hash tooling. We intentionally do NOT re-resolve still-unresolved hashes on
   // every pass. The expensive resolution (archive parse + LXRS/kark/DB) already ran once
   // at index time, and the bundled DB is static, so a hash unresolved then stays
   // unresolved now. Re-hydrating here was spawning one resolve-kark-hashes PowerShell per
-  // 250 unresolved hashes per kark file on EVERY launch/refresh — e.g. a single mod with
+  // 250 unresolved hashes per kark file on EVERY launch/refresh - e.g. a single mod with
   // ~2.7k unresolved hashes caused ~24 PowerShell spawns against CET's tweakdb karks
-  // (which can't resolve resource hashes anyway) — which is what made conflict badges take
+  // (which can't resolve resource hashes anyway) - which is what made conflict badges take
   // many seconds to appear on the first conflict pass of each session (and made the first
   // reinstall stall on "checking conflicts"; later ones were fast off the in-memory cache).
   // Conflicts are keyed on the hash, not the path, so unresolved entries still detect
-  // conflicts — they only render as "Unresolved" in the inspector. A sidecar version bump
+  // conflicts - they only render as "Unresolved" in the inspector. A sidecar version bump
   // or a reinstall re-runs full resolution.
   if (
     Array.isArray(meta.archiveResources) &&
@@ -719,7 +719,7 @@ function resolveScannedModDir(libraryPath: string, mod: ModMetadata): { mod: Mod
  * Deployment is virtual: enabled mods are mapped into the game by the usvfs VFS
  * at Launch Game (see `buildEnabledModLinks` + `IPC.LAUNCH_GAME`). Nothing is
  * ever written into the game folder, so this is a no-op that simply returns the
- * current library — kept as the single chokepoint that callers invoke to refresh
+ * current library - kept as the single chokepoint that callers invoke to refresh
  * state after enable/disable/install/reorder.
  */
 async function redeployEnabledMods(
@@ -732,13 +732,13 @@ async function redeployEnabledMods(
 }
 
 /**
- * Computes the ordered list of directory mounts for all enabled mods — the
+ * Computes the ordered list of directory mounts for all enabled mods - the
  * mapping the usvfs VFS virtually links over the game tree at launch.
  *
  * Each file's deploy path is reduced to the shallowest `sourceDir -> destDir`
  * mount by peeling the longest common path suffix, then linked **as a recursive
  * directory** so usvfs creates folders that don't exist in the game (e.g.
- * `bin/x64/plugins`). Per-file linking can't do this — usvfs requires a file's
+ * `bin/x64/plugins`). Per-file linking can't do this - usvfs requires a file's
  * destination directory to already exist.
  *
  * Order matches load order (ascending priority): a later mod's link overrides an
@@ -858,7 +858,7 @@ export async function buildEnabledModLinks(
 
 // ─── Metadata read cache ───────────────────────────────────────────────────────
 // Every scan used to read + JSON.parse `_metadata.json` AND the archive sidecar for
-// every mod — 2 disk reads × N mods × every scan (boot, install, delete, toggle,
+// every mod - 2 disk reads × N mods × every scan (boot, install, delete, toggle,
 // redeploy). The cache keys on the on-disk identity (mtimeMs + size) of BOTH files,
 // so out-of-band writes (Explorer edits, the raw category write in nexusDownloader,
 // sidecar unlinks) are picked up naturally, and a scan of an unchanged library costs
@@ -866,7 +866,7 @@ export async function buildEnabledModLinks(
 //
 // INVARIANT: the cached object is shared between calls. Callers may mutate the
 // returned meta ONLY if they persist it via writeMetadata afterwards (which is what
-// every current mutation site does) — writeMetadata re-stamps the cache entry.
+// every current mutation site does) - writeMetadata re-stamps the cache entry.
 interface MetadataCacheEntry {
   metaMtimeMs: number
   metaSize: number
@@ -1079,12 +1079,12 @@ async function refreshModAfterTreeMutation(
   libraryPath: string,
   _gamePath: string
 ): Promise<IpcResult<ModMetadata>> {
-  // Refresh ONLY the mod that was just edited — re-read its file list/type/size from
+  // Refresh ONLY the mod that was just edited - re-read its file list/type/size from
   // disk. Never re-walk the whole library here: a full `refreshFileMetadata` scan
   // re-reads every file of all installed mods, which made each create/rename/delete
   // in the Files tab take noticeably long on large libraries. There is also no
-  // deployment work to do — the VFS is virtual and picks up file changes on the next
-  // launch — so the old enabled-mod resync (another full re-walk) is gone too.
+  // deployment work to do - the VFS is virtual and picks up file changes on the next
+  // launch - so the old enabled-mod resync (another full re-walk) is gone too.
   const found = findModDir(libraryPath, modId)
   if (!found) return { ok: false, error: 'Mod not found after file operation' }
   const { mod, dir } = found
@@ -1243,7 +1243,7 @@ export function findModDir(libraryPath: string, uuid: string): { mod: ModMetadat
   if (!fs.existsSync(libraryPath)) return null
 
   // Fast path: the uuid → dir hint recorded on every successful metadata read.
-  // Validated by re-reading the hinted dir (cheap — usually a cache hit), so a
+  // Validated by re-reading the hinted dir (cheap - usually a cache hit), so a
   // stale hint (renamed/deleted folder) just falls through to the full walk.
   const hintedDir = uuidDirHints.get(uuid)
   if (hintedDir && isInsidePathForHint(hintedDir, libraryPath)) {
@@ -1440,7 +1440,7 @@ export async function purgeMods(
   let purged = 0
   let failed = 0
 
-  // With virtual (VFS) deployment there is nothing on disk to remove — purging is
+  // With virtual (VFS) deployment there is nothing on disk to remove - purging is
   // just flipping every enabled mod off in the library. The VFS reflects this on
   // the next Launch Game.
   for (const mod of enabledMods) {
@@ -1566,7 +1566,7 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
       const mods = await scanMods(settings.libraryPath, {
         refreshFileMetadata: options?.refreshFileMetadata === true,
       })
-      // Bulk payloads cross the IPC boundary slimmed (no per-file arrays) — see toRendererMod.
+      // Bulk payloads cross the IPC boundary slimmed (no per-file arrays) - see toRendererMod.
       return { ok: true, data: mods.map(toRendererMod) }
     } catch (error) {
       return {
@@ -1821,7 +1821,7 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
         const archiveOwners = new Map<string, Array<{ modId: string; name: string; order: number; resource: ArchiveResourceEntry }>>()
 
         for (const mod of mods.filter((m) => m.kind === 'mod' && m.enabled)) {
-          // Pre-normalized + cached per meta object (see getTrackedPathsEntry) — the
+          // Pre-normalized + cached per meta object (see getTrackedPathsEntry) - the
           // pass over an unchanged library reuses the derived paths instead of
           // recomputing ~1M deploy-path joins.
           for (const normalized of getNormalizedConflictPaths(mod)) {
@@ -1943,7 +1943,7 @@ export function registerModManagerHandlers(getMainWindow?: () => BrowserWindow |
 
   // Lazy, on-demand name resolution for a single mod's archive resources. Indexing/install
   // only resolves names from the in-memory DB (instant); the slow external tooling (LXRS +
-  // kark via PowerShell) runs here, only when the renderer actually needs the names — i.e.
+  // kark via PowerShell) runs here, only when the renderer actually needs the names - i.e.
   // when a mod's conflict inspector is opened and it still has unresolved hashes. The result
   // is written back to the sidecar so it persists and isn't recomputed next time.
   ipcMain.handle(

@@ -78,7 +78,7 @@ const shouldPreferReinstallTarget = (candidate: ModMetadata, current: ModMetadat
 }
 
 // Owns the windowing scroll state so scrolling re-renders ONLY this small list
-// component — never the whole DownloadsPane (toolbar, dialogs, context menu, sort
+// component - never the whole DownloadsPane (toolbar, dialogs, context menu, sort
 // pipeline). Same isolation the mod library uses: before this split, the scroll
 // listener's state lived in the pane, so every scroll frame above the
 // virtualization threshold re-rendered the entire screen (~30fps with 120+ files).

@@ -20,7 +20,7 @@ type HyperionButtonSize = 'md' | 'sm' | 'icon'
 type HeroButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'outline' | 'ghost' | 'danger' | 'danger-soft'
 
 const heroVariantMap: Record<HyperionButtonVariant, HeroButtonVariant> = {
-  primary: 'primary',      // solid accent (blue) — main CTA
+  primary: 'primary',      // solid accent (blue) - main CTA
   toolbar: 'secondary',    // clearly-defined neutral surface (HeroUI-style), not a faint one
   cyan: 'secondary',       // legacy "cyan" now folds into the neutral surface action
   danger: 'danger-soft',   // red-tinted destructive
@@ -166,7 +166,7 @@ export const HyperionPanel = React.forwardRef<HTMLDivElement, HyperionPanelProps
     <div
       ref={ref}
       className={cx(
-        // Elevated card floating on the app canvas — HeroUI tokens so it follows
+        // Elevated card floating on the app canvas - HeroUI tokens so it follows
         // light/dark mode instead of a fixed charcoal. No drop shadow: the border +
         // surface contrast carry the elevation.
         'rounded-2xl border border-[var(--border)]',
@@ -198,7 +198,7 @@ const badgeChipColor: Record<HyperionBadgeTone, 'accent' | 'default' | 'success'
   cyan: 'accent',
 }
 
-// Purely informational tag — soft pill, never button-like. Default size is md so info
+// Purely informational tag - soft pill, never button-like. Default size is md so info
 // chips stay comfortably readable (sm reads too small next to 13-14px body text).
 export const HyperionBadge: React.FC<HyperionBadgeProps> = ({ tone = 'neutral', size = 'md', className, children, ...props }) => (
   <Chip

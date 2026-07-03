@@ -128,7 +128,7 @@ export function parseFomodXml(xml: string): FomodModuleConfig {
   let doc: Document = new DOMParser().parseFromString(cleanXml, 'text/xml')
 
   // If XML parsing failed (returns a <parsererror> document), fall back to
-  // lenient HTML parsing — it ignores malformed declarations and handles
+  // lenient HTML parsing - it ignores malformed declarations and handles
   // common FOMOD quirks.
   if (doc.getElementsByTagName('parsererror').length > 0) {
     doc = new DOMParser().parseFromString(cleanXml, 'text/html')
@@ -163,7 +163,7 @@ export function buildInitialSelections(config: FomodModuleConfig): Map<string, S
         const rec = group.plugins.findIndex((p) => p.typeDescriptor === 'Recommended')
         if (rec >= 0) set.add(rec)
       } else {
-        // SelectAny — select all Required and Recommended
+        // SelectAny - select all Required and Recommended
         group.plugins.forEach((p, idx) => {
           if (p.typeDescriptor === 'Required' || p.typeDescriptor === 'Recommended') set.add(idx)
         })

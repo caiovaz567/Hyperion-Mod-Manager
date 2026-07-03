@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 // Self-hosted fonts (bundled by Vite): the app must never fetch fonts from the
-// network at boot — the old Google Fonts <link> added a round-trip to every cold
+// network at boot - the old Google Fonts <link> added a round-trip to every cold
 // start (with display=block hiding all text meanwhile) and broke offline launches.
 import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
@@ -23,7 +23,7 @@ import './styles/globals.css'
 
 const root = document.getElementById('root')!
 
-// HeroUI v3 needs no provider — its components read the theme CSS variables that
+// HeroUI v3 needs no provider - its components read the theme CSS variables that
 // AppThemeProvider injects onto <html>. MUI's ThemeProvider/CssBaseline were removed
 // as part of the HeroUI migration.
 ReactDOM.createRoot(root).render(

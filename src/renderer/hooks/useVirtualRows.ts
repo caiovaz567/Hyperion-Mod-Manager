@@ -30,7 +30,7 @@ export function useVirtualRows({
   useEffect(() => {
     // Only observe scroll while we're actually windowing rows. When the list isn't
     // virtualized (small enough to render every row), tracking scroll here would
-    // re-render the entire list on every scroll frame for no benefit — the cause of
+    // re-render the entire list on every scroll frame for no benefit - the cause of
     // scroll stutter on large-but-sub-threshold libraries. Consumers that need the
     // live visible range without windowing (the floating conflict overlay) track the
     // scroll container themselves instead.

@@ -11,7 +11,7 @@ interface LibraryRowsProps {
   rowsRef: React.RefObject<HTMLDivElement | null>
   displayedMods: ModMetadata[]
   // The list windows itself here (not in the parent ModList) so scrolling only
-  // re-renders this row list, never the whole ModList — that's what keeps scroll
+  // re-renders this row list, never the whole ModList - that's what keeps scroll
   // cheap even with windowing enabled.
   scrollContainerRef: React.RefObject<HTMLDivElement | null>
   rowHeight: number

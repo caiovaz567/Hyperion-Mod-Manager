@@ -4,7 +4,7 @@ import { useTheme } from '../../theme/ThemeContext'
 import { Icon } from './Icon'
 
 /**
- * Accent color picker — a row of color swatches (like HeroUI's own docs demo). Picking one
+ * Accent color picker - a row of color swatches (like HeroUI's own docs demo). Picking one
  * recolors the whole app live (the accent is applied as an overlay on top of the active
  * theme by AppThemeProvider). Accent is a separate axis from the theme, so any color works
  * with Dark, Clean, or any community theme.

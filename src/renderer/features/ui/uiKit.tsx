@@ -160,7 +160,7 @@ export const IconTile: React.FC<{ icon: string; size?: 'sm' | 'md' }> = ({ icon,
 // One HeroUI-style card per setting: header row (icon tile + title/description, with the
 // compact control or status readout on the right), and any richer content below, aligned
 // under the title. Cards stack vertically on the darker page background so they lift
-// without borders competing for attention — no side-by-side explanation column.
+// without borders competing for attention - no side-by-side explanation column.
 export const SettingCard: React.FC<{
   icon: string
   title: string

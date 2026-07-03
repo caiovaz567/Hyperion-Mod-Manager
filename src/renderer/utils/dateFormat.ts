@@ -1,8 +1,8 @@
 export function formatWindowsDateTime(value?: string): string {
-  if (!value) return '—'
+  if (!value) return '-'
 
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
+  if (Number.isNaN(date.getTime())) return '-'
 
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -19,5 +19,5 @@ export function formatWindowsDateTimeOrFallback(value: string | undefined, fallb
   if (!value) return fallback
 
   const formatted = formatWindowsDateTime(value)
-  return formatted === '—' ? fallback : formatted
+  return formatted === '-' ? fallback : formatted
 }

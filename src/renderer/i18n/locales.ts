@@ -11,7 +11,7 @@ import ptBR from './locales/pt-BR.json'
  * 2. `import` it above and add one entry to the `LOCALES` array below with its
  *    BCP-47 `code`, an English `label`, and the `nativeLabel` (the language
  *    name written in that language).
- * That is the only code change required — `en.json` stays the source of truth
+ * That is the only code change required - `en.json` stays the source of truth
  * for the available translation keys.
  */
 export const LOCALES = [

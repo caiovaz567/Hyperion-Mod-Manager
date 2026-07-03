@@ -384,7 +384,7 @@ function buildVfsOverwriteReadLinks(gameRoot: string, overwritePath: string): Vf
 
   // usvfsVirtualLinkFile requires the destination's parent directory to exist at
   // least virtually (see usvfs.h). Many runtime captures live in directories that
-  // are created at runtime and exist in NO enabled mod's source tree — e.g.
+  // are created at runtime and exist in NO enabled mod's source tree - e.g.
   // bin/x64/plugins/address_library, r6/storages/RedscriptConfigFramework,
   // red4ext/plugins/Codeware/Persistent. usvfsVirtualLinkDirectoryStatic only
   // materializes directories that exist in the source, so nothing materializes
@@ -402,7 +402,7 @@ function buildVfsOverwriteReadLinks(gameRoot: string, overwritePath: string): Vf
   // physically in the game tree) is materialized virtually, shallow-to-deep, so each
   // emptyDir link's own parent already exists when usvfs links it. Materializing only
   // the immediate parent is not enough when several levels are runtime-created (e.g.
-  // r6/storages/RedscriptConfigFramework — both `storages` and the framework folder
+  // r6/storages/RedscriptConfigFramework - both `storages` and the framework folder
   // are missing). usvfsVirtualLinkDirectoryStatic on an empty dir only ensures the
   // node exists; it never hides existing files because usvfs merges directory links.
   const materializeChain = (destDir: string): void => {
@@ -438,7 +438,7 @@ function buildVfsOverwriteReadLinks(gameRoot: string, overwritePath: string): Vf
 
 // Removes ALL captured files inside the overwrite folder (keeping the folder
 // itself). This backs the manual "Clear captures" action and is intentionally a
-// full wipe — unlike cleanVfsOverwriteVolatileFiles, which only prunes volatile
+// full wipe - unlike cleanVfsOverwriteVolatileFiles, which only prunes volatile
 // logs/tmp during automatic post-run cleanup and must not touch user settings.
 function removeAllVfsOverwriteFiles(overwritePath: string): VfsOverwriteCleanResult {
   const result: VfsOverwriteCleanResult = { removed: 0, removedBytes: 0, errors: [] }
@@ -614,7 +614,7 @@ function isVfsBootstrapDeployPath(deployPath: string): boolean {
 
   // RED4ext framework files sit directly under red4ext/ (e.g. RED4ext.dll).
   // RED4ext's winmm.dll proxy is a STATIC import of Cyberpunk2077.exe, so it
-  // initializes during the game's loader/DllMain phase — BEFORE usvfs file hooks
+  // initializes during the game's loader/DllMain phase - BEFORE usvfs file hooks
   // are active (proven: usvfs redirection is not live in a static-import
   // DllMain). It reads its config and runs create_directories(red4ext/logs)
   // against the REAL disk, so red4ext/ MUST exist physically or RED4ext aborts
@@ -1209,7 +1209,7 @@ function bootstrapFileStillMatches(entry: BootstrapStageEntry): boolean {
 // ─── Bootstrap staging crash-recovery manifest ────────────────────────────────
 // The staged-file lists above live in memory, so a crash (or a quit while the
 // game is still attached to the VFS) would orphan the physically staged loader
-// files in the game folder forever — cleanup only ever removes entries it staged
+// files in the game folder forever - cleanup only ever removes entries it staged
 // itself ('copied'), and a later launch re-stages them as 'already-present'.
 // Persisting the lists lets the next session replay the exact same cleanup.
 interface BootstrapStagingManifest {
@@ -1268,7 +1268,7 @@ function persistBootstrapStagingManifest(): void {
 
 // Merge staging left by a previous session (from the manifest) with this run's
 // fresh staging. Keyed on dest so a re-staged file keeps its newest entry; only
-// 'copied' entries matter — cleanup ignores every other status.
+// 'copied' entries matter - cleanup ignores every other status.
 function mergeStagedBootstrapEntries(
   previous: BootstrapStageEntry[] | undefined,
   current: BootstrapStageEntry[]
@@ -1295,7 +1295,7 @@ function mergeStagedTempDirs(
 
 // Replays the bootstrap cleanup a previous session never got to run (crash, kill,
 // or quit while the game was attached to the VFS). Runs once at startup; while
-// the game is running it defers — the next launch folds the leftover manifest
+// the game is running it defers - the next launch folds the leftover manifest
 // into its own staging lists instead.
 async function sweepLeftoverBootstrapStaging(): Promise<void> {
   const manifest = readBootstrapStagingManifest()
@@ -1405,12 +1405,12 @@ function makeVfsLaunchError(message: string): string {
 }
 
 // ─── REDmod deploy (virtual) ─────────────────────────────────────────────────
-// REDmods don't load by merely existing under `mods/` — the game only sees them
+// REDmods don't load by merely existing under `mods/` - the game only sees them
 // after `tools/redmod/bin/redMod.exe deploy` compiles scripts/tweaks/sounds into
 // `r6/cache/modded`, and only when launched with `-modded`. Hyperion runs that
 // deploy as a VFS-HOOKED process AFTER mounting: redMod reads the *virtual* mods/
 // tree (enabled REDmods mapped from the library) and its writes to r6/cache/modded
-// are redirected into the Runtime Captures overwrite folder — the real game dir
+// are redirected into the Runtime Captures overwrite folder - the real game dir
 // stays clean. The compiled output is remounted as read overlays on later launches,
 // and a fingerprint of the enabled REDmod set skips the (slow) deploy when nothing
 // changed. On any failure the launch continues WITHOUT -modded so non-REDmod mods
@@ -1451,7 +1451,7 @@ function writeRedmodDeployState(state: { fingerprint: string; deployedAt: string
 }
 
 // Identity of the enabled REDmod set: which mods, whether their payload changed
-// (size/count/source timestamps), and the resolved `-mod=` load order — a pure
+// (size/count/source timestamps), and the resolved `-mod=` load order - a pure
 // reorder must trigger a redeploy because the compiled output depends on it.
 function computeRedmodFingerprint(enabledRedmods: ModMetadata[], orderedModNames: string[]): string {
   const identity = {
@@ -1505,7 +1505,7 @@ async function deployRedmodsUnderVfs(
     key: 'redmod',
     percent: 84,
     cancellable: true,
-    detail: `${enabledRedmods.length} REDmod(s) — starting redMod.exe`,
+    detail: `${enabledRedmods.length} REDmod(s) - starting redMod.exe`,
   })
 
   // Route redMod's console output to a log file (via a hooked cmd.exe redirect):
@@ -1579,7 +1579,7 @@ async function deployRedmodsUnderVfs(
       if (lastStage) {
         const stageNumber = Number.parseInt(lastStage[1], 10)
         const stageTotal = Math.max(1, Number.parseInt(lastStage[2], 10))
-        const detail = `Stage ${lastStage[1]}/${lastStage[2]} — ${lastStage[3].trim()}${foundMods > 0 ? ` · ${foundMods} mod(s)` : ''}`
+        const detail = `Stage ${lastStage[1]}/${lastStage[2]} - ${lastStage[3].trim()}${foundMods > 0 ? ` · ${foundMods} mod(s)` : ''}`
         if (detail !== lastDetail) {
           lastDetail = detail
           emitProgress({
@@ -1722,7 +1722,7 @@ function isUsableDirectoryPath(targetPath?: string): boolean {
   }
 }
 
-// The cap is a guard against pathological folders, not a working size — the renderer
+// The cap is a guard against pathological folders, not a working size - the renderer
 // windows its rows, and the per-file registry lookup is an O(1) in-memory index, so
 // thousands of archives enumerate fine.
 function collectDownloadEntries(dirPath: string, limit = 10000): Array<{
@@ -1813,7 +1813,7 @@ const pendingNxmUrls: string[] = []
 
 // Watches the configured Downloads folder so externally-added archives (e.g. a
 // manual Nexus download dropped into the folder) surface in the Downloads view
-// without a manual refresh. Non-recursive fs.watch is enough — the folder is flat.
+// without a manual refresh. Non-recursive fs.watch is enough - the folder is flat.
 let downloadsWatcher: fs.FSWatcher | null = null
 let downloadsWatcherPath: string | null = null
 let downloadsChangeTimer: ReturnType<typeof setTimeout> | null = null
@@ -1886,7 +1886,7 @@ function stopLibraryWatcher(): void {
 }
 
 // Watch the mod library (recursively) so files added/removed directly in a mod folder via
-// Explorer surface without a manual refresh — mirrors the Downloads watcher. Routine scans
+// Explorer surface without a manual refresh - mirrors the Downloads watcher. Routine scans
 // reuse each mod's stored file list for speed and never re-walk the folder, so this is what
 // keeps the library honest about on-disk reality.
 function startLibraryWatcher(libraryPath: string | undefined | null): void {
@@ -1900,7 +1900,7 @@ function startLibraryWatcher(libraryPath: string | undefined | null): void {
       // re-trigger the watcher in a loop. (On Windows recursive watches report the filename.)
       if (filename && LIBRARY_WATCH_IGNORED_FILES.has(path.basename(filename.toString()))) return
       // Writing a file also fires a directory-level event (the mod folder's own mtime) whose
-      // filename is the folder, which the name filter above can't catch — so also ignore any
+      // filename is the folder, which the name filter above can't catch - so also ignore any
       // event that lands inside a self-write window opened by our metadata/sidecar writers.
       // Without this, a metadata-refreshing scan endlessly re-triggers itself (infinite loop).
       if (isLibraryWatchSuppressed()) return
@@ -2132,7 +2132,7 @@ function createMainWindow(): BrowserWindow {
   attachEditContextMenu(win)
 
   // DevTools toggle. The window is frameless and no application menu is set, so the
-  // default Ctrl+Shift+I / F12 accelerators don't fire — bind them explicitly here so
+  // default Ctrl+Shift+I / F12 accelerators don't fire - bind them explicitly here so
   // the console is reachable in any build (dev or packaged) for diagnostics.
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return
@@ -2524,10 +2524,10 @@ function registerGlobalHandlers(): void {
 
     // For Steam installs, make the game's embedded Steamworks SDK register with the
     // running Steam client (overlay, playtime, achievements) even though we launch the
-    // exe directly. Two complementary mechanisms — this is how Vortex/MO2 stay tracked:
-    //   1. steam_appid.txt next to the exe — the documented requirement when SteamAPI_Init
+    // exe directly. Two complementary mechanisms - this is how Vortex/MO2 stay tracked:
+    //   1. steam_appid.txt next to the exe - the documented requirement when SteamAPI_Init
     //      runs outside the Steam client.
-    //   2. SteamAppId / SteamGameId env vars — what Steam itself sets when launching a game.
+    //   2. SteamAppId / SteamGameId env vars - what Steam itself sets when launching a game.
     // Cyberpunk 2077 Steam App ID: 1091500
     const STEAM_APP_ID = '1091500'
     const normalizedGamePath = path.normalize(gameRoot || settings.gamePath).toLowerCase()
@@ -2769,7 +2769,7 @@ function registerGlobalHandlers(): void {
 
       // Final guard: usvfs fails repeated identical links, so collapse any exact
       // duplicates across every builder (mod plan, bootstrap overrides, overwrite
-      // layer, read overlays) before mounting. Keyed on the full link identity —
+      // layer, read overlays) before mounting. Keyed on the full link identity -
       // dir/createTarget flags matter, so an overwrite createTarget dir link and a
       // read overlay file link to the same dest are correctly kept distinct.
       const dedupedSeen = new Set<string>()
@@ -2863,7 +2863,7 @@ function registerGlobalHandlers(): void {
       }
 
       // REDmod deploy: run redMod.exe hooked into the mounted VFS so it compiles the
-      // virtual mods/ tree into r6/cache/modded (captured into the Overwrite folder —
+      // virtual mods/ tree into r6/cache/modded (captured into the Overwrite folder -
       // the real game dir stays clean), then launch the game with -modded so the
       // compiled output is actually used. Failure degrades to a normal launch.
       let launchModded = false
@@ -2882,7 +2882,7 @@ function registerGlobalHandlers(): void {
           pushGeneralLog(mainWindow, {
             level: 'warn',
             source: 'launcher',
-            message: 'REDmod deploy failed — launching without -modded (REDmods will not load)',
+            message: 'REDmod deploy failed - launching without -modded (REDmods will not load)',
             details: { error: redmodOutcome.failed, redmods: enabledRedmods.length, logPath: getVfsLaunchLogPath() },
           })
         }
@@ -3054,7 +3054,7 @@ function registerGlobalHandlers(): void {
   ipcMain.handle(IPC.LAUNCH_GAME, async () => {
     // Re-entry guard: mounting again while a hooked game is attached would reset
     // the shared usvfs state under it (usvfsCreateVFS re-creates the VFS), so a
-    // second Launch — double-click or a stale renderer state — must never reach
+    // second Launch - double-click or a stale renderer state - must never reach
     // the mount path while a launch is in flight or the game is running.
     if (vfsLaunchInProgress) {
       return { ok: false, error: 'A game launch is already in progress' }
@@ -3086,7 +3086,7 @@ function registerGlobalHandlers(): void {
     return new Promise((resolve) => {
       exec('taskkill /F /IM Cyberpunk2077.exe /T', { windowsHide: true }, (err) => {
         // Wait for the process to fully release file handles before running
-        // residue migration — taskkill completes before the OS fully tears
+        // residue migration - taskkill completes before the OS fully tears
         // down the process, so an immediate unmount races with locked files.
         setTimeout(() => {
           unmountVfsIfMounted()
@@ -3184,7 +3184,7 @@ app.whenReady().then(async () => {
   // first-run conflict re-index), so an absolute timer fired the false "did not
   // signal in time" warning and revealed early. Instead, every boot-status update
   // (and the initial first-paint) re-arms the timer, so it only fires after a real
-  // stall — the renderer going silent for the whole grace period with no progress
+  // stall - the renderer going silent for the whole grace period with no progress
   // and no APP_READY. That's the genuine "stuck on LOADING SETTINGS…" hang.
   let splashSafetyTimer: ReturnType<typeof setTimeout> | null = null
   const clearSplashSafetyWatchdog = () => {
@@ -3294,7 +3294,7 @@ app.whenReady().then(async () => {
   // the renderer explicitly signals that the boot sequence is complete.
   ipcMain.on(IPC.APP_BOOT_STATUS, () => {
     // The splash is animation-only now (no status text), but these still arrive as a
-    // boot heartbeat — the renderer is alive, so push the inactivity watchdog back.
+    // boot heartbeat - the renderer is alive, so push the inactivity watchdog back.
     armSplashSafetyWatchdog()
   })
 
@@ -3316,7 +3316,7 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', () => {
-  // Tear down any active VFS so usvfs shared state doesn't outlive the controller —
+  // Tear down any active VFS so usvfs shared state doesn't outlive the controller -
   // but NEVER while the game is still attached: clearing the virtual mappings under
   // a running hooked process would make every mod file vanish mid-session. In that
   // case leave the VFS resident (the game's own handle keeps the shared memory
@@ -3329,7 +3329,7 @@ app.on('before-quit', () => {
     attachedToVfs = false
   }
   if (attachedToVfs) {
-    appendVfsLaunchLog('app quitting with game attached to VFS — leaving VFS resident')
+    appendVfsLaunchLog('app quitting with game attached to VFS - leaving VFS resident')
   } else {
     unmountVfsIfMounted()
   }

@@ -333,7 +333,7 @@ export const FomodInstallerDialog: React.FC = () => {
     if (p) setLastHoveredPlugin(p)
   }, [])
 
-  // Install handler — close dialog immediately and let install run in background
+  // Install handler - close dialog immediately and let install run in background
   const handleInstall = useCallback(() => {
     if (!config || !fomodPrompt) return
     const entries = resolveInstallEntries(config, selections)
@@ -351,7 +351,7 @@ export const FomodInstallerDialog: React.FC = () => {
     })
   }, [config, selections, fomodInstall, dismissFomodPrompt, fomodPrompt])
 
-  // Recomputes whenever selections change — gates which steps are navigable
+  // Recomputes whenever selections change - gates which steps are navigable
   const visibleSteps = useMemo(
     () => (config ? computeVisibleSteps(config, selections) : []),
     [config, selections]
@@ -365,7 +365,7 @@ export const FomodInstallerDialog: React.FC = () => {
     }
   }, [visibleSteps, currentStep])
 
-  // All plugins with images in the current step — used for lightbox navigation
+  // All plugins with images in the current step - used for lightbox navigation
   const lightboxEntries = useMemo(() => {
     if (!config || !fomodPrompt) return []
     const rawStep = config.steps[currentStep]
@@ -432,7 +432,7 @@ export const FomodInstallerDialog: React.FC = () => {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — HeroUI modal language: accent icon tile + sentence-case title,
+        {/* Header - HeroUI modal language: accent icon tile + sentence-case title,
             step counter with a slim rounded progress track, CloseButton. */}
         <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4 border-b border-[var(--border)]">
           <div className="flex items-center gap-3.5 min-w-0">
@@ -506,7 +506,7 @@ export const FomodInstallerDialog: React.FC = () => {
             )}
           </div>
 
-          {/* Preview panel — shown only when any plugin in this step has an image */}
+          {/* Preview panel - shown only when any plugin in this step has an image */}
           {hasPreviewImages && (
             <PreviewPanel
               plugin={hoveredPlugin ?? lastHoveredPlugin}

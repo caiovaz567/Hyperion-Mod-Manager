@@ -4,7 +4,7 @@ import path from 'path'
 // Mirrors VFS_OVERWRITE_DIR_NAME in index.ts. The Runtime Captures folder is the
 // "Overwrite" sibling beside the Mod Library, holding files mod tools wrote into
 // the game at runtime (CET settings, red4ext plugin state, etc.). It is a single
-// always-mounted catch-all — Hyperion never moves captures
+// always-mounted catch-all - Hyperion never moves captures
 // around based on enable/disable state. The ONLY automatic cleanup is removing a
 // deleted mod's own leftovers (below), and even that is limited to the mod's private
 // per-mod folder so it can never disturb another mod's data.
@@ -13,7 +13,7 @@ export const VFS_OVERWRITE_DIR_NAME = 'Overwrite'
 // Roots under which each immediate child folder is a single mod's private namespace
 // (one-folder-per-mod convention). A capture inside `<root>/<folder>/…` belongs to
 // whatever mod deploys `<root>/<folder>`. Deliberately NARROW and limited to these
-// strict per-mod slots — a framework's own root folder (e.g. `cyber_engine_tweaks`
+// strict per-mod slots - a framework's own root folder (e.g. `cyber_engine_tweaks`
 // itself) is intentionally NOT attributed to any single mod, because many mods write
 // shared files there. Anything outside a per-mod slot is left untouched.
 const PER_MOD_SLOT_ROOTS = [
@@ -56,7 +56,7 @@ export interface OverwriteSweepResult {
 
 // Removes captured runtime files whose per-mod slot folder is NOT in liveOwners (no
 // installed mod owns it). Files outside any recognized per-mod slot are always kept
-// — including everything at the root of a framework folder — so this can only ever
+// - including everything at the root of a framework folder - so this can only ever
 // delete leftovers in a deleted mod's own private folder. liveOwners keys must come
 // from captureOwnerFolder() so casing and separators line up.
 export function sweepOrphanCaptures(overwritePath: string, liveOwners: Set<string>): OverwriteSweepResult {

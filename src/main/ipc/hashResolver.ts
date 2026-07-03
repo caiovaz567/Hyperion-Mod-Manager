@@ -280,7 +280,7 @@ async function doLoadHashDatabase(): Promise<Map<string, string>> {
           else resolve(result.toString('utf-8'))
         })
       })
-      // The bundled CSV is already fully normalized — every row is
+      // The bundled CSV is already fully normalized - every row is
       // `<16-char lowercase FNV1a hex>,<forward-slash lowercase resource path>` with
       // CRLF endings. Running the full normalize* helpers (regex + replace + lowercase
       // + padStart + split/filter/join) on all ~1.7M rows roughly doubled load time for
@@ -310,7 +310,7 @@ async function doLoadHashDatabase(): Promise<Map<string, string>> {
         }
       }
     } catch {
-      // DB unavailable — conflict detection will use raw hashes
+      // DB unavailable - conflict detection will use raw hashes
     }
   }
 
@@ -547,8 +547,8 @@ async function resolveHashesFromKark(targetHashes: string[]): Promise<Map<string
  *
  * Detection vs. display: conflict detection only needs the hashes (cheap, from the native
  * archive parse). Resolving hash -> path is purely for the inspector display, and the
- * external tooling that does it — per-archive LXRS path tables and the `.kark` databases,
- * both via PowerShell + oodle — is the slow part that made installs/refreshes hang for
+ * external tooling that does it - per-archive LXRS path tables and the `.kark` databases,
+ * both via PowerShell + oodle - is the slow part that made installs/refreshes hang for
  * seconds (a single mod with thousands of unresolved hashes spawned dozens of PowerShell
  * processes). So by default we resolve names only from the in-memory hash DB (instant);
  * pass `resolveExternalNames: true` to additionally run LXRS + kark, which we now do

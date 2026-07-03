@@ -15,7 +15,7 @@ import {
 
 // Central icon registry: maps the (legacy Material Symbols) name strings still used across the
 // app to real HeroUI-consistent Lucide icons. Rendered at 1em so the existing `text-[Npx]`
-// sizing + `text-[color]` classes keep controlling size/color exactly as before — no call site
+// sizing + `text-[color]` classes keep controlling size/color exactly as before - no call site
 // needs to change how it sizes/colors icons. Do NOT reintroduce the Material Symbols font.
 const ICONS: Record<string, LucideIcon> = {
   arrow_back: ArrowLeft,

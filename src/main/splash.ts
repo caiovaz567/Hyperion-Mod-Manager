@@ -105,7 +105,7 @@ function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
         position: absolute;
         inset: 0;
         border-radius: 999px;
-        /* Fills from the left, then drains from the right — a calm, self-contained
+        /* Fills from the left, then drains from the right - a calm, self-contained
            loop that never travels outside the track. */
         background: var(--accent);
         animation: indeterminate 1.5s ease-in-out infinite;

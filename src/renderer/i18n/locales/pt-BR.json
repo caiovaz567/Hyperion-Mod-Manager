@@ -40,7 +40,7 @@
       "launching": "INICIANDO...",
       "inGame": "EM JOGO",
       "close": "FECHAR JOGO",
-      "notConfigured": "Caminho do jogo não configurado — verifique as Configurações",
+      "notConfigured": "Caminho do jogo não configurado - verifique as Configurações",
       "launchFailed": "Não foi possível iniciar o jogo",
       "closeFailed": "Não foi possível fechar o jogo"
     },
@@ -216,7 +216,7 @@
       "deleteFailedCount_other": "{count} downloads não puderam ser excluídos",
       "fileNotAvailable": "O arquivo de download ainda não está disponível",
       "autoInstallFailed": "Falha na instalação automática",
-      "installedNotActivatedNamed": "{name} instalado — não foi possível ativar: {error}",
+      "installedNotActivatedNamed": "{name} instalado - não foi possível ativar: {error}",
       "updateFailed": "Não foi possível atualizar {name}",
       "updatedNotActivated": "Atualizado, mas não foi possível ativar: {error}",
       "updatedActivated": "{name} atualizado e ativado",
@@ -230,7 +230,7 @@
   },
   "welcome": {
     "headline": "Vamos configurar seu espaço de trabalho",
-    "subtitle": "Uma configuração rápida e única. Indique ao Hyperion onde o Cyberpunk 2077 está e escolha onde seus mods ficam — leva menos de um minuto.",
+    "subtitle": "Uma configuração rápida e única. Indique ao Hyperion onde o Cyberpunk 2077 está e escolha onde seus mods ficam - leva menos de um minuto.",
     "version": "Hyperion {version}",
     "stepCounter": "Etapa {current} de {total}",
     "settingUp": "Preparando tudo…",
@@ -246,13 +246,13 @@
       "library": {
         "label": "Biblioteca de mods",
         "heading": "Onde seus mods devem ficar?",
-        "description": "Cada mod que você adiciona é guardado aqui — organizado, preparado e pronto para ativar quando quiser.",
+        "description": "Cada mod que você adiciona é guardado aqui - organizado, preparado e pronto para ativar quando quiser.",
         "preview": "Onde seus mods gerenciados são armazenados"
       },
       "downloads": {
         "label": "Downloads",
         "heading": "Onde os novos downloads chegam?",
-        "description": "O Hyperion recolhe novos arquivos de mod desta pasta. Sugerimos uma ao lado da sua biblioteca — mude quando quiser.",
+        "description": "O Hyperion recolhe novos arquivos de mod desta pasta. Sugerimos uma ao lado da sua biblioteca - mude quando quiser.",
         "preview": "Onde novos arquivos de mod são recolhidos"
       },
       "nexus": {
@@ -263,13 +263,13 @@
       }
     },
     "game": {
-      "placeholder": "Nenhuma pasta selecionada — detecte ou procure abaixo",
-      "valid": "Cyberpunk 2077 encontrado — está tudo pronto.",
+      "placeholder": "Nenhuma pasta selecionada - detecte ou procure abaixo",
+      "valid": "Cyberpunk 2077 encontrado - está tudo pronto.",
       "invalid": "Não encontramos o Cyberpunk 2077 nesta pasta.",
       "continueTooltip": "Selecione uma pasta válida do Cyberpunk 2077 para continuar"
     },
     "library": {
-      "placeholder": "Nenhuma pasta selecionada — use a sugestão ou procure",
+      "placeholder": "Nenhuma pasta selecionada - use a sugestão ou procure",
       "valid": "Esta pasta está pronta para uso.",
       "invalid": "Esta pasta não pode ser usada como biblioteca de mods.",
       "continueTooltip": "Selecione uma pasta de biblioteca de mods válida para continuar"
@@ -287,7 +287,7 @@
       "apiKeyPlaceholder": "Cole sua chave de API do Nexus Mods",
       "showKey": "Mostrar chave de API",
       "hideKey": "Ocultar chave de API",
-      "optionalInfo": "Opcional — você pode adicionar isto depois em Configurações > Nexus.",
+      "optionalInfo": "Opcional - você pode adicionar isto depois em Configurações > Nexus.",
       "validating": "Validando sua chave de API…",
       "connectedAs": "Conectado como",
       "error": "Não conseguimos validar esta chave. Confira se você copiou a Chave de API Pessoal."
@@ -420,7 +420,7 @@
       "updatesAvailable_other": "{count} atualizações de mods disponíveis.",
       "allUpToDate": "Todos os mods do Nexus estão atualizados.",
       "checkUpdatesError": "Não foi possível verificar atualizações de mods.",
-      "openedOnNexus": "Aberto no Nexus — use \"Mod Manager Download\" para atualizar este mod.",
+      "openedOnNexus": "Aberto no Nexus - use \"Mod Manager Download\" para atualizar este mod.",
       "noNexusLink": "Nenhum link do Nexus armazenado para este mod",
       "noOriginalSource": "A fonte original não está armazenada para este mod",
       "noEntriesToDelete": "Nenhum item da biblioteca para excluir",
@@ -857,7 +857,7 @@
       "keep": "Manter {version}",
       "keepHelper": "Mantenha a instalação atual e ignore este arquivo mais antigo.",
       "addToLibrary": "Adicionar à Biblioteca",
-      "addToLibraryHelper": "Mantenha as duas — adicione esta versão como um item separado.",
+      "addToLibraryHelper": "Mantenha as duas - adicione esta versão como um item separado.",
       "updateTo": "Atualizar para {version}",
       "switchTo": "Trocar para {version}",
       "replaceHelper": "Substitua o mod instalado por esta versão.",
@@ -928,7 +928,7 @@
       "cancelled": "Inicialização cancelada",
       "error": "Falha ao iniciar",
       "cancelling": "Cancelando inicialização...",
-      "redmodHint": "Iniciando o redMod.exe — o primeiro launch pode levar alguns minutos"
+      "redmodHint": "Iniciando o redMod.exe - o primeiro launch pode levar alguns minutos"
     }
   }
 }

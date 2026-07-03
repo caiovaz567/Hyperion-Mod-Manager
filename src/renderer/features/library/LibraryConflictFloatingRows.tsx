@@ -14,7 +14,7 @@ interface LibraryConflictFloatingRowsProps {
   /**
    * The library's scroll container. This overlay tracks its scroll position
    * INTERNALLY (only while it actually has rows to show) so that scrolling does not
-   * re-render the whole mod list every frame — only this small overlay updates.
+   * re-render the whole mod list every frame - only this small overlay updates.
    */
   scrollContainerRef: React.RefObject<HTMLElement | null>
   rowHeight: number
@@ -97,7 +97,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
 
   // Will this overlay actually render anything? Only a selected mod that participates
   // in at least one conflict can produce floating rows. We use this to decide whether
-  // to bother tracking scroll at all — when there's nothing to show, we attach no
+  // to bother tracking scroll at all - when there's nothing to show, we attach no
   // listener and never re-render on scroll.
   const overlayActive =
     Boolean(selectedMod && selectedMod.kind === 'mod') &&
@@ -107,7 +107,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
     )
 
   // Track the scroll container's position locally (rAF-throttled) so that scrolling
-  // re-renders ONLY this lightweight overlay — never the full mod list. This is the
+  // re-renders ONLY this lightweight overlay - never the full mod list. This is the
   // key to smooth scrolling while a conflicting mod is selected.
   const [viewport, setViewport] = React.useState({ scrollTop: 0, height: 0 })
   React.useEffect(() => {
@@ -139,7 +139,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
       : displayedMods.length
 
   // Who this mod wins over / loses to. This scans the (potentially very large) conflicts
-  // array, so it MUST NOT depend on scroll position — it's memoized on the selection +
+  // array, so it MUST NOT depend on scroll position - it's memoized on the selection +
   // conflicts only, so scrolling never re-runs it.
   const relatedMods = React.useMemo(() => {
     if (!selectedMod || selectedMod.kind !== 'mod') return []
