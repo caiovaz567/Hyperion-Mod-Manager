@@ -98,10 +98,10 @@ export const Sidebar: React.FC = () => {
   const itemInnerClass =
     'grid h-12 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4'
 
-  // Explicit label color (not inherited from the HeroUI Button) so inactive items keep
-  // readable contrast in both light and dark modes.
-  const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 tracking-wider ${
-    active ? 'text-[var(--accent)]' : disabled ? 'text-[var(--text-disabled)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
+  // Inter (the app's primary font — the nav no longer inherits the Syne brand font) with an
+  // explicit color, so inactive items keep readable contrast in both light and dark modes.
+  const labelClass = (active?: boolean, disabled?: boolean) => `min-w-0 overflow-hidden whitespace-nowrap text-[13.5px] font-medium opacity-0 transition-opacity duration-300 group-hover/sidebar:opacity-100 ${
+    active ? 'text-[var(--accent)] font-semibold' : disabled ? 'text-[var(--text-disabled)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'
   }`
 
   const [launching, setLaunching] = useState(false)
@@ -173,7 +173,7 @@ export const Sidebar: React.FC = () => {
         : t('shell.account.notConnected')
 
   return (
-    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[var(--bg-subtle)] bg-[var(--bg-base-deep)] py-8 text-sm tracking-tight text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)] brand-font font-semibold">
+    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[var(--bg-subtle)] bg-[var(--bg-base-deep)] py-8 text-sm text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)]">
       <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-0 text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
