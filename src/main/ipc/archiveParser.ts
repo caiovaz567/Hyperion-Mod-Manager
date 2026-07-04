@@ -195,7 +195,10 @@ export function detectModType(modDir: string): ModType {
 }
 
 function getAllFiles(dir: string, depth = 0): string[] {
-  if (depth > 5) return []
+  // 8 levels: a full-tree CET mod keeps its payload at
+  // bin/x64/plugins/cyber_engine_tweaks/mods/<mod>/... (7 levels) plus room for
+  // the mod's own subfolders. 5 was too shallow and misdetected those as unknown.
+  if (depth > 8) return []
   const results: string[] = []
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true })
