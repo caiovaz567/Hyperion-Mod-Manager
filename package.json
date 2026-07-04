@@ -19,7 +19,8 @@
     "release:major": "node scripts/prepare-release-tag.mjs major",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs"
+    "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs",
+    "typecheck": "tsc --noEmit -p tests/tsconfig.json"
   },
   "keywords": [
     "cyberpunk",
