@@ -2774,7 +2774,7 @@ function registerGlobalHandlers(): void {
       // read overlay file link to the same dest are correctly kept distinct.
       const dedupedSeen = new Set<string>()
       links = links.filter((link) => {
-        const key = `${link.source} ${link.dest} ${link.dir ? 1 : 0} ${link.createTarget ? 1 : 0}`
+        const key = `${link.source}|${link.dest}|${link.dir ? 1 : 0}|${link.createTarget ? 1 : 0}`
         if (dedupedSeen.has(key)) return false
         dedupedSeen.add(key)
         return true
