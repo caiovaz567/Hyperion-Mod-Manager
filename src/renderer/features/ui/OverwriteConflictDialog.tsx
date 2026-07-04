@@ -90,13 +90,13 @@ export const OverwriteConflictDialog: React.FC = () => {
       </div>
 
       {archiveConflicts.length > 0 ? (
-        <div className="mt-4 rounded-xl bg-[rgb(248_113_113/0.08)] px-4 py-3 text-sm leading-relaxed text-[var(--status-error-text)]">
+        <div className="mt-4 rounded-xl bg-[rgb(248_113_113/0.08)] px-4 py-3 text-[15px] leading-relaxed text-[var(--status-error-text)]">
           {tn('dialogs.overwrite.archiveConflictNote', archiveConflicts.length)}
         </div>
       ) : null}
 
       {losingOverwrites.length > 0 ? (
-        <div className="mt-4 rounded-xl bg-[rgb(252_238_9/0.08)] px-4 py-3 text-sm leading-relaxed text-[var(--status-warning-text)]">
+        <div className="mt-4 rounded-xl bg-[rgb(252_238_9/0.08)] px-4 py-3 text-[15px] leading-relaxed text-[var(--status-warning-text)]">
           {t('dialogs.overwrite.priorityNote')}
         </div>
       ) : null}
@@ -132,7 +132,7 @@ export const OverwriteConflictDialog: React.FC = () => {
                     {label}
                   </span>
                 </div>
-                <div className="min-w-0 text-sm text-[var(--text-primary)]">
+                <div className="min-w-0 text-[15px] text-[var(--text-primary)]">
                   <div className="break-all">{conflict.resourcePath}</div>
                   {showArchiveHash ? (
                     <div className="mt-1 break-all text-xs text-[var(--text-support)]">
@@ -140,7 +140,7 @@ export const OverwriteConflictDialog: React.FC = () => {
                     </div>
                   ) : null}
                 </div>
-                <div className="min-w-0 text-sm text-[var(--text-secondary)]">
+                <div className="min-w-0 text-[15px] text-[var(--text-secondary)]">
                   <div className="truncate text-[var(--text-primary)]">{conflict.existingModName}</div>
                   {typeof conflict.existingOrder === 'number' ? (
                     <div className="mt-1 text-xs text-[var(--text-support)]">#{conflict.existingOrder + 1}</div>
@@ -153,7 +153,7 @@ export const OverwriteConflictDialog: React.FC = () => {
       </div>
 
       {hiddenCount > 0 ? (
-        <div className="mt-3 text-sm text-[var(--text-support)]">
+        <div className="mt-3 text-[15px] text-[var(--text-support)]">
           {tn('dialogs.overwrite.moreOverlaps', hiddenCount)}
         </div>
       ) : null}

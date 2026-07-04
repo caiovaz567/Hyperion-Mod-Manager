@@ -76,11 +76,11 @@ export const SeparatorNameDialog: React.FC<SeparatorNameDialogProps> = ({
       <div className="px-6 pb-6 pt-6">
         <HyperionModalHeader icon="label" title={title} className="mb-3" />
 
-        <p className="mb-5 text-sm leading-relaxed text-[var(--text-support)]">
+        <p className="mb-5 text-[15px] leading-relaxed text-[var(--text-support)]">
           {description}
         </p>
 
-        <label className="mb-2 block text-[12px] font-medium text-[var(--text-secondary)]">
+        <label className="mb-2 block text-[13px] font-medium text-[var(--text-secondary)]">
           {resolvedInputLabel}
         </label>
         <Input

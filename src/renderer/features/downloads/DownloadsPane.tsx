@@ -717,10 +717,10 @@ export const DownloadsPane: React.FC = () => {
     setSortDirection('asc')
   }, [sortDirection, sortKey])
 
-  const downloadMenuButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-  const downloadMenuSubtleButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-  const downloadMenuBlueButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.1)] hover:text-[var(--accent)]'
-  const downloadMenuDangerButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.1)]'
+  const downloadMenuButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+  const downloadMenuSubtleButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+  const downloadMenuBlueButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.1)] hover:text-[var(--accent)]'
+  const downloadMenuDangerButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.1)]'
   const contextMenuRow = contextMenu?.kind === 'row' ? contextMenu.row : null
   const contextMenuActiveDownload = contextMenuRow?.kind === 'active' ? contextMenuRow.active : null
   const contextMenuLocalEntry = contextMenuRow?.kind === 'local' ? contextMenuRow.entry : null
@@ -757,13 +757,13 @@ export const DownloadsPane: React.FC = () => {
               {/* Rows */}
               <div className="relative" onContextMenu={handleDownloadsBlankContextMenu}>
                 {loading ? (
-                  <div className="flex items-center justify-center py-24 text-[var(--text-muted)] tabular-nums text-sm">
+                  <div className="flex items-center justify-center py-24 text-[var(--text-muted)] tabular-nums text-[15px]">
                     {t('downloads.empty.scanning')}
                   </div>
                 ) : totalRows === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <Icon name={searchQuery.trim() ? 'search_off' : 'download'} className="text-[48px] text-[var(--text-muted)]" />
-                    <span className="text-[var(--text-muted)] text-sm tabular-nums">
+                    <span className="text-[var(--text-muted)] text-[15px] tabular-nums">
                       {searchQuery.trim()
                         ? t('downloads.empty.noMatch')
                         : settings?.downloadPath

@@ -120,7 +120,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
               ${checked ? 'border-[var(--accent)] bg-[var(--accent)]' : 'border-[var(--border-strong)]'}`}
           >
             {checked && (
-              <Icon name="check" className="text-[12px] text-[var(--accent-foreground)] font-bold leading-none" />
+              <Icon name="check" className="text-[13px] text-[var(--accent-foreground)] font-bold leading-none" />
             )}
           </span>
         )}
@@ -161,7 +161,7 @@ const GroupSection: React.FC<GroupSectionProps> = ({
   return (
     <div className="mb-4">
       <div className="mb-2 flex items-center gap-2.5 px-1">
-        <span className="text-[13px] font-semibold text-[var(--text-secondary)]">{group.name}</span>
+        <span className="text-[14px] font-semibold text-[var(--text-secondary)]">{group.name}</span>
         {isAll && (
           <HyperionBadge tone="accent" size="sm" className="normal-case tracking-normal">{t('dialogs.fomod.allSelected')}</HyperionBadge>
         )}
@@ -201,7 +201,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
 
   return (
     <div className="w-[420px] shrink-0 flex flex-col gap-3 border-l border-[var(--border)] pl-6 min-h-0 overflow-hidden">
-      <div className="text-[13px] font-semibold text-[var(--text-secondary)] shrink-0">{t('dialogs.fomod.preview')}</div>
+      <div className="text-[14px] font-semibold text-[var(--text-secondary)] shrink-0">{t('dialogs.fomod.preview')}</div>
 
       <div className="flex-1 min-h-0 overflow-y-auto hyperion-scrollbar flex flex-col gap-3" style={{ scrollbarGutter: 'stable' }}>
         {imagePath ? (
@@ -216,11 +216,11 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ plugin, extractRoot, onOpen
 
         {plugin && (
           <>
-            <div className="text-sm font-semibold text-[var(--text-primary)] border-b border-[var(--border)] pb-2 leading-snug shrink-0">
+            <div className="text-[15px] font-semibold text-[var(--text-primary)] border-b border-[var(--border)] pb-2 leading-snug shrink-0">
               {plugin.name}
             </div>
             {plugin.description && (
-              <div className="text-sm leading-relaxed text-[var(--text-support)] whitespace-pre-line">
+              <div className="text-[15px] leading-relaxed text-[var(--text-support)] whitespace-pre-line">
                 {plugin.description}
               </div>
             )}
@@ -447,7 +447,7 @@ export const FomodInstallerDialog: React.FC = () => {
           <div className="flex shrink-0 items-center gap-4">
             {hasSteps && (
               <div className="flex items-center gap-3">
-                <span className="text-[13px] tabular-nums text-[var(--text-muted)]">{t('dialogs.fomod.stepCounter', { pos: safePos + 1, total: totalSteps })}</span>
+                <span className="text-[14px] tabular-nums text-[var(--text-muted)]">{t('dialogs.fomod.stepCounter', { pos: safePos + 1, total: totalSteps })}</span>
                 <span className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--surface-secondary)]">
                   <span
                     className="block h-full rounded-full bg-[var(--accent)] transition-[width] duration-300"
@@ -501,7 +501,7 @@ export const FomodInstallerDialog: React.FC = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-[var(--text-muted)]">
                 <Icon name="check_circle" className="text-3xl mb-2" />
-                <span className="text-sm">{t('dialogs.fomod.noOptions')}</span>
+                <span className="text-[15px]">{t('dialogs.fomod.noOptions')}</span>
               </div>
             )}
           </div>
@@ -613,7 +613,7 @@ export const FomodInstallerDialog: React.FC = () => {
             className="mt-4 text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-sm font-semibold text-white/80">{lightboxEntries[lightboxIndex].plugin.name}</div>
+            <div className="text-[15px] font-semibold text-white/80">{lightboxEntries[lightboxIndex].plugin.name}</div>
             {lightboxEntries.length > 1 && (
               <div className="mt-1 font-mono text-xs text-white/35">{lightboxIndex + 1} / {lightboxEntries.length}</div>
             )}

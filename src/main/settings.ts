@@ -4,7 +4,12 @@ import fs from 'fs'
 import type { AppSettings } from '../shared/types'
 import type { PathDefaults } from '../shared/types'
 
-const settingsPath = path.join(app.getPath('userData'), 'settings.json')
+// Resolved lazily (not at module load): index.ts redirects userData to a
+// separate `Hyperion-Dev` dir in dev BEFORE anything reads settings, so dev and
+// the installed app never share (or clobber) each other's settings.json.
+function getSettingsPath(): string {
+  return path.join(app.getPath('userData'), 'settings.json')
+}
 
 // ─── Nexus API key at-rest encryption ─────────────────────────────────────────
 // The key is persisted OS-encrypted (DPAPI on Windows via Electron safeStorage)
@@ -72,13 +77,6 @@ function getDownloadPathFromLibrary(libraryPath?: string): string {
   return path.join(libraryParent, 'Downloads')
 }
 
-function normalizeLibraryColumnWidths(raw?: AppSettings['libraryColumnWidths']): AppSettings['libraryColumnWidths'] {
-  if (!raw) return undefined
-  const entries = Object.entries(raw).filter((entry): entry is [keyof NonNullable<AppSettings['libraryColumnWidths']>, number] =>
-    typeof entry[1] === 'number' && Number.isFinite(entry[1])
-  )
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined
-}
 
 /**
  * The directory Hyperion is installed into. Only meaningful for packaged builds;
@@ -134,7 +132,6 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
     autoInstallDownloads: raw?.autoInstallDownloads ?? true,
     nexusApiKey: raw?.nexusApiKey ?? '',
     language: typeof raw?.language === 'string' && raw.language.trim() ? raw.language : 'en',
-    libraryColumnWidths: normalizeLibraryColumnWidths(raw?.libraryColumnWidths),
     collapsedLibrarySeparatorIds: Array.isArray(raw?.collapsedLibrarySeparatorIds)
       ? raw.collapsedLibrarySeparatorIds.filter((id): id is string => typeof id === 'string')
       : undefined,
@@ -154,6 +151,7 @@ function ensureManagedDirectories(settings: AppSettings): void {
 
 export function loadSettings(): AppSettings {
   try {
+    const settingsPath = getSettingsPath()
     if (fs.existsSync(settingsPath)) {
       const raw = fs.readFileSync(settingsPath, 'utf-8')
       const stored = JSON.parse(raw) as PersistedSettings
@@ -190,6 +188,7 @@ export function saveSettings(settings: AppSettings): void {
       // Encryption hiccup: fall back to plaintext rather than losing the key.
     }
   }
+  const settingsPath = getSettingsPath()
   const dir = path.dirname(settingsPath)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(settingsPath, JSON.stringify(persisted, null, 2), 'utf-8')

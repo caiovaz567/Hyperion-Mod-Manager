@@ -44,7 +44,17 @@ const BrandMark: React.FC<{ size?: 'sm' | 'lg' }> = ({ size = 'sm' }) => {
             : 'h-7 w-7 rounded-[6px]'
         }`}
       >
-        <span className={`rounded-[3px] bg-[var(--bg-base-deep)] ${isLarge ? 'h-[18px] w-[18px]' : 'h-[10px] w-[10px]'}`} />
+        <svg
+          width={isLarge ? 22 : 12}
+          height={isLarge ? 22 : 12}
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect x="1" y="0" width="5" height="20" fill="#FFFFFF" />
+          <rect x="14" y="0" width="5" height="20" fill="#FFFFFF" />
+          <rect x="5" y="7.5" width="10" height="5" fill="#FFFFFF" />
+        </svg>
       </span>
       <span className={`brand-font font-black tracking-tighter text-[var(--text-primary)] ${isLarge ? 'text-3xl' : 'text-base'}`}>
         HYPERION
@@ -75,7 +85,7 @@ const StepProgress: React.FC<{
             className={`group flex items-center gap-2.5 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
           >
             <span
-              className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[12px] font-semibold transition-all duration-200 ${
+              className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[13px] font-semibold transition-all duration-200 ${
                 isActive
                   ? 'bg-[var(--accent)] text-[var(--accent-foreground)] shadow-[0_0_0_4px_rgb(var(--accent-rgb)/0.12)]'
                   : isCompleted
@@ -421,7 +431,7 @@ export const WelcomeScreen: React.FC = () => {
                     key={s.key}
                     className="flex items-center gap-3.5 rounded-xl border-0 bg-[var(--surface)] px-4 py-3.5"
                   >
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[12px] font-semibold text-[var(--text-muted)]">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-secondary)] text-[13px] font-semibold text-[var(--text-muted)]">
                       {index + 1}
                     </div>
                     <Icon name={s.icon} className="flex-shrink-0 text-[var(--accent)]" style={{ fontSize: 20 }} />
@@ -484,9 +494,9 @@ export const WelcomeScreen: React.FC = () => {
                 </h2>
               </div>
 
-              <p className="mb-5 text-[14px] leading-relaxed text-[var(--text-support)]">{t(`welcome.steps.${step.key}.description`)}</p>
+              <p className="mb-5 text-[15px] leading-relaxed text-[var(--text-support)]">{t(`welcome.steps.${step.key}.description`)}</p>
 
-              <div className="mb-1 text-[12px] font-medium text-[var(--text-muted)]">{t('common.selectedFolder')}</div>
+              <div className="mb-1 text-[13px] font-medium text-[var(--text-muted)]">{t('common.selectedFolder')}</div>
 
               {currentStep === 0 && (
                 <>
@@ -579,7 +589,7 @@ export const WelcomeScreen: React.FC = () => {
                     {t('welcome.nexus.openApiPage')}
                   </button>
 
-                  <div className="mb-1 text-[12px] font-medium text-[var(--text-muted)]">{t('welcome.nexus.apiKeyLabel')}</div>
+                  <div className="mb-1 text-[13px] font-medium text-[var(--text-muted)]">{t('welcome.nexus.apiKeyLabel')}</div>
                   <div className="relative">
                     <input
                       type={showApiKey ? 'text' : 'password'}
@@ -603,7 +613,7 @@ export const WelcomeScreen: React.FC = () => {
                   </div>
 
                   {/* Live validation */}
-                  <div className="mt-3 flex items-start gap-2 text-[13px] leading-relaxed">
+                  <div className="mt-3 flex items-start gap-2 text-[14px] leading-relaxed">
                     {nexusAccount.status === 'not-configured' && (
                       <>
                         <Icon name="info" className="mt-px text-[#60A5FA]" style={{ fontSize: 16 }} />

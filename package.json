@@ -1,6 +1,6 @@
 {
   "name": "hyperion",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Cyberpunk 2077 Mod Manager",
   "main": "out/main/index.js",
   "scripts": {
@@ -27,7 +27,7 @@
     "manager",
     "electron"
   ],
-  "author": "",
+  "author": "Caio Vaz",
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.2",
     "@types/adm-zip": "^0.5.5",

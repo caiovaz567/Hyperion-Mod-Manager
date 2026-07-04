@@ -63,7 +63,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
           <h2 className="text-[1.05rem] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{title}</h2>
         </div>
 
-        <p className="mb-4 text-sm leading-relaxed text-[var(--text-support)]">{description}</p>
+        <p className="mb-4 text-[15px] leading-relaxed text-[var(--text-support)]">{description}</p>
 
         {(detailContent || (detailLabel && detailValue)) && (
           <div className="mb-6 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
@@ -71,7 +71,7 @@ export const ActionPromptDialog: React.FC<ActionPromptDialogProps> = ({
               <div className="px-4 py-3">
                 <div className="font-mono text-xs text-[var(--text-support)]">{detailLabel}</div>
                 <div
-                  className="mt-1.5 break-words text-sm font-semibold tracking-[0.01em] text-[var(--text-primary)]"
+                  className="mt-1.5 break-words text-[15px] font-semibold tracking-[0.01em] text-[var(--text-primary)]"
                   title={detailValue}
                 >
                   {detailValue}

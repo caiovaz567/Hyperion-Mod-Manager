@@ -358,7 +358,6 @@
       "clearSelection": "Limpar seleção"
     },
     "header": {
-      "resizeColumn": "Redimensionar coluna {column}",
       "releaseTopLevel": "Solte Para Nível Principal",
       "dragTopLevel": "Arraste Aqui Para Nível Principal",
       "applying": "Aplicando...",
@@ -928,7 +927,9 @@
       "cancelled": "Inicialização cancelada",
       "error": "Falha ao iniciar",
       "cancelling": "Cancelando inicialização...",
-      "redmodHint": "Iniciando o redMod.exe - o primeiro launch pode levar alguns minutos"
+      "redmodHint": "Iniciando o redMod.exe - o primeiro launch pode levar alguns minutos",
+      "launchedDetail_one": "Rodando com {count} mod ativo",
+      "launchedDetail_other": "Rodando com {count} mods ativos"
     }
   }
 }

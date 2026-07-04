@@ -29,7 +29,7 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
     <h1 className="text-[1.32rem] font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-[1.44rem]">
       {t('downloads.title')}
     </h1>
-    <p className="mt-1.5 flex items-center gap-2 text-[13px] text-[var(--text-support)]">
+    <p className="mt-1.5 flex items-center gap-2 text-[14px] text-[var(--text-support)]">
       {t('downloads.summary.local')}: {localFileCount}
       {activeDownloadCount > 0 && <>&nbsp;|&nbsp; {t('downloads.summary.active')}: {activeDownloadCount}</>}
       {searchQuery.trim() && <>&nbsp;|&nbsp; {t('downloads.summary.shown')}: {totalRows}</>}
@@ -38,6 +38,7 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
       <HyperionSearchField
         value={searchQuery}
         onChange={(event) => onSearchQueryChange(event.target.value)}
+        onClear={() => onSearchQueryChange('')}
         placeholder={t('downloads.searchPlaceholder')}
       />
       <HyperionButton

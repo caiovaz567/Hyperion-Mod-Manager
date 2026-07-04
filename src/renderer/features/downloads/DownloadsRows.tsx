@@ -182,7 +182,7 @@ const ActiveDownloadRow: React.FC<{
             </span>
           </div>
           <span
-            className="text-sm tabular-nums"
+            className="text-[15px] tabular-nums"
             style={{ color: isError ? '#fca5a5' : isPaused ? 'var(--text-secondary)' : accent }}
           >
             {transferSummary}
@@ -196,20 +196,20 @@ const ActiveDownloadRow: React.FC<{
           >
             {isError ? t('downloads.status.error') : isDone ? t('downloads.status.downloaded') : isPaused ? t('downloads.status.paused') : t('downloads.status.downloading')}
           </span>
-          <span className="truncate text-sm tabular-nums text-[var(--text-support)]">
+          <span className="truncate text-[15px] tabular-nums text-[var(--text-support)]">
             {progressSummary}
           </span>
         </div>
 
-        <div className="flex items-center text-sm tabular-nums text-[var(--text-support)]">
+        <div className="flex items-center text-[15px] tabular-nums text-[var(--text-support)]">
           {download.version ?? '-'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
+        <div className="flex items-center pl-4 text-[15px] tabular-nums text-[var(--text-primary-alt)]">
           {formatSize(Math.max(download.totalBytes, download.downloadedBytes))}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
+        <div className="flex flex-col justify-center gap-1 overflow-hidden text-[15px] tabular-nums">
           <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(download.startedAt)}</span>
           <span className="truncate text-[var(--text-support)]">{speedSummary}</span>
         </div>
@@ -316,7 +316,7 @@ const InstallingDownloadRow: React.FC<{
             </span>
           </div>
           <span
-            className="truncate text-sm tabular-nums"
+            className="truncate text-[15px] tabular-nums"
             style={{ color: installAppearance.accent }}
           >
             {progressDetail}
@@ -333,20 +333,20 @@ const InstallingDownloadRow: React.FC<{
           >
             {installAppearance.label}
           </span>
-          <span className="truncate text-sm tabular-nums text-[var(--text-primary-alt)]">
+          <span className="truncate text-[15px] tabular-nums text-[var(--text-primary-alt)]">
             {progressSummary}
           </span>
         </div>
 
-        <div className="flex items-center text-sm tabular-nums text-[var(--text-primary-alt)]">
+        <div className="flex items-center text-[15px] tabular-nums text-[var(--text-primary-alt)]">
           {entry.version ?? '-'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
+        <div className="flex items-center pl-4 text-[15px] tabular-nums text-[var(--text-primary-alt)]">
           {formatSize(entry.size)}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
+        <div className="flex flex-col justify-center gap-1 overflow-hidden text-[15px] tabular-nums">
           <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
           <span className="truncate text-[var(--text-support)]">{installAppearance.summary}</span>
         </div>
@@ -443,15 +443,15 @@ const DeletingDownloadRow: React.FC<{
           </span>
         </div>
 
-        <div className="flex items-center text-sm tabular-nums text-[var(--text-primary-alt)]">
+        <div className="flex items-center text-[15px] tabular-nums text-[var(--text-primary-alt)]">
           {entry.version ?? '-'}
         </div>
 
-        <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-primary-alt)]">
+        <div className="flex items-center pl-4 text-[15px] tabular-nums text-[var(--text-primary-alt)]">
           {formatSize(entry.size)}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-sm tabular-nums">
+        <div className="flex flex-col justify-center gap-1 overflow-hidden text-[15px] tabular-nums">
           <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
           <span className="truncate text-[var(--status-error-text)]">
             {deleteProgress > 0 ? `${deleteProgress}% · ${deleteSummary}` : deleteSummary}
@@ -558,15 +558,15 @@ const LocalDownloadRow: React.FC<{
         </span>
       </div>
 
-      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
+      <div className="flex items-center text-[15px] tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
         {entry.version ?? '-'}
       </div>
 
-      <div className="flex items-center pl-4 text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
+      <div className="flex items-center pl-4 text-[15px] tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
         {formatSize(entry.size)}
       </div>
 
-      <div className="flex items-center text-sm tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
+      <div className="flex items-center text-[15px] tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
         {formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}
       </div>
 

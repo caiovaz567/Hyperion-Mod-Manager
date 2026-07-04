@@ -129,7 +129,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             <button
               type="button"
               onClick={() => onStatusFilterChange('all')}
-              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-sm font-medium text-[var(--accent)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.18)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.18)]"
+              className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-[15px] font-medium text-[var(--accent)] transition-colors hover:bg-[rgb(var(--accent-rgb)/0.18)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.18)]"
             >
               <Icon name={activeStatusNotice.icon} className="text-[16px] text-current" />
               <span>{activeStatusNotice.label}</span>

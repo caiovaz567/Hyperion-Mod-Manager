@@ -191,7 +191,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                 if (event.key === 'Enter') onRenameSave()
                 if (event.key === 'Escape') onRenameCancel()
               }}
-              className="allow-text-selection h-9 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 text-[13px] font-semibold tracking-[0.01em] leading-none text-[var(--text-primary)] focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.5)] focus:outline-none"
+              className="allow-text-selection h-9 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 text-[14px] font-semibold tracking-[0.01em] leading-none text-[var(--text-primary)] focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-cyber-blue-rgb)/0.5)] focus:outline-none"
             />
           ) : (
             <div className="flex min-w-0 items-center gap-3 pl-[32px]">
@@ -202,7 +202,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                 style={{ background: separatorDropTarget ? 'var(--accent-cyber-blue)' : 'var(--accent)' }}
               />
               <span
-                className={`truncate text-[13px] font-semibold tracking-[0.01em] transition-colors duration-150 ${
+                className={`truncate text-[14px] font-semibold tracking-[0.01em] transition-colors duration-150 ${
                   separatorDropTarget
                     ? 'text-[var(--accent-cyber-blue)]'
                     : selected
@@ -225,7 +225,7 @@ export const ModRow: React.FC<ModRowProps> = ({
                   className="flex shrink-0 items-center gap-[3px] rounded-md bg-[rgb(var(--accent-cyber-blue-rgb)/0.14)] px-[6px] py-[3px] text-[11px] font-semibold tabular-nums text-[var(--accent-cyber-blue)]"
                   title={tn('library.row.separatorUpdateTitle', separatorUpdateCount)}
                 >
-                  <Icon name="upgrade" className="text-[13px] leading-none" />
+                  <Icon name="upgrade" className="text-[14px] leading-none" />
                   {separatorUpdateCount}
                 </span>
               ) : null}
@@ -291,7 +291,7 @@ export const ModRow: React.FC<ModRowProps> = ({
       ) : null}
       {isRedundant ? (
         <div className="flex items-center gap-2 text-[var(--status-warning-text)]">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.14)] font-mono text-[12px] font-bold leading-none">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.14)] font-mono text-[13px] font-bold leading-none">
             !
           </span>
           <span>{t('library.conflict.redundantFull')}</span>
@@ -484,7 +484,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           />
         </div>
 
-        <div className={`flex items-center text-[12px] font-mono transition-colors ${indexTextClass}`}>
+        <div className={`flex items-center text-[13px] font-mono transition-colors ${indexTextClass}`}>
           {index}
         </div>
 
@@ -565,7 +565,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           )}
         </div>
 
-        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-sm font-mono tracking-tight">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[15px] font-mono tracking-tight">
           <span className={`truncate transition-colors ${hasModUpdate ? 'text-[#f87171]' : secondaryTextClass}`}>
             {mod.version ?? '-'}
           </span>
@@ -589,13 +589,13 @@ export const ModRow: React.FC<ModRowProps> = ({
 
         <div className="flex min-w-0 items-center overflow-hidden">
           <Tooltip content={t('library.row.categoryTooltip', { category: categoryLabel })} side="bottom" wrapperClassName="block w-full min-w-0">
-            <span className={`block truncate text-sm transition-colors ${secondaryTextClass}`}>
+            <span className={`block truncate text-[15px] transition-colors ${secondaryTextClass}`}>
               {categoryLabel}
             </span>
           </Tooltip>
         </div>
 
-        <div className={`flex min-w-0 items-center overflow-hidden text-sm font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
+        <div className={`flex min-w-0 items-center overflow-hidden text-[15px] font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
           <span className="truncate whitespace-nowrap">{formatWindowsDateTime(mod.installedAt)}</span>
         </div>
 

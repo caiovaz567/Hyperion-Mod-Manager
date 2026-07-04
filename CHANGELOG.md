@@ -8,11 +8,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.33.0] - 2026-07-04
+
 ### Added
 - **Automated test suite guarding the destructive paths.** 82 unit tests (vitest, run by `npm test` and on every push via GitHub Actions) now pin down the logic that decides where files are written and deleted: deploy-path computation (including flat and nested REDmod layouts and path-traversal stripping), mod-type detection, the deleted-mod capture sweep (proving it can never touch another mod's data or shared framework folders), FOMOD parsing (including malformed XML), conflict math (unique-resource counts, redundant detection, pairwise expansion), nxm-link / Nexus update-lineage resolution, the install naming pipeline (folder sanitization, collision suffixes, game-root preservation, `meta.ini` identity recovery), the `.archive` binary parser against corrupt/truncated/hostile files (returns null, never crashes), the Nexus download registry (upsert/lookup/dead-record pruning), and the VFS mount plan (`buildEnabledModLinks` - load-order-respecting mounts, load-ordered virtual archive names, single materialization of virtual folders).
 - **End-to-end smoke test** (`npm run test:e2e`): launches the real app via Playwright inside an isolated throwaway profile (own settings, fake game folder, fixture archives - the machine's real setup is never touched) and exercises the core journey: first-run welcome, installing two conflicting archives from the Downloads screen, the +1/-1 conflict badges, search filtering, disabling a mod dissolving the conflict pair, and deleting a mod through the confirm dialog with the folder really leaving the disk. Screenshots every step and fails on any renderer crash - the pre-release safety net. The App Logs header button and the Downloads row install/delete buttons also gained proper accessible names (`aria-label`).
 
+### Changed
+- **Hyperion has a real visual identity.** A new brand icon (white H on the canonical blue rounded square) replaces the legacy yellow mark across the executable, installer, shortcuts, taskbar and window - crisp at every size from 16px up, and immune to Windows' icon cache (the window icon is served from memory). The in-app brand follows: header, splash and the setup screen draw the same white H on an accent-colored plate (so it recolors live with your chosen accent), the header shows just the mark and reveals the HYPERION wordmark on hover, and the splash is now nothing but the oversized mark floating with a soft pulsing accent glow. The README carries the new logo, and the executable metadata now includes the author/copyright.
+- The Downloads search field gained the same one-click clear (X) as the library search.
+- **Library columns are now fixed - column resizing was removed.** Version, Category and Date have set widths sized to their content and Mod Name flexes to fill the rest, so the table always fits the window: no more permanent horizontal scrollbar hiding the right-hand columns on smaller screens. The drag handles and the persisted per-user column widths are gone (stale settings entries are ignored).
+
 ### Fixed
+- **The Nexus API key can no longer be lost by mixing dev and installed builds.** `npm run dev` and the installed app shared the same data folder: the installed build stores the key encrypted with a machine key dev cannot read, and a dev settings save then dropped the encrypted copy - each side kept destroying the other's key. Dev now uses its own `Hyperion-Dev` data folder (seeded once from the existing settings).
+- The launch success card now says "Running with N active mods" instead of exposing a process PID.
+- **The REDmod compile console is no longer an empty black window.** The compiler window now shows redMod's real output live (compile warnings, files written, stage progress) - and the launch status card narrates the same lines inside the app, so you can follow the deploy from either place.
+- **Interface text reads comfortably at every resolution - and stays pixel-crisp.** Two fixes: the resolution-based UI zoom used to shrink everything fully proportionally below its 1440p baseline (13px interface text rendered at ~9px physical on a 1920x1080 monitor - unreadable); downscaling now runs at half strength with a floor (1080p ≈ 86% instead of 72%). And the base type scale itself was proportionally small, so every reading size across the app grew by 1px (12→13, 13→14, 14/`text-sm`→15) - real font sizes, not an optical zoom, so text stays sharp instead of blurring at fractional zoom factors.
 - **Mods shipping a full game tree with deeply nested payloads are typed correctly again.** Type detection stopped scanning 6 folder levels down, so a CET mod packaged as `bin/x64/plugins/cyber_engine_tweaks/mods/<mod>/init.lua` (7 levels) was misdetected as `unknown`. The scan now reaches those payloads.
 
 ---

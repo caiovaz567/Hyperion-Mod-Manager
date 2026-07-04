@@ -114,7 +114,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
             </span>
           ) : null}
         </span>
-        <span className="mt-1 block text-sm leading-relaxed text-[var(--text-secondary)]">
+        <span className="mt-1 block text-[15px] leading-relaxed text-[var(--text-secondary)]">
           {helper}
         </span>
       </span>
@@ -238,12 +238,12 @@ export const VersionMismatchDialog: React.FC = () => {
           </span>
         </div>
 
-        <p className="mb-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+        <p className="mb-4 text-[15px] leading-relaxed text-[var(--text-secondary)]">
           {headerMeta.summary}
         </p>
 
         <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5">
-          <div className="mb-3 truncate text-sm font-medium text-[var(--text-primary)]">
+          <div className="mb-3 truncate text-[15px] font-medium text-[var(--text-primary)]">
             {versionMismatchPrompt.existingModName}
           </div>
           <div className="flex items-end gap-4">

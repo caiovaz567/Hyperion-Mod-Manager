@@ -13,16 +13,6 @@ import { LibraryRows } from './LibraryRows'
 import { LibraryTableHeader } from './LibraryTableHeader'
 import { LibraryDeleteProgressRow, LibraryInstallProgressRow } from './LibraryProgressRows'
 import { LibraryToolbar } from './LibraryToolbar'
-import {
-  applyColumnResize,
-  areLibraryColumnWidthsEqual,
-  buildLibraryGridTemplate,
-  fitNameWidthToContainer,
-  hasStoredColumnWidths,
-  readLibraryColumnWidths,
-  type LibraryColumnWidths,
-  type LibraryResizableColumnKey,
-} from './libraryColumns'
 import { SeparatorNameDialog } from '../ui/SeparatorNameDialog'
 import { MoveToSeparatorDialog } from '../ui/MoveToSeparatorDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
@@ -66,7 +56,6 @@ export const ModList: React.FC = () => {
   const [pendingConflictGoToModId, setPendingConflictGoToModId] = useState<string | null>(null)
   const [navigationHighlightModId, setNavigationHighlightModId] = useState<string | null>(null)
   const [moveSeparatorTargets, setMoveSeparatorTargets] = useState<string[] | null>(null)
-  const [columnWidths, setColumnWidths] = useState(readLibraryColumnWidths)
   const listScrollRef = useRef<HTMLDivElement>(null)
   const listRowsRef = useRef<HTMLDivElement>(null)
 
@@ -159,39 +148,7 @@ export const ModList: React.FC = () => {
   }), shallow)
 
   const updateCount = Object.values(modUpdates).filter((status) => status.state === 'update-available').length
-  const columnWidthsHydratedRef = useRef(false)
   const collapsedSepsHydratedRef = useRef(false)
-
-  const handleColumnResize = useCallback((key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => {
-    const next = applyColumnResize(start, key, deltaPx)
-    setColumnWidths(next)
-  }, [])
-
-  useEffect(() => {
-    if (!settings) return
-    const next = readLibraryColumnWidths(settings.libraryColumnWidths)
-    setColumnWidths(next)
-    columnWidthsHydratedRef.current = true
-  }, [settings?.libraryColumnWidths])
-
-  useEffect(() => {
-    if (!settings || hasStoredColumnWidths(settings.libraryColumnWidths)) return
-    const el = listScrollRef.current
-    if (!el) return
-    setColumnWidths((prev) => {
-      const next = { ...prev, name: fitNameWidthToContainer(el.clientWidth, prev) }
-      return next
-    })
-  }, [settings])
-
-  useEffect(() => {
-    if (!settings || !columnWidthsHydratedRef.current) return
-    if (areLibraryColumnWidthsEqual(settings.libraryColumnWidths, columnWidths)) return
-    const timer = window.setTimeout(() => {
-      void updateSettings({ libraryColumnWidths: columnWidths })
-    }, 250)
-    return () => window.clearTimeout(timer)
-  }, [columnWidths, settings, updateSettings])
 
   // Hydrate collapsed separator state from persisted settings on first load.
   useEffect(() => {
@@ -217,8 +174,6 @@ export const ModList: React.FC = () => {
     }, 400)
     return () => window.clearTimeout(timer)
   }, [collapsedSeparatorIds, settings, updateSettings])
-
-  const libraryGridTemplate = useMemo(() => buildLibraryGridTemplate(columnWidths), [columnWidths])
 
   const {
     handleInstallFile,
@@ -734,7 +689,7 @@ export const ModList: React.FC = () => {
       {isDragging && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--bg-base-deep)]/90 border-[1px] border-[var(--accent)]/40 pointer-events-none">
           <Icon name="file_download" className="text-[48px] text-[var(--accent)] mb-4" />
-          <span className="brand-font text-sm text-[var(--accent)] tracking-widest uppercase">{t('library.dnd.dropToInstall')}</span>
+          <span className="brand-font text-[15px] text-[var(--accent)] tracking-widest uppercase">{t('library.dnd.dropToInstall')}</span>
         </div>
       )}
 
@@ -757,10 +712,7 @@ export const ModList: React.FC = () => {
 
         {/* Table - has its own scroll, toolbar stays fixed above */}
       <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
-        <HyperionPanel
-          className="relative h-full overflow-hidden"
-          style={{ '--library-grid': libraryGridTemplate } as React.CSSProperties}
-        >
+        <HyperionPanel className="relative h-full overflow-hidden">
           <div
             ref={listScrollRef}
             className="hyperion-scrollbar managed-mods-scroll h-full overflow-auto"
@@ -777,8 +729,6 @@ export const ModList: React.FC = () => {
             bulkToggleTooltip={bulkToggleTooltip}
             isBulkToggling={isBulkToggling}
             allVisibleEnabled={allVisibleEnabled}
-            columnWidths={columnWidths}
-            onColumnResize={handleColumnResize}
             onSort={handleSort}
             onTopLevelDragOver={handleTopLevelDragOver}
             onTopLevelDragLeave={handleTopLevelDragLeave}

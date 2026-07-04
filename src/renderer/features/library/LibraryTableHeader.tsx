@@ -1,54 +1,13 @@
 import React from 'react'
 import { HyperionSortHeader, HyperionSwitch } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
-import { LIBRARY_GRID_FALLBACK, type LibraryColumnWidths, type LibraryResizableColumnKey } from './libraryColumns'
+import { LIBRARY_GRID_FALLBACK } from './libraryColumns'
 import { useTranslation } from '../../i18n/I18nContext'
 
 export type LibrarySortKey = 'name' | 'category' | 'installedAt'
 export type SortDirection = 'asc' | 'desc'
 
-export const LIBRARY_GRID_TEMPLATE = `var(--library-grid, ${LIBRARY_GRID_FALLBACK})`
-
-const ColumnResizeHandle: React.FC<{
-  columnKey: LibraryResizableColumnKey
-  columnWidths: LibraryColumnWidths
-  onResize: (key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => void
-}> = ({ columnKey, columnWidths, onResize }) => {
-  const { t } = useTranslation()
-  const handleMouseDown = (event: React.MouseEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
-    const startX = event.clientX
-    const start = columnWidths
-    const onMove = (move: MouseEvent) => {
-      onResize(columnKey, move.clientX - startX, start)
-    }
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }
-
-  return (
-    <span
-      role="separator"
-      aria-orientation="vertical"
-      aria-label={t('library.header.resizeColumn', { column: columnKey })}
-      onMouseDown={handleMouseDown}
-      onClick={(event) => event.stopPropagation()}
-      className="group/resize absolute top-0 z-20 flex h-full w-4 cursor-col-resize items-center justify-center"
-      style={{ left: '-24px' }}
-    >
-      <span className="h-4 w-px bg-[var(--border-strong)] transition-colors group-hover/resize:bg-[var(--accent)]/70" />
-    </span>
-  )
-}
+export const LIBRARY_GRID_TEMPLATE = LIBRARY_GRID_FALLBACK
 
 interface LibraryTableHeaderProps {
   sortKey: LibrarySortKey | null
@@ -60,8 +19,6 @@ interface LibraryTableHeaderProps {
   bulkToggleTooltip: string
   isBulkToggling: boolean
   allVisibleEnabled: boolean
-  columnWidths: LibraryColumnWidths
-  onColumnResize: (key: LibraryResizableColumnKey, deltaPx: number, start: LibraryColumnWidths) => void
   onSort: (key: LibrarySortKey) => void
   onBulkToggle: () => void
   onTopLevelDragOver?: (event: React.DragEvent<HTMLDivElement>) => void
@@ -79,8 +36,6 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
   bulkToggleTooltip,
   isBulkToggling,
   allVisibleEnabled,
-  columnWidths,
-  onColumnResize,
   onSort,
   onBulkToggle,
   onTopLevelDragOver,
@@ -147,7 +102,6 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
     />
     <div className="relative flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">
       <span className="min-w-0 truncate whitespace-nowrap">{t('library.header.columnVersion')}</span>
-      <ColumnResizeHandle columnKey="version" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
     <div className="relative flex min-w-0 items-center">
       <HyperionSortHeader
@@ -160,7 +114,6 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         className="justify-start gap-0.5"
         innerClassName="gap-0.5"
       />
-      <ColumnResizeHandle columnKey="category" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
     <div className="relative flex min-w-0 items-center">
       <HyperionSortHeader
@@ -173,7 +126,6 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         className="justify-start gap-0.5"
         innerClassName="gap-0.5"
       />
-      <ColumnResizeHandle columnKey="date" columnWidths={columnWidths} onResize={onColumnResize} />
     </div>
     <div className="flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">{t('library.header.columnActions')}</div>
   </div>

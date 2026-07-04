@@ -15,13 +15,13 @@ import { Icon } from './Icon'
 // the same live accent/surface tokens as the real HeroUI <Button> components.
 export const uiButton = {
   primary:
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[var(--accent)] px-5 text-[13px] font-semibold leading-none text-[var(--accent-foreground)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--accent)]',
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[var(--accent)] px-5 text-[14px] font-semibold leading-none text-[var(--accent-foreground)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--accent)]',
   secondary:
-    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[var(--surface-secondary)] px-4 text-[13px] font-medium leading-none text-[var(--text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--surface-secondary)]',
+    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[var(--surface-secondary)] px-4 text-[14px] font-medium leading-none text-[var(--text-secondary)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[var(--surface-secondary)]',
   accentOutline:
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-[13px] font-semibold leading-none text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[rgb(var(--accent-rgb)/0.12)] disabled:hover:text-[var(--accent)]',
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-[14px] font-semibold leading-none text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[rgb(var(--accent-rgb)/0.12)] disabled:hover:text-[var(--accent)]',
   ghost:
-    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-transparent px-3 text-[13px] font-medium leading-none text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent',
+    'group inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-transparent px-3 text-[14px] font-medium leading-none text-[var(--text-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent',
 } as const
 
 /* -- Underline tabs -- */
@@ -119,7 +119,7 @@ export const SegmentedTabs = <T extends string,>({
           role="tab"
           aria-selected={active}
           onClick={() => onChange(item.id)}
-          className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+          className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-[14px] font-medium transition-colors ${
             active
               ? 'bg-[var(--surface-secondary)] text-[var(--text-primary)]'
               : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -221,7 +221,7 @@ export const PathBox: React.FC<{ value: string; placeholder: string; emphasize?:
   emphasize = false,
 }) => (
   <div
-    className={`allow-text-selection flex min-h-10 min-w-0 items-center rounded-lg border-0 px-4 py-3 font-mono text-[13px] leading-[1.35] text-[var(--text-primary-alt)] ${
+    className={`allow-text-selection flex min-h-10 min-w-0 items-center rounded-lg border-0 px-4 py-3 font-mono text-[14px] leading-[1.35] text-[var(--text-primary-alt)] ${
       emphasize ? 'bg-[rgb(var(--accent-rgb)/0.06)] shadow-[inset_0_0_0_1px_var(--accent-dim)]' : 'bg-[var(--surface-secondary)]'
     }`}
   >
@@ -240,7 +240,7 @@ export const ValidationRow: React.FC<{
   const emptyLabel = emptyText ?? translate('common.noFolderSelected')
   if (state === 'valid') {
     return (
-      <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
+      <div className="mt-3 flex items-start gap-2 text-[14px] leading-5">
         <Icon name="check_circle" className="mt-[1px] text-[#34d399]" style={{ fontSize: 17 }} />
         <span className="text-[var(--status-success-text)]">{validText}</span>
       </div>
@@ -248,7 +248,7 @@ export const ValidationRow: React.FC<{
   }
   if (state === 'invalid') {
     return (
-      <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
+      <div className="mt-3 flex items-start gap-2 text-[14px] leading-5">
         <Icon name="error" className="mt-[1px] text-[var(--status-warning-text)]" style={{ fontSize: 17 }} />
         <span className="text-[var(--status-warning-text)]">{invalidText}</span>
       </div>
@@ -256,14 +256,14 @@ export const ValidationRow: React.FC<{
   }
   if (state === 'info') {
     return (
-      <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
+      <div className="mt-3 flex items-start gap-2 text-[14px] leading-5">
         <Icon name="info" className="mt-[1px] text-[var(--text-muted)]" style={{ fontSize: 17 }} />
         <span className="text-[var(--text-support)]">{infoText}</span>
       </div>
     )
   }
   return (
-    <div className="mt-3 flex items-start gap-2 text-[13px] leading-5">
+    <div className="mt-3 flex items-start gap-2 text-[14px] leading-5">
       <Icon name="radio_button_unchecked" className="mt-[1px] text-[var(--text-muted)]" style={{ fontSize: 17 }} />
       <span className="text-[var(--text-muted)]">{emptyLabel}</span>
     </div>

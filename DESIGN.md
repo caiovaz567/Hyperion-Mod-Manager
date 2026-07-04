@@ -38,7 +38,7 @@ Primary goals:
 Accessibility:
 - All visible text must meet at least WCAG AA contrast against its immediate background
 - Use $4.5:1$ for normal text and $3:1$ for large text
-- Helper/support copy must not drop below the Downloads timestamp baseline: `text-sm` / roughly 14px with the same readable gray value used by download dates (`#9A9A9A` or stronger)
+- Helper/support copy must not drop below the Downloads timestamp baseline: 15px (`text-[15px]` / `.ui-support-text`) with the same readable gray value used by download dates (`#9A9A9A` or stronger)
 - This minimum applies especially to Settings, dialogs, logs, and explanatory copy; avoid 9-12px body text on dark surfaces unless the text is purely badge chrome
 - **Micro-label hard floor - MUST follow everywhere**: never use uppercase tracking labels below 11px for anything the user needs to read (section headers, group labels, field captions, status tags inside content areas). 11px is the absolute minimum for any label that carries meaning; below that is chrome-only territory (icon badges, decorative corner chips). Labels like `INFORMATION:`, `INSTALL OPTIONS`, `PREVIEW` inside dialogs must be ≥ 11px with AA contrast. When a label feels unreadable the fix is always larger text or higher contrast - never accept a tight space as a reason to shrink below the floor
 
@@ -82,15 +82,15 @@ Accessibility:
 - Custom header with drag region across the top bar
 - Main renderer stays hidden until splash handoff is complete
 - Initial desktop window size should scale from the primary display work area instead of a single fixed size; 1080p, 1440p, and 4K should all open into a comfortably large workspace
-- The whole renderer is **uniformly zoom-scaled to the display resolution** so the UI renders the same logical layout on every monitor - never a smaller window holding the same fixed-pixel UI (which cramps controls and truncates table columns to `Down…`), and never a huge window holding a tiny sparse UI. The main process applies a single page zoom factor derived from the display work area relative to a 1440p baseline (`computeResolutionZoom` in `src/main/index.ts`, clamped `0.7–2.0`): ≈`0.75` at 1080p, `1.0` at 1440p, `1.5` at 4K@100%. Because the work area is reported in DIPs, OS display scaling is already accounted for, and because window size and zoom scale by the same ratio off the baseline, every resolution gets identical logical layout space. The factor re-applies on load, when the window moves to another monitor, and on display-metrics changes. Do NOT solve cramped/truncated layouts on small screens with per-component breakpoints - the global zoom is the single scaling mechanism
+- The whole renderer is **uniformly zoom-scaled to the display resolution** so the UI renders the same logical layout on every monitor - never a smaller window holding the same fixed-pixel UI (which cramps controls and truncates table columns to `Down…`), and never a huge window holding a tiny sparse UI. The main process applies a single page zoom factor derived from the display work area relative to a 1440p baseline (`computeResolutionZoom` in `src/main/index.ts`, clamped `0.85–2.0`): `1.0` at 1440p, `1.5` at 4K@100%, and BELOW the baseline the zoom shrinks at half strength (1080p ≈ `0.86`) - a fully proportional downscale rendered UI text at ~9px physical on 1080p, which is unreadable. The baseline factor stays exactly `1.0`: fractional zoom renders text/hairlines at broken pixel metrics and the whole UI reads blurry, so when the UI should read bigger, bump the REAL type scale in the renderer (reading sizes are 13/14/15px after the +1px type-scale pass), never an optical zoom multiplier - a fully proportional downscale rendered 13px UI text at ~9px physical on 1080p, which is unreadable, so below the baseline readability wins over identical logical space (the library scrolls horizontally and Mod Name flexes to absorb the smaller viewport). Because the work area is reported in DIPs, OS display scaling is already accounted for. The factor re-applies on load, when the window moves to another monitor, and on display-metrics changes. Do NOT solve cramped/truncated layouts on small screens with per-component breakpoints - the global zoom is the single scaling mechanism
 - Background uses a subtle static atmospheric field from App.tsx and globals.css
 - Avoid animated parallax star layers in the main shell; keep the background understated and low-cost to render
 
 ### Header
 
 - Height: 56px
-- Left side: Hyperion mark + wordmark
-- A subtle app version marker should live in the shell header so the current build is visible from any page without opening Settings
+- Left side: the Hyperion mark only (accent rounded square with the white geometric brand H, mirroring the app icon) - no wordmark text and no version marker in the header
+- The header shows no version marker - the current build lives in the Settings header chip and the About tab
 - Right side: single-step updater CTA, the light/dark/system mode toggle, the icon-only language selector, the App Logs button, and native window controls - all sharing one HeroUI icon-button chrome (h-9 rounded-lg `--surface` fill, `--surface-secondary` hover)
 - The terminal icon in the header opens App Logs; it is not an in-app terminal session
 
@@ -142,8 +142,8 @@ Alignment rules:
 ### Splash
 
 - Minimal, animation-only loading screen handled in the main process (inline HTML, no status text)
-- HeroUI language: a flat, borderless rounded dark card, the brand mark (rounded accent square + inner square) gently floating, the HYPERION wordmark, and a quiet rounded indeterminate progress bar
-- The brand mark and progress bar are tinted with the **user's chosen accent color**, and the card follows the **light/dark mode** (system resolved via Electron's nativeTheme), so the splash matches the app that follows
+- **Icon-only**: nothing but the oversized brand mark (rounded accent square with the white geometric brand H, mirroring the app icon) gently floating on a fully transparent window with a soft pulsing accent-colored glow - no card, no progress bar, no wordmark text
+- The mark is tinted with the **user's chosen accent color**, so the splash matches the app that follows. The brand H itself is **always white** (like the app icon) in every accent - never the accent-foreground, which flips dark on light accents like yellow/green. The glow is a radial-gradient layer behind the mark, never an animated drop-shadow filter (that creates a rectangular compositor layer that reads as a faint box over the desktop on transparent windows)
 - No glows, rotating frames, sweeping beams, or faux-terminal ornaments
 
 ### Welcome / first setup
@@ -156,7 +156,7 @@ Alignment rules:
 - Show the current Hyperion version as a subdued detail so first-run/setup states still expose build context before the main shell appears
 
 Welcome screen:
-- Centered: the Hyperion brand mark (the shared accent-colored rounded square + inner square + `HYPERION` wordmark, reused from the header), a large sentence-case headline ("Let's set up your workspace"), and a short reassuring subtitle that the setup is quick and one-time
+- Centered: the Hyperion brand mark (the shared accent-colored rounded square with the white brand H + `HYPERION` wordmark, reused from the header), a large sentence-case headline ("Let's set up your workspace"), and a short reassuring subtitle that the setup is quick and one-time
 - A preview list of the things to configure - each row is a numbered circle, an accent icon, the label, and a plain one-line description; the optional rows (Downloads, Nexus) carry a quiet `Optional` tag
 - A single primary `Get started` CTA advances into the wizard; elements stagger in with `.fade-up` (small `animationDelay` increments)
 
@@ -193,10 +193,9 @@ Setup wizard:
 - Table sorting should be available from `Mod Name`, `Category`, and `Installed`
 - Sort icons should stay visually secondary and sit tight to the label without affecting the left alignment of the header text
 - The `Category` column shows the mod's category as plain left-aligned text in the neutral secondary text color (not type-colored, not a bordered badge chip); when a Nexus category is known it shows the real Nexus category name, otherwise the detected type label. Category values must preserve source casing from Nexus or the detected type label
-- Columns resize **cascade-style** (like a file explorer / data grid): `#`, `Version`, `Category`, and `Date` each have their own right-border drag handle and an explicit pixel width. Dragging a handle resizes only that column; the columns to its right shift along (cascade). Growing past the viewport scrolls horizontally (the list scroll region is `overflow-auto`, and rows use `min-w-max` so they extend to the full column width). The enable-toggle, `Mod Name`, and trailing `Actions` columns are **static** (no handle): `Mod Name` absorbs extra horizontal space so `Version`, `Category`, `Date`, and `Actions` stay pushed to the right edge on wide layouts, while `Actions` still holds only icon buttons and stays adjacent to `Date`. After first run the layout is persisted in app settings (`libraryColumnWidths`) and restored across sessions
+- Columns are **fixed - not user-resizable**: the enable-toggle, `#`, `Version`, `Category`, `Date`, and `Actions` all have set widths sized to their content (version numbers, real Nexus category names, the full Windows timestamp), and `Mod Name` flexes to absorb the remaining space so `Version` through `Actions` stay pushed to the right edge on wide layouts. Because the flexible column shrinks first (down to a hard minimum), the table always fits the viewport - **no permanent horizontal scrollbar on smaller windows/resolutions**; horizontal scroll only appears below ~1080px logical width, where nothing readable would fit anyway. Do not reintroduce drag handles or persisted column widths
 - Every data cell (`Mod Name`, `Version`, `Category`, `Date`) clips with `overflow-hidden` + single-line truncation, so a narrowed column never lets its text spill over the next column; the `gap` between columns keeps a minimum visual separation
-- Resizing is **content-aware**: each column's minimum width is raised at runtime to the widest actual text currently shown (measured from the loaded mods, plus a small buffer), so a drag stops exactly where the content still fits rather than continuing to shrink and truncate. Columns also grow to that content minimum on load so they never start truncated. `Category` and `Date` use this so e.g. "VISUALS AND GRAPHICS" or a full timestamp can't be cut off by dragging
-- All library row variants (header, mod rows, install/delete progress rows) read one shared grid template from the `--library-grid` CSS variable set on the list scroll container, so a resize updates every row in lockstep
+- All library row variants (header, mod rows, install/delete progress rows) read one shared static grid template (`LIBRARY_GRID_TEMPLATE`), so every row stays in lockstep
 - Bulk actions should appear only when multiple mods are selected
 - Sort affordance should keep the entire header cell clickable, left align the label, and show only one active sorted column at a time
 - When the local status filter is `Enabled` or `Disabled`, the enable/disable-all control should be visibly disabled and explain that state through the shared tooltip treatment

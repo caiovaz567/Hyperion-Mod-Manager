@@ -6,7 +6,7 @@ import { useTranslation } from '../../i18n/I18nContext'
 import { Icon } from '../ui/Icon'
 
 export const detailTitleClass = 'text-[1.12rem] font-bold leading-[1.08] tracking-[-0.01em] text-[var(--text-primary)] sm:text-[1.18rem]'
-export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-[13px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
+export const detailToolbarButtonClass = 'group flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-4 text-[14px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
 
 // Same metrics/treatment as the shared UnderlineTabs in uiKit - one tab pattern app-wide.
 export const TabButton: React.FC<{
@@ -81,15 +81,15 @@ export const ConflictSection: React.FC<{
       >
         <Icon name={isWin ? 'visibility' : 'visibility_off'} className="text-[17px] shrink-0" style={{ color: accent }} />
 
-        <span className="text-[13px] font-semibold" style={{ color: accent }}>
+        <span className="text-[14px] font-semibold" style={{ color: accent }}>
           {title}
         </span>
-        <span className="text-[13px] text-[var(--text-support)]">
+        <span className="text-[14px] text-[var(--text-support)]">
           {isWin ? t('library.detail.conflictWinsSubtitle') : t('library.detail.conflictLossSubtitle')}
         </span>
 
         <span
-          className="ml-auto shrink-0 text-[13px] font-semibold tabular-nums px-2.5 py-1 rounded-md border-0"
+          className="ml-auto shrink-0 text-[14px] font-semibold tabular-nums px-2.5 py-1 rounded-md border-0"
           style={{ color: accent, background: `${accent}22` }}
         >
           {count}
@@ -127,7 +127,7 @@ export const ConflictSection: React.FC<{
                   {/* File / resource path */}
                   <div className="min-w-0 px-5 py-2 flex items-center">
                     <span
-                      className={`font-mono text-[13px] break-all ${unresolved ? 'text-[var(--text-muted)]' : 'text-[var(--text-secondary)]'}`}
+                      className={`font-mono text-[14px] break-all ${unresolved ? 'text-[var(--text-muted)]' : 'text-[var(--text-secondary)]'}`}
                     >
                       {displayPath}
                     </span>
@@ -136,13 +136,13 @@ export const ConflictSection: React.FC<{
                   {/* Other mod - full name, wraps, never truncated */}
                   <div className="min-w-0 border-l border-[var(--border)] px-5 py-2 flex items-center gap-2">
                     <span
-                      className="min-w-0 text-[13px] font-medium text-[var(--text-secondary)] break-words leading-snug"
+                      className="min-w-0 text-[14px] font-medium text-[var(--text-secondary)] break-words leading-snug"
                       title={opponentTitle}
                     >
                       {opponentName || t('library.detail.conflictUnknownMod')}
                     </span>
                     {typeof opponentOrder === 'number' && (
-                      <span className="shrink-0 text-[12px] text-[var(--text-muted)]">#{opponentOrder + 1}</span>
+                      <span className="shrink-0 text-[13px] text-[var(--text-muted)]">#{opponentOrder + 1}</span>
                     )}
                   </div>
                 </div>
@@ -150,7 +150,7 @@ export const ConflictSection: React.FC<{
             })}
         </div>
       ) : (
-        <div className="bg-[var(--surface)] px-5 py-8 text-[13px] text-[var(--text-muted)]">
+        <div className="bg-[var(--surface)] px-5 py-8 text-[14px] text-[var(--text-muted)]">
           {emptyMessage}
         </div>
       ))}
@@ -206,12 +206,12 @@ export const FileTreeBranch: React.FC<{
           className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left"
         >
           <Icon name={isFolder ? 'folder' : 'description'} className={`text-[17px] ${isFolder ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'}`} />
-          <span className={`min-w-0 truncate text-sm ${selected ? 'text-[var(--accent)]' : 'text-[var(--text-primary-alt)]'}`}>
+          <span className={`min-w-0 truncate text-[15px] ${selected ? 'text-[var(--accent)]' : 'text-[var(--text-primary-alt)]'}`}>
             {node.name}
           </span>
         </button>
 
-        <span className={`shrink-0 pl-4 text-sm ${selected ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}`}>
+        <span className={`shrink-0 pl-4 text-[15px] ${selected ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}`}>
           {isFolder ? tn('library.detail.treeFileCount', node.fileCount) : t('library.detail.treeFile')}
         </span>
       </div>

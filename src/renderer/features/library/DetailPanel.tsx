@@ -80,8 +80,8 @@ function isIncomingConflictForMod(conflict: ConflictInfo, mod: ModMetadata): boo
   )
 }
 
-const treeMenuButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
-const treeMenuDangerButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.1)]'
+const treeMenuButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]'
+const treeMenuDangerButtonClass = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium text-[var(--status-error)] transition-colors hover:bg-[rgb(248_113_113/0.1)]'
 
 function sanitizeTreeEntryName(rawName: string): string {
   return rawName
@@ -668,7 +668,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder={t('library.detail.searchFiles')}
-                    className="h-10 w-full rounded-lg border-0 bg-[var(--surface)] py-1.5 pl-10 pr-[88px] text-sm text-[var(--text-primary-alt)] placeholder-[var(--text-muted)] transition-colors hover:bg-[var(--surface-secondary)] focus:bg-[var(--surface-secondary)] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.4)]"
+                    className="h-10 w-full rounded-lg border-0 bg-[var(--surface)] py-1.5 pl-10 pr-[88px] text-[15px] text-[var(--text-primary-alt)] placeholder-[var(--text-muted)] transition-colors hover:bg-[var(--surface-secondary)] focus:bg-[var(--surface-secondary)] focus:outline-none focus:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.4)]"
                   />
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Ctrl + F
@@ -682,7 +682,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   <div className="text-right">{t('library.detail.columnScope')}</div>
                 </div>
 
-                <div className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-support)]">
+                <div className="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[15px] text-[var(--text-support)]">
                   {fileTreeModeDescription}
                 </div>
 
@@ -704,7 +704,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       />
                     ))
                   ) : (
-                    <div className="px-5 py-14 text-center text-sm text-[var(--text-support)]">
+                    <div className="px-5 py-14 text-center text-[15px] text-[var(--text-support)]">
                       {t('library.detail.noFilesMatched')}
                     </div>
                   )}

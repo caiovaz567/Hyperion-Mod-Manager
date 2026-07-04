@@ -247,7 +247,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                 <div className="flex items-center pl-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: accent }} />
                 </div>
-                <div className="flex items-center font-mono text-[12px] text-[var(--text-muted)]">
+                <div className="flex items-center font-mono text-[13px] text-[var(--text-muted)]">
                   {loadOrder ?? row.mod.order + 1}
                 </div>
                 <div className="flex min-w-0 items-center gap-2">
@@ -257,7 +257,7 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                   >
                     {row.tone === 'win' ? '+' : '-'}{row.conflictCount}
                   </span>
-                  <span className="min-w-0 truncate text-[13px] font-semibold text-[var(--text-primary)]">
+                  <span className="min-w-0 truncate text-[14px] font-semibold text-[var(--text-primary)]">
                     {row.mod.name}
                   </span>
                   {row.hiddenInSeparator ? (
@@ -266,13 +266,13 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                     </span>
                   ) : null}
                 </div>
-                <div className="truncate font-mono text-[12px] text-[var(--text-secondary)]">
+                <div className="truncate font-mono text-[13px] text-[var(--text-secondary)]">
                   {row.mod.version ?? '-'}
                 </div>
-                <div className="truncate text-[12px] text-[var(--text-secondary)]">
+                <div className="truncate text-[13px] text-[var(--text-secondary)]">
                   {category}
                 </div>
-                <div className="flex min-w-0 items-center font-mono text-[12px] text-[var(--text-support)]">
+                <div className="flex min-w-0 items-center font-mono text-[13px] text-[var(--text-support)]">
                   <span className="truncate whitespace-nowrap">
                     {row.tone === 'win' ? t('library.conflict.losesToSelected') : t('library.conflict.winsOverSelected')}
                   </span>

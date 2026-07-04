@@ -6,7 +6,8 @@ import {
   shell,
   screen,
   Menu,
-  clipboard
+  clipboard,
+  nativeImage
 } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -1514,22 +1515,37 @@ async function deployRedmodsUnderVfs(
   // lets the launch card narrate the real deploy stages, and its final lines are
   // the authoritative success/failure signal ("Commandlet deploy has succeeded").
   const deployLogPath = path.join(app.getPath('userData'), 'logs', 'redmod-deploy.log')
-  const cmdExePath = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe')
 
+  const cmdExePath = path.join(process.env.SystemRoot ?? 'C:/Windows', 'System32', 'cmd.exe')
+  const powershellPath = path.join(
+    process.env.SystemRoot ?? 'C:/Windows',
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe',
+  )
+
+  // Tee-Object (Windows PowerShell 5.1) writes UTF-16LE with a BOM - decode by BOM.
   const readDeployLog = (): string => {
     try {
-      return fs.readFileSync(deployLogPath, 'utf8')
+      const raw = fs.readFileSync(deployLogPath)
+      if (raw.length >= 2 && raw[0] === 0xff && raw[1] === 0xfe) {
+        return raw.subarray(2).toString('utf16le')
+      }
+      return raw.toString('utf8')
     } catch {
       return ''
     }
   }
+
+
 
   type DeployAttempt =
     | { status: 'succeeded' }
     | { status: 'cancelled' }
     | { status: 'failed'; failedLine: string }
 
-  const attemptDeploy = async (modListArgs: string): Promise<DeployAttempt> => {
+  const attemptDeploy = async (modNames: string[]): Promise<DeployAttempt> => {
     try {
       fs.mkdirSync(path.dirname(deployLogPath), { recursive: true })
       fs.rmSync(deployLogPath, { force: true })
@@ -1537,12 +1553,24 @@ async function deployRedmodsUnderVfs(
       // Best-effort; the artifact fallback below still validates the deploy.
     }
 
+    // A VISIBLE console showing redMod's live output (Vortex-style). cmd builds
+    // the EXACT raw argument shape redMod's parser expects (-root="path" with the
+    // quotes around the path only - PowerShell's own arg re-quoting produces
+    // "-root=path" which redMod rejects as "No root specified"). cmd merges
+    // stderr BEFORE the pipe, so PowerShell only tees plain text (no red
+    // NativeCommandError wrapping) into the log that powers the card narration
+    // and the success check. NEVER use the bridge's capture:true for a
+    // long-running launch: its ReadFile loop is synchronous and freezes the
+    // whole main process until the child exits.
+    const modListArgs = modNames.map((name) => ` -mod= "${name}"`).join('')
+    const teeCommand = `"${powershellPath}" -NoProfile -Command "$input | Tee-Object -FilePath '${deployLogPath}'"`
+
     const startedAt = Date.now()
     const launch = bridge.launchHookedProcess({
       appPath: cmdExePath,
       // Hooked into the VFS: redMod reads the virtual mods/ tree and its writes
       // land in the overwrite capture instead of the real game folder.
-      commandLine: `"${cmdExePath}" /s /c ""${toolPath}" deploy -root="${gameRoot}"${modListArgs} > "${deployLogPath}" 2>&1"`,
+      commandLine: `"${cmdExePath}" /s /c ""${toolPath}" deploy -root="${gameRoot}"${modListArgs} 2>&1 | ${teeCommand}"`,
       cwd: path.dirname(toolPath),
       capture: false,
       waitMs: 0,
@@ -1551,7 +1579,7 @@ async function deployRedmodsUnderVfs(
       ...launch,
       fingerprint,
       redmods: enabledRedmods.length,
-      modListArgs: modListArgs || '(default: all mods, alphabetical)',
+      modList: modNames.length > 0 ? modNames.join(', ') : '(default: all mods, alphabetical)',
       deployLogPath,
     })
     if (!launch.ok || !launch.pid) {
@@ -1575,21 +1603,25 @@ async function deployRedmodsUnderVfs(
       const logContent = readDeployLog()
       const stageMatches = [...logContent.matchAll(/\[DEPLOY\] Stage (\d+)\/(\d+) - (.+)/g)]
       const lastStage = stageMatches[stageMatches.length - 1]
-      const foundMods = logContent.match(/^Found mod .+$/gm)?.length ?? 0
-      if (lastStage) {
-        const stageNumber = Number.parseInt(lastStage[1], 10)
-        const stageTotal = Math.max(1, Number.parseInt(lastStage[2], 10))
-        const detail = `Stage ${lastStage[1]}/${lastStage[2]} - ${lastStage[3].trim()}${foundMods > 0 ? ` · ${foundMods} mod(s)` : ''}`
-        if (detail !== lastDetail) {
-          lastDetail = detail
-          emitProgress({
-            step: 'Deploying REDmods',
-            key: 'redmod',
-            percent: Math.min(90, 84 + Math.round((stageNumber / stageTotal) * 6)),
-            cancellable: true,
-            detail,
-          })
-        }
+      // Live console feel: surface redMod's most recent output line in the card
+      // (the tool's own words - compile warnings, files written), alongside the
+      // parsed stage. This replaces the empty console window the deploy used to pop.
+      const logLines = logContent.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+      const lastRawLine = logLines[logLines.length - 1] ?? ''
+      const stagePart = lastStage ? `Stage ${lastStage[1]}/${lastStage[2]} - ${lastStage[3].trim()}` : ''
+      const livePart = lastRawLine && !lastRawLine.startsWith('[DEPLOY] Stage') ? lastRawLine : ''
+      const detail = [stagePart, livePart].filter(Boolean).join(' · ')
+      if (detail && detail !== lastDetail) {
+        lastDetail = detail
+        const stageNumber = lastStage ? Number.parseInt(lastStage[1], 10) : 0
+        const stageTotal = lastStage ? Math.max(1, Number.parseInt(lastStage[2], 10)) : 1
+        emitProgress({
+          step: 'Deploying REDmods',
+          key: 'redmod',
+          percent: Math.min(90, 84 + Math.round((stageNumber / stageTotal) * 6)),
+          cancellable: true,
+          detail,
+        })
       }
 
       if (!(await isProcessRunningByPid(launch.pid))) break
@@ -1622,13 +1654,12 @@ async function deployRedmodsUnderVfs(
     return { status: 'failed', failedLine: tailLine.slice(0, 200) }
   }
 
-  const modListArgs = orderedModNames.map((name) => ` -mod= "${name}"`).join('')
-  let attempt = await attemptDeploy(modListArgs)
+  let attempt = await attemptDeploy(orderedModNames)
 
   // Older/newer redMod builds may reject the -mod list syntax; retry once with
   // the default (all mods in the virtual folder, alphabetical) rather than
   // failing the whole launch over a load-order refinement.
-  if (attempt.status === 'failed' && modListArgs) {
+  if (attempt.status === 'failed' && orderedModNames.length > 0) {
     appendVfsLaunchLog('redmod deploy retrying without explicit -mod list', { failedLine: attempt.failedLine })
     emitProgress({
       step: 'Deploying REDmods',
@@ -1637,7 +1668,7 @@ async function deployRedmodsUnderVfs(
       cancellable: true,
       detail: 'Retrying with the default load order',
     })
-    attempt = await attemptDeploy('')
+    attempt = await attemptDeploy([])
   }
 
   if (attempt.status === 'cancelled') return { modded: false, cancelled: true }
@@ -1800,6 +1831,34 @@ if (process.platform === 'win32') {
 }
 
 if (!app.isPackaged) {
+  // Dev gets its OWN data dir. The installed app and `npm run dev` used to share
+  // userData ("Hyperion"): the packaged build encrypts the Nexus API key with a
+  // DPAPI key dev can't read, and a dev settings save then DROPPED the encrypted
+  // field - each side kept destroying the other's key. First dev run seeds the
+  // new dir from the shared one (minus the undecryptable encrypted key) so paths
+  // and caches carry over; only the API key needs re-entering once.
+  const devUserData = `${app.getPath('userData')}-Dev`
+  try {
+    const devSettingsPath = path.join(devUserData, 'settings.json')
+    const sharedUserData = app.getPath('userData')
+    if (!fs.existsSync(devSettingsPath) && fs.existsSync(path.join(sharedUserData, 'settings.json'))) {
+      fs.mkdirSync(devUserData, { recursive: true })
+      for (const fileName of ['settings.json', 'nexus-downloads.json', 'mod-update-cache.json', 'redmod-deploy-state.json']) {
+        const source = path.join(sharedUserData, fileName)
+        if (!fs.existsSync(source)) continue
+        if (fileName === 'settings.json') {
+          const seeded = JSON.parse(fs.readFileSync(source, 'utf-8')) as Record<string, unknown>
+          delete seeded.nexusApiKeyEncrypted
+          fs.writeFileSync(devSettingsPath, JSON.stringify(seeded, null, 2), 'utf-8')
+        } else {
+          fs.copyFileSync(source, path.join(devUserData, fileName))
+        }
+      }
+    }
+  } catch {
+    // Seeding is best-effort; a fresh dev profile just re-runs onboarding.
+  }
+  app.setPath('userData', devUserData)
   app.setPath('sessionData', path.join(app.getPath('temp'), 'Hyperion-dev-session', String(process.pid)))
 }
 
@@ -2009,19 +2068,20 @@ app.on('open-url', (_event, url) => {
 })
 
 function resolveWindowIconPath(): string {
-  if (process.platform === 'win32') {
-    if (app.isPackaged) {
-      return path.join(process.resourcesPath, 'resources', 'icon.png')
-    }
-
-    return path.join(app.getAppPath(), 'build', 'icon.ico')
-  }
-
   if (app.isPackaged) {
     return path.join(process.resourcesPath, 'resources', 'icon.png')
   }
-
   return path.join(app.getAppPath(), 'src', 'main', 'resources', 'icon.png')
+}
+
+// Load the window icon into memory instead of handing Windows a file path: the
+// shell caches icons by path, so a replaced icon file keeps showing the OLD
+// artwork on the taskbar until the cache is cleared. A NativeImage bypasses the
+// cache entirely (falls back to the path if decoding ever fails).
+function resolveWindowIcon(): Electron.NativeImage | string {
+  const iconPath = resolveWindowIconPath()
+  const image = nativeImage.createFromPath(iconPath)
+  return image.isEmpty() ? iconPath : image
 }
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -2066,19 +2126,29 @@ function getInitialMainWindowBounds(): {
 //
 // The factor is derived from the display work area relative to a 1440p baseline
 // (the design target). Electron reports the work area in DIPs, so OS display
-// scaling (e.g. 150% on a 4K laptop) is already folded in. Because both the
-// window size and this zoom scale by the same ratio off the baseline, every
-// resolution ends up with an identical amount of logical layout space.
+// scaling (e.g. 150% on a 4K laptop) is already folded in.
+//
+// Above the baseline the zoom is proportional (4K gets the full 1.5x). BELOW the
+// baseline it shrinks at HALF strength with a hard floor: a fully proportional
+// 0.72x on a 1080p display pushed 13px UI text to ~9px physical - unreadable.
+// Half-strength (1080p => ~0.86) keeps text at a readable size and accepts a
+// somewhat smaller logical viewport instead; the layouts absorb it (the library
+// scrolls horizontally and Mod Name flexes).
 const ZOOM_BASELINE_WIDTH = 2560
 const ZOOM_BASELINE_HEIGHT = 1440
-const ZOOM_MIN = 0.7
+const ZOOM_MIN = 0.85
 const ZOOM_MAX = 2.0
+// NOTE: keep the baseline zoom at exactly 1.0 - fractional zoom factors render
+// text/hairlines at broken pixel metrics and the whole UI reads slightly blurry.
+// When the UI should read bigger, bump the REAL font sizes in the renderer (the
+// type scale), never an optical zoom multiplier.
 
 function computeResolutionZoom(win: BrowserWindow): number {
   const display = screen.getDisplayMatching(win.getBounds())
   const { width, height } = display.workArea
   const ratio = Math.min(width / ZOOM_BASELINE_WIDTH, height / ZOOM_BASELINE_HEIGHT)
-  return clampNumber(Math.round(ratio * 100) / 100, ZOOM_MIN, ZOOM_MAX)
+  const zoom = ratio >= 1 ? ratio : 1 - (1 - ratio) / 2
+  return clampNumber(Math.round(zoom * 100) / 100, ZOOM_MIN, ZOOM_MAX)
 }
 
 function createMainWindow(): BrowserWindow {
@@ -2095,7 +2165,7 @@ function createMainWindow(): BrowserWindow {
     title: 'Hyperion',
     titleBarStyle: 'hidden',
     backgroundColor: '#0a0a0f',
-    icon: resolveWindowIconPath(),
+    icon: resolveWindowIcon(),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -3026,7 +3096,10 @@ function registerGlobalHandlers(): void {
         percent: 100,
         state: 'done',
         cancellable: false,
-        detail: `PID ${launch.pid ?? 'unknown'} attached to VFS`,
+        // Human copy, not diagnostics - the PID lives in the vfs launch log.
+        detail: `Running with ${enabledMods.length} active mods`,
+        detailKey: 'launchedDetail',
+        detailVars: { count: enabledMods.length },
       })
       startGameExitMonitor(launch.pid)
       return { ok: true }

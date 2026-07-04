@@ -239,14 +239,14 @@ a[href]) {
 .hyperion-row-attention { animation: row-attention 1.45s ease-out both; }
 
 .ui-support-text {
-  font-size: 0.875rem;
+  font-size: 0.9375rem; /* 15px - shared support-text baseline */
   line-height: 1.45;
   color: var(--text-support);
 }
 
 .ui-support-mono {
   font-family: 'Inter', sans-serif;
-  font-size: 0.875rem;
+  font-size: 0.9375rem; /* 15px - shared support-text baseline */
   line-height: 1.45;
   font-feature-settings: 'tnum' 1;
   color: var(--text-support);

@@ -40,7 +40,7 @@ const MenuButton: React.FC<{
 }> = ({ icon, children, onClick, tone = 'default', labelClassName = '' }) => (
   <button
     onClick={() => void onClick()}
-    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${menuButtonClassByTone[tone]}`}
+    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] font-medium transition-colors ${menuButtonClassByTone[tone]}`}
   >
     <Icon name={icon} className="text-[18px]" />
     <span className={labelClassName}>{children}</span>

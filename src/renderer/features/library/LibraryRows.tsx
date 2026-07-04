@@ -165,7 +165,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
     {displayedMods.length === 0 ? (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <Icon name="inventory_2" className="text-[48px] text-[var(--text-muted)]" />
-        <span className="text-[var(--text-support)] text-sm font-mono tracking-tight">
+        <span className="text-[var(--text-support)] text-[15px] font-mono tracking-tight">
           {filter
             ? t('library.empty.noMatch')
             : totalCount === 0

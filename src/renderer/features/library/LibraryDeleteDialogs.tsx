@@ -76,10 +76,10 @@ export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
         detailContent={(
           <div className="px-4 py-3">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-              <div className="text-sm text-[var(--text-support)]">
+              <div className="text-[15px] text-[var(--text-support)]">
                 {t('library.delete.modsBeingUninstalled')}
               </div>
-              <div className="rounded-lg bg-[rgb(248_113_113/0.12)] px-2.5 py-1 text-sm font-semibold text-[var(--status-error)]">
+              <div className="rounded-lg bg-[rgb(248_113_113/0.12)] px-2.5 py-1 text-[15px] font-semibold text-[var(--status-error)]">
                 {t('library.delete.selectedCount', { count: pendingAction.count })}
               </div>
             </div>
@@ -87,7 +87,7 @@ export const LibraryDeleteDialogs: React.FC<LibraryDeleteDialogsProps> = ({
               {selectedMods.map((mod) => (
                 <div
                   key={mod.uuid}
-                  className="rounded-lg bg-[var(--surface-secondary)] px-3 py-2 text-[12px] text-[var(--text-secondary)]"
+                  className="rounded-lg bg-[var(--surface-secondary)] px-3 py-2 text-[13px] text-[var(--text-secondary)]"
                 >
                   {mod.name}
                 </div>

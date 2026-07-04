@@ -1,7 +1,7 @@
 # Hyperion
 
 <p align="center">
-  <img src="src/main/resources/hyperion-logo.svg" alt="Hyperion" width="520" />
+  <img src="src/main/resources/hyperion-logo.png" alt="Hyperion" width="520" />
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@ Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps you
 
 <!-- Hero image: a single showcase shot (e.g. the library in several accent colors / light & dark). Replace the src below. -->
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e0458ebb-aad1-4ff5-90d1-38c10bbeba0e" alt="Hyperion" width="900" />
+  <img src="https://github.com/user-attachments/assets/ec164022-4c90-4e4f-8838-36a3aefb043c" alt="Hyperion" width="900" />
 </p>
 
 ## Why Hyperion Exists

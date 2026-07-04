@@ -300,7 +300,7 @@ const StructuredDataPanel: React.FC<{
       </div>
       {expanded ? (
         value === null || value === undefined ? (
-          <div className="px-4 py-3 text-[13px] text-[var(--text-muted)]">{emptyLabel}</div>
+          <div className="px-4 py-3 text-[14px] text-[var(--text-muted)]">{emptyLabel}</div>
           ) : (
           <div className="border-t border-[var(--border)] bg-[var(--code-bg)] px-3 py-2.5">
             {/* Mode-aware code surface: dark editor tones in dark mode, a light
@@ -581,7 +581,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="justify-self-start font-mono">{entry.method}</HyperionBadge>
           <span className="min-w-0">
             <span className="mb-1 flex items-center gap-2">
-              <span className="block truncate font-mono text-sm text-[var(--text-primary-alt)]">{entry.endpoint}</span>
+              <span className="block truncate font-mono text-[15px] text-[var(--text-primary-alt)]">{entry.endpoint}</span>
               {previewLabel ? (
                 <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-[var(--surface-secondary)] px-2 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-secondary)]">
                   {previewLabel}
@@ -600,7 +600,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           <div className="border-t border-[var(--border)] px-6 py-5">
             {previewLabel ? (
               <LabeledPanel icon="visibility" label={t('logs.preview')}>
-                <div className="px-4 py-3 font-mono text-[13px] text-[var(--text-secondary)]">
+                <div className="px-4 py-3 font-mono text-[14px] text-[var(--text-secondary)]">
                   {t('logs.previewMock')}
                 </div>
               </LabeledPanel>
@@ -610,18 +610,18 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                 <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="font-mono">{entry.method}</HyperionBadge>
               </MetaCard>
               <MetaCard label={t('logs.endpoint')}>
-                <div className="font-mono text-[13px] text-[var(--text-primary)] break-all">{entry.endpoint}</div>
+                <div className="font-mono text-[14px] text-[var(--text-primary)] break-all">{entry.endpoint}</div>
               </MetaCard>
               <MetaCard label={t('logs.status')}>
-                <div className="font-mono text-[13px] text-[var(--text-primary)]">{formatStatusCode(entry)}</div>
+                <div className="font-mono text-[14px] text-[var(--text-primary)]">{formatStatusCode(entry)}</div>
               </MetaCard>
               <MetaCard label={t('logs.apiTime')}>
-                <div className="font-mono text-[13px] text-[var(--text-primary)]">{formatDuration(entry.durationMs)}</div>
+                <div className="font-mono text-[14px] text-[var(--text-primary)]">{formatDuration(entry.durationMs)}</div>
               </MetaCard>
             </div>
             <div className="mb-4">
               <LabeledPanel icon="link" label={t('logs.requestUrl')}>
-                <div className="px-4 pb-3 font-mono text-[13px] text-[var(--text-primary)] break-all">
+                <div className="px-4 pb-3 font-mono text-[14px] text-[var(--text-primary)] break-all">
                   {entry.url}
                 </div>
               </LabeledPanel>
@@ -629,7 +629,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             {entry.error ? (
               <div className="mb-4">
                 <LabeledPanel icon="error" label={t('logs.error')} tone="error">
-                  <div className="px-4 pb-3 font-mono text-[13px] text-[var(--status-error)]">
+                  <div className="px-4 pb-3 font-mono text-[14px] text-[var(--status-error)]">
                     {entry.error}
                   </div>
                 </LabeledPanel>
@@ -684,7 +684,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                 {t('logs.live')}
               </span>
             </div>
-            <p className="max-w-3xl text-sm leading-relaxed text-[var(--text-support)]">
+            <p className="max-w-3xl text-[15px] leading-relaxed text-[var(--text-support)]">
               {t('logs.description')}
             </p>
           </div>
@@ -707,7 +707,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             withBorder={false}
           />
           <div className="flex shrink-0 items-center gap-3 pb-2">
-            <span className="text-[13px] text-[var(--text-support)]">
+            <span className="text-[14px] text-[var(--text-support)]">
               {tn('logs.entries', activeCount)}
             </span>
             <Tooltip content={clearTabLabel}>
@@ -735,7 +735,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           {activeTab === 'general' ? (
             generalEntries.length === 0 ? (
               <div className="flex h-full min-h-[260px] items-center justify-center rounded-xl bg-[var(--surface)]">
-                <div className="text-center text-sm text-[var(--text-muted)]">{emptyLabel}</div>
+                <div className="text-center text-[15px] text-[var(--text-muted)]">{emptyLabel}</div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -760,13 +760,13 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                         <div className="border-t border-[var(--border)] px-4 py-5">
                           <div className="mb-4 grid gap-3 md:grid-cols-3">
                             <MetaCard label={t('logs.source')}>
-                              <div className="font-mono text-[13px] text-[var(--text-primary)]">{entry.source}</div>
+                              <div className="font-mono text-[14px] text-[var(--text-primary)]">{entry.source}</div>
                             </MetaCard>
                             <MetaCard label={t('logs.level')}>
-                              <div className="font-mono text-[13px] uppercase tracking-[0.06em] text-[var(--text-primary)]">{entry.level}</div>
+                              <div className="font-mono text-[14px] uppercase tracking-[0.06em] text-[var(--text-primary)]">{entry.level}</div>
                             </MetaCard>
                             <MetaCard label={t('logs.occurred')}>
-                              <div className="font-mono text-[13px] text-[var(--text-primary)]">{formatWindowsDateTime(entry.timestamp)}</div>
+                              <div className="font-mono text-[14px] text-[var(--text-primary)]">{formatWindowsDateTime(entry.timestamp)}</div>
                             </MetaCard>
                           </div>
                           <StructuredDataPanel
@@ -790,7 +790,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             <div className="space-y-2">
               {requestEntries.length === 0 ? (
                 <div className="flex min-h-[180px] items-center justify-center rounded-xl bg-[var(--surface)]">
-                  <div className="text-center text-sm text-[var(--text-muted)]">{t('logs.emptyRequestsLive')}</div>
+                  <div className="text-center text-[15px] text-[var(--text-muted)]">{t('logs.emptyRequestsLive')}</div>
                 </div>
               ) : (
                 requestEntries.map((entry) => renderRequestEntry(entry))

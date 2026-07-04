@@ -179,10 +179,10 @@ export const Sidebar: React.FC = () => {
         : t('shell.account.notConnected')
 
   return (
-    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[var(--bg-subtle)] bg-[var(--bg-base-deep)] py-8 text-sm text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)]">
+    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[var(--bg-subtle)] bg-[var(--bg-base-deep)] py-8 text-[15px] text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)]">
       <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-0 text-[12px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-0 text-[13px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
         >
           {nexusAccount.status === 'connected' ? (
             getAccountInitials(nexusAccount.data.name)
@@ -254,7 +254,7 @@ export const Sidebar: React.FC = () => {
           isDisabled={isLaunchDisabled && !gameRunning && !launching}
           fullWidth
           variant={!gameRunning && !launching && !isLaunchDisabled ? 'primary' : 'tertiary'}
-          className={`h-auto min-w-0 w-full overflow-hidden rounded-lg border-0 px-2 py-3 text-[13px] font-semibold whitespace-nowrap transition-[background-color,color] duration-150 ${
+          className={`h-auto min-w-0 w-full overflow-hidden rounded-lg border-0 px-2 py-3 text-[14px] font-semibold whitespace-nowrap transition-[background-color,color] duration-150 ${
             gameRunning
               ? 'bg-[rgba(52,211,153,0.14)] text-[#34D399] cursor-default'
               : launching
@@ -285,7 +285,7 @@ export const Sidebar: React.FC = () => {
             onPress={handleKillGame}
             fullWidth
             variant="danger-soft"
-            className="h-auto min-w-0 w-full overflow-hidden rounded-lg border-0 px-2 py-3 text-[13px] font-semibold whitespace-nowrap bg-[rgba(248,113,113,0.12)] text-[var(--status-error)] hover:bg-[rgba(248,113,113,0.2)] transition-[background-color] duration-150"
+            className="h-auto min-w-0 w-full overflow-hidden rounded-lg border-0 px-2 py-3 text-[14px] font-semibold whitespace-nowrap bg-[rgba(248,113,113,0.12)] text-[var(--status-error)] hover:bg-[rgba(248,113,113,0.2)] transition-[background-color] duration-150"
           >
             <span className="flex items-center justify-center">
               <Icon name="power_settings_new" className="shrink-0 text-[18px]" />

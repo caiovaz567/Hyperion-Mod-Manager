@@ -3,7 +3,6 @@ import { Button } from '@heroui/react'
 import { useAppStore } from '../../store/useAppStore'
 import { IpcService } from '../../services/IpcService'
 import { Tooltip } from './Tooltip'
-import { useAppVersion } from '../../hooks/useAppVersion'
 import { useTranslation } from '../../i18n/I18nContext'
 import { useTheme, type UiMode } from '../../theme/ThemeContext'
 import { Icon } from './Icon'
@@ -53,7 +52,6 @@ const ModeToggle: React.FC = () => {
 
 export const Header: React.FC = () => {
   const { t } = useTranslation()
-  const appVersion = useAppVersion()
   const {
     updateAvailable,
     updateDownloading,
@@ -139,20 +137,24 @@ export const Header: React.FC = () => {
       className="flex justify-between items-center w-full px-6 h-14 bg-[var(--bg-base-deep)] border-b-[0.5px] border-[var(--bg-subtle)] z-50 flex-shrink-0"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      {/* Left: brand */}
-      <div className="flex items-center gap-6" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <div className="flex items-center gap-3 select-none">
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgb(var(--accent-rgb)/0.4)] bg-[var(--accent)] shadow-[0_0_18px_rgb(var(--accent-rgb)/0.25)]">
-            <span className="h-3 w-3 rounded-[2px] bg-[var(--accent-foreground)]" />
+      {/* Left: brand. -ml-6 + pl-5 put the 40px mark's center exactly on the sidebar
+          rail axis (40px from the window edge), aligned with the avatar below.
+          Hovering reveals the HYPERION wordmark, which tucks away on mouse leave. */}
+      <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="group -ml-6 flex items-center pl-5 select-none">
+          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[rgb(var(--accent-rgb)/0.4)] bg-[var(--accent)] shadow-[0_0_18px_rgb(var(--accent-rgb)/0.25)]">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="1" y="0" width="5" height="20" fill="#FFFFFF" />
+              <rect x="14" y="0" width="5" height="20" fill="#FFFFFF" />
+              <rect x="5" y="7.5" width="10" height="5" fill="#FFFFFF" />
+            </svg>
           </span>
-          <div className="flex items-end gap-2">
-            <span className="brand-font font-black tracking-tighter text-2xl text-[var(--text-primary)]">
-              HYPERION
-            </span>
-            <span className="ui-support-mono pb-[2px] text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              {appVersion}
-            </span>
-          </div>
+          <span
+            aria-hidden="true"
+            className="brand-font max-w-0 overflow-hidden whitespace-nowrap text-2xl font-black tracking-tighter text-[var(--text-primary)] opacity-0 transition-all duration-300 ease-out group-hover:ml-3 group-hover:max-w-[220px] group-hover:opacity-100"
+          >
+            HYPERION
+          </span>
         </div>
       </div>
 
@@ -167,7 +169,7 @@ export const Header: React.FC = () => {
               onPress={() => void handleUpdateAction()}
               isDisabled={updateDownloading || updateDownloaded}
               variant="tertiary"
-              className={`group relative flex h-9 min-w-[180px] items-center justify-center overflow-hidden rounded-lg border-0 px-4 text-[13px] font-medium transition-colors ${updateToneClass} ${
+              className={`group relative flex h-9 min-w-[180px] items-center justify-center overflow-hidden rounded-lg border-0 px-4 text-[14px] font-medium transition-colors ${updateToneClass} ${
                 updateDownloading || updateDownloaded ? 'cursor-default' : ''
               }`}
             >

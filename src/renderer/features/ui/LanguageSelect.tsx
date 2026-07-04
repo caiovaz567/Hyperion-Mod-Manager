@@ -61,7 +61,7 @@ export const LanguageSelect: React.FC<{
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={t('language.select')}
-          className={`inline-flex h-10 items-center gap-2 rounded-lg border-0 bg-[var(--surface-secondary)] px-3 text-[13px] font-medium text-[var(--text-primary-alt)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)] ${buttonClassName}`}
+          className={`inline-flex h-10 items-center gap-2 rounded-lg border-0 bg-[var(--surface-secondary)] px-3 text-[14px] font-medium text-[var(--text-primary-alt)] transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)] ${buttonClassName}`}
         >
           <Icon name="language" className="text-[var(--text-support)]" style={{ fontSize: 17 }} />
           <span className="truncate">{current.nativeLabel}</span>
@@ -76,7 +76,7 @@ export const LanguageSelect: React.FC<{
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
-          <div className="px-3.5 pb-1.5 pt-1 text-[12px] font-medium text-[var(--text-muted)]">
+          <div className="px-3.5 pb-1.5 pt-1 text-[13px] font-medium text-[var(--text-muted)]">
             {t('language.choose')}
           </div>
           {languages.map((locale) => {
@@ -99,7 +99,7 @@ export const LanguageSelect: React.FC<{
                   {active ? <Icon name="check" style={{ fontSize: 15 }} /> : null}
                 </span>
                 <span className="flex min-w-0 flex-col">
-                  <span className={`truncate text-[13px] ${active ? 'font-semibold' : 'font-medium'}`}>{locale.nativeLabel}</span>
+                  <span className={`truncate text-[14px] ${active ? 'font-semibold' : 'font-medium'}`}>{locale.nativeLabel}</span>
                   {locale.label !== locale.nativeLabel && (
                     <span className="truncate text-[11px] text-[var(--text-muted)]">
                       {locale.label}

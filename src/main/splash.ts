@@ -1,10 +1,10 @@
 import { BrowserWindow, nativeTheme } from 'electron'
 import { resolveAccent, type AccentPreset } from '../shared/theme/accents'
 
-// HeroUI-style splash: a flat, borderless card (same surface language as the app, light or
-// dark following the user's uiMode), the brand mark tinted with the chosen accent color,
-// and a quiet rounded indeterminate progress bar. No glows, rotating frames, or beams.
-function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
+// Icon-only splash: nothing but the oversized brand mark (accent plate + white H,
+// mirroring the app icon) gently floating on a fully transparent window with a
+// soft pulsing accent glow - no card, no progress bar, no text.
+export function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -44,72 +44,33 @@ function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
         position: relative;
       }
 
-      .window-surface {
+      /* Glow as a radial gradient BEHIND the mark - an animated drop-shadow filter
+         creates a rectangular compositor layer that reads as a faint "invisible
+         wall" over the desktop on transparent windows. A gradient fades to true
+         transparency with no layer edge. */
+      .glow {
         position: absolute;
-        inset: 0;
-        border-radius: 16px;
-        overflow: hidden;
-        background: var(--bg);
-        box-shadow:
-          0 18px 44px rgba(0,0,0,${dark ? '0.5' : '0.22'}),
-          inset 0 0 0 1px var(--edge);
-      }
-
-      .shell {
-        position: relative;
-        width: 420px;
-        min-height: 230px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 22px;
+        left: 50%;
+        top: 50%;
+        width: 470px;
+        height: 470px;
+        margin-left: -235px;
+        margin-top: -235px;
+        border-radius: 50%;
+        /* The icon covers the central ~330px - the visible glow lives in the outer
+           ring, so the gradient must stay strong PAST the icon's edge (~70%). */
+        background: radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.55), rgb(var(--accent-rgb) / 0.38) 62%, rgb(var(--accent-rgb) / 0.16) 82%, transparent 100%);
+        animation: glow-pulse 2s ease-in-out infinite;
+        pointer-events: none;
       }
 
       .logo-mark {
-        width: 64px;
-        height: 64px;
+        position: relative;
+        width: 330px;
+        height: 330px;
         display: block;
         animation: fade-in 0.35s ease forwards, float-mark 2s ease-in-out infinite;
         opacity: 0;
-      }
-
-      .brand-lockup {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 14px;
-      }
-
-      .title {
-        font-size: 24px;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        color: var(--text);
-        line-height: 1;
-        text-transform: uppercase;
-        animation: fade-in 0.4s 0.12s ease forwards;
-        opacity: 0;
-      }
-
-      .progress-track {
-        width: 190px;
-        height: 5px;
-        border-radius: 999px;
-        background: var(--surface);
-        position: relative;
-        overflow: hidden;
-      }
-
-      .progress-bar {
-        position: absolute;
-        inset: 0;
-        border-radius: 999px;
-        /* Fills from the left, then drains from the right - a calm, self-contained
-           loop that never travels outside the track. */
-        background: var(--accent);
-        animation: indeterminate 1.5s ease-in-out infinite;
-        will-change: transform;
       }
 
       @keyframes fade-in {
@@ -118,31 +79,23 @@ function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
 
       @keyframes float-mark {
         0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-4px); }
+        50% { transform: translateY(-8px); }
       }
 
-      @keyframes indeterminate {
-        0%     { transform: scaleX(0); transform-origin: left; }
-        50%    { transform: scaleX(1); transform-origin: left; }
-        50.01% { transform: scaleX(1); transform-origin: right; }
-        100%   { transform: scaleX(0); transform-origin: right; }
+      @keyframes glow-pulse {
+        0%, 100% { opacity: 0.45; transform: scale(0.9); }
+        50%      { opacity: 1; transform: scale(1.06); }
       }
     </style>
   </head>
   <body>
-    <div class="window-surface" aria-hidden="true"></div>
-    <div class="shell">
-      <svg class="logo-mark" width="64" height="64" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="6" y="6" width="32" height="32" rx="9" fill="var(--accent)"></rect>
-        <rect x="16" y="16" width="12" height="12" rx="3" fill="var(--accent-foreground)"></rect>
-      </svg>
-      <div class="brand-lockup">
-        <span class="title">Hyperion</span>
-        <div class="progress-track">
-          <div class="progress-bar"></div>
-        </div>
-      </div>
-    </div>
+    <div class="glow" aria-hidden="true"></div>
+    <svg class="logo-mark" width="330" height="330" viewBox="4 4 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="6" width="32" height="32" rx="9" fill="var(--accent)"></rect>
+      <rect x="14.5" y="14" width="4" height="16" fill="#FFFFFF"></rect>
+      <rect x="25.5" y="14" width="4" height="16" fill="#FFFFFF"></rect>
+      <rect x="17.5" y="20" width="9" height="4" fill="#FFFFFF"></rect>
+    </svg>
   </body>
 </html>`
 }
@@ -150,7 +103,7 @@ function buildSplashHtml(accent: AccentPreset, dark: boolean): string {
 export function createSplashWindow(accentColorId?: string, uiMode?: 'light' | 'dark' | 'system'): BrowserWindow {
   const splash = new BrowserWindow({
     width: 480,
-    height: 300,
+    height: 480,
     show: false,
     frame: false,
     transparent: true,

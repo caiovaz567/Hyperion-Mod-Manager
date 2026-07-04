@@ -39,7 +39,7 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
       <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 pt-6">
         <HyperionModalHeader icon="move_item" title={t('dialogs.moveToSeparator.title')} className="mb-3" />
 
-        <p className="mb-4 text-sm leading-relaxed text-[var(--text-support)]">
+        <p className="mb-4 text-[15px] leading-relaxed text-[var(--text-support)]">
           {modCount === 1
             ? t('dialogs.moveToSeparator.descriptionOne')
             : t('dialogs.moveToSeparator.descriptionMany', { count: modCount })}
@@ -64,14 +64,14 @@ export const MoveToSeparatorDialog: React.FC<MoveToSeparatorDialogProps> = ({
                 className="group grid h-10 w-full grid-cols-[28px_minmax(0,1fr)_28px] items-center rounded-lg px-3 text-center transition-colors hover:bg-[rgb(var(--accent-rgb)/0.10)] focus:outline-none focus-visible:bg-[rgb(var(--accent-rgb)/0.12)]"
               >
                 <span aria-hidden="true" />
-                <span className="truncate text-center text-[13px] font-semibold text-[var(--text-primary-alt)] transition-colors group-hover:text-[var(--accent)]">
+                <span className="truncate text-center text-[14px] font-semibold text-[var(--text-primary-alt)] transition-colors group-hover:text-[var(--accent)]">
                   {separator.name}
                 </span>
                 <Icon name="arrow_forward" className="justify-self-end text-[16px] text-[var(--text-muted)] transition-colors group-hover:text-[var(--accent)]" />
               </button>
             ))
           ) : (
-            <div className="px-4 py-6 text-center text-[13px] italic text-[var(--text-muted)]">
+            <div className="px-4 py-6 text-center text-[14px] italic text-[var(--text-muted)]">
               {t('dialogs.moveToSeparator.noMatch')}
             </div>
           )}

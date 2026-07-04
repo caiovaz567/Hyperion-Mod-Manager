@@ -28,7 +28,7 @@ const STEP_LABEL_KEYS: Record<string, TranslationKey> = {
 // progress events; before this card the renderer dropped them and the user only
 // saw the sidebar button spinning on "Launching...".
 export const LaunchProgressCard: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, tn } = useTranslation()
   const [progress, setProgress] = useState<GameLaunchProgress | null>(null)
   const [cancelling, setCancelling] = useState(false)
   const hideTimerRef = useRef<number | null>(null)
@@ -81,12 +81,14 @@ export const LaunchProgressCard: React.FC = () => {
       ? { tile: 'bg-[rgba(52,211,153,0.14)] text-[#34D399]', bar: 'bg-[#34D399]' }
       : { tile: 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)]', bar: 'bg-[var(--accent)]' }
   const percent = Math.min(Math.max(progress.percent, 0), 100)
-  // REDmod's own stage lines take over the detail slot once compilation starts
-  // (percent moves past the initial 84); until then show the translated "first
-  // launch can take minutes" hint so the wait never reads as a hang.
-  const detail = progress.key === 'redmod' && isRunning && percent <= 84
-    ? t('launch.step.redmodHint')
-    : progress.detail
+  // REDmod's live log lines take over the detail slot as soon as the tool starts
+  // talking; until any output exists, show the translated "first launch can take
+  // minutes" hint so the wait never reads as a hang.
+  const detail = progress.detailKey === 'launchedDetail'
+    ? tn('launch.step.launchedDetail', Number(progress.detailVars?.count ?? 0))
+    : progress.key === 'redmod' && isRunning && !progress.detail
+      ? t('launch.step.redmodHint')
+      : progress.detail
 
   const handleCancel = async () => {
     setCancelling(true)
@@ -116,7 +118,7 @@ export const LaunchProgressCard: React.FC = () => {
                 happening - long step titles/details wrap instead of ellipsizing. */}
             <span className="min-w-0 break-words text-[13.5px] font-semibold leading-snug text-[var(--text-primary)]">{title}</span>
             {isRunning ? (
-              <span className="shrink-0 text-[12px] tabular-nums text-[var(--text-muted)]">{percent}%</span>
+              <span className="shrink-0 text-[13px] tabular-nums text-[var(--text-muted)]">{percent}%</span>
             ) : null}
           </div>
           {detail ? (

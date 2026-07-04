@@ -86,12 +86,6 @@ export interface AppSettings {
   // renderer owns the list of supported locales; the main process only persists
   // the value and falls back to 'en' when it is missing or not a string.
   language?: string
-  libraryColumnWidths?: {
-    name?: number
-    version?: number
-    category?: number
-    date?: number
-  }
   collapsedLibrarySeparatorIds?: string[]
   autoInstallPerMod?: Record<string, 'replace' | 'copy' | 'none'>
   // True only once the user has explicitly completed the first-run setup wizard
@@ -310,6 +304,12 @@ export interface GameLaunchProgress {
   key?: string
   percent: number
   detail?: string
+  /**
+   * Optional translated detail: the renderer resolves `launch.step.<detailKey>`
+   * with `detailVars` (falling back to the English `detail` text when unknown).
+   */
+  detailKey?: string
+  detailVars?: Record<string, string | number>
   current?: number
   total?: number
   state?: 'running' | 'done' | 'error' | 'cancelled'

@@ -53,7 +53,7 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === false ? 'text-[var(--tier-free-text)]' : 'text-[var(--text-muted)]'}`}>{t('common.free')}</div>
         {NEXUS_FREE_FEATURES.map((f) => (
           <div key={f.icon} className="flex items-start gap-2">
-            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[var(--tier-free-text)]' : 'text-[var(--text-disabled)]'}`} />
+            <Icon name={f.icon} className={`text-[15px] mt-[1px] shrink-0 ${isPremium === false ? 'text-[var(--tier-free-text)]' : 'text-[var(--text-disabled)]'}`} />
             <span className={isPremium === false ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>{t(f.textKey)}</span>
           </div>
         ))}
@@ -64,7 +64,7 @@ function NexusTierComparison({ isPremium }: { isPremium: boolean | null }) {
         <div className={`text-[10px] brand-font font-bold uppercase tracking-widest mb-1 ${isPremium === true ? 'text-[var(--tier-premium-text)]' : 'text-[var(--text-muted)]'}`}>{t('common.premium')}</div>
         {NEXUS_PREMIUM_FEATURES.map((f) => (
           <div key={f.icon} className="flex items-start gap-2">
-            <Icon name={f.icon} className={`text-[14px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[var(--tier-premium-text)]' : 'text-[var(--text-disabled)]'}`} />
+            <Icon name={f.icon} className={`text-[15px] mt-[1px] shrink-0 ${isPremium === true ? 'text-[var(--tier-premium-text)]' : 'text-[var(--text-disabled)]'}`} />
             <span className={isPremium === true ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'}>{t(f.textKey)}</span>
           </div>
         ))}
@@ -371,7 +371,7 @@ export const SettingsPage: React.FC = () => {
   // Accent-tinted link buttons for the credit rows - they sit on --surface-secondary, so a
   // neutral fill would blend in and stop reading as a button.
   const aboutActionBtn =
-    'group inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-3.5 text-[13px] font-medium leading-none text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.42)]'
+    'group inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.12)] px-3.5 text-[14px] font-medium leading-none text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus:outline-none focus-visible:shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.42)]'
 
   const tabMeta: Array<{ id: SettingsTab; label: string; icon: string }> = [
     { id: 'general', label: t('settings.tabs.general'), icon: 'tune' },
@@ -447,8 +447,8 @@ export const SettingsPage: React.FC = () => {
                 >
                 <div className="flex w-full items-center justify-between gap-4 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3">
                   <span className="min-w-0">
-                    <span className="block text-[14px] font-semibold text-[var(--text-primary-alt)]">{t('settings.general.installBehavior.toggleTitle')}</span>
-                    <span className="mt-1 block text-[13px] leading-5 text-[var(--text-support)]">
+                    <span className="block text-[15px] font-semibold text-[var(--text-primary-alt)]">{t('settings.general.installBehavior.toggleTitle')}</span>
+                    <span className="mt-1 block text-[14px] leading-5 text-[var(--text-support)]">
                       {t('settings.general.installBehavior.toggleDescription')}
                     </span>
                   </span>
@@ -489,7 +489,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => void handleClearRuntimeCaptures()}
                       disabled={clearingCaptures}
-                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(248_113_113/0.13)] px-4 text-[13px] font-semibold leading-none text-[var(--status-error-text)] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[rgb(248_113_113/0.08)] disabled:text-[rgb(248_113_113/0.45)] sm:w-auto"
+                      className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg border-0 bg-[rgb(248_113_113/0.13)] px-4 text-[14px] font-semibold leading-none text-[var(--status-error-text)] transition-colors hover:bg-[#f87171] hover:text-[#190505] disabled:cursor-not-allowed disabled:bg-[rgb(248_113_113/0.08)] disabled:text-[rgb(248_113_113/0.45)] sm:w-auto"
                     >
                       <Icon name={clearingCaptures ? 'progress_activity' : 'delete_sweep'} className={`${clearingCaptures ? 'animate-spin' : ''}`} style={{ fontSize: 16 }} />
                       {clearingCaptures ? t('settings.general.runtimeCaptures.clearing') : t('settings.general.runtimeCaptures.clear')}
@@ -624,7 +624,7 @@ export const SettingsPage: React.FC = () => {
                       value={nexusApiKey}
                       onChange={(e) => setNexusApiKey(e.target.value)}
                       placeholder={t('settings.nexus.connection.placeholder')}
-                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[13px] text-[var(--text-primary-alt)] placeholder:text-[var(--text-muted)] focus:outline-none"
+                      className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[14px] text-[var(--text-primary-alt)] placeholder:text-[var(--text-muted)] focus:outline-none"
                       spellCheck={false}
                       autoComplete="off"
                     />
@@ -648,7 +648,7 @@ export const SettingsPage: React.FC = () => {
                   </button>
                 </div>
                 {nexusStatus === 'error' && (
-                  <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[var(--status-error-text)]">
+                  <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[15px] leading-6 text-[var(--status-error-text)]">
                     {nexusAccount.error}
                   </div>
                 )}
@@ -672,7 +672,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <div className="text-[15px] font-semibold text-[var(--text-primary)]">{nexusAccount.data.name}</div>
-                      <div className="text-[13px] text-[var(--text-support)]">{t('settings.nexus.account.userLine', { email: nexusAccount.data.email, id: nexusAccount.data.userId })}</div>
+                      <div className="text-[14px] text-[var(--text-support)]">{t('settings.nexus.account.userLine', { email: nexusAccount.data.email, id: nexusAccount.data.userId })}</div>
                     </div>
                     <NexusTierComparison isPremium={nexusAccount.data.isPremium} />
                   </div>
@@ -721,7 +721,7 @@ export const SettingsPage: React.FC = () => {
             >
               <ValidationRow state={updateDownloaded || updateAvailable ? 'info' : 'valid'} validText={updateMessage} infoText={updateMessage} />
               {updateError ? (
-                <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[14px] leading-6 text-[var(--status-error-text)]">
+                <div className="mt-4 rounded-xl border-0 bg-[rgb(248_113_113/0.13)] px-4 py-3 text-[15px] leading-6 text-[var(--status-error-text)]">
                   {updateError}
                 </div>
               ) : null}
@@ -825,10 +825,10 @@ export const SettingsPage: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[14px] font-semibold text-[var(--text-primary)]">usvfs / Mod Organizer 2</span>
+                        <span className="text-[15px] font-semibold text-[var(--text-primary)]">usvfs / Mod Organizer 2</span>
                         <HyperionBadge tone="accent">{t('settings.about.credits.coreVfsLabel')}</HyperionBadge>
                       </div>
-                      <p className="mt-1 text-[13px] leading-5 text-[var(--text-support)]">
+                      <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.coreVfsBody')}
                       </p>
                     </div>
@@ -847,10 +847,10 @@ export const SettingsPage: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[14px] font-semibold text-[var(--text-primary)]">Nexus Mods API</span>
+                        <span className="text-[15px] font-semibold text-[var(--text-primary)]">Nexus Mods API</span>
                         <HyperionBadge tone="neutral">{t('settings.about.credits.serviceApiLabel')}</HyperionBadge>
                       </div>
-                      <p className="mt-1 text-[13px] leading-5 text-[var(--text-support)]">
+                      <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.serviceApiBody')}
                       </p>
                     </div>
@@ -859,10 +859,10 @@ export const SettingsPage: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[14px] font-semibold text-[var(--text-primary)]">REDmodding ecosystem</span>
+                        <span className="text-[15px] font-semibold text-[var(--text-primary)]">REDmodding ecosystem</span>
                         <HyperionBadge tone="neutral">{t('settings.about.credits.referenceLabel')}</HyperionBadge>
                       </div>
-                      <p className="mt-1 text-[13px] leading-5 text-[var(--text-support)]">
+                      <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.referenceBody')}
                       </p>
                     </div>
