@@ -55,7 +55,11 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
     const current = get().settings
     if (!current) return { ok: false, error: translate('common.settingsNotLoaded') }
     const merged = { ...current, ...partial }
-    const saveResult = await IpcService.invoke<IpcResult<void>>(IPC.SET_SETTINGS, merged)
+    // Send ONLY the touched fields: the main process merges them over the
+    // persisted settings. Sending the full renderer copy let a stale/empty
+    // in-memory value (e.g. the Nexus API key before hydration) silently
+    // overwrite what was on disk.
+    const saveResult = await IpcService.invoke<IpcResult<void>>(IPC.SET_SETTINGS, partial)
     if (!saveResult.ok) {
       // The save was rejected (e.g. a data path inside the install folder). Leave the
       // persisted settings untouched so the UI never reflects an unsaved value.

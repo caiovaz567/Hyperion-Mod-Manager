@@ -2267,8 +2267,27 @@ function registerGlobalHandlers(): void {
       }
     }
   })
-  ipcMain.handle(IPC.SET_SETTINGS, (_event, settings) => {
+  ipcMain.handle(IPC.SET_SETTINGS, (_event, incoming: Partial<AppSettings>) => {
     try {
+      // Merge over the persisted truth: the payload is treated as a PARTIAL, so a
+      // renderer holding stale/empty state can never silently erase fields it
+      // didn't touch (this bit the Nexus API key more than once).
+      const stored = loadSettings()
+      const settings = { ...stored, ...incoming }
+      if (
+        stored.nexusApiKey &&
+        Object.prototype.hasOwnProperty.call(incoming, 'nexusApiKey') &&
+        !settings.nexusApiKey
+      ) {
+        // Legit when the user clears the field - logged so an unexplained key
+        // loss is diagnosable from App Logs instead of a mystery.
+        pushGeneralLog(mainWindow, {
+          level: 'warn',
+          source: 'settings',
+          message: 'Nexus API key cleared by a settings save',
+          details: { payloadFields: Object.keys(incoming ?? {}) },
+        })
+      }
       saveSettings(settings)
 
       if (settings.gamePath?.trim() && !isValidConfiguredGamePath(settings.gamePath)) {

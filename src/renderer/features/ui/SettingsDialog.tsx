@@ -129,6 +129,10 @@ export const SettingsPage: React.FC = () => {
   const [showApiKey, setShowApiKey] = useState(false)
   const [updateActionLoading, setUpdateActionLoading] = useState<null | 'check' | 'download'>(null)
   const nexusSaveTimerRef = useRef<number | null>(null)
+  // Auto-save must fire ONLY for keys the user actually typed/cleared. The local
+  // input starts empty and hydrates from settings later, so a drift-based save
+  // could race hydration and persist '' - silently erasing a stored key.
+  const nexusKeyTouchedRef = useRef(false)
   const [runtimeCapturesInfo, setRuntimeCapturesInfo] = useState<VfsOverwriteInfo | null>(null)
   const [clearingCaptures, setClearingCaptures] = useState(false)
 
@@ -280,12 +284,14 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     if (!settings) return
+    if (!nexusKeyTouchedRef.current) return
     if (nexusApiKey === (settings.nexusApiKey ?? '')) return
 
     if (nexusSaveTimerRef.current) window.clearTimeout(nexusSaveTimerRef.current)
     nexusSaveTimerRef.current = window.setTimeout(async () => {
       try {
         await updateSettings({ nexusApiKey })
+        nexusKeyTouchedRef.current = false
         addToast(nexusApiKey.trim() ? t('settings.toast.nexusKeySaved') : t('settings.toast.nexusKeyCleared'), 'success', 1800)
       } catch {
         addToast(t('settings.toast.nexusKeyError'), 'error', 2600)
@@ -622,7 +628,10 @@ export const SettingsPage: React.FC = () => {
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}
-                      onChange={(e) => setNexusApiKey(e.target.value)}
+                      onChange={(e) => {
+                        nexusKeyTouchedRef.current = true
+                        setNexusApiKey(e.target.value)
+                      }}
                       placeholder={t('settings.nexus.connection.placeholder')}
                       className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[14px] text-[var(--text-primary-alt)] placeholder:text-[var(--text-muted)] focus:outline-none"
                       spellCheck={false}
