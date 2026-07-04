@@ -787,8 +787,11 @@ export async function buildEnabledModLinks(
       const fileDest = resolveDeploymentTarget(gamePath, relativeDeployPath)
       if (!fileDest) continue
 
-      const srcSegs = normalizedRelativePath.split('\\').filter(Boolean)
-      const destSegs = relativeDeployPath.split('\\').filter(Boolean)
+      // path.sep, not a literal backslash: normalizeRelativePath joins with the
+      // platform separator, so a hardcoded '\\' collapses every path into one
+      // segment on Linux (CI) and flips the mount planning logic.
+      const srcSegs = normalizedRelativePath.split(path.sep).filter(Boolean)
+      const destSegs = relativeDeployPath.split(path.sep).filter(Boolean)
       if (useLoadOrderedArchiveName) {
         const destParent = path.dirname(fileDest)
         const dirKey = `mk:${destParent}`
