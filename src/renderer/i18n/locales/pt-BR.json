@@ -189,7 +189,8 @@
       "removeFromList": "Remover da Lista",
       "pause": "Pausar",
       "cancel": "Cancelar Download",
-      "deleteDownload": "Excluir Download"
+      "deleteDownload": "Excluir Download",
+      "installToSeparator": "Instalar no separador"
     },
     "deleteDialog": {
       "title": "Excluir Download",
@@ -225,7 +226,8 @@
       "originalSourceUnavailable": "A fonte original não está mais disponível",
       "fomodInstallFailed": "Falha na instalação do FOMOD",
       "nexusDownloadStartFailed": "Não foi possível iniciar o download do Nexus",
-      "nexusLinkReadFailed": "Não foi possível ler o link de download do Nexus"
+      "nexusLinkReadFailed": "Não foi possível ler o link de download do Nexus",
+      "installedToSeparator": "{name} instalado em {separator}"
     }
   },
   "welcome": {

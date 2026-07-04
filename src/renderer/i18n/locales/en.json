@@ -189,7 +189,8 @@
       "removeFromList": "Remove from List",
       "pause": "Pause",
       "cancel": "Cancel Download",
-      "deleteDownload": "Delete Download"
+      "deleteDownload": "Delete Download",
+      "installToSeparator": "Install to separator"
     },
     "deleteDialog": {
       "title": "Delete Download",
@@ -225,7 +226,8 @@
       "originalSourceUnavailable": "Original source is no longer available",
       "fomodInstallFailed": "FOMOD install failed",
       "nexusDownloadStartFailed": "Could not start Nexus download",
-      "nexusLinkReadFailed": "Could not read Nexus download link"
+      "nexusLinkReadFailed": "Could not read Nexus download link",
+      "installedToSeparator": "{name} installed to {separator}"
     }
   },
   "welcome": {

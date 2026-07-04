@@ -20,6 +20,7 @@ import {
 import type { DownloadListRow } from './DownloadsRows'
 import { DownloadsToolbar } from './DownloadsToolbar'
 import { ActionPromptDialog } from '../ui/ActionPromptDialog'
+import { MoveToSeparatorDialog } from '../ui/MoveToSeparatorDialog'
 import { HyperionPanel } from '../ui/HyperionPrimitives'
 import { useVirtualRows } from '../../hooks/useVirtualRows'
 import { useTranslation } from '../../i18n/I18nContext'
@@ -185,6 +186,7 @@ export const DownloadsPane: React.FC = () => {
     addToast,
     setActiveView,
     mods,
+    reorderMods,
     openReinstallPrompt,
     gamePathValid,
     libraryPathValid,
@@ -210,6 +212,7 @@ export const DownloadsPane: React.FC = () => {
     addToast: state.addToast,
     setActiveView: state.setActiveView,
     mods: state.mods,
+    reorderMods: state.reorderMods,
     openReinstallPrompt: state.openReinstallPrompt,
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
@@ -236,6 +239,9 @@ export const DownloadsPane: React.FC = () => {
 
   const [loading, setLoading] = useState(true)
   const [pendingDeleteDownload, setPendingDeleteDownload] = useState<DownloadEntry | null>(null)
+  // Set when the user picks "Install to separator": opens the separator picker,
+  // then installs the archive straight into the chosen group.
+  const [installToSeparatorEntry, setInstallToSeparatorEntry] = useState<DownloadEntry | null>(null)
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const [deletingAll, setDeletingAll] = useState(false)
   const [deletingDownloads, setDeletingDownloads] = useState<Record<string, { startedAt: number; entry: DownloadEntry }>>({})
@@ -363,7 +369,7 @@ export const DownloadsPane: React.FC = () => {
     }
   }, [])
 
-  const handleInstall = async (entry: DownloadEntry) => {
+  const handleInstall = async (entry: DownloadEntry, options?: { separatorId?: string }) => {
     if (!hasRequiredPaths) {
       addToast(t('downloads.toast.setPathsFirst'), 'warning')
       setActiveView('settings')
@@ -393,6 +399,42 @@ export const DownloadsPane: React.FC = () => {
       if (!enableResult.ok) {
         addToast(t('downloads.toast.installedNotActivated', { error: String(enableResult.error) }), 'warning')
         return
+      }
+      // Fresh install straight into a chosen separator. The mod installs at the
+      // end (highest order), so we splice its id into the target separator's
+      // block and persist the new custom order - the same insertion the library's
+      // drag/move uses, replicated here from the fresh post-scan store state.
+      const newModId = installResult.data.mod.uuid
+      if (options?.separatorId) {
+        const ordered = [...useAppStore.getState().mods].sort((a, b) => a.order - b.order)
+        const remaining = ordered.filter((entry) => entry.uuid !== newModId)
+        const separatorIndex = remaining.findIndex(
+          (entry) => entry.uuid === options.separatorId && entry.kind === 'separator',
+        )
+        if (separatorIndex >= 0) {
+          let insertIndex = separatorIndex + 1
+          while (insertIndex < remaining.length && remaining[insertIndex].kind !== 'separator') {
+            insertIndex += 1
+          }
+          const newMod = ordered.find((entry) => entry.uuid === newModId)
+          if (newMod) {
+            const reordered = [
+              ...remaining.slice(0, insertIndex),
+              newMod,
+              ...remaining.slice(insertIndex),
+            ]
+            await reorderMods(reordered.map((entry) => entry.uuid))
+          }
+          const separator = ordered.find((entry) => entry.uuid === options.separatorId)
+          addToast(
+            t('downloads.toast.installedToSeparator', {
+              name: installResult.data.mod.name,
+              separator: separator?.name ?? '',
+            }),
+            'success',
+          )
+          return
+        }
       }
       addToast(t('downloads.toast.installedActivated', { name: installResult.data.mod.name }), 'success')
       return
@@ -506,6 +548,12 @@ export const DownloadsPane: React.FC = () => {
     setContextMenu(null)
     await handleInstall(contextMenu.row.entry)
   }, [contextMenu, handleInstall])
+
+  const handleInstallToSeparatorContextRow = useCallback(() => {
+    if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.row.kind !== 'local') return
+    setInstallToSeparatorEntry(contextMenu.row.entry)
+    setContextMenu(null)
+  }, [contextMenu])
 
   const handleToggleDownloadState = useCallback(async () => {
     if (!contextMenu || contextMenu.kind !== 'row' || contextMenu.row.kind !== 'active') return
@@ -726,6 +774,7 @@ export const DownloadsPane: React.FC = () => {
   const contextMenuLocalEntry = contextMenuRow?.kind === 'local' ? contextMenuRow.entry : null
   const contextMenuRowPath = contextMenuRow ? getDownloadRowPath(contextMenuRow) : null
   const contextMenuInstalledMod = contextMenuLocalEntry ? installedBySourcePath.get(contextMenuLocalEntry.path.toLowerCase()) : null
+  const librarySeparators = useMemo(() => mods.filter((mod) => mod.kind === 'separator'), [mods])
 
   return (
     <div className="h-full animate-settings-in">
@@ -906,6 +955,16 @@ export const DownloadsPane: React.FC = () => {
                 <Icon name={contextMenuInstalledMod ? 'restart_alt' : 'deployed_code'} className="text-[16px]" />
                 <span>{contextMenuInstalledMod ? t('common.reinstall') : t('common.install')}</span>
               </button>
+              {!contextMenuInstalledMod && librarySeparators.length > 0 && (
+                <button
+                  onClick={handleInstallToSeparatorContextRow}
+                  disabled={Boolean(contextMenuLocalEntry && installing && installSourcePath === contextMenuLocalEntry.path)}
+                  className={`${downloadMenuBlueButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+                >
+                  <Icon name="move_item" className="text-[16px]" />
+                  <span>{t('downloads.menu.installToSeparator')}</span>
+                </button>
+              )}
               <div className="my-1 border-t border-[var(--border)]" />
               <button
                 onClick={() => void handleOpenDownloadsLocation()}
@@ -951,6 +1010,19 @@ export const DownloadsPane: React.FC = () => {
           primaryLabel={t('common.delete')}
           onPrimary={() => void handleDeleteDownload()}
           onCancel={() => setPendingDeleteDownload(null)}
+        />
+      )}
+
+      {installToSeparatorEntry && (
+        <MoveToSeparatorDialog
+          separators={librarySeparators}
+          modCount={1}
+          onSelect={(separatorId) => {
+            const entry = installToSeparatorEntry
+            setInstallToSeparatorEntry(null)
+            void handleInstall(entry, { separatorId })
+          }}
+          onCancel={() => setInstallToSeparatorEntry(null)}
         />
       )}
 

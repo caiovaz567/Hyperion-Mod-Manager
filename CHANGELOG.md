@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Install straight into a separator from Downloads.** The Downloads right-click menu gained an "Install to separator" action below Install: pick a group (the same searchable HeroUI picker as the library's Move to Separator) and the archive installs, enables, and lands in that separator in one step - no install-then-move.
+
+### Fixed
+- The library bulk-selection bar buttons are vertically aligned again (they were top-anchored instead of centered).
+
 ---
 
 ## [0.33.1] - 2026-07-04

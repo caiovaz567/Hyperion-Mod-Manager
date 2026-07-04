@@ -26,13 +26,14 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
   const { t } = useTranslation()
   return (
   <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[120] flex justify-center px-6">
-    <div data-bulk-actions="true" className="pointer-events-auto flex items-stretch gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--overlay)] p-2">
+    <div data-bulk-actions="true" className="pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--overlay)] p-2">
       <HyperionButton
         onClick={() => void onEnableSelected()}
         variant="toolbar"
         size="sm"
         icon="check_circle"
         iconClassName="text-[15px]"
+        className="h-9"
       >
         {t('library.bulk.enable')}
       </HyperionButton>
@@ -42,6 +43,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
         size="sm"
         icon="do_not_disturb_on"
         iconClassName="text-[15px]"
+        className="h-9"
       >
         {t('library.bulk.disable')}
       </HyperionButton>
@@ -54,6 +56,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
               size="sm"
               icon="move_item"
               iconClassName="text-[15px]"
+              className="h-9"
             >
               {t('library.bulk.moveToSeparator')}
             </HyperionButton>
@@ -64,6 +67,7 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
             size="sm"
             icon="vertical_align_top"
             iconClassName="text-[15px]"
+            className="h-9"
           >
             {t('library.bulk.topLevel')}
           </HyperionButton>
@@ -75,16 +79,18 @@ export const LibraryBulkSelectionBar: React.FC<LibraryBulkSelectionBarProps> = (
         size="sm"
         icon="delete"
         iconClassName="text-[15px]"
+        className="h-9"
       >
         {t('library.bulk.uninstall')}
       </HyperionButton>
-      <div className="mx-1.5 h-5 self-center w-px bg-[var(--border)]" />
+      <div className="mx-1.5 h-5 w-px bg-[var(--border)]" />
       <HyperionIconButton
         icon="close"
         label={t('library.bulk.clearSelection')}
         variant="ghost"
         iconClassName="text-[15px]"
         onClick={onClearSelection}
+        className="!h-9 !w-9"
       />
     </div>
   </div>
