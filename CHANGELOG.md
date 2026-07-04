@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.33.1] - 2026-07-04
+
 ### Fixed
 - **The Nexus API key can no longer be silently erased.** Opening Settings could race the form's hydration and auto-save an empty key over the stored one. The key field now only saves after a real user edit, settings saves are merged field-by-field over what is on disk (so no screen can overwrite values it didn't touch), and App Logs records a warning whenever a stored key is cleared.
 - The first-run "Use suggested" folders always point beside the Hyperion installation (`Mods`/`Downloads` next to the executable) - never a Documents/OneDrive fallback, and the downloads suggestion is no longer derived from the library location.
