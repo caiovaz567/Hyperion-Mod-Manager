@@ -41,6 +41,7 @@
     "electron": "^30.0.2",
     "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
+    "esbuild": "^0.28.1",
     "happy-dom": "^20.10.6",
     "node-addon-api": "^8.0.0",
     "node-gyp": "^11.0.0",
