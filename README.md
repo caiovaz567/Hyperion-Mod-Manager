@@ -1,5 +1,3 @@
-# Hyperion
-
 <p align="center">
   <img src="src/main/resources/hyperion-logo.png" alt="Hyperion" width="520" />
 </p>
@@ -19,7 +17,6 @@
 
 Hyperion is a desktop application for managing Cyberpunk 2077 mods. It keeps your mod library organized, installs mods without touching the game folder, detects conflicts, and launches the game - all from one place.
 
-<!-- Hero image: a single showcase shot (e.g. the library in several accent colors / light & dark). Replace the src below. -->
 <p align="center">
   <img src="https://github.com/user-attachments/assets/ec164022-4c90-4e4f-8838-36a3aefb043c" alt="Hyperion" width="900" />
 </p>

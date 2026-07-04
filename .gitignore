@@ -23,3 +23,7 @@ native/**/*.node
 native/usvfs-bridge/vendor/
 # Development test harnesses (removed from repo, excluded locally)
 native/usvfs-bridge/test/
+
+# Dev "Use suggested" data folders (project root = install dir in dev)
+/Mods/
+/Downloads/

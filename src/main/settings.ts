@@ -63,20 +63,6 @@ function normalizePerModChoices(
   )
 }
 
-function getDownloadPathFromLibrary(libraryPath?: string): string {
-  const normalizedLibraryPath = libraryPath?.trim()
-  if (!normalizedLibraryPath) {
-    return path.join(getManagedRoot(), 'Downloads')
-  }
-
-  const libraryParent = path.dirname(normalizedLibraryPath)
-  if (!libraryParent || libraryParent === normalizedLibraryPath) {
-    return path.join(getManagedRoot(), 'Downloads')
-  }
-
-  return path.join(libraryParent, 'Downloads')
-}
-
 
 /**
  * The directory Hyperion is installed into. Only meaningful for packaged builds;
@@ -84,8 +70,12 @@ function getDownloadPathFromLibrary(libraryPath?: string): string {
  * to the Documents managed root.
  */
 export function getInstallDir(): string | null {
-  if (!app.isPackaged) return null
   try {
+    // Packaged: the folder holding Hyperion.exe. Dev: the project root (the
+    // exe would be electron.exe inside node_modules) - so "Use suggested"
+    // ALWAYS means "beside where Hyperion lives", never a Documents/OneDrive
+    // fallback that silently syncs a mod library to the cloud.
+    if (!app.isPackaged) return app.getAppPath()
     return path.dirname(app.getPath('exe'))
   } catch {
     return null
@@ -123,9 +113,9 @@ function normalizeSettings(raw?: Partial<AppSettings>): AppSettings {
   return {
     gamePath,
     libraryPath,
-    downloadPath: hasDownloadPath
-      ? (raw?.downloadPath?.trim() || getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath)
-      : (getDownloadPathFromLibrary(libraryPath) || defaults.downloadPath),
+    // The default downloads folder is ALWAYS <install dir>/Downloads - never
+    // derived from wherever the library happens to sit.
+    downloadPath: (hasDownloadPath && raw?.downloadPath?.trim()) || defaults.downloadPath,
     accentColor: typeof raw?.accentColor === 'string' && raw.accentColor.trim() ? raw.accentColor : 'blue',
     uiMode: raw?.uiMode === 'light' || raw?.uiMode === 'dark' ? raw.uiMode : 'system',
     autoUpdate: raw?.autoUpdate ?? true,

@@ -306,10 +306,10 @@ export const WelcomeScreen: React.FC = () => {
   }
 
   const applyDownloadsDefault = async () => {
-    // Use the independent suggested downloads folder, not one derived from the
-    // current library path - clicking this must only set the downloads path.
-    const nextDownloadPath =
-      defaultPaths?.downloadPath?.trim() || resolveDownloadPath(defaultPaths?.libraryPath || '')
+    // The suggestion is ALWAYS <install dir>/Downloads (getPathDefaults) - never
+    // derived from wherever the library sits.
+    const nextDownloadPath = defaultPaths?.downloadPath?.trim() ?? ''
+    if (!nextDownloadPath) return
     setDownloadPath(nextDownloadPath)
     if (await ensureDirectory(nextDownloadPath, t('welcome.label.downloads'))) {
       addToast(t('welcome.toast.downloadsLoaded'), 'info', 1800)
