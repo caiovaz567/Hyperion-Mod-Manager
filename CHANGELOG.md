@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Automated test suite guarding the destructive paths.** 82 unit tests (vitest, run by `npm test` and on every push via GitHub Actions) now pin down the logic that decides where files are written and deleted: deploy-path computation (including flat and nested REDmod layouts and path-traversal stripping), mod-type detection, the deleted-mod capture sweep (proving it can never touch another mod's data or shared framework folders), FOMOD parsing (including malformed XML), conflict math (unique-resource counts, redundant detection, pairwise expansion), nxm-link / Nexus update-lineage resolution, the install naming pipeline (folder sanitization, collision suffixes, game-root preservation, `meta.ini` identity recovery), the `.archive` binary parser against corrupt/truncated/hostile files (returns null, never crashes), the Nexus download registry (upsert/lookup/dead-record pruning), and the VFS mount plan (`buildEnabledModLinks` - load-order-respecting mounts, load-ordered virtual archive names, single materialization of virtual folders).
+
+### Fixed
+- **Mods shipping a full game tree with deeply nested payloads are typed correctly again.** Type detection stopped scanning 6 folder levels down, so a CET mod packaged as `bin/x64/plugins/cyber_engine_tweaks/mods/<mod>/init.lua` (7 levels) was misdetected as `unknown`. The scan now reaches those payloads.
+
 ---
 
 ## [0.32.0] - 2026-07-03

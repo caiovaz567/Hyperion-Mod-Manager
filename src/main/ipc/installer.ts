@@ -462,7 +462,7 @@ function findFomodConfig(
  * Installs a mod from a file path (zip archive or folder).
  * Returns conflicts if any exist; the caller must resolve them before committing.
  */
-function sanitizeFolderName(name: string): string {
+export function sanitizeFolderName(name: string): string {
   return (name
     .replace(/[<>:"/\\|?*]/g, '')
     .replace(/\s+/g, ' ')
@@ -471,7 +471,7 @@ function sanitizeFolderName(name: string): string {
     .slice(0, 80)) || 'mod'
 }
 
-function uniqueFolderName(libraryPath: string, base: string): string {
+export function uniqueFolderName(libraryPath: string, base: string): string {
   let candidate = base
   let i = 1
   while (fs.existsSync(path.join(libraryPath, candidate))) {
@@ -480,7 +480,7 @@ function uniqueFolderName(libraryPath: string, base: string): string {
   return candidate
 }
 
-function uniqueDisplayName(existingMods: ModMetadata[], base: string): string {
+export function uniqueDisplayName(existingMods: ModMetadata[], base: string): string {
   const usedNames = new Set(existingMods.map((mod) => mod.name.trim().toLowerCase()))
   if (!usedNames.has(base.trim().toLowerCase())) return base
 
@@ -493,11 +493,11 @@ function uniqueDisplayName(existingMods: ModMetadata[], base: string): string {
   return candidate
 }
 
-function shouldPreserveArchiveRootFolder(folderName: string): boolean {
+export function shouldPreserveArchiveRootFolder(folderName: string): boolean {
   return PRESERVED_ARCHIVE_ROOT_DIRS.has(folderName.trim().toLowerCase())
 }
 
-function extractVersionFromName(rawName: string): string | undefined {
+export function extractVersionFromName(rawName: string): string | undefined {
   const cleaned = rawName
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
@@ -538,7 +538,7 @@ interface MetaIniNexusInfo {
 //   [installedFiles]
 //   1\modid=3993
 //   1\fileid=12345
-function parseMetaIniNexusInfo(contents: string): MetaIniNexusInfo | null {
+export function parseMetaIniNexusInfo(contents: string): MetaIniNexusInfo | null {
   let modId: number | undefined
   let fileId: number | undefined
   let version: string | undefined
@@ -596,7 +596,7 @@ function findNexusInfoFromMetaIni(rootDir: string): MetaIniNexusInfo | null {
   return null
 }
 
-function normalizeModName(rawName: string): string {
+export function normalizeModName(rawName: string): string {
   const cleaned = rawName
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\([^)]*nexus[^)]*\)/gi, ' ')

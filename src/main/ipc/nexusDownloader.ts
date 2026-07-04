@@ -1025,7 +1025,8 @@ function nexusModPageUrl(modId: number): string {
 }
 
 // MAIN files are the canonical release; never treat OLD_VERSION/ARCHIVED as "latest".
-function pickLatestPrimaryFile(files: NexusFileEntry[]): NexusFileEntry | null {
+// Exported for tests (pure update-lineage logic).
+export function pickLatestPrimaryFile(files: NexusFileEntry[]): NexusFileEntry | null {
   const usable = files.filter((file) => {
     const category = (file.category_name || '').toUpperCase()
     return category !== 'OLD_VERSION' && category !== 'ARCHIVED'
@@ -1041,7 +1042,7 @@ function pickLatestPrimaryFile(files: NexusFileEntry[]): NexusFileEntry | null {
 
 const SUPERSEDED_CATEGORIES = new Set(['OLD_VERSION', 'ARCHIVED', 'DELETED'])
 
-function isSupersededCategory(file: NexusFileEntry | null | undefined): boolean {
+export function isSupersededCategory(file: NexusFileEntry | null | undefined): boolean {
   return SUPERSEDED_CATEGORIES.has((file?.category_name || '').toUpperCase())
 }
 
@@ -1049,7 +1050,7 @@ function isSupersededCategory(file: NexusFileEntry | null | undefined): boolean 
 // newest successor of the installed file. This keeps update detection scoped to the
 // exact file the user installed instead of comparing an OPTIONAL file against the
 // page's latest MAIN release.
-function findLatestFileIdInLineage(fileUpdates: NexusFileUpdate[], startFileId: number): number {
+export function findLatestFileIdInLineage(fileUpdates: NexusFileUpdate[], startFileId: number): number {
   let currentId = startFileId
   const visited = new Set<number>([currentId])
   for (;;) {
@@ -1068,7 +1069,7 @@ function normalizeFileName(name?: string): string {
 // Fallback when file_updates has no link for the installed file (author uploaded a new
 // version without chaining it): find the newest non-superseded file that shares the same
 // display name lineage. Matching by name avoids flagging an unrelated file on the page.
-function pickLatestSameNameFile(
+export function pickLatestSameNameFile(
   files: NexusFileEntry[],
   installedFile: NexusFileEntry,
 ): NexusFileEntry | null {

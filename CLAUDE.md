@@ -175,9 +175,17 @@
 
 ## Core Commands
 - Dev: npm run dev
+- Unit tests: npm test (vitest; watch mode via npm run test:watch)
 - Local installer build: npm run build
 - Publishable installer build: npm run publish
 - Preview unpacked Windows output: npm run preview:win
+
+## Tests
+- The vitest suite lives in `tests/` and covers the destructive/critical logic: deploy-path computation (`getDeployRelativePath`, incl. flat/nested REDmod and `..` stripping), `detectModType` (real disk fixtures), the capture sweep (`captureOwnerFolder`/`sweepOrphanCaptures` - proving deletion can never leave a deleted mod's private slot), the FOMOD parser (incl. malformed XML), the renderer conflict recompute (`modConflictState.ts` - unique-resource counts, redundant, pairwise expansion, load-order direction), `parseNxmUrl` + the Nexus update-lineage helpers, the installer naming helpers (`sanitizeFolderName`/`uniqueFolderName`/`uniqueDisplayName`/`parseMetaIniNexusInfo`/`shouldPreserveArchiveRootFolder`), `parseRed4Archive` hardened against corrupt/truncated/hostile archives, `nexusDownloadRegistry` (upsert/lookup/dead-record prune), and `buildEnabledModLinks` (ordered VFS mounts, load-ordered virtual archive names, dedup).
+- Main-process modules import `electron` at module load; `vitest.config.ts` aliases it to the stub in `tests/stubs/electron.ts` (plus the `@shared` alias). The suite runs outside Electron - keep units under test pure (no electron API calls at function-call time).
+- DOM-dependent suites (fomodParser) opt into happy-dom with a `// @vitest-environment happy-dom` pragma; everything else runs in node.
+- Tests are typechecked by `tests/tsconfig.json` (`npx tsc --noEmit -p tests/tsconfig.json`) - living inside `tests/` means the IDE picks it up automatically for test files (node types included). CI (`.github/workflows/test.yml`) runs typecheck + suite on every push/PR with `npm ci --ignore-scripts` (no Electron binary needed).
+- When changing deploy-path rules, mod-type detection, capture cleanup, conflict math, FOMOD parsing, or update-lineage logic, update/extend the corresponding test file in the same task.
 
 ## Release Rules
 - package.json version is the release version used by electron-builder artifacts.

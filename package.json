@@ -16,7 +16,9 @@
     "publish": "npm run clean:dist && electron-vite build && npm run build:native && electron-builder --win nsis --publish always",
     "release:patch": "node scripts/prepare-release-tag.mjs patch",
     "release:minor": "node scripts/prepare-release-tag.mjs minor",
-    "release:major": "node scripts/prepare-release-tag.mjs major"
+    "release:major": "node scripts/prepare-release-tag.mjs major",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "cyberpunk",
@@ -38,11 +40,13 @@
     "electron": "^30.0.2",
     "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
+    "happy-dom": "^20.10.6",
     "node-addon-api": "^8.0.0",
     "node-gyp": "^11.0.0",
     "postcss": "^8.4.39",
     "tailwindcss": "^4.3.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
