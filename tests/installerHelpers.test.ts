@@ -74,6 +74,14 @@ describe('extractVersionFromName / normalizeModName', () => {
   it('normalizes underscores and bracketed noise in mod names', () => {
     expect(normalizeModName('Cool_Mod_HD [4K] (from Nexus)')).toContain('Cool Mod HD')
   })
+
+  it('strips the Nexus manual-download id/version/hash tail', () => {
+    expect(normalizeModName('Rosemary Winters - Hair Pack 31149 1.0 n1B61wYbu')).toBe('Rosemary Winters - Hair Pack')
+    expect(normalizeModName('Better Housing Buffs 6181 0.3 aB12cD34')).toBe('Better Housing Buffs')
+    // A real name that merely ends in a number must NOT be clipped.
+    expect(normalizeModName('Cyberpunk 2077 HD Reworked Project')).toBe('Cyberpunk 2077 HD Reworked Project')
+    expect(normalizeModName('E3 Window')).toBe('E3 Window')
+  })
 })
 
 describe('parseMetaIniNexusInfo', () => {

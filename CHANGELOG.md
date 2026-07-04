@@ -12,6 +12,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Install straight into a separator from Downloads.** The Downloads right-click menu gained an "Install to separator" action below Install: pick a group (the same searchable HeroUI picker as the library's Move to Separator) and the archive installs, enables, and lands in that separator in one step - no install-then-move.
 
 ### Fixed
+- **Manually-downloaded Nexus mods get a clean library name.** A manual Nexus download names its archive `<Mod> <modId> <version> <hash>` (e.g. `... Hair Pack 31149 1.0 n1B61wYbu`); Hyperion used to keep that whole string as the mod name. The id/version/hash tail is now stripped, and reinstalling recovers the exact Nexus page name via the MD5 lookup.
+- **Auto-install no longer runs while the game is open.** With "Install completed downloads automatically" on, a finishing download would install even mid-session (rewriting the library usvfs deploys from). It now defers with a clear warning and keeps the archive in Downloads to install after closing the game; the manual Install action in Downloads blocks the same way.
 - The library bulk-selection bar buttons are vertically aligned again (they were top-anchored instead of centered).
 
 ---

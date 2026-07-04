@@ -1285,13 +1285,32 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           intent: completedDownload.intent,
         })
       } else if (completedDownload && (get() as DownloadsStoreBridge).settings?.autoInstallDownloads !== false) {
-        void installCompletedDownload(get, savedPath, {
-          modId: completedDownload.nxmModId,
-          fileId: completedDownload.nxmFileId,
-        }, {
-          fileName: fileName ?? completedDownload.fileName,
-          version: version ?? completedDownload.version,
-        })
+        // Auto-install must never run while the game is open (installing rewrites
+        // the mod library usvfs deploys from). The download is already saved into
+        // Downloads above, so defer with a clear notice and let the user install
+        // it manually after closing the game. Fresh IPC check - the polled
+        // `gameRunning` flag can lag the moment a download finishes.
+        void (async () => {
+          const running = await IpcService.invoke<boolean>(IPC.GAME_RUNNING).catch(() => false)
+          if (running) {
+            const bridge = get() as DownloadsStoreBridge
+            bridge.addToast?.(
+              translate('downloads.toast.gameRunningAutoInstallDeferred', {
+                name: fileName ?? completedDownload.fileName,
+              }),
+              'warning',
+              4200,
+            )
+            return
+          }
+          await installCompletedDownload(get, savedPath, {
+            modId: completedDownload.nxmModId,
+            fileId: completedDownload.nxmFileId,
+          }, {
+            fileName: fileName ?? completedDownload.fileName,
+            version: version ?? completedDownload.version,
+          })
+        })()
       }
     })
 

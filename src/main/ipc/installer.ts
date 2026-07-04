@@ -601,6 +601,13 @@ export function normalizeModName(rawName: string): string {
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
     .replace(/[_]+/g, ' ')
+    // Nexus MANUAL-download filename tail: "<Name> <modId> <version> <hash>"
+    // (e.g. "Rosemary Winters - Hair Pack 31149 1.0 n1B61wYbu"). nxm downloads
+    // carry a clean display name; manual ones don't, so strip the id/version/hash
+    // trio here. Kept tight (3+ digit id, a dotted version, a 5+ char mixed hash)
+    // so real names aren't clipped.
+    .replace(/\s+\d{3,}\s+v?\d[\d.]*\s+[A-Za-z0-9]{5,}$/, '')
+    .replace(/\s+/g, ' ')
     .trim()
 
   const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)

@@ -188,6 +188,7 @@ export const DownloadsPane: React.FC = () => {
     mods,
     reorderMods,
     openReinstallPrompt,
+    gameRunning,
     gamePathValid,
     libraryPathValid,
     activeDownloads,
@@ -214,6 +215,7 @@ export const DownloadsPane: React.FC = () => {
     mods: state.mods,
     reorderMods: state.reorderMods,
     openReinstallPrompt: state.openReinstallPrompt,
+    gameRunning: state.gameRunning,
     gamePathValid: state.gamePathValid,
     libraryPathValid: state.libraryPathValid,
     activeDownloads: state.activeDownloads,
@@ -373,6 +375,13 @@ export const DownloadsPane: React.FC = () => {
     if (!hasRequiredPaths) {
       addToast(t('downloads.toast.setPathsFirst'), 'warning')
       setActiveView('settings')
+      return
+    }
+
+    // Installing rewrites the mod library that usvfs deploys from - never do it
+    // while the game is attached to the VFS.
+    if (gameRunning) {
+      addToast(t('library.toast.closeGameBeforeInstall'), 'warning')
       return
     }
 

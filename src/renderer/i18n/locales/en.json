@@ -227,7 +227,8 @@
       "fomodInstallFailed": "FOMOD install failed",
       "nexusDownloadStartFailed": "Could not start Nexus download",
       "nexusLinkReadFailed": "Could not read Nexus download link",
-      "installedToSeparator": "{name} installed to {separator}"
+      "installedToSeparator": "{name} installed to {separator}",
+      "gameRunningAutoInstallDeferred": "Cyberpunk 2077 is running - {name} was downloaded but not installed. Close the game, then install it from Downloads."
     }
   },
   "welcome": {
