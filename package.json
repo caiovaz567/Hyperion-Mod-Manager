@@ -18,7 +18,8 @@
     "release:minor": "node scripts/prepare-release-tag.mjs minor",
     "release:major": "node scripts/prepare-release-tag.mjs major",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs"
   },
   "keywords": [
     "cyberpunk",
@@ -43,6 +44,7 @@
     "happy-dom": "^20.10.6",
     "node-addon-api": "^8.0.0",
     "node-gyp": "^11.0.0",
+    "playwright-core": "^1.61.1",
     "postcss": "^8.4.39",
     "tailwindcss": "^4.3.2",
     "typescript": "^5.5.4",

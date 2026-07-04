@@ -186,6 +186,7 @@
 - DOM-dependent suites (fomodParser) opt into happy-dom with a `// @vitest-environment happy-dom` pragma; everything else runs in node.
 - Tests are typechecked by `tests/tsconfig.json` (`npx tsc --noEmit -p tests/tsconfig.json`) - living inside `tests/` means the IDE picks it up automatically for test files (node types included). CI (`.github/workflows/test.yml`) runs typecheck + suite on every push/PR with `npm ci --ignore-scripts` (no Electron binary needed).
 - When changing deploy-path rules, mod-type detection, capture cleanup, conflict math, FOMOD parsing, or update-lineage logic, update/extend the corresponding test file in the same task.
+- **E2E smoke test**: `npm run test:e2e` builds `out/` (`electron-vite build`) and drives the REAL app via playwright-core's `_electron` (`tests/e2e/smoke.mjs`): waits for the main renderer window (the splash is a separate data:-URL window), walks Mods → Downloads → Settings → App Logs, screenshots each to `tests/e2e/artifacts/` (gitignored), and fails on any renderer `pageerror`. It is navigation-only (never installs/deletes/changes settings) and runs against the machine's real dev profile. Local-only - not in CI (needs the Electron binary + display). The script clears `ELECTRON_RUN_AS_NODE` before launching (some CLI shells set it, which makes Electron boot as plain Node and the launch hang). Run it before cutting a release.
 
 ## Release Rules
 - package.json version is the release version used by electron-builder artifacts.

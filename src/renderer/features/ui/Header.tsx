@@ -200,6 +200,7 @@ export const Header: React.FC = () => {
               isIconOnly
               size="sm"
               variant="ghost"
+              aria-label={t('shell.header.appLogs')}
               className={chromeButtonClass}
               onPress={() => openDialog('appLogs')}
             >
