@@ -577,6 +577,7 @@ const LocalDownloadRow: React.FC<{
               event.stopPropagation()
               void onInstall(entry)
             }}
+            aria-label={installedMod ? t('downloads.tooltip.reinstallArchive') : t('downloads.tooltip.installArchive')}
             disabled={isInstalling}
             className={`flex h-8 w-8 items-center justify-center rounded-lg border-0 transition-colors disabled:opacity-50 ${
               installedMod
@@ -593,6 +594,7 @@ const LocalDownloadRow: React.FC<{
               event.stopPropagation()
               onDeleteRequest(entry)
             }}
+            aria-label={t('downloads.tooltip.delete')}
             className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(248_113_113/0.13)] text-[var(--status-error)] transition-colors hover:bg-[var(--status-error)] hover:text-[#190505]"
           >
             <Icon name="delete" className="text-[16px]" />
