@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.34.0] - 2026-07-05
+
 ### Added
 - **Install optional/sibling files from the same Nexus mod page without a false "already installed" warning.** Duplicate detection now keys on the Nexus file identity (mod id + file id), not the display name, so installing an OPTIONAL file while the MAIN file is already installed no longer flags it as a duplicate. Library names prefer the Nexus FILE name over the mod page title, and a **"Name this mod"** dialog lets you pick the file name, the mod page title (from a dropdown of suggestions), or type a custom name when adding a second file from a page you already have. If you deliberately choose a name that matches a mod you already have, the usual "already installed" prompt (Replace / Install as Copy) appears.
 - **Install straight into a separator from Downloads.** The Downloads right-click menu gained an "Install to separator" action below Install: pick a group (the same searchable HeroUI picker as the library's Move to Separator) and the archive installs, enables, and lands in that separator in one step - no install-then-move.
