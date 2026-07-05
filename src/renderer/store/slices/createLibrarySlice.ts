@@ -5,6 +5,16 @@ import { IpcService } from '../../services/IpcService'
 import { translate, translateN } from '../../i18n/translate'
 import { recomputeConflictStateFromExistingConflicts } from '../../utils/modConflictState'
 import { applyConflictState, scheduleConflictRefresh } from './libraryConflictRefresh'
+
+// Enabling/disabling changes the mod library that usvfs deploys from, so it is
+// blocked while the game is attached to the VFS (same rule as installing). The
+// caller surfaces `error` as a toast. `get()` returns the whole store at runtime,
+// so the narrow cast reads the settings slice's live gameRunning flag.
+function gameRunningBlock<T = undefined>(get: () => unknown): IpcResult<T> | null {
+  return (get() as { gameRunning?: boolean }).gameRunning
+    ? { ok: false, error: translate('library.toast.closeGameBeforeToggle') }
+    : null
+}
 import {
   appendAndSortLibraryEntry,
   enabledLibraryModCount,
@@ -158,6 +168,8 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   enableMod: async (id) => {
+    const blocked = gameRunningBlock(get)
+    if (blocked) return blocked
     const result = await IpcService.invoke<IpcResult>(IPC.ENABLE_MOD, id)
     if (result.ok) {
       set((state) => ({
@@ -169,6 +181,8 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   enableMods: async (ids) => {
+    const blocked = gameRunningBlock<{ processed: string[]; failed: string[] }>(get)
+    if (blocked) return blocked
     const result = await IpcService.invoke<IpcResult<{ processed: string[]; failed: string[] }>>(IPC.ENABLE_MODS, ids)
     if (result.ok || result.data) {
       const processed = result.data?.processed ?? ids.filter(Boolean)
@@ -181,6 +195,8 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   disableMod: async (id) => {
+    const blocked = gameRunningBlock(get)
+    if (blocked) return blocked
     const result = await IpcService.invoke<IpcResult>(IPC.DISABLE_MOD, id)
     if (result.ok) {
       set((state) => ({
@@ -192,6 +208,8 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   disableMods: async (ids) => {
+    const blocked = gameRunningBlock<{ processed: string[]; failed: string[] }>(get)
+    if (blocked) return blocked
     const result = await IpcService.invoke<IpcResult<{ processed: string[]; failed: string[] }>>(IPC.DISABLE_MODS, ids)
     if (result.ok || result.data) {
       const processed = result.data?.processed ?? ids.filter(Boolean)

@@ -676,10 +676,25 @@ function findDuplicateMod(
   existingMods: ModMetadata[],
   rawName: string,
   folderBase: string,
-  targetModId?: string
+  targetModId?: string,
+  nexus?: { modId?: number; fileId?: number }
 ): ModMetadata | null {
   if (targetModId) {
     return existingMods.find((mod) => mod.uuid === targetModId) ?? null
+  }
+
+  // Nexus identity wins over the name heuristic: a real duplicate is the SAME
+  // file (same fileId). A DIFFERENT file from the same mod page (a sibling like
+  // an optional patch) is NOT a duplicate - even if the mod page title would
+  // make the names look alike - so it must not be flagged.
+  if (nexus?.fileId) {
+    const sameFile = existingMods.find(
+      (mod) => mod.kind === 'mod' && mod.nexusFileId === nexus.fileId,
+    )
+    if (sameFile) return sameFile
+    if (nexus.modId && existingMods.some((mod) => mod.kind === 'mod' && mod.nexusModId === nexus.modId)) {
+      return null
+    }
   }
 
   const normalizedName = rawName.trim().toLowerCase()
@@ -692,6 +707,19 @@ function findDuplicateMod(
     const folderName = (mod.folderName ?? '').trim().toLowerCase()
     return modName === normalizedName || folderName === normalizedFolderBase
   }) ?? null
+}
+
+// A sibling: an installed mod from the SAME Nexus mod page but a DIFFERENT file.
+// Its presence is what makes a new install "ambiguous" and worth a name prompt.
+function findNexusSiblingMod(
+  existingMods: ModMetadata[],
+  modId?: number,
+  fileId?: number,
+): ModMetadata | null {
+  if (!modId) return null
+  return existingMods.find(
+    (mod) => mod.kind === 'mod' && mod.nexusModId === modId && mod.nexusFileId !== fileId,
+  ) ?? null
 }
 
 function getNextInstallOrder(existingMods: ModMetadata[]): number {
@@ -827,11 +855,18 @@ async function installMod(
     }
 
     const rawName = isDir ? path.basename(filePath) : path.basename(filePath, ext)
-    // Prefer the clean Nexus file display name over the raw archive filename, which
-    // can carry author tokens/hashes (e.g. "Weird_Glass_Begone_1_sHIUHDmOO.zip").
-    const nexusDisplayName = findNexusDownloadRecordByPath(filePath)?.displayName?.trim()
-    normalizedName = nexusDisplayName || normalizeModName(rawName)
+    // A name the user picked in the name-choice dialog wins over everything. Then
+    // the clean Nexus file display name, then the cleaned archive filename (which
+    // can carry author tokens/hashes, e.g. "Weird_Glass_Begone_1_sHIUHDmOO.zip").
+    const earlyNexusRecord = findNexusDownloadRecordByPath(filePath)
+    const nexusDisplayName = earlyNexusRecord?.displayName?.trim()
+    const customName = request.customName?.trim()
+    normalizedName = customName || nexusDisplayName || normalizeModName(rawName)
     folderBase = sanitizeFolderName(normalizedName)
+    // Incoming Nexus identity (from the download record or an explicit request),
+    // used to detect a real same-file duplicate vs a sibling file of a mod page.
+    const incomingNexusModId = request.nexusModId ?? earlyNexusRecord?.modId
+    const incomingNexusFileId = request.nexusFileId ?? earlyNexusRecord?.fileId
 
     pushGeneralLog(win, {
       level: 'info',
@@ -960,7 +995,49 @@ async function installMod(
 
     // Detect conflicts using archive hashes
     const existingMods = await scanMods(settings.libraryPath)
-    const duplicateMod = findDuplicateMod(existingMods, normalizedName, folderBase, targetModMatchId)
+    const identityDuplicate = findDuplicateMod(existingMods, normalizedName, folderBase, targetModMatchId, {
+      modId: incomingNexusModId,
+      fileId: incomingNexusFileId,
+    })
+    // When the user explicitly picked a name in the name-choice dialog that
+    // already belongs to another mod, treat it as a duplicate so they get the
+    // "already installed" prompt (Replace / Install as Copy) - even for a Nexus
+    // sibling, since they deliberately chose a colliding name.
+    const duplicateMod = identityDuplicate ?? (customName
+      ? existingMods.find(
+          (mod) => mod.kind === 'mod' && mod.name.trim().toLowerCase() === normalizedName.trim().toLowerCase(),
+        ) ?? null
+      : null)
+
+    // A different file from a mod page the user already has (e.g. installing the
+    // optional patch when the main file is in): not a duplicate, but ambiguous -
+    // let the user name the new library entry. Only when interactive and not
+    // already answered (customName set) or targeting a specific mod.
+    if (
+      !duplicateMod
+      && duplicateAction === 'prompt'
+      && !customName
+      && !targetModMatchId
+    ) {
+      const sibling = findNexusSiblingMod(existingMods, incomingNexusModId, incomingNexusFileId)
+      if (sibling) {
+        removeInstallerTempDir(tempDir, settings)
+        sendProgress(win, 'Choose a name', 100)
+        return {
+          ok: true,
+          data: {
+            status: 'name-choice',
+            nameChoice: {
+              sourcePath: filePath,
+              fileName: nexusDisplayName || normalizedName,
+              archiveName: normalizeModName(rawName),
+              pageName: earlyNexusRecord?.pageName,
+              existingSiblingName: sibling.name,
+            },
+          },
+        }
+      }
+    }
     const nextInstallOrder = getNextInstallOrder(existingMods)
     const preservedOrder = typeof request.preserveOrder === 'number' && Number.isFinite(request.preserveOrder)
       ? request.preserveOrder

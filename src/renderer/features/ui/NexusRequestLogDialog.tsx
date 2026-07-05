@@ -220,11 +220,15 @@ function maskRequestLogEntry(entry: NexusApiLogEntry): NexusApiLogEntry {
   } as NexusApiLogEntry
 }
 
-function payloadHasSecrets(value: unknown): boolean {
-  if (isLoggedSecretValue(value)) return true
-  if (Array.isArray(value)) return value.some((item) => payloadHasSecrets(item))
+// Only reports secrets that are actually *revealable* - a LoggedSecretValue whose real
+// value differs from its masked form. Ingestion-masked account keys (value === masked,
+// with no raw value retained, for security) have nothing to reveal, so the reveal toggle
+// would be a dead no-op; excluding them hides the toggle when it can't do anything.
+function payloadHasRevealableSecrets(value: unknown): boolean {
+  if (isLoggedSecretValue(value)) return value.value !== value.masked
+  if (Array.isArray(value)) return value.some((item) => payloadHasRevealableSecrets(item))
   if (value && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).some((item) => payloadHasSecrets(item))
+    return Object.values(value as Record<string, unknown>).some((item) => payloadHasRevealableSecrets(item))
   }
   return false
 }
@@ -254,7 +258,7 @@ const StructuredDataPanel: React.FC<{
 }) => {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(defaultExpanded)
-  const hasSecrets = payloadHasSecrets(value)
+  const hasSecrets = payloadHasRevealableSecrets(value)
 
   return (
     <div className="overflow-hidden rounded-xl bg-[var(--surface-secondary)]">
@@ -263,7 +267,7 @@ const StructuredDataPanel: React.FC<{
         tabIndex={0}
         onClick={() => setExpanded((current) => !current)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setExpanded((c) => !c) }}
-        className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-[rgb(255_255_255/0.02)]"
+        className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary),var(--text-primary)_8%)]"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <Icon name="expand_more" className={`text-[16px] text-[var(--text-muted)] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />
@@ -425,13 +429,25 @@ const PayloadNode: React.FC<{
   )
 }
 
+// The reveal/hide-secrets choice is remembered across sessions (localStorage). In dev
+// the per-PID sessionData namespace resets it each run; in packaged builds it persists.
+const REVEAL_SECRETS_STORAGE_KEY = 'hyperion.logs.revealSecrets'
+
+function readRevealSecretsPref(): boolean {
+  try {
+    return localStorage.getItem(REVEAL_SECRETS_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
   const { t, tn } = useTranslation()
   const addToast = useAppStore((state) => state.addToast)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<LogsTab>('general')
   const [loading, setLoading] = useState(false)
-  const [revealSecrets, setRevealSecrets] = useState(false)
+  const [revealSecrets, setRevealSecrets] = useState(readRevealSecretsPref)
   const [scrollbarCompensationPx, setScrollbarCompensationPx] = useState(0)
   const [generalEntries, setGeneralEntries] = useState<AppGeneralLogEntry[]>([])
   const [requestEntries, setRequestEntries] = useState<NexusApiLogEntry[]>([])
@@ -560,7 +576,15 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
   }
 
   const toggleRevealSecrets = () => {
-    setRevealSecrets((current) => !current)
+    setRevealSecrets((current) => {
+      const next = !current
+      try {
+        localStorage.setItem(REVEAL_SECRETS_STORAGE_KEY, next ? '1' : '0')
+      } catch {
+        /* localStorage unavailable - preference just won't persist */
+      }
+      return next
+    })
   }
 
   const renderRequestEntry = (entry: NexusApiLogEntry, previewLabel?: string) => {

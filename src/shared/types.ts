@@ -368,6 +368,9 @@ export interface InstallModRequest {
   filePath: string
   duplicateAction?: InstallDuplicateAction
   targetModId?: string
+  // A library name the user typed/picked in the name-choice dialog; when set it
+  // overrides the auto-resolved name and skips the name-choice prompt.
+  customName?: string
   nexusModId?: number
   nexusFileId?: number
   sourceFileName?: string
@@ -383,11 +386,27 @@ export interface InstallModRequest {
 }
 
 export interface InstallModResponse {
-  status: 'installed' | 'duplicate' | 'conflict' | 'version-mismatch' | 'fomod'
+  status: 'installed' | 'duplicate' | 'conflict' | 'version-mismatch' | 'fomod' | 'name-choice'
   mod?: ModMetadata
   conflicts?: ConflictInfo[]
   duplicate?: DuplicateModInfo
   fomod?: { xml: string; tempDir: string; extractRoot: string; needsExtraction?: boolean }
+  nameChoice?: NameChoiceInfo
+}
+
+// Returned when installing a Nexus file whose mod page already has a different
+// file (different fileId) installed - a sibling like an optional patch. The
+// renderer offers the user a name for the new library entry (file name / mod
+// page name / a custom one) before committing.
+export interface NameChoiceInfo {
+  sourcePath: string
+  fileName: string
+  // The cleaned archive filename (e.g. "RedLine HUD Patch" from
+  // "RedLine HUD Patch 30975 1 NEnvE3bxN.zip") - a good distinct suggestion even
+  // when an older download record only carried the mod page title.
+  archiveName?: string
+  pageName?: string
+  existingSiblingName: string
 }
 
 export interface InstallResult {

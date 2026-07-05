@@ -465,7 +465,8 @@
       "bulkEnableFailed_one": "{count} mod falhou ao ativar",
       "bulkEnableFailed_other": "{count} mods falharam ao ativar",
       "bulkDisableFailed_one": "{count} mod falhou ao desativar",
-      "bulkDisableFailed_other": "{count} mods falharam ao desativar"
+      "bulkDisableFailed_other": "{count} mods falharam ao desativar",
+      "closeGameBeforeToggle": "Feche o Cyberpunk 2077 antes de ativar ou desativar mods"
     },
     "separatorDialog": {
       "createTitle": "Criar Separador",
@@ -872,6 +873,18 @@
       "descriptionMany": "Escolha um separador para mover {count} mods selecionados.",
       "searchPlaceholder": "Buscar separadores...",
       "noMatch": "Nenhum separador corresponde à sua busca."
+    },
+    "installName": {
+      "title": "Nomear este mod",
+      "description": "Um arquivo desta página de mod já está na sua biblioteca ({existing}). Escolha um nome para este.",
+      "nameLabel": "Nome na biblioteca",
+      "placeholder": "Digite um nome",
+      "suggestions": "Sugestões:",
+      "install": "Instalar",
+      "failed": "Falha ao instalar",
+      "installedActivated": "{name} instalado e ativado",
+      "installedNotActivated": "Instalado, mas não foi possível ativar: {error}",
+      "suggestionsAria": "Escolher um nome sugerido"
     }
   },
   "logs": {

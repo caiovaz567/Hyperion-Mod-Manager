@@ -383,6 +383,15 @@ export interface FomodPromptInfo {
   needsExtraction?: boolean
 }
 
+export interface NameChoicePromptInfo {
+  filePath: string
+  fileName: string
+  archiveName?: string
+  pageName?: string
+  existingSiblingName: string
+  request: Partial<InstallModRequest>
+}
+
 export interface StartNxmDownloadOptions {
   allowDuplicate?: boolean
   navigateToDownloads?: boolean
@@ -405,6 +414,7 @@ export interface DownloadsSlice {
   versionMismatchPrompt: VersionMismatchPromptInfo | null
   overwriteConflictPrompt: OverwriteConflictPromptInfo | null
   fomodPrompt: FomodPromptInfo | null
+  nameChoicePrompt: NameChoicePromptInfo | null
   activeDownloads: ActiveDownload[]
   localFiles: DownloadEntry[]
   newFiles: string[]
@@ -427,6 +437,7 @@ export interface DownloadsSlice {
   fomodInstall: (fomodRequest: FomodInstallRequest) => Promise<IpcResult<InstallModResponse>>
   dismissFomodPrompt: () => void
   clearFomodPrompt: () => void
+  clearNameChoicePrompt: () => void
   clearInstall: () => void
   refreshLocalFiles: () => Promise<void>
   startNxmDownload: (payload: NxmLinkPayload, options?: StartNxmDownloadOptions) => Promise<void>
@@ -461,6 +472,7 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   versionMismatchPrompt: null,
   overwriteConflictPrompt: null,
   fomodPrompt: null,
+  nameChoicePrompt: null,
   newFiles: (() => {
     try { return JSON.parse(localStorage.getItem('hyperion:newFiles') ?? '[]') as string[] }
     catch { return [] }
@@ -588,6 +600,19 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             originalFilePath: filePath,
             request,
             needsExtraction: resultData.fomod.needsExtraction,
+          },
+        })
+      } else if (resultData.status === 'name-choice' && resultData.nameChoice) {
+        // A sibling file of an already-installed mod page: let the user name the
+        // new library entry (the tempDir was cleaned; confirm re-installs).
+        set({
+          nameChoicePrompt: {
+            filePath,
+            fileName: resultData.nameChoice.fileName,
+            archiveName: resultData.nameChoice.archiveName,
+            pageName: resultData.nameChoice.pageName,
+            existingSiblingName: resultData.nameChoice.existingSiblingName,
+            request,
           },
         })
       } else if (resultData.status === 'duplicate' && resultData.duplicate) {
@@ -994,6 +1019,8 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
       IpcService.invoke(IPC.FOMOD_CANCEL, prompt.tempDir).catch(() => {})
     }
   },
+
+  clearNameChoicePrompt: () => set({ nameChoicePrompt: null }),
 
   clearInstall: () =>
     set({

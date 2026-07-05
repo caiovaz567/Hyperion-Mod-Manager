@@ -11,9 +11,12 @@ export interface NexusDownloadRecord {
   version?: string
   categoryId?: number
   categoryName?: string
-  // Human-readable Nexus mod/page name, used so installed mods get the same
-  // library name Nexus shows instead of the raw archive upload name.
+  // The Nexus FILE display name (e.g. "RedLine HUD Patch") - the library name,
+  // so two files from the same mod page stay distinct.
   displayName?: string
+  // The Nexus mod PAGE title (e.g. "DocWorks Quadra Type-66 'RedLine'"), offered
+  // as an alternative in the name-choice prompt.
+  pageName?: string
 }
 
 interface NexusDownloadRegistryShape {

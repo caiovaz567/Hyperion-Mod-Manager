@@ -797,6 +797,7 @@ interface DownloadHandle {
   categoryId?: number
   categoryName?: string
   displayName?: string
+  pageName?: string
 }
 
 const inFlightDownloads = new Map<string, DownloadHandle>()
@@ -943,6 +944,7 @@ function beginDownload(
         categoryId: latestHandle.categoryId,
         categoryName: latestHandle.categoryName,
         displayName: latestHandle.displayName,
+        pageName: latestHandle.pageName,
       })
       safeSendToWindow(mainWindow, IPC.NXM_DOWNLOAD_COMPLETE, {
         id,
@@ -1486,7 +1488,10 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
       version: detectedVersion,
       categoryId: modCategoryInfo.categoryId,
       categoryName: modCategoryInfo.categoryName,
-      displayName: modCategoryInfo.modName ?? fileInfo.displayName,
+      // The FILE display name is the library name (keeps sibling files from the
+      // same mod page distinct); the mod page title is kept as an alternative.
+      displayName: fileInfo.displayName ?? modCategoryInfo.modName,
+      pageName: modCategoryInfo.modName,
     })
 
     beginDownload(id, mainWindow, cdnUrl)

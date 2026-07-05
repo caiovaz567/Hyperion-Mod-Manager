@@ -130,6 +130,7 @@ Launch Game states (all borderless HeroUI fills, `rounded-lg`, 13px semibold - n
 - When In Game, a second **Close Game** destructive button appears below, same `py-3` height, `power_settings_new` icon, error-tinted fill (`rgba(248,113,113,0.12)` + `--status-error` text, deeper tint on hover)
 - Game running state is polled every 5 seconds via `IPC.GAME_RUNNING` (`tasklist`); `IPC.KILL_GAME` (`taskkill /F`) handles force close
 - Mod installation is blocked while the game is running (toast: `Close Cyberpunk 2077 before installing mods`)
+- Enabling/disabling a mod (single or bulk) is blocked the same way while the game is running (toast: `Close Cyberpunk 2077 before enabling or disabling mods`), since toggling changes the mod set usvfs deploys from
 
 Alignment rules:
 - Nav icons, Settings icon, and Launch Game icon must share a consistent visual axis
@@ -316,6 +317,8 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Downloads rows should support a right-click menu with reveal-in-Explorer, install/reinstall, pause/resume/cancel, delete, and refresh-style utilities that match the row state
 - In Downloads row context menus, `Install` or `Reinstall` should appear before file utilities such as reveal-in-Explorer
 - Revealing a download in Explorer should select the exact file the user clicked, not just open the parent folder
+- Duplicate detection compares Nexus file identity (mod id + file id), not display name, so installing a different file from the same mod page (e.g. an OPTIONAL patch alongside an already-installed MAIN file) never raises a false "already installed" warning
+- When installing a Nexus file whose mod page already has a different file installed, a compact **"Name this mod"** dialog asks for a library name before proceeding: an editable text field pre-filled with the file's own name, plus a dropdown of alternate suggestions (the mod page title, the cleaned archive filename). Typing a name that matches an existing mod falls through to the normal duplicate-install prompt (Replace / Install as Copy) instead of silently colliding
 - If a Nexus archive already exists in Downloads, use the shared confirmation dialog instead of a toast-only rejection and preview the renamed duplicate archive before the user confirms
 - If the same Nexus archive is already downloading, reuse that same duplicate-download confirmation dialog instead of blocking the request; make it clear that one transfer is already in progress and preview the next duplicate name
 - Repeated `Download Again` requests for the same Nexus file should serialize behind the first request and still end in the shared duplicate-download confirmation flow; do not fall back to a warning snackbar/toast just because the first request is still spinning up
@@ -391,6 +394,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Even when using syntax-style differentiation, App Logs should stay inside the Hyperion palette: primary text for keys, a warm amber for string emphasis, status/info colors for typed values, and restrained gray for structure chrome
 - Payload actions such as copy should live in the same header row as the payload block they affect
 - Secret-bearing payload fields should stay masked by default; if reveal is offered, it must be an explicit local toggle in the inspector and copy actions should respect the current masked/revealed state
+- The reveal/hide toggle only appears on a payload block when it holds a genuinely revealable secret (the short-lived nxm download token); ingestion-masked fields like the account API key have no raw value behind the mask, so the toggle is omitted there rather than shown as a no-op. The user's reveal/hide choice persists between sessions
 - Sensitive tokens embedded in logged URLs or endpoints should be masked before they reach the viewer; URL surfaces should never expose raw credentials by default
 - Request rows should prioritize `method`, `endpoint`, `status code`, and API response time; avoid extra diagnostic chrome unless it clearly helps
 - Long request URLs should be read primarily in the expanded inspector content, not via cramped hover tooltips over collapsed rows

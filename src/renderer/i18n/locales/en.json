@@ -465,7 +465,8 @@
       "bulkEnableFailed_one": "{count} mod failed to enable",
       "bulkEnableFailed_other": "{count} mods failed to enable",
       "bulkDisableFailed_one": "{count} mod failed to disable",
-      "bulkDisableFailed_other": "{count} mods failed to disable"
+      "bulkDisableFailed_other": "{count} mods failed to disable",
+      "closeGameBeforeToggle": "Close Cyberpunk 2077 before enabling or disabling mods"
     },
     "separatorDialog": {
       "createTitle": "Create Separator",
@@ -872,6 +873,18 @@
       "descriptionMany": "Choose a separator to move {count} selected mods into.",
       "searchPlaceholder": "Search separators...",
       "noMatch": "No separators match your search."
+    },
+    "installName": {
+      "title": "Name this mod",
+      "description": "A file from this mod page is already in your library ({existing}). Choose a name for this one.",
+      "nameLabel": "Library name",
+      "placeholder": "Type a name",
+      "suggestions": "Suggestions:",
+      "install": "Install",
+      "failed": "Install failed",
+      "installedActivated": "{name} installed and enabled",
+      "installedNotActivated": "Installed, but could not enable: {error}",
+      "suggestionsAria": "Choose a suggested name"
     }
   },
   "logs": {

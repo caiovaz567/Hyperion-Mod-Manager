@@ -11,6 +11,7 @@ import { DuplicateDownloadDialog } from './features/ui/DuplicateDownloadDialog'
 import { DuplicateInstallDialog } from './features/ui/DuplicateInstallDialog'
 import { VersionMismatchDialog } from './features/ui/VersionMismatchDialog'
 import { FomodInstallerDialog } from './features/ui/FomodInstallerDialog'
+import { InstallNameDialog } from './features/ui/InstallNameDialog'
 import { WelcomeScreen } from './features/ui/WelcomeScreen'
 import { ModList } from './features/library/ModList'
 import { DownloadsPane } from './features/downloads/DownloadsPane'
@@ -284,6 +285,7 @@ export const App: React.FC = () => {
         <DuplicateInstallDialog />
         <FomodInstallerDialog />
         <VersionMismatchDialog />
+        <InstallNameDialog />
         {dialogs.appLogs && (
           <AppLogsDialog onClose={() => closeDialog('appLogs')} />
         )}

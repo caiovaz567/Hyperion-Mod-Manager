@@ -27,6 +27,7 @@ import {
   scanMods,
 } from './ipc/modManager'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type UsvfsBridge, type VfsLink } from './vfsBridge'
+import { pruneEmptyModFrameworkDirs } from './vfsFrameworkCleanup'
 import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
@@ -124,6 +125,14 @@ function unmountVfsIfMounted(): void {
   vfsMounted = false
   migrateActiveVfsResidueAfterRun()
   cleanupStagedBootstrapFiles()
+  // After the files are migrated/removed, drop any empty framework directory
+  // trees the session left behind (e.g. an emptied cyber_engine_tweaks/mods), so
+  // "game closed" really means "game folder clean".
+  try {
+    pruneEmptyModFrameworkDirs(resolveGameRootPath(loadSettings().gamePath))
+  } catch {
+    // Best-effort; a stray empty dir is harmless if this ever throws.
+  }
 }
 
 function isGameProcessRunning(): Promise<boolean> {
@@ -1193,20 +1202,6 @@ function createBootstrapOverrideLinks(entries: BootstrapStageEntry[]): {
   return { links, dirs }
 }
 
-function bootstrapFileStillMatches(entry: BootstrapStageEntry): boolean {
-  try {
-    if (!fs.existsSync(entry.dest)) return false
-
-    if (path.basename(entry.dest).toLowerCase() === 'global.ini') {
-      return fs.readFileSync(entry.dest, 'utf8') === readBootstrapConfigContent(entry.source)
-    }
-
-    return filesAreEqual(entry.source, entry.dest)
-  } catch {
-    return false
-  }
-}
-
 // ─── Bootstrap staging crash-recovery manifest ────────────────────────────────
 // The staged-file lists above live in memory, so a crash (or a quit while the
 // game is still attached to the VFS) would orphan the physically staged loader
@@ -1340,13 +1335,27 @@ function cleanupStagedBootstrapFiles(): void {
   const results: Array<{ dest: string; deployPath: string; status: 'removed' | 'skipped' | 'error'; error?: string }> = []
 
   for (const entry of cleanupEntries) {
-    if (entry.status !== 'copied') continue
+    // Remove every loader Hyperion staged, whether it CREATED the file this run
+    // ('copied') or a prior session already staged this exact file and it
+    // persisted ('already-present' = byte-identical to the library source at
+    // staging time). Only 'existing-kept' (a DIFFERENT pre-existing file the user
+    // owns) and 'error' are left untouched. Cleaning only 'copied' was the bug:
+    // once a loader survived one dirty exit it became 'already-present' on the
+    // next launch and was then orphaned forever, piling up in bin/x64/plugins
+    // until a vanilla / all-disabled launch crashed on stale loaders.
+    if (entry.status !== 'copied' && entry.status !== 'already-present') continue
     try {
-      if (!bootstrapFileStillMatches(entry)) {
+      if (!fs.existsSync(entry.dest)) {
         results.push({ dest: entry.dest, deployPath: entry.deployPath, status: 'skipped' })
         continue
       }
-
+      // Both 'copied' and 'already-present' are Hyperion-staged loaders (the
+      // latter byte-matched the library source at staging time), so remove them
+      // outright. No match guard: a loader whose source was updated/uninstalled,
+      // or that the game touched at runtime, must still be cleaned - otherwise a
+      // stray .asi/.dll lingers in bin/x64/plugins and crashes a mod-free launch.
+      // The user's own file is protected by the 'existing-kept' status, which we
+      // never touch (and a path Hyperion never staged is never in this list).
       fs.rmSync(entry.dest, { force: true })
       results.push({ dest: entry.dest, deployPath: entry.deployPath, status: 'removed' })
     } catch (error) {
@@ -2715,7 +2724,15 @@ function registerGlobalHandlers(): void {
           })
           return { ok: false, error }
         }
+        // Launching vanilla (no usvfs). Make sure no modded residue from a prior
+        // session is left in the game folder to trip up the clean launch: remove
+        // any staged loaders still tracked, then prune emptied framework dir trees
+        // (bin/x64/plugins, red4ext). rmdir only touches empty folders, so a mod
+        // the user installed OUTSIDE Hyperion (real files present) is never removed.
         cleanupStagedBootstrapFiles()
+        try {
+          pruneEmptyModFrameworkDirs(gameRoot)
+        } catch { /* best-effort clean */ }
         return launchDirect('No enabled mods')
       }
 

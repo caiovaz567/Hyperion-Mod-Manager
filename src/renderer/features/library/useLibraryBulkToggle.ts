@@ -19,6 +19,14 @@ export function useLibraryBulkToggle({
   const [isBulkToggling, setIsBulkToggling] = useState(false)
 
   const runBulkToggle = useCallback(async (modIds: string[], target: BulkToggleTarget) => {
+    // Blocked while the game is attached to the VFS (same rule as the store's
+    // enable/disable + install). Checked BEFORE the optimistic UI flip below so
+    // the switches never move and no false "done" toast fires.
+    if (useAppStore.getState().gameRunning) {
+      addToast(translate('library.toast.closeGameBeforeToggle'), 'warning')
+      return
+    }
+
     const actionableIds = modIds.filter((id) => {
       const mod = allMods.find((item) => item.uuid === id)
       if (!mod) return false
