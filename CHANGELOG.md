@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.35.1] - 2026-07-06
+
 ### Changed
 - **Electron upgraded from 30 to 43.** Version 30 had left the security-support window and carried published high-severity advisories (ASAR integrity bypass, IPC reply spoofing); Hyperion now ships on the current supported line with its bundled Chromium/Node security fixes and installer ASAR integrity protection. The build toolchain moved with it (electron-vite 2 → 5, Vite 7), the native usvfs bridge was rebuilt against the new runtime, and the remaining dependencies were refreshed (`uuid`, `adm-zip`, bundled 7-Zip, and friends) - `npm audit` now reports **zero known vulnerabilities**. No user-facing behavior changes; the full unit suite and the end-to-end smoke test (boot, install, conflicts, delete, settings, logs) pass on the new runtime, and a packaged build was produced and verified.
 
