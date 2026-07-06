@@ -65,25 +65,35 @@ export const AppThemeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [])
 
   const previousResolvedModeRef = useRef<'light' | 'dark'>(resolvedMode)
+  // False until the persisted settings have been applied once. The mode flip
+  // that happens when settings hydrate (system default -> stored mode) is part
+  // of BOOT, not a user toggle - it must apply instantly. Starting a view
+  // transition on the still-booting (often still-hidden) window can freeze the
+  // page mid-transition: the compositor never captures a frame, the transition
+  // never settles, and the app sits blank until relaunch.
+  const settingsAppliedRef = useRef(false)
 
   useEffect(() => {
     // Light↔dark cross-fades via the View Transitions API: the compositor snapshots
     // the old frame and fades to the new one on the GPU - one repaint total. (A CSS
     // `transition` on every element animated paint properties across the whole tree
-    // and visibly chugged.) Only MODE changes animate; accent changes and the first
-    // mount apply instantly.
+    // and visibly chugged.) Only MODE changes animate; accent changes, the first
+    // mount, the settings-hydration apply, and hidden-window changes are instant.
     const modeChanged = previousResolvedModeRef.current !== resolvedMode
     previousResolvedModeRef.current = resolvedMode
+    const isBootApply = !settingsAppliedRef.current
+    if (settingsUiMode !== undefined) settingsAppliedRef.current = true
 
     const doc = document as Document & { startViewTransition?: (callback: () => void) => unknown }
-    if (modeChanged && typeof doc.startViewTransition === 'function') {
+    const canAnimate = modeChanged && !isBootApply && document.visibilityState === 'visible'
+    if (canAnimate && typeof doc.startViewTransition === 'function') {
       doc.startViewTransition(() => {
         applyThemeTokens(resolvedMode, accentTokens(resolvedAccent))
       })
       return
     }
     applyThemeTokens(resolvedMode, accentTokens(resolvedAccent))
-  }, [resolvedMode, resolvedAccent])
+  }, [resolvedMode, resolvedAccent, settingsUiMode])
 
   const setMode = useCallback(
     (nextMode: UiMode) => {

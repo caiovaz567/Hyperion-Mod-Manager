@@ -401,6 +401,36 @@ a[href]) {
   background-color: color-mix(in srgb, var(--overlay), var(--accent) 12%) !important;
 }
 
+/* Toasts render as a fully expanded vertical list - never HeroUI's collapsed
+   deck, where each new toast covered the previous one behind a scaled stack.
+   HeroUI positions every toast with INLINE per-index scale/translate styles,
+   so restoring plain flow needs !important (stylesheet !important beats inline
+   styles). The region's DOM order is newest-first; column-reverse pins the
+   newest toast at the bottom (nearest the screen corner) with older ones
+   stacking upward, so nothing ever overlaps. */
+[data-slot='toast-region'] {
+  display: flex !important;
+  flex-direction: column-reverse;
+  gap: 8px;
+  /* Above every Hyperion surface (dialogs/overlays top out at z-[300]).
+     HeroUI ships the region at z-50, which put toasts BEHIND open modals -
+     and since view transitions render in the browser's top layer, a toast
+     flashed in front during its enter/exit animation and dropped behind the
+     modal in between, reading as a front/behind flicker. */
+  z-index: 400 !important;
+}
+[data-slot='toast'] {
+  position: static !important;
+  scale: none !important;
+  translate: none !important;
+}
+/* Overflow beyond maxVisibleToasts stays hidden (it was opacity-0 in the deck
+   layout, which static flow would otherwise reveal as a blank gap). */
+[data-slot='toast'][data-hidden='true'] {
+  display: none !important;
+}
+
+
 /* The outline follows the element's own border-radius; never force a radius here -
    a global `border-radius: 3px` squared off every focused pill/rounded control. */
 *:focus-visible {

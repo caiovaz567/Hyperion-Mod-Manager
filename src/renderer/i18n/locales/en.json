@@ -466,7 +466,8 @@
       "bulkEnableFailed_other": "{count} mods failed to enable",
       "bulkDisableFailed_one": "{count} mod failed to disable",
       "bulkDisableFailed_other": "{count} mods failed to disable",
-      "closeGameBeforeToggle": "Close Cyberpunk 2077 before enabling or disabling mods"
+      "closeGameBeforeToggle": "Close Cyberpunk 2077 before enabling or disabling mods",
+      "closeGameBeforeModify": "Close Cyberpunk 2077 before modifying or deleting mods"
     },
     "separatorDialog": {
       "createTitle": "Create Separator",

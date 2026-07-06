@@ -41,7 +41,6 @@ export interface ModMetadata {
   hashes?: string[]
   archiveResources?: ArchiveResourceEntry[]
   archiveResourceIndexVersion?: number
-  notes?: string
   folderName?: string
   sourcePath?: string
   sourceType?: 'archive' | 'directory'

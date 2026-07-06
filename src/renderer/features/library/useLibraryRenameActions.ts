@@ -6,7 +6,7 @@ type AddToast = (message: string, severity?: ToastSeverity, duration?: number) =
 
 interface UseLibraryRenameActionsOptions {
   orderedEntries: ModMetadata[]
-  updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
+  updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<boolean>
   addToast: AddToast
 }
 
@@ -52,7 +52,8 @@ export function useLibraryRenameActions({
       return
     }
 
-    await updateModMetadata(renamingModId, { name: trimmed })
+    const renamed = await updateModMetadata(renamingModId, { name: trimmed })
+    if (!renamed) return // blocked/failed - the slice already toasted the reason
     addToast(translate('library.detail.toastNameUpdated'), 'success', 1800)
     setRenamingModId(null)
     setRenameValue('')

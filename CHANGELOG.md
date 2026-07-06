@@ -8,6 +8,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Creating or renaming a file/folder in a mod's Files tree no longer makes all the mod's files vanish from the view.** The disk change tripped the library watcher, whose bulk re-scan carries slimmed mod entries (file lists stripped for speed) - and that empty list replaced the full one the open details panel was showing. Scans now keep each mod's last known full file list, and an open details panel re-reads the real folder whenever the watcher fires, so the tree stays correct and live. This also removes the brief flicker around the rename success toast.
+- **Fixed the app occasionally freezing on a blank screen at startup.** When the saved color mode differed from the system scheme, the boot-time theme switch started a screen cross-fade before the window had ever painted - the transition could never finish and the app sat blank until relaunched. The animation now only runs for real light/dark toggles; the boot apply is instant.
+- **Toasts no longer cover each other, and always render above open dialogs.** Notifications now stack as a fully expanded vertical list - the newest appears at the bottom and older ones move up, every message staying readable until it expires (previously new toasts collapsed on top of the previous ones). Toasts also sat BEHIND open modals (only flashing in front during their enter/exit animation, which read as a weird front/behind flicker when renaming from mod details); they now always sit above every dialog and overlay.
+- **Deleting, renaming, or reinstalling a mod is now blocked while the game is running** - same rule as installing and enabling/disabling. Those actions change or remove the very folders the virtual file system has mounted under the running game, so a mid-session delete made the mod's files vanish from the game instantly. Editing a mod's files from the details Files tree is blocked the same way; renaming separators stays allowed (they deploy nothing). Everything unblocks as soon as the game closes.
+- A rename that fails (or is blocked) no longer shows a false "Name updated" toast.
+
+### Removed
+- Dropped the internal unused `notes` metadata field (it was never shown or editable anywhere in the app).
+
 ---
 
 ## [0.35.1] - 2026-07-06

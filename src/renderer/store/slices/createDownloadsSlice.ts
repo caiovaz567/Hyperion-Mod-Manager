@@ -679,6 +679,11 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
   },
 
   reinstallMod: async (modId) => {
+    // Defense in depth behind openReinstallPrompt's early check: never replace
+    // a mounted mod folder while the game is attached to the VFS.
+    if ((get() as { gameRunning?: boolean }).gameRunning) {
+      return { ok: false, error: translate('library.toast.closeGameBeforeModify') }
+    }
     const targetMod = (
       get() as DownloadsSlice & {
         mods?: ModMetadata[]
@@ -753,6 +758,13 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     const addToast = (get() as DownloadsSlice & {
       addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
     }).addToast
+
+    // Reinstalling replaces the mod's on-disk folder, which usvfs has mounted
+    // while the game runs - blocked like install/delete/rename.
+    if ((get() as { gameRunning?: boolean }).gameRunning) {
+      addToast?.(translate('library.toast.closeGameBeforeModify'), 'warning')
+      return
+    }
 
     if (!mod.sourcePath) {
       addToast?.(translate('downloads.toast.noOriginalSource'), 'warning')

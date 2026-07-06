@@ -49,7 +49,7 @@ Accessibility:
 ### Color mode & accent color
 
 - The header hosts a **light / dark / system segmented toggle** (sun / moon / monitor, HeroUI-docs style). Default is **system**, following the OS scheme live. Light mode mirrors HeroUI's light scheme: a light-gray page canvas with white elevated cards - not a plain white page
-- Switching light↔dark cross-fades over ~220ms via the View Transitions API (the theme provider wraps the token swap in `document.startViewTransition`, so the compositor fades a GPU snapshot - smooth on any DOM size; never use a global CSS `transition` on `*` for this, it repaints the whole tree per frame). Accent changes stay instant
+- Switching light↔dark cross-fades over ~220ms via the View Transitions API (the theme provider wraps the token swap in `document.startViewTransition`, so the compositor fades a GPU snapshot - smooth on any DOM size; never use a global CSS `transition` on `*` for this, it repaints the whole tree per frame). Accent changes stay instant. **Only real user/OS toggles animate**: the mode application that happens while settings hydrate at boot is instant - starting a view transition on the still-booting window can freeze the page mid-transition (blank app until relaunch)
 - Hyperion has one base look per mode; the only visual customization is the **accent color**, chosen in **Settings > General -> "Color"**: a swatch row (blue, cyan, green, yellow, orange, red, pink, purple) that recolors every button, switch, tab and highlight across the whole app instantly (including the setup screen) and persists across sessions. Default is the HeroUI blue (`#006FEE`)
 - There is **no theme selector, no Themes folder, and no community-theme JSON support** - that system was removed in favor of the single accent-color axis
 - Status colors (`--status-success/warning/error/info`), the Nexus **Premium gold**, and per-mod-type colors are **never** recolored by the accent - they carry fixed meaning. The Nexus **Free** tier marker follows the accent color
@@ -131,6 +131,7 @@ Launch Game states (all borderless HeroUI fills, `rounded-lg`, 13px semibold - n
 - Game running state is polled every 5 seconds via `IPC.GAME_RUNNING` (`tasklist`); `IPC.KILL_GAME` (`taskkill /F`) handles force close
 - Mod installation is blocked while the game is running (toast: `Close Cyberpunk 2077 before installing mods`)
 - Enabling/disabling a mod (single or bulk) is blocked the same way while the game is running (toast: `Close Cyberpunk 2077 before enabling or disabling mods`), since toggling changes the mod set usvfs deploys from
+- Deleting, renaming, or reinstalling a mod - and editing its files from the details Files tree - is also blocked while the game is running (toast: `Close Cyberpunk 2077 before modifying or deleting mods`): those touch the on-disk folders usvfs has mounted, so removing/renaming one mid-session makes the mod's files vanish under the running game. Separator renames stay allowed (separators deploy nothing)
 
 Alignment rules:
 - Nav icons, Settings icon, and Launch Game icon must share a consistent visual axis
@@ -178,7 +179,7 @@ Setup wizard:
 - Dense table/list layout with active state clarity over ornament
 - Mod details opens as a centered modal overlay over the library instead of navigating to a separate screen
 - MUST: the mod details modal stays visually centered and uses the HeroUI modal language - dark `--background` shell with rounded corners, `--surface`/`--surface-secondary` panels inside, real HeroUI chips (enabled state) and CloseButton
-- MUST: the mod details modal is tabbed; `Files` is the primary inspection tab and `Details` holds secondary metadata, notes, conflicts, source context, and operational actions
+- MUST: the mod details modal is tabbed; `Files` is the primary inspection tab and `Conflicts` holds the conflict inspector (see Conflict Detection below)
 - MUST: file inspection inside mod details uses a dense tree view that is a **faithful 1:1 mirror of the mod's real folder on disk** (file-explorer style) - exactly the files and folders inside the mod directory, so a rename/add/remove on disk shows up verbatim. It is NOT transformed into the inferred game-deployment layout (the deployment/conflict systems compute deploy targets separately). The view re-reads files from disk when the details open and updates live via the library watcher. Hyperion's own bookkeeping files (`_metadata.json`, `_archive_resources.json`) are hidden. Do not reduce this surface to a flat filename dump, and do not reintroduce the inferred-deployment transform on this tree
 - MUST: the `Files` tree starts collapsed by default, and expanding folders must never resize or recenter the modal; the modal frame stays fixed to the current app window and uses internal scroll regions instead
 - MUST: file-tree operations live in a right-click context menu instead of a crowded toolbar; folder expansion supports double click, and exact-location reveal lives in that same context surface
@@ -444,7 +445,7 @@ Tooltips:
 
 - Real HeroUI `Toast` components: the store's `addToast(message, severity, duration)` pushes into a single global HeroUI `ToastQueue` (`features/ui/toastQueue.ts`) and `ToastContainer` renders it via `<ToastProvider placement="bottom end">` - no hand-rolled toast markup
 - Severity maps to HeroUI variants: success → `success`, error → `danger`, warning → `warning`, info → `accent` (informational toasts follow the user's accent color)
-- Compact stacked notifications, short text, no gimmick labels. globals.css pins the floating-surface language on the toast slot: `--overlay` fill + `--border-strong` border, `box-shadow: none` (HeroUI's default surface melted into the page in both modes)
+- Toasts stack as a fully expanded vertical list - every toast stays fully readable, the newest sits at the bottom (nearest the corner) and older ones climb above it; never HeroUI's collapsed deck where a new toast covers the previous one. The toast region sits above every other surface (dialogs and blocking overlays included) so a toast is never hidden behind an open modal. Compact notifications, short text, no gimmick labels. globals.css pins the floating-surface language on the toast slot: `--overlay` fill + `--border-strong` border, `box-shadow: none` (HeroUI's default surface melted into the page in both modes)
 - Semantic toasts additionally blend a restrained 12% tint of their status color into the overlay fill (`color-mix`), restoring the soft background HeroUI pairs with each variant's title color - without it, warning/success text sat washed-out on the pure white overlay in light mode
 
 ### Lists and panels

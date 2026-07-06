@@ -1322,16 +1322,6 @@ export async function scanMods(
             shouldWrite = true
           }
 
-          if (typeof meta.notes !== 'string' || meta.notes.trim().length === 0) {
-            if (meta.notes !== undefined) {
-              delete meta.notes
-              shouldWrite = true
-            }
-          } else if (meta.notes !== meta.notes.trim()) {
-            meta.notes = meta.notes.trim()
-            shouldWrite = true
-          }
-
           if (meta.previewImagePath !== undefined && typeof meta.previewImagePath !== 'string') {
             delete meta.previewImagePath
             shouldWrite = true

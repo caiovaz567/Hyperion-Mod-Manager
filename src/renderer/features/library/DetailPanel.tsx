@@ -336,6 +336,21 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mod?.uuid])
 
+  // Keep the tree live against disk while the panel is open: external changes
+  // (Explorer edits, or this panel's own create/rename that the watcher sees as
+  // a disk change) trigger LIBRARY_CHANGED, whose bulk re-scan carries SLIM mods
+  // (no files). Re-pull this one mod's FULL file list so the tree reflects the
+  // real folder instead of the last carried-over snapshot. REFRESH_MOD_FILES'
+  // own metadata write is ignored by the watcher, so this can't loop.
+  useEffect(() => {
+    if (!mod?.uuid) return
+    const uuid = mod.uuid
+    return IpcService.on(IPC.LIBRARY_CHANGED, () => {
+      void refreshModFiles(uuid)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mod?.uuid])
+
   const modsById = useMemo(() => new Map(mods.map((m) => [m.uuid, m])), [mods])
 
   useEffect(() => {
@@ -438,8 +453,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     }
 
     setNameSaving(true)
-    await updateModMetadata(mod.uuid, { name: trimmed })
+    const renamed = await updateModMetadata(mod.uuid, { name: trimmed })
     setNameSaving(false)
+    if (!renamed) return // blocked/failed - the slice already toasted the reason
     setEditingName(false)
     addToast(t('library.detail.toastNameUpdated'), 'success', 1800)
   }
@@ -497,6 +513,14 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
   const handleSubmitTreeAction = async () => {
     if (!treeActionDialog) return
+
+    // These edit the mod's real source folder, which usvfs has mounted while
+    // the game runs - blocked like delete/rename/reinstall.
+    if (useAppStore.getState().gameRunning) {
+      setTreeActionDialog(null)
+      addToast(t('library.toast.closeGameBeforeModify'), 'warning')
+      return
+    }
 
     const targetNode = findFileTreeNode(fileTree, treeActionDialog.nodeId ?? null)
     setTreeActionSubmitting(true)

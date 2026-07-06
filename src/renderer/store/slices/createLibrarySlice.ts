@@ -6,13 +6,18 @@ import { translate, translateN } from '../../i18n/translate'
 import { recomputeConflictStateFromExistingConflicts } from '../../utils/modConflictState'
 import { applyConflictState, scheduleConflictRefresh } from './libraryConflictRefresh'
 
-// Enabling/disabling changes the mod library that usvfs deploys from, so it is
-// blocked while the game is attached to the VFS (same rule as installing). The
-// caller surfaces `error` as a toast. `get()` returns the whole store at runtime,
-// so the narrow cast reads the settings slice's live gameRunning flag.
-function gameRunningBlock<T = undefined>(get: () => unknown): IpcResult<T> | null {
+// Mutating the mod library is blocked while the game is attached to the VFS
+// (same rule as installing): toggling changes what usvfs deploys, and
+// deleting/renaming/reinstalling touches the very folders usvfs has mounted -
+// removing a mounted folder makes the mod's files vanish mid-session. The
+// caller surfaces `error` as a toast. `get()` returns the whole store at
+// runtime, so the narrow cast reads the settings slice's live gameRunning flag.
+function gameRunningBlock<T = undefined>(
+  get: () => unknown,
+  messageKey: 'library.toast.closeGameBeforeToggle' | 'library.toast.closeGameBeforeModify' = 'library.toast.closeGameBeforeToggle',
+): IpcResult<T> | null {
   return (get() as { gameRunning?: boolean }).gameRunning
-    ? { ok: false, error: translate('library.toast.closeGameBeforeToggle') }
+    ? { ok: false, error: translate(messageKey) }
     : null
 }
 import {
@@ -80,7 +85,9 @@ export interface LibrarySlice {
   deleteMod: (id: string) => Promise<IpcResult>
   createSeparator: (name?: string) => Promise<ModMetadata | null>
   reorderMods: (orderedIds: string[]) => Promise<void>
-  updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
+  // Resolves true when the update was applied - callers gate their success
+  // toast on it (a rename can be blocked while the game runs, or fail on disk).
+  updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<boolean>
   refreshConflicts: (options?: { immediate?: boolean }) => Promise<void>
   resolveArchiveNames: (uuid: string) => Promise<void>
   refreshModFiles: (uuid: string) => Promise<void>
@@ -132,10 +139,25 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       // pass), which is why reinstalling a mod made its badges vanish "for a while". Carry the
       // previous summary over by uuid (reinstall/replace preserves the uuid) so badges stay
       // stable; the scheduled refresh below still corrects them when it runs.
-      const previousSummaries = new Map(get().mods.map((mod) => [mod.uuid, mod.conflictSummary] as const))
+      //
+      // files/emptyDirs get the same carry-over: bulk SCAN_MODS results are SLIM
+      // (files emptied for IPC size), so a plain replace wiped the details Files
+      // tree of any open mod whenever a scan landed - e.g. the library watcher
+      // reacting to a folder created/renamed from the tree itself. A mod that
+      // already holds the FULL arrays (from REFRESH_MOD_FILES / MOD_TREE_*)
+      // keeps its last known list; the details on-open/post-action refresh and
+      // the watcher hook in DetailPanel keep it honest against disk.
+      const previousByUuid = new Map(get().mods.map((mod) => [mod.uuid, mod] as const))
       const mergedMods = result.data.map((mod) => {
-        const summary = previousSummaries.get(mod.uuid)
-        return summary ? { ...mod, conflictSummary: summary } : mod
+        const previous = previousByUuid.get(mod.uuid)
+        if (!previous) return mod
+        const merged = { ...mod }
+        if (previous.conflictSummary) merged.conflictSummary = previous.conflictSummary
+        if ((!mod.files || mod.files.length === 0) && previous.files && previous.files.length > 0) {
+          merged.files = previous.files
+          if (!mod.emptyDirs && previous.emptyDirs) merged.emptyDirs = previous.emptyDirs
+        }
+        return merged
       })
       set({ mods: mergedMods, modUpdates: prunedModUpdates })
       if (removedSome) persistModUpdates(prunedModUpdates, get().modUpdatesCheckedAt)
@@ -233,6 +255,9 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   deleteMod: async (id) => {
+    // Deleting removes the on-disk folder usvfs has mounted - never mid-game.
+    const blocked = gameRunningBlock(get, 'library.toast.closeGameBeforeModify')
+    if (blocked) return blocked
     const result = await IpcService.invoke<IpcResult>(IPC.DELETE_MOD, id)
     if (result.ok) {
       set((state) => ({
@@ -274,6 +299,20 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   },
 
   updateModMetadata: async (id, updates) => {
+    // A rename also renames the mod's on-disk folder, which usvfs has mounted
+    // while the game runs - block it like delete/reinstall. Metadata-only
+    // updates (order, ...) don't touch mounted files and stay allowed,
+    // and separators deploy nothing, so only real mod renames are blocked.
+    const isModRename = typeof updates.name === 'string'
+      && get().mods.find((m) => m.uuid === id)?.kind !== 'separator'
+    if (isModRename) {
+      const blocked = gameRunningBlock(get, 'library.toast.closeGameBeforeModify')
+      if (blocked) {
+        ;(get() as { addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error') => void })
+          .addToast?.(blocked.error ?? '', 'warning')
+        return false
+      }
+    }
     const result = await IpcService.invoke<IpcResult<ModMetadata>>(
       IPC.UPDATE_MOD_METADATA,
       id,
@@ -287,7 +326,9 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       if (hasConflictSensitiveMetadataUpdate(updates)) {
         void scheduleConflictRefresh(set)
       }
+      return true
     }
+    return false
   },
   refreshConflicts: async (options) => {
     await scheduleConflictRefresh(set, options?.immediate ?? false)

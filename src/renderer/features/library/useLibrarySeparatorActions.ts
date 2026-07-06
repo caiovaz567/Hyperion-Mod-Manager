@@ -34,7 +34,7 @@ interface UseLibrarySeparatorActionsOptions {
   createSeparator: (name?: string) => Promise<ModMetadata | null>
   scanMods: () => Promise<ModMetadata[]>
   selectMod: (modId: string | null) => void
-  updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<void>
+  updateModMetadata: (id: string, updates: Partial<ModMetadata>) => Promise<boolean>
   resetSelection: () => void
   closeContextMenu: () => void
 }

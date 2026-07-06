@@ -211,6 +211,82 @@ async function scenarioWorkflow() {
     const boxB = await nameB.boundingBox()
     const lowerRowName = boxA && boxB && boxA.y > boxB.y ? 'Conflict Mod A' : 'Conflict Mod B'
 
+    // ── Mod details: Files tree ops on TEST-ONLY entries, verified on disk ──
+    // Real file operations, but every touched entry is created BY this test
+    // (smoke_e2e_* names) - the mod's own files are never renamed or deleted.
+    await nameA.click({ button: 'right', force: true })
+    await page.waitForTimeout(400)
+    await page.getByText('Details', { exact: true }).first().click({ force: true })
+    await page.waitForSelector('text=Mirroring', { timeout: 15_000 })
+    await page.waitForTimeout(800)
+    const treeShowsR6 = await page.getByText('r6', { exact: true }).first().isVisible().catch(() => false)
+    step('details Files tree lists the mod\'s real folders', treeShowsR6)
+
+    const modADir = path.join(libraryPath, 'Conflict Mod A')
+
+    // Create a folder inside r6
+    await page.getByText('r6', { exact: true }).first().click({ button: 'right', force: true })
+    await page.waitForTimeout(400)
+    await page.getByText('Create Folder', { exact: true }).first().click({ force: true })
+    await page.waitForTimeout(400)
+    await page.keyboard.type('smoke_e2e_folder')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(1200)
+    const createdOnDisk = fs.existsSync(path.join(modADir, 'r6', 'smoke_e2e_folder'))
+    const createdInTree = await page.getByText('smoke_e2e_folder', { exact: true }).first().isVisible().catch(() => false)
+    step('tree Create Folder writes the folder to disk', createdOnDisk)
+    step('created folder appears in the tree', createdInTree)
+
+    // Rename the test folder (toast doubles as the above-modal stacking check:
+    // toasts must render over the open details modal, never behind its backdrop)
+    await page.getByText('smoke_e2e_folder', { exact: true }).first().click({ button: 'right', force: true })
+    await page.waitForTimeout(400)
+    await page.getByText('Rename', { exact: true }).first().click({ force: true })
+    await page.waitForTimeout(400)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('smoke_e2e_renamed')
+    await page.keyboard.press('Enter')
+    await page.waitForSelector("[data-slot='toast']", { state: 'attached', timeout: 8_000 }).catch(() => {})
+    await page.waitForTimeout(350) // let the enter view-transition settle
+    const toastBox = await page.locator("[data-slot='toast']").first().boundingBox().catch(() => null)
+    let toastOnTop = false
+    let toastHit = 'no toast box'
+    if (toastBox) {
+      const probe = await page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y)
+        return {
+          onTop: el ? Boolean(el.closest("[data-slot='toast']")) : false,
+          hit: el ? `${el.tagName}.${String(el.className).slice(0, 60)}` : 'null',
+        }
+      }, { x: toastBox.x + toastBox.width / 2, y: toastBox.y + toastBox.height / 2 })
+      toastOnTop = probe.onTop
+      toastHit = probe.hit
+    }
+    step('action toast renders above the open modal', toastOnTop, toastHit)
+    await page.waitForTimeout(800)
+    const renamedOnDisk = fs.existsSync(path.join(modADir, 'r6', 'smoke_e2e_renamed'))
+      && !fs.existsSync(path.join(modADir, 'r6', 'smoke_e2e_folder'))
+    step('tree Rename renames the folder on disk', renamedOnDisk)
+
+    // The library watcher reacts to these disk changes with a slim bulk rescan;
+    // the tree must keep the mod's real files through it (regression guard).
+    await page.waitForTimeout(3000)
+    const treeStillPopulated = await page.getByText('r6', { exact: true }).first().isVisible().catch(() => false)
+    step('tree keeps the mod\'s files after the watcher rescan', treeStillPopulated)
+
+    // Delete the test folder through the confirm dialog
+    await page.getByText('smoke_e2e_renamed', { exact: true }).first().click({ button: 'right', force: true })
+    await page.waitForTimeout(400)
+    await page.getByText('Delete', { exact: true }).first().click({ force: true })
+    await page.waitForSelector('text=Delete Entry', { timeout: 10_000 })
+    await page.getByRole('button', { name: 'Delete', exact: true }).last().click({ force: true })
+    await page.waitForTimeout(1200)
+    const deletedFromDisk = !fs.existsSync(path.join(modADir, 'r6', 'smoke_e2e_renamed'))
+    step('tree Delete removes the folder from disk', deletedFromDisk)
+    await screenshot(page, '14b-details-tree-ops')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(600)
+
     // ── Search filters ─────────────────────────────────────────────────────
     const search = page.getByPlaceholder('Search managed mods...')
     await search.fill('Mod B')

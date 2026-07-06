@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { IpcResult, ModMetadata } from '@shared/types'
 import { translate, translateN } from '../../i18n/translate'
+import { useAppStore } from '../../store/useAppStore'
 
 type ToastSeverity = 'info' | 'success' | 'warning' | 'error'
 type AddToast = (message: string, severity?: ToastSeverity, duration?: number) => void
@@ -63,6 +64,14 @@ export function useLibraryDeleteActions({
   }, [deletingRows])
 
   const handleDeleteAll = useCallback(async () => {
+    // Deleting removes mounted mod folders - blocked while the game runs (the
+    // slice also blocks per-mod; this early check gives ONE clear toast
+    // instead of a generic "N failed to delete" count).
+    if (useAppStore.getState().gameRunning) {
+      addToast(translate('library.toast.closeGameBeforeModify'), 'warning')
+      clearPendingAction()
+      return
+    }
     const targets = [...orderedEntries]
     if (targets.length === 0) {
       addToast(translate('library.toast.noEntriesToDelete'), 'info')
@@ -97,6 +106,11 @@ export function useLibraryDeleteActions({
   }, [addToast, clearDeletingRows, clearPendingAction, deleteMod, markRowsDeleting, orderedEntries, resetSelection])
 
   const handleDeleteSelected = useCallback(async (modIds: string[]) => {
+    if (useAppStore.getState().gameRunning) {
+      addToast(translate('library.toast.closeGameBeforeModify'), 'warning')
+      clearPendingAction()
+      return
+    }
     const targets = allMods.filter((mod) => modIds.includes(mod.uuid))
     if (targets.length === 0) {
       clearPendingAction()
