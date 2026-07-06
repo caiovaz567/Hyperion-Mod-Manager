@@ -390,6 +390,10 @@ export interface NameChoicePromptInfo {
   pageName?: string
   existingSiblingName: string
   request: Partial<InstallModRequest>
+  // Set when the prompt came from a FOMOD install: the main process kept the
+  // FOMOD tempDir ALIVE, so confirm retries fomodInstall with `customName`
+  // (wizard selections intact) and cancel must go through IPC.FOMOD_CANCEL.
+  fomodRequest?: FomodInstallRequest
 }
 
 export interface StartNxmDownloadOptions {
@@ -437,6 +441,7 @@ export interface DownloadsSlice {
   fomodInstall: (fomodRequest: FomodInstallRequest) => Promise<IpcResult<InstallModResponse>>
   dismissFomodPrompt: () => void
   clearFomodPrompt: () => void
+  dismissNameChoicePrompt: () => void
   clearNameChoicePrompt: () => void
   clearInstall: () => void
   refreshLocalFiles: () => Promise<void>
@@ -964,6 +969,20 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             duplicateAction: 'prompt',
           },
         })
+      } else if (data.status === 'name-choice' && data.nameChoice) {
+        // A sibling file of an already-installed mod page: the FOMOD tempDir was
+        // kept alive, so confirm retries this same request with `customName`.
+        set({
+          nameChoicePrompt: {
+            filePath: fomodRequest.originalFilePath,
+            fileName: data.nameChoice.fileName,
+            archiveName: data.nameChoice.archiveName,
+            pageName: data.nameChoice.pageName,
+            existingSiblingName: data.nameChoice.existingSiblingName,
+            request: {},
+            fomodRequest,
+          },
+        })
       } else if (data.status === 'conflict' && data.mod && data.conflicts?.length) {
         set({
           overwriteConflictPrompt: {
@@ -1002,9 +1021,9 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
           )
         }
         state.setRecentLibraryBadge?.(data.mod.uuid, badge)
-      } else if (!result.ok) {
-        state.addToast?.(result.error ?? translate('downloads.toast.fomodInstallFailed'), 'error')
       }
+    } else if (!result.ok) {
+      state.addToast?.(result.error ?? translate('downloads.toast.fomodInstallFailed'), 'error')
     }
 
     return result
@@ -1020,7 +1039,18 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
     }
   },
 
-  clearNameChoicePrompt: () => set({ nameChoicePrompt: null }),
+  // Confirm path: just close - the follow-up install owns the temp dirs.
+  dismissNameChoicePrompt: () => set({ nameChoicePrompt: null }),
+
+  // Cancel path: a FOMOD-originated prompt keeps its tempDir alive for the
+  // retry, so cancelling must release it (mirrors clearFomodPrompt).
+  clearNameChoicePrompt: () => {
+    const prompt = get().nameChoicePrompt
+    set({ nameChoicePrompt: null })
+    if (prompt?.fomodRequest?.tempDir) {
+      IpcService.invoke(IPC.FOMOD_CANCEL, prompt.fomodRequest.tempDir).catch(() => {})
+    }
+  },
 
   clearInstall: () =>
     set({

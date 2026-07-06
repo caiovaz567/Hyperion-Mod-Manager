@@ -403,11 +403,13 @@ export const SettingsPage: React.FC = () => {
       ? { tone: 'danger' as const, label: t('settings.nexus.status.invalidKey') }
       : { tone: 'neutral' as const, label: t('settings.nexus.status.notConnected') }
 
+  // No idle chip: the Settings header right above already shows the current
+  // version, so the card only badges actionable update states.
   const updateReadout = updateDownloaded
     ? { tone: 'success' as const, label: t('settings.updates.status.ready') }
     : updateAvailable
     ? { tone: 'warning' as const, label: t('settings.updates.status.available') }
-    : { tone: 'neutral' as const, label: `v${appVersion}` }
+    : null
 
   const updateVersion = updateInfo?.version ?? ''
   const updateMessage = updateDownloaded
@@ -722,9 +724,9 @@ export const SettingsPage: React.FC = () => {
               icon="update"
               title={t('settings.updates.title')}
               description={t('settings.updates.description')}
-              headerRight={
+              headerRight={updateReadout ? (
                 <HyperionBadge tone={updateReadout.tone} className={updateDownloading ? 'animate-pulse' : ''}>{updateReadout.label}</HyperionBadge>
-              }
+              ) : undefined}
               className="fade-up"
               style={{ animationDelay: '0ms' }}
             >

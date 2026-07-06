@@ -384,6 +384,23 @@ a[href]) {
   border: 1px solid var(--border-strong) !important;
 }
 
+/* Semantic toasts keep a soft tint of their status color over the overlay fill.
+   HeroUI pairs each variant's title color (--*-soft-foreground) with a soft
+   tinted background - the plain overlay alone strips that context, and in light
+   mode the warning/success text sat washed-out on pure white. */
+[data-slot='toast'].toast--success {
+  background-color: color-mix(in srgb, var(--overlay), var(--success) 12%) !important;
+}
+[data-slot='toast'].toast--warning {
+  background-color: color-mix(in srgb, var(--overlay), var(--warning) 12%) !important;
+}
+[data-slot='toast'].toast--danger {
+  background-color: color-mix(in srgb, var(--overlay), var(--danger) 12%) !important;
+}
+[data-slot='toast'].toast--accent {
+  background-color: color-mix(in srgb, var(--overlay), var(--accent) 12%) !important;
+}
+
 /* The outline follows the element's own border-radius; never force a radius here -
    a global `border-radius: 3px` squared off every focused pill/rounded control. */
 *:focus-visible {

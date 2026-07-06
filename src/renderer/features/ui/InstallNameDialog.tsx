@@ -15,8 +15,10 @@ export const InstallNameDialog: React.FC = () => {
   const { t } = useTranslation()
   const {
     nameChoicePrompt,
+    dismissNameChoicePrompt,
     clearNameChoicePrompt,
     installMod,
+    fomodInstall,
     scanMods,
     enableMod,
     addToast,
@@ -89,8 +91,16 @@ export const InstallNameDialog: React.FC = () => {
     if (!trimmed || submitting) return
     setSubmitting(true)
     const prompt = nameChoicePrompt
-    clearNameChoicePrompt()
+    // Close WITHOUT the cancel cleanup: a FOMOD prompt's tempDir must stay
+    // alive for the retry below (fomodInstall owns it from here).
+    dismissNameChoicePrompt()
     try {
+      if (prompt.fomodRequest) {
+        // FOMOD sibling: retry the same request with the chosen name - the
+        // slice's fomodInstall handles installed/duplicate/conflict + toasts.
+        await fomodInstall({ ...prompt.fomodRequest, customName: trimmed })
+        return
+      }
       const result = await installMod(prompt.filePath, { ...prompt.request, customName: trimmed })
       if (!result.ok || !result.data) {
         addToast(result.error ?? t('dialogs.installName.failed'), 'error')

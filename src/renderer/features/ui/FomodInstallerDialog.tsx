@@ -93,11 +93,21 @@ const PluginRow: React.FC<PluginRowProps> = ({
   const isNotUsable = plugin.typeDescriptor === 'NotUsable'
   const isRequired = plugin.typeDescriptor === 'Required'
   const effectiveDisabled = disabled || isNotUsable || isRequired
+  // Checked and fixed by the installer's own rules (Required plugin or a
+  // SelectAll group). These render slightly dimmed - not interactive - but well
+  // above the NotUsable wash so the label stays readable in light mode. No lock
+  // glyph: that read as the mod manager blocking the option, when it is the
+  // FOMOD itself that fixes it.
+  const lockedActive = checked && effectiveDisabled && !isNotUsable
 
   return (
     <label
       className={`flex items-center gap-3 rounded-lg px-3.5 py-2.5 cursor-pointer transition-colors select-none
-        ${effectiveDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[var(--surface-secondary)]'}
+        ${isNotUsable
+          ? 'opacity-40 cursor-not-allowed'
+          : effectiveDisabled
+            ? 'opacity-60 cursor-default'
+            : 'hover:bg-[var(--surface-secondary)]'}
         ${checked ? 'bg-[var(--surface-secondary)]' : ''}`}
       onMouseEnter={onHover}
       onClick={(e) => {
@@ -106,7 +116,7 @@ const PluginRow: React.FC<PluginRowProps> = ({
       }}
     >
       {/* Control */}
-      <span className="shrink-0">
+      <span className="shrink-0" aria-label={lockedActive ? t('dialogs.fomod.lockedOption') : undefined}>
         {inputType === 'radio' ? (
           <span
             className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 transition-colors

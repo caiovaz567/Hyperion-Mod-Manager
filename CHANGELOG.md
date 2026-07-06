@@ -8,6 +8,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **The "Name this mod" prompt now also covers FOMOD installers.** Installing a FOMOD archive that is a sibling file of a Nexus mod page you already have (e.g. an optional FOMOD patch alongside the main file) now asks for a library name right after the wizard's Install step, instead of falling back to the old name handling. Confirming proceeds with the options you already picked - the wizard does not reappear - and cancelling cleans up properly. FOMOD duplicate detection also became Nexus-identity-aware (same file id = duplicate; a different file from the same page is not), matching normal installs.
+
+### Fixed
+- A failed FOMOD install now shows its error message as a toast (it used to fail silently).
+- The Settings > Updates card no longer repeats the current version as a chip (the Settings header right above already shows it); the chip now appears only when an update is actually available or downloaded.
+- **Light-mode contrast pass across the app.** Warning/success/error/info toasts now carry a soft tint of their status color, so their text no longer sits washed-out on a plain white surface (dark mode gets the same subtle tint); FOMOD options that are always-installed (Required or "all selected" groups) now render at a readable middle dim level - visibly fixed by the installer, but no longer near-invisible in light mode like before (truly unusable options stay strongly greyed out); the first-run welcome screen sits on the light-gray canvas so its white cards stand out instead of melting into a white page; and muted labels (status-filter segments, inactive tabs, placeholders) got a slightly stronger gray in light mode to meet the AA contrast floor.
+
 ---
 
 ## [0.34.0] - 2026-07-05
@@ -21,6 +29,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Manually-downloaded Nexus mods get a clean library name.** A manual Nexus download names its archive `<Mod> <modId> <version> <hash>` (e.g. `... Hair Pack 31149 1.0 n1B61wYbu`); Hyperion used to keep that whole string as the mod name. The id/version/hash tail is now stripped, and reinstalling recovers the exact Nexus page name via the MD5 lookup.
 - **Auto-install no longer runs while the game is open.** With "Install completed downloads automatically" on, a finishing download would install even mid-session (rewriting the library usvfs deploys from). It now defers with a clear warning and keeps the archive in Downloads to install after closing the game; the manual Install action in Downloads blocks the same way.
 - The library bulk-selection bar buttons are vertically aligned again (they were top-anchored instead of centered).
+- The "Name this mod" field has a visible border in light mode (it blended into the dialog background), and the App Logs payload headers (Response body etc.) have a visible hover in light mode.
+- The App Logs reveal/hide-secrets button only appears when there is actually a revealable secret behind the mask (the account API key is masked at the source with nothing to reveal, so the button was a no-op there), and the reveal/hide choice is now remembered.
 
 ---
 

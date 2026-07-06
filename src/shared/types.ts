@@ -276,6 +276,9 @@ export interface FomodInstallRequest {
   needsExtraction?: boolean
   duplicateAction?: InstallDuplicateAction
   targetModId?: string
+  // A library name the user typed/picked in the name-choice dialog; when set it
+  // overrides the auto-resolved name and skips the name-choice prompt.
+  customName?: string
   nexusModId?: number
   nexusFileId?: number
   sourceFileName?: string

@@ -1398,16 +1398,58 @@ async function installFromFomod(
 
   const ext = path.extname(originalFilePath).toLowerCase()
   const rawName = path.basename(originalFilePath, ext) || path.basename(originalFilePath)
-  // Prefer the clean Nexus display name over the raw archive filename (which may
-  // carry author tokens), matching the normal install flow.
-  const fomodNexusDisplayName = findNexusDownloadRecordByPath(originalFilePath)?.displayName?.trim()
-  const normalizedName = fomodNexusDisplayName || normalizeModName(rawName)
+  // A name the user picked in the name-choice dialog wins over everything. Then
+  // the clean Nexus file display name, then the cleaned archive filename (which
+  // may carry author tokens) - matching the normal install flow.
+  const fomodNexusRecord = findNexusDownloadRecordByPath(originalFilePath)
+  const fomodNexusDisplayName = fomodNexusRecord?.displayName?.trim()
+  const customName = request.customName?.trim()
+  const normalizedName = customName || fomodNexusDisplayName || normalizeModName(rawName)
+  // Incoming Nexus identity (from the request or the download record), used to
+  // detect a real same-file duplicate vs a sibling file of a mod page.
+  const incomingNexusModId = request.nexusModId ?? fomodNexusRecord?.modId
+  const incomingNexusFileId = request.nexusFileId ?? fomodNexusRecord?.fileId
   let modDir = ''
   // Tracks a fullTempDir created during needsExtraction so we can clean it up on error
   // if the tempDir switch hasn't happened yet.
   let pendingFullTempDir: string | null = null
 
   try {
+    // A different file from a mod page the user already has (e.g. a FOMOD
+    // optional patch when the main file is in): not a duplicate, but ambiguous -
+    // let the user name the new library entry. This runs BEFORE the full
+    // extraction (it only needs the library + Nexus identity) and keeps tempDir
+    // ALIVE - like the conflict path - so confirming retries this same request
+    // with `customName` and the user's wizard selections intact, and cancelling
+    // goes through IPC.FOMOD_CANCEL. Only when interactive and not already
+    // answered (customName set) or targeting a specific mod.
+    if (duplicateAction === 'prompt' && !customName && !targetModId) {
+      const preInstallMods = await scanMods(settings.libraryPath)
+      const identityDuplicate = findDuplicateMod(preInstallMods, normalizedName, sanitizeFolderName(rawName), targetModId, {
+        modId: incomingNexusModId,
+        fileId: incomingNexusFileId,
+      })
+      if (!identityDuplicate) {
+        const sibling = findNexusSiblingMod(preInstallMods, incomingNexusModId, incomingNexusFileId)
+        if (sibling) {
+          sendProgress(win, 'Choose a name', 100)
+          return {
+            ok: true,
+            data: {
+              status: 'name-choice',
+              nameChoice: {
+                sourcePath: originalFilePath,
+                fileName: fomodNexusDisplayName || normalizedName,
+                archiveName: normalizeModName(rawName),
+                pageName: fomodNexusRecord?.pageName,
+                existingSiblingName: sibling.name,
+              },
+            },
+          }
+        }
+      }
+    }
+
     if (needsExtraction) {
       // The early-detection path only extracted the FOMOD XML.  Do the full
       // extraction now so copyFomodEntries can read the selected source files.
@@ -1439,7 +1481,19 @@ async function installFromFomod(
     sendProgress(win, 'Preparing FOMOD install...', needsExtraction ? 55 : 10)
 
     const existingMods = await scanMods(settings.libraryPath)
-    const duplicateMod = findDuplicateMod(existingMods, normalizedName, sanitizeFolderName(rawName), targetModId)
+    const identityDuplicate = findDuplicateMod(existingMods, normalizedName, sanitizeFolderName(rawName), targetModId, {
+      modId: incomingNexusModId,
+      fileId: incomingNexusFileId,
+    })
+    // When the user explicitly picked a name in the name-choice dialog that
+    // already belongs to another mod, treat it as a duplicate so they get the
+    // "already installed" prompt (Replace / Install as Copy) - even for a Nexus
+    // sibling, since they deliberately chose a colliding name.
+    const duplicateMod = identityDuplicate ?? (customName
+      ? existingMods.find(
+          (mod) => mod.kind === 'mod' && mod.name.trim().toLowerCase() === normalizedName.trim().toLowerCase(),
+        ) ?? null
+      : null)
     const nextInstallOrder = getNextInstallOrder(existingMods)
     const preservedOrder = typeof request.preserveOrder === 'number' && Number.isFinite(request.preserveOrder)
       ? request.preserveOrder

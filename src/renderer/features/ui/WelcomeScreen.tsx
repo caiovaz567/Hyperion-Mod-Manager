@@ -383,8 +383,11 @@ export const WelcomeScreen: React.FC = () => {
   const centeredEndIcon = 'col-start-3 justify-self-start leading-none transition-transform duration-150 group-hover:translate-x-0.5'
   const centeredStartIcon = 'col-start-1 justify-self-end leading-none transition-transform duration-150 group-hover:-translate-x-0.5'
 
+  // --bg-canvas, not --bg-base-deep: in light mode base-deep is the near-white
+  // header chrome and the welcome's white cards melted into it; the canvas gray
+  // keeps them separated (dark values are visually identical).
   return (
-    <div className="relative h-full overflow-y-auto animate-settings-in bg-[var(--bg-base-deep)]">
+    <div className="relative h-full overflow-y-auto animate-settings-in bg-[var(--bg-canvas)]">
       <div
         className="absolute inset-x-0 top-0 h-12"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -630,7 +633,7 @@ export const WelcomeScreen: React.FC = () => {
                       <>
                         <Icon name="check_circle" className="mt-px text-[#34d399]" style={{ fontSize: 16 }} />
                         <span className="text-[var(--status-success-text)]">
-                          {t('welcome.nexus.connectedAs')} <span className="font-semibold text-white">{nexusAccount.data.name}</span>
+                          {t('welcome.nexus.connectedAs')} <span className="font-semibold text-[var(--text-primary)]">{nexusAccount.data.name}</span>
                           {' '}({nexusAccount.data.isPremium ? t('common.premium') : t('common.free')})
                         </span>
                       </>

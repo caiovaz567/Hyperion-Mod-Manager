@@ -790,6 +790,7 @@
       "preview": "Pré-visualização",
       "clickToExpand": "Clique para expandir",
       "required": "obrigatório",
+      "lockedOption": "Travado pelo instalador - sempre instalado",
       "allSelected": "todos selecionados",
       "fallbackModuleName": "Instalação do Mod",
       "fallbackStepName": "Opções de Instalação",

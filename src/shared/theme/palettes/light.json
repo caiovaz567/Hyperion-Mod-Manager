@@ -17,7 +17,7 @@
     "--text-primary": "#111113",
     "--text-primary-alt": "#18181b",
     "--text-secondary": "rgba(17, 17, 19, 0.64)",
-    "--text-muted": "rgba(17, 17, 19, 0.46)",
+    "--text-muted": "rgba(17, 17, 19, 0.52)",
     "--text-disabled": "rgba(17, 17, 19, 0.3)",
     "--text-support": "rgba(17, 17, 19, 0.56)",
 

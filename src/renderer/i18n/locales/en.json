@@ -790,6 +790,7 @@
       "preview": "Preview",
       "clickToExpand": "Click to expand",
       "required": "required",
+      "lockedOption": "Locked by this installer - always installed",
       "allSelected": "all selected",
       "fallbackModuleName": "Mod Installation",
       "fallbackStepName": "Installation Options",

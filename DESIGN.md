@@ -285,6 +285,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Groups render as labeled sections on a borderless `--surface` card; option rows hover/check onto `--surface-secondary`.
 - `SelectExactlyOne` / `SelectAtMostOne` → custom radio controls (accent fill dot); `SelectAny` / `SelectAll` → custom checkboxes (accent fill with check icon) - 18px, token-driven borders.
 - `Required` plugins are always checked and show an accent HeroUI chip; group-wide "All selected" is a neutral chip; `NotUsable` plugins are greyed out and cannot be toggled.
+- Installer-fixed selections (a `Required` plugin or any plugin in a `SelectAll` group) render **moderately dimmed** (60% opacity) - visibly not interactive, but still readable in light mode and clearly above the `NotUsable` 40% wash. No lock iconography: the option is fixed by the FOMOD itself, and a lock read as the mod manager blocking it.
 - Footer: left = Cancel (HeroUI secondary surface fill - the tertiary/ghost variant washed out in light mode); right = Back (secondary) + Next / Install (primary accent).
 - Install button is disabled until all `SelectExactlyOne` groups have exactly one selection.
 - On the last step, "Next" becomes "Install" with a `download` icon.
@@ -318,7 +319,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - In Downloads row context menus, `Install` or `Reinstall` should appear before file utilities such as reveal-in-Explorer
 - Revealing a download in Explorer should select the exact file the user clicked, not just open the parent folder
 - Duplicate detection compares Nexus file identity (mod id + file id), not display name, so installing a different file from the same mod page (e.g. an OPTIONAL patch alongside an already-installed MAIN file) never raises a false "already installed" warning
-- When installing a Nexus file whose mod page already has a different file installed, a compact **"Name this mod"** dialog asks for a library name before proceeding: an editable text field pre-filled with the file's own name, plus a dropdown of alternate suggestions (the mod page title, the cleaned archive filename). Typing a name that matches an existing mod falls through to the normal duplicate-install prompt (Replace / Install as Copy) instead of silently colliding
+- When installing a Nexus file whose mod page already has a different file installed, a compact **"Name this mod"** dialog asks for a library name before proceeding: an editable text field pre-filled with the file's own name, plus a dropdown of alternate suggestions (the mod page title, the cleaned archive filename). Typing a name that matches an existing mod falls through to the normal duplicate-install prompt (Replace / Install as Copy) instead of silently colliding. FOMOD archives get the same prompt right after the wizard's Install step; confirming proceeds with the selections already made - the wizard does not reappear
 - If a Nexus archive already exists in Downloads, use the shared confirmation dialog instead of a toast-only rejection and preview the renamed duplicate archive before the user confirms
 - If the same Nexus archive is already downloading, reuse that same duplicate-download confirmation dialog instead of blocking the request; make it clear that one transfer is already in progress and preview the next duplicate name
 - Repeated `Download Again` requests for the same Nexus file should serialize behind the first request and still end in the shared duplicate-download confirmation flow; do not fall back to a warning snackbar/toast just because the first request is still spinning up
@@ -444,6 +445,7 @@ Tooltips:
 - Real HeroUI `Toast` components: the store's `addToast(message, severity, duration)` pushes into a single global HeroUI `ToastQueue` (`features/ui/toastQueue.ts`) and `ToastContainer` renders it via `<ToastProvider placement="bottom end">` - no hand-rolled toast markup
 - Severity maps to HeroUI variants: success → `success`, error → `danger`, warning → `warning`, info → `accent` (informational toasts follow the user's accent color)
 - Compact stacked notifications, short text, no gimmick labels. globals.css pins the floating-surface language on the toast slot: `--overlay` fill + `--border-strong` border, `box-shadow: none` (HeroUI's default surface melted into the page in both modes)
+- Semantic toasts additionally blend a restrained 12% tint of their status color into the overlay fill (`color-mix`), restoring the soft background HeroUI pairs with each variant's title color - without it, warning/success text sat washed-out on the pure white overlay in light mode
 
 ### Lists and panels
 
