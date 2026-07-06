@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.35.0] - 2026-07-06
+
 ### Added
 - **The "Name this mod" prompt now also covers FOMOD installers.** Installing a FOMOD archive that is a sibling file of a Nexus mod page you already have (e.g. an optional FOMOD patch alongside the main file) now asks for a library name right after the wizard's Install step, instead of falling back to the old name handling. Confirming proceeds with the options you already picked - the wizard does not reappear - and cancelling cleans up properly. FOMOD duplicate detection also became Nexus-identity-aware (same file id = duplicate; a different file from the same page is not), matching normal installs.
 
