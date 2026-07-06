@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.36.0] - 2026-07-06
+
 ### Fixed
 - **Creating or renaming a file/folder in a mod's Files tree no longer makes all the mod's files vanish from the view.** The disk change tripped the library watcher, whose bulk re-scan carries slimmed mod entries (file lists stripped for speed) - and that empty list replaced the full one the open details panel was showing. Scans now keep each mod's last known full file list, and an open details panel re-reads the real folder whenever the watcher fires, so the tree stays correct and live. This also removes the brief flicker around the rename success toast.
 - **Fixed the app occasionally freezing on a blank screen at startup.** When the saved color mode differed from the system scheme, the boot-time theme switch started a screen cross-fade before the window had ever painted - the transition could never finish and the app sat blank until relaunched. The animation now only runs for real light/dark toggles; the boot apply is instant.
