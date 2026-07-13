@@ -20,6 +20,9 @@ interface LibraryToolbarProps {
   onCheckUpdates: () => void
   checkingUpdates: boolean
   updateCount: number
+  onUpdateAll: () => void
+  updatingAll: boolean
+  updateAllProgress: { current: number; total: number; name: string } | null
 }
 
 export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
@@ -37,6 +40,9 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
   onCheckUpdates,
   checkingUpdates,
   updateCount,
+  onUpdateAll,
+  updatingAll,
+  updateAllProgress,
 }) => {
   const { t } = useTranslation()
   const disabledCount = Math.max(0, totalCount - enabledCount)
@@ -57,7 +63,9 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
       : null
 
   return (
-    <div className="shrink-0 px-8 pt-6 pb-3 w-full">
+    // pt-10 centers the title on the sidebar brand mark's axis (rail top 12px + 20px
+    // inset + half the 44px logo slot = y54), so logo -> title read as one top line.
+    <div className="shrink-0 px-8 pt-10 pb-3 w-full">
       <div className="flex items-center gap-2">
         <Tooltip
           content={t('library.toolbar.titleTooltip')}
@@ -87,7 +95,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
       </div>
 
       <div
-        className="mt-2 inline-flex items-center gap-0.5 rounded-lg bg-[var(--surface)] p-0.5"
+        className="mt-4 inline-flex items-center gap-0.5 rounded-lg bg-[var(--surface)] p-0.5"
         role="group"
         aria-label={t('library.toolbar.statusFilterAria')}
       >
@@ -160,6 +168,23 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
               {checkingUpdates ? t('library.toolbar.checking') : updateCount > 0 ? t('library.toolbar.updatesCount', { count: updateCount }) : t('library.toolbar.checkUpdates')}
             </HyperionButton>
           </Tooltip>
+
+          {(updateCount > 0 || updatingAll) && (
+            <Tooltip content={t('library.toolbar.updateAllTooltip')} side="bottom" variant="help">
+              <HyperionButton
+                onClick={onUpdateAll}
+                variant="cyan"
+                icon={updatingAll ? 'progress_activity' : 'upgrade'}
+                iconClassName={updatingAll ? 'animate-spin' : undefined}
+                disabled={updatingAll || checkingUpdates}
+                className="px-5"
+              >
+                {updatingAll && updateAllProgress
+                  ? t('library.toolbar.updatingAll', { current: updateAllProgress.current, total: updateAllProgress.total })
+                  : t('library.toolbar.updateAll')}
+              </HyperionButton>
+            </Tooltip>
+          )}
 
         </div>
 

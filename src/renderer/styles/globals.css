@@ -19,7 +19,7 @@
 :root {
   /* Backgrounds */
   --bg-base:      #0A0A0A;
-  --bg-base-deep: #050505; /* deliberately darker than --bg-base; distinct surface (header, brand chrome, atmospheric base fill) */
+  --bg-base-deep: #050505; /* deliberately darker than --bg-base; legacy fills (shell header is transparent; sidebar rail uses the HyperionPanel card tokens) */
   --bg-surface:   #111111;
   --bg-elevated:  #161616;
   --bg-subtle:    #1C1C1C;

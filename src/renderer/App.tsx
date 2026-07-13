@@ -274,7 +274,7 @@ export const App: React.FC = () => {
         {showHeader && <Header />}
         <div className="flex flex-1 overflow-hidden relative">
           {showSidebar && <Sidebar />}
-          <main className={`flex-1 h-full overflow-hidden bg-transparent transition-[margin] duration-300 ${showSidebar ? 'ml-20' : 'ml-0'}`}>
+          <main className={`flex-1 h-full overflow-hidden bg-transparent transition-[margin] duration-300 ${showSidebar ? 'ml-[92px]' : 'ml-0'}`}>
             {needsOnboarding ? <WelcomeScreen /> : null}
             {!needsOnboarding && activeView === 'settings' ? <SettingsPage /> : null}
             {!needsOnboarding && activeView === 'library' && <ModList />}

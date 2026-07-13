@@ -134,30 +134,14 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className="flex justify-between items-center w-full px-6 h-14 bg-[var(--bg-base-deep)] border-b-[0.5px] border-[var(--bg-subtle)] z-50 flex-shrink-0"
+      className="absolute top-0 left-1/2 right-0 z-50 flex h-12 items-center justify-end px-6 bg-transparent"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      {/* Left: brand. -ml-6 + pl-5 put the 40px mark's center exactly on the sidebar
-          rail axis (40px from the window edge), aligned with the avatar below.
-          Hovering reveals the HYPERION wordmark, which tucks away on mouse leave. */}
-      <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <div className="group -ml-6 flex items-center pl-5 select-none">
-          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[rgb(var(--accent-rgb)/0.4)] bg-[var(--accent)] shadow-[0_0_18px_rgb(var(--accent-rgb)/0.25)]">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <rect x="1" y="0" width="5" height="20" fill="#FFFFFF" />
-              <rect x="14" y="0" width="5" height="20" fill="#FFFFFF" />
-              <rect x="5" y="7.5" width="10" height="5" fill="#FFFFFF" />
-            </svg>
-          </span>
-          <span
-            aria-hidden="true"
-            className="brand-font max-w-0 overflow-hidden whitespace-nowrap text-2xl font-black tracking-tighter text-[var(--text-primary)] opacity-0 transition-all duration-300 ease-out group-hover:ml-3 group-hover:max-w-[220px] group-hover:opacity-100"
-          >
-            HYPERION
-          </span>
-        </div>
-      </div>
-
+      {/* The brand mark lives at the top of the sidebar rail (Sidebar.tsx). The header is a
+          floating overlay, not a layout row: content starts at the window top, so each
+          view's title shares this top line with the controls. It spans only the right half
+          so the title area below stays interactive; the empty half up to the controls is
+          the window drag strip. */}
       {/* Right: window controls */}
       <div
         className="flex items-center gap-3"

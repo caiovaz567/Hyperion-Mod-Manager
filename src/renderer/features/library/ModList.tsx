@@ -98,6 +98,9 @@ export const ModList: React.FC = () => {
     setConflictHighlight,
     clearConflictHighlight,
     checkModUpdates,
+    updateAllMods,
+    updatingAllMods,
+    updateAllProgress,
     checkingModUpdates,
     modUpdates,
     collapsedSeparatorIds,
@@ -141,6 +144,9 @@ export const ModList: React.FC = () => {
     setConflictHighlight: state.setConflictHighlight,
     clearConflictHighlight: state.clearConflictHighlight,
     checkModUpdates: state.checkModUpdates,
+    updateAllMods: state.updateAllMods,
+    updatingAllMods: state.updatingAllMods,
+    updateAllProgress: state.updateAllProgress,
     checkingModUpdates: state.checkingModUpdates,
     modUpdates: state.modUpdates,
     collapsedSeparatorIds: state.collapsedLibrarySeparatorIds,
@@ -708,10 +714,13 @@ export const ModList: React.FC = () => {
         onCheckUpdates={() => void checkModUpdates({ force: true, notify: true })}
         checkingUpdates={checkingModUpdates}
         updateCount={updateCount}
+        onUpdateAll={() => void updateAllMods()}
+        updatingAll={updatingAllMods}
+        updateAllProgress={updateAllProgress}
       />
 
         {/* Table - has its own scroll, toolbar stays fixed above */}
-      <div className="flex-1 overflow-hidden px-8 pb-6 w-full">
+      <div className="flex-1 overflow-hidden px-8 pb-3 w-full">
         <HyperionPanel className="relative h-full overflow-hidden">
           <div
             ref={listScrollRef}

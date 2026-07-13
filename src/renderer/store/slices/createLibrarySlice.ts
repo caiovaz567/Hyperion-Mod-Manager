@@ -62,6 +62,47 @@ function pickUpdatedPeriod(lastCheckedAt: string | null): '1d' | '1w' | '1m' {
 const archiveNamesResolveInFlight = new Set<string>()
 const archiveNamesResolvedThisSession = new Set<string>()
 
+// Waits for one queued mod update to settle. Success = the mod's update flag is
+// cleared (the inline-update install path calls clearModUpdate when the replace
+// lands); failure = the download errored, never started, or vanished without the
+// install completing within a grace window. Polling the store keeps Update All
+// sequential without new IPC wiring - installs must not run concurrently (they
+// shift library order and share the install UI state).
+async function waitForUpdateSettled(
+  get: () => LibrarySlice,
+  modUuid: string,
+  nexusModId: number,
+  fileId: number,
+): Promise<boolean> {
+  const deadline = Date.now() + 20 * 60_000 // big archives on slow links
+  let sawDownload = false
+  let missingSince: number | null = null
+  const startedAt = Date.now()
+  while (Date.now() < deadline) {
+    const state = get() as LibrarySlice & {
+      activeDownloads?: Array<{ nxmModId: number; nxmFileId: number; status: string }>
+    }
+    if (state.modUpdates[modUuid]?.state !== 'update-available') return true
+    const download = state.activeDownloads?.find(
+      (d) => d.nxmModId === nexusModId && d.nxmFileId === fileId,
+    )
+    if (download) {
+      sawDownload = true
+      missingSince = null
+      if (download.status === 'error') return false
+    } else if (sawDownload) {
+      // Download row removed = transfer done; the install is in flight. Give it
+      // a generous window before declaring the update lost.
+      missingSince ??= Date.now()
+      if (Date.now() - missingSince > 5 * 60_000) return false
+    } else if (Date.now() - startedAt > 30_000) {
+      return false // the download never started (link resolve failed etc.)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+  }
+  return false
+}
+
 export interface LibrarySlice {
   mods: ModMetadata[]
   conflicts: ConflictInfo[]
@@ -73,6 +114,8 @@ export interface LibrarySlice {
   modUpdates: Record<string, ModUpdateStatus>
   modUpdatesCheckedAt: string | null
   checkingModUpdates: boolean
+  updatingAllMods: boolean
+  updateAllProgress: { current: number; total: number; name: string } | null
 
   // Actions
   scanMods: (options?: { refreshConflicts?: boolean; immediateConflicts?: boolean; refreshModUpdates?: boolean; refreshFileMetadata?: boolean }) => Promise<ModMetadata[]>
@@ -95,6 +138,7 @@ export interface LibrarySlice {
   hydrateModUpdates: () => Promise<void>
   clearModUpdate: (uuid: string) => void
   updateMod: (uuid: string) => Promise<void>
+  updateAllMods: () => Promise<void>
   setFilter: (filter: string) => void
   setTypeFilter: (type: string) => void
   setLibraryStatusFilter: (filter: LibraryStatusFilter) => void
@@ -122,6 +166,8 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
   modUpdates: {},
   modUpdatesCheckedAt: null,
   checkingModUpdates: false,
+  updatingAllMods: false,
+  updateAllProgress: null,
 
   scanMods: async (options) => {
     const result = await IpcService.invoke<IpcResult<ModMetadata[]>>(IPC.SCAN_MODS, { refreshFileMetadata: options?.refreshFileMetadata === true })
@@ -501,6 +547,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     persistModUpdates(next, get().modUpdatesCheckedAt)
   },
   updateMod: async (uuid) => {
+    if (get().updatingAllMods) return // Update All owns the pipeline while it runs
     const status = get().modUpdates[uuid]
     const mod = get().mods.find((item) => item.uuid === uuid)
     if (!mod || mod.nexusModId == null || !status || status.state !== 'update-available') return
@@ -574,6 +621,122 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
       const url = `${status.modPageUrl ?? `https://www.nexusmods.com/cyberpunk2077/mods/${nexusModId}`}?tab=files`
       await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
       ext.addToast?.(translate('library.toast.openedOnNexus'), 'info', 3600)
+    }
+  },
+
+  // Update every outdated mod in one go. Premium: downloads and installs them
+  // ONE AT A TIME through the existing inline-update pipeline (installs must not
+  // overlap - they shift library order and share the install UI state), waiting
+  // for each mod's update flag to clear before starting the next. Free accounts
+  // can't mint download links, so every update intent is queued (each matching
+  // nxm:// link then installs inline) and the first mod's files page opens.
+  updateAllMods: async () => {
+    if (get().updatingAllMods || get().checkingModUpdates) return
+
+    const ext = get() as LibrarySlice & {
+      gameRunning?: boolean
+      settings?: { nexusApiKey?: string } | null
+      addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
+      startNxmDownload?: (
+        payload: NxmLinkPayload,
+        options?: {
+          allowDuplicate?: boolean
+          navigateToDownloads?: boolean
+          intent?: { kind: 'mod-update'; targetModId: string; targetModName: string; currentVersion?: string; latestVersion?: string }
+        }
+      ) => Promise<void>
+      queueNxmUpdateIntent?: (
+        modId: number,
+        fileId: number,
+        intent: { kind: 'mod-update'; targetModId: string; targetModName: string; currentVersion?: string; latestVersion?: string }
+      ) => void
+    }
+
+    // Updating replaces on-disk mod folders usvfs has mounted - same rule as
+    // install/delete/rename.
+    if (ext.gameRunning) {
+      ext.addToast?.(translate('library.toast.closeGameBeforeModify'), 'warning')
+      return
+    }
+
+    const outdated = get().mods.filter(
+      (mod) => mod.kind === 'mod'
+        && mod.nexusModId != null
+        && get().modUpdates[mod.uuid]?.state === 'update-available',
+    )
+    if (outdated.length === 0) return
+
+    const apiKey = ext.settings?.nexusApiKey
+    let isPremium = false
+    if (apiKey) {
+      const validate = await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY, apiKey)
+      isPremium = !!(validate.ok && validate.data?.isPremium)
+    }
+
+    const intentFor = (mod: ModMetadata, status: ModUpdateStatus) => ({
+      kind: 'mod-update' as const,
+      targetModId: mod.uuid,
+      targetModName: mod.name,
+      currentVersion: status.currentVersion ?? mod.version,
+      latestVersion: status.latestVersion,
+    })
+
+    if (!isPremium) {
+      let queued = 0
+      for (const mod of outdated) {
+        const status = get().modUpdates[mod.uuid]
+        if (status?.latestFileId && mod.nexusModId != null) {
+          ext.queueNxmUpdateIntent?.(mod.nexusModId, status.latestFileId, intentFor(mod, status))
+          queued += 1
+        }
+      }
+      const first = outdated[0]
+      const firstStatus = get().modUpdates[first.uuid]
+      const url = `${firstStatus?.modPageUrl ?? `https://www.nexusmods.com/cyberpunk2077/mods/${first.nexusModId}`}?tab=files`
+      await IpcService.invoke(IPC.OPEN_EXTERNAL, url)
+      ext.addToast?.(translateN('library.toast.updateAllFreeQueued', queued), 'info', 6500)
+      return
+    }
+
+    set({ updatingAllMods: true, updateAllProgress: { current: 0, total: outdated.length, name: '' } })
+    let updated = 0
+    let failed = 0
+    try {
+      for (let index = 0; index < outdated.length; index++) {
+        const mod = outdated[index]
+        // Re-read: an earlier iteration (or a manual action) may have already
+        // updated or removed this mod.
+        const status = get().modUpdates[mod.uuid]
+        if (!get().mods.some((m) => m.uuid === mod.uuid)) continue
+        if (!status || status.state !== 'update-available') continue
+        set({ updateAllProgress: { current: index + 1, total: outdated.length, name: mod.name } })
+        if (!status.latestFileId || mod.nexusModId == null || !ext.startNxmDownload) {
+          failed += 1
+          continue
+        }
+        await ext.startNxmDownload({
+          modId: mod.nexusModId,
+          fileId: status.latestFileId,
+          key: '',
+          expires: 0,
+          userId: 0,
+          raw: '',
+        }, {
+          navigateToDownloads: false,
+          intent: intentFor(mod, status),
+        })
+        const settled = await waitForUpdateSettled(get, mod.uuid, mod.nexusModId, status.latestFileId)
+        if (settled) updated += 1
+        else failed += 1
+      }
+    } finally {
+      set({ updatingAllMods: false, updateAllProgress: null })
+    }
+
+    if (failed === 0) {
+      ext.addToast?.(translateN('library.toast.updateAllDone', updated), 'success', 5000)
+    } else {
+      ext.addToast?.(translate('library.toast.updateAllSummary', { updated, failed }), 'warning', 6500)
     }
   },
   setFilter: (filter) => set({ filter }),

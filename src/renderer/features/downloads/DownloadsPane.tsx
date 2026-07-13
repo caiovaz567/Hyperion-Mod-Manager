@@ -801,7 +801,7 @@ export const DownloadsPane: React.FC = () => {
         />
 
         {/* Unified table */}
-        <div className="flex-1 overflow-hidden px-6 pb-6 w-full">
+        <div className="flex-1 overflow-hidden px-6 pb-3 w-full">
           <HyperionPanel className="h-full overflow-hidden">
             <div ref={downloadsScrollRef} className="hyperion-scrollbar h-full overflow-y-auto [will-change:scroll-position]">
 

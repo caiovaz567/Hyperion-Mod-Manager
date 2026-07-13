@@ -88,17 +88,20 @@ Accessibility:
 
 ### Header
 
-- Height: 56px
-- Left side: the Hyperion mark only (accent rounded square with the white geometric brand H, mirroring the app icon) - no wordmark text and no version marker in the header
-- The header shows no version marker - the current build lives in the Settings header chip and the About tab
-- Right side: single-step updater CTA, the light/dark/system mode toggle, the icon-only language selector, the App Logs button, and native window controls - all sharing one HeroUI icon-button chrome (h-9 rounded-lg `--surface` fill, `--surface-secondary` hover)
+- The header is a **floating overlay cluster, not a layout row**: a transparent 48px strip absolutely positioned over the top-right half of the window, so the content area starts at the window's top edge and each view's title (Managed Mods, Downloads) sits on the same horizontal line as the header controls - no reserved chrome bar, no blank strip above the title
+- Window dragging lives in the empty part of that overlay (from mid-window to the controls); the title area on the left stays fully interactive
+- The brand mark does NOT live in the header - it heads the sidebar rail (see Sidebar). The header shows no version marker either - the current build lives in the Settings header chip and the About tab
+- The header holds only the right-side controls: single-step updater CTA, the light/dark/system mode toggle, the icon-only language selector, the App Logs button, and native window controls - all sharing one HeroUI icon-button chrome (h-9 rounded-lg `--surface` fill, `--surface-secondary` hover)
 - The terminal icon in the header opens App Logs; it is not an in-app terminal session
 
 ### Sidebar
 
 Current implementation state:
-- Collapsed width: 80px
-- Expanded width: 256px on hover
+- The sidebar is a **full-height floating rail**: a rounded panel (`rounded-2xl`) inset 12px from the window's left/top/bottom edges, using the exact same card language as the library/downloads content panels (`--overlay` fill + fine `--border` border) so rail and content read as sibling cards on the canvas. Item hover/active lift uses `--surface-secondary`
+- The **Hyperion brand mark heads the rail** (accent rounded square with the white geometric brand H, mirroring the app icon), above the account block, so logo -> account -> navigation -> Launch read as one column; expanding the rail reveals the `HYPERION` wordmark beside it
+- Collapsed width: 80px, with the 44px icon column optically centered in the rail (the 17px side inset plus the rail's 1px border put the icon axis exactly on the rail's center line)
+- Expanded width: 256px on hover (the rail widens over the content)
+- The library/downloads content panels share the rail's 12px bottom inset, so the panel bottoms and the rail bottom sit on one line
 - Top account block is hidden while collapsed and revealed on hover
 - Top account block should reflect real Nexus connection state when available: account name plus `Premium Connected` / `Free Connected`
 - When Nexus is not configured, the block should fall back to a neutral `Nexus Account / Not Connected` treatment instead of faux online-system language
@@ -273,6 +276,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Nexus request logs should summarize large `files.json` responses (count + small sample) instead of rendering the full file list; the app may still need the complete response internally for manual update checks.
 - When a newer version is available, the mod row renders its installed version in red (`#f87171`) in the Version column with an inline cyber-blue `upgrade` button beside it. Tooltip format: `Installed: X - Latest: Y - New version on Nexus. Click to update.`
 - Clicking the upgrade button is adaptive to the Nexus account: Premium resolves the download directly, stays on the Library view, then replaces and re-enables the mod in place when the archive finishes. Free opens the mod's Nexus files page so the user triggers the `nxm://` flow.
+- An **Update All** button (cyan, `upgrade` icon) appears beside `Check Updates` whenever at least one update is flagged. Premium: downloads and installs every outdated mod **one at a time** through the existing inline-update pipeline (installs never overlap), narrating progress in the button (`Updating X/N...`); per-mod upgrade buttons and a summary toast close the loop. Free: queues every update intent (each matching `nxm://` link then installs inline) and opens the first mod's Nexus files page with guidance. Blocked while the game is running, like every library mutation
 - A `Check Updates` control in the Library toolbar (cyan, with spinner + `Updates (N)` count) runs a bulk re-check and toasts the result: one `updated.json` request (with a window that adapts to time since the last check - 1 day / 1 week / 1 month) finds which mods changed game-wide, and only those installed mods get a per-file deep check. This scales to large libraries instead of one request per mod. A per-mod `Check for Update` action also lives in the mod right-click menu (Nexus-sourced mods only) - it checks just that one mod (a single `files.json` request) and toasts whether an update is available. Both merge results into the cached statuses (which persist between sessions); these are the only two ways update status is fetched.
 
 ### FOMOD Installer
@@ -380,7 +384,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Hyperion supports multiple interface languages. English is the source of truth; **Brazilian Portuguese (`Português (Brasil)`)** is the first translation. The selector is exposed in two places: the first-run setup wizard (top-right) and Settings > General
 - The selector is the shared `LanguageSelect` rendered as an **icon-only HeroUI button** (translate icon) in two places: the setup wizard top-right and the app header beside App Logs. Its popover has a muted "Choose a language" header and lists each language by its native name (English label as a secondary line) with a leading check on the active one. It no longer lives in Settings > General
 - Changing the language applies **live** (no restart) and persists across sessions in `settings.language`
-- Translation coverage spans the whole renderer UI: the setup wizard, app shell, Downloads, Library (including mod details, conflicts, and dialogs), all Settings tabs, the shared install/conflict/version/duplicate/move-to-separator dialogs, the FOMOD installer, App Logs, and toasts. Only main-process error strings remain English. Untranslated strings fall back to English rather than showing missing-key placeholders, so the app stays readable; `en.json` is the source of truth and `pt-BR.json` is a complete translation at full key parity with it (726/726 keys)
+- Translation coverage spans the whole renderer UI: the setup wizard, app shell, Downloads, Library (including mod details, conflicts, and dialogs), all Settings tabs, the shared install/conflict/version/duplicate/move-to-separator dialogs, the FOMOD installer, App Logs, and toasts. Only main-process error strings remain English. Untranslated strings fall back to English rather than showing missing-key placeholders, so the app stays readable; `en.json` is the source of truth and `pt-BR.json` is a complete translation at full key parity with it (761/761 keys)
 - Engine/implementation details (JSON catalogs, the `LOCALES` registry, the `t()` fallback, how to add a language) live in CLAUDE.md → Internationalization
 
 ### App Logs

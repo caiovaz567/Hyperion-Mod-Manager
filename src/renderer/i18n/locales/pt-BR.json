@@ -331,6 +331,9 @@
       "checkUpdatesTooltip": "Verificar se há versões mais novas dos mods do Nexus instalados",
       "checking": "Verificando…",
       "updatesCount": "Atualizações ({count})",
+      "updateAll": "Atualizar tudo",
+      "updateAllTooltip": "Baixa e instala todas as atualizações de mods disponíveis, uma por vez",
+      "updatingAll": "Atualizando {current}/{total}...",
       "checkUpdates": "Verificar Atualizações",
       "deleteAllLabel": "Excluir todos os mods",
       "deleteAllTooltip": "Excluir todos os mods da biblioteca atual",
@@ -467,7 +470,12 @@
       "bulkDisableFailed_one": "{count} mod falhou ao desativar",
       "bulkDisableFailed_other": "{count} mods falharam ao desativar",
       "closeGameBeforeToggle": "Feche o Cyberpunk 2077 antes de ativar ou desativar mods",
-      "closeGameBeforeModify": "Feche o Cyberpunk 2077 antes de modificar ou excluir mods"
+      "closeGameBeforeModify": "Feche o Cyberpunk 2077 antes de modificar ou excluir mods",
+      "updateAllDone_one": "{count} mod atualizado",
+      "updateAllDone_other": "{count} mods atualizados",
+      "updateAllSummary": "{updated} mods atualizados - {failed} falharam",
+      "updateAllFreeQueued_one": "Atualização enfileirada para {count} mod - baixe pela página da Nexus e o Hyperion instala automaticamente",
+      "updateAllFreeQueued_other": "Atualizações enfileiradas para {count} mods - baixe cada uma pela página da Nexus e o Hyperion instala automaticamente"
     },
     "separatorDialog": {
       "createTitle": "Criar Separador",

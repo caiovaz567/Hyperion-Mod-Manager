@@ -25,7 +25,9 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
 }) => {
   const { t } = useTranslation()
   return (
-  <div className="shrink-0 px-6 pt-6 pb-3 w-full">
+  // pt-10 keeps the Downloads title on the same top line as the library title (aligned
+  // with the sidebar brand mark's axis).
+  <div className="shrink-0 px-6 pt-10 pb-3 w-full">
     <h1 className="text-[1.32rem] font-bold tracking-[-0.01em] text-[var(--text-primary)] sm:text-[1.44rem]">
       {t('downloads.title')}
     </h1>

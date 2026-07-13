@@ -10,6 +10,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.37.0] - 2026-07-13
+
+### Added
+- **Update All.** When mods have updates available, a new Update All button appears beside Check Updates in the library toolbar. Premium accounts download and install every outdated mod automatically, one at a time, with live progress on the button (`Updating 2/5...`) and a summary toast at the end. Free accounts get every update queued (each file downloaded from Nexus then installs inline automatically) and the first mod's files page opened. Blocked while the game is running, like every other library change.
+
+### Changed
+- **App shell redesign.** The sidebar is now a full-height floating panel with the Hyperion logo at its top - logo, account, navigation, and Launch Game read as one column - using the same card style as the mod list and Downloads panels, so the whole shell feels like one coherent system instead of loose chrome strips split by gray border lines. The top bar no longer reserves its own strip: the window/utility controls float over the top-right corner and the screen title (Managed Mods / Downloads) sits on the same top line, removing the blank band that used to sit above it. The mod list and Downloads panels now end on exactly the same line as the sidebar's bottom edge, and the sidebar icons are optically dead-center in the rail.
+
+---
+
 ## [0.36.0] - 2026-07-06
 
 ### Fixed

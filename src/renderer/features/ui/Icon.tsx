@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   AlignJustify, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ArrowUpToLine,
-  BookOpen, Bookmark, Boxes, Braces, Bug, Check, CheckCheck, ChevronDown, ChevronsDown, ChevronsDownUp,
+  BookOpen, Bookmark, Boxes, Braces, Bug, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronsDown, ChevronsDownUp,
   ChevronsUp, ChevronsUpDown, Circle, CircleAlert, CircleArrowUp, CircleCheck, CircleHelp, CircleMinus,
   CircleUser, Cloud, Code, Copy, CopyPlus, CornerDownRight, Delete, Download, Ellipsis, ExternalLink,
   Eye, EyeOff, File, FileDiff, FileDown, FileSearch, FileText, Folder, FolderArchive, FolderInput, FolderOpen, FolderPlus,
@@ -58,6 +58,7 @@ const ICONS: Record<string, LucideIcon> = {
   downloading: Download,
   edit: Pencil,
   error: CircleAlert,
+  chevron_left: ChevronLeft,
   expand_more: ChevronDown,
   file: File,
   file_download: FileDown,

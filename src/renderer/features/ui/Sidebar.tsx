@@ -87,16 +87,17 @@ export const Sidebar: React.FC = () => {
 
   const itemClass = (active?: boolean, disabled?: boolean) => `relative h-12 w-full min-w-0 rounded-none bg-transparent p-0 text-left transition-[background-color,color] duration-200 ${
     active
-      ? 'text-[var(--accent)] bg-[var(--bg-base)] before:absolute before:left-0 before:w-[2px] before:h-8 before:bg-[var(--accent)] before:top-1/2 before:-translate-y-1/2'
+      ? 'text-[var(--accent)] bg-[var(--surface-secondary)] before:absolute before:left-0 before:w-[2px] before:h-8 before:bg-[var(--accent)] before:top-1/2 before:-translate-y-1/2'
       : disabled
         ? 'text-[var(--text-disabled)]'
-        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-base)]'
+        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-secondary)]'
   }`
 
-  // Same grid as the account block above (18px inset + 44px icon column), so the avatar,
-  // nav icons, and Settings gear all sit on one vertical axis in the collapsed rail.
+  // Same grid as the account block above (17px inset + 44px icon column; 17px + the rail's
+  // 1px border centers the column exactly in the 80px rail), so the avatar, nav icons, and
+  // Settings gear all sit on one vertical axis in the collapsed rail.
   const itemInnerClass =
-    'grid h-12 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4'
+    'grid h-12 w-full items-center whitespace-nowrap px-[17px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4'
 
   // Inter (the app's primary font - the nav no longer inherits the Syne brand font) with an
   // explicit color, so inactive items keep readable contrast in both light and dark modes.
@@ -179,8 +180,28 @@ export const Sidebar: React.FC = () => {
         : t('shell.account.notConnected')
 
   return (
-    <nav className="group/sidebar slide-in-left fixed left-0 top-14 bottom-0 z-40 flex w-20 flex-col overflow-hidden border-r-[0.5px] border-[var(--bg-subtle)] bg-[var(--bg-base-deep)] py-8 text-[15px] text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)]">
-      <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[18px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
+    <nav className="group/sidebar slide-in-left fixed left-3 top-3 bottom-3 z-40 flex w-20 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--overlay)] pt-5 pb-6 text-[15px] text-[var(--accent)] hover:w-64 transition-[width] duration-200 ease-in-out [will-change:width] [contain:layout_paint] [transform:translateZ(0)]">
+      {/* Brand mark heads the rail so logo -> account -> nav read as one column; the
+          HYPERION wordmark rides the rail's hover expansion. */}
+      <div className="mb-7 grid w-full select-none items-center whitespace-nowrap px-[17px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-3">
+        <span className="flex h-11 w-11 items-center justify-center">
+          <span className="relative flex h-10 w-10 items-center justify-center rounded-[10px] border border-[rgb(var(--accent-rgb)/0.4)] bg-[var(--accent)] shadow-[0_0_18px_rgb(var(--accent-rgb)/0.25)]">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="1" y="0" width="5" height="20" fill="#FFFFFF" />
+              <rect x="14" y="0" width="5" height="20" fill="#FFFFFF" />
+              <rect x="5" y="7.5" width="10" height="5" fill="#FFFFFF" />
+            </svg>
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="brand-font min-w-0 overflow-hidden whitespace-nowrap text-[17px] font-black tracking-tighter text-[var(--text-primary)] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100"
+        >
+          HYPERION
+        </span>
+      </div>
+
+      <div className="mb-8 grid h-11 w-full items-center whitespace-nowrap px-[17px] [grid-template-columns:44px_0fr] gap-x-0 transition-[grid-template-columns,column-gap] duration-200 group-hover/sidebar:[grid-template-columns:44px_minmax(0,1fr)] group-hover/sidebar:gap-x-4">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-0 text-[13px] font-bold tracking-[0.14em] transition-colors duration-150 ${avatarToneClass}`}
         >
