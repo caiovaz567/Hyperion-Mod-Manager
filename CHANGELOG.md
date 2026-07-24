@@ -10,6 +10,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.37.1] - 2026-07-24
+
+### Added
+- **Collapsed separators now show their conflicts.** A folded group used to hide its members' conflict badges completely. The separator row now carries small presence marks in the same color language - green `+` when mods inside overwrite others, red `-` when mods inside are overwritten, yellow `!` when a mod is fully redundant - with no counts, so large libraries stay clean. Hovering explains each mark, and clicking the row expands the group to see the detailed per-mod badges.
+
+### Fixed
+- **The app no longer gets stuck looping on the splash screen at startup.** On some boots the hidden main window never produced its first frame, which deadlocked the reveal: the "window painted" signal never fired, the interface's "ready" signal was itself waiting on animation frames that a hidden window doesn't guarantee, and the 12-second safety net hit the same dead gate and gave up silently - so the splash animated forever until the app was closed and reopened. All three paths are fixed: the ready signal no longer depends on hidden-window frames, receiving it now reveals the window unconditionally (showing forces a paint), and the safety net forces the reveal open as a true last resort and is armed from the moment the window is created.
+
+---
+
 ## [0.37.0] - 2026-07-13
 
 ### Added

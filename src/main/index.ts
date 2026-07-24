@@ -3313,7 +3313,12 @@ app.whenReady().then(async () => {
         source: 'app',
         message: 'Renderer went silent during boot; revealing window via safety net',
       })
+      // Last resort: force BOTH reveal gates open. On flaky boots the hidden window
+      // never produces its first paint, so 'ready-to-show' never fires - if the
+      // watchdog kept gating on it, this timer would no-op once and die, leaving the
+      // splash looping forever. Showing the window forces the compositor to paint.
       rendererReady = true
+      mainWindowReadyToShow = true
       revealMainWindow()
     }, SPLASH_SAFETY_REVEAL_MS)
   }
@@ -3354,6 +3359,11 @@ app.whenReady().then(async () => {
 
   // Create main window (hidden)
   mainWindow = createMainWindow()
+  // Arm the safety watchdog immediately: if the renderer dies before its first
+  // boot-status heartbeat AND the hidden window never paints ('ready-to-show'
+  // never fires), no other code path would ever start the timer and the splash
+  // would loop forever. Boot-status updates keep re-arming it as usual.
+  armSplashSafetyWatchdog()
   pushGeneralLog(mainWindow, {
     level: 'info',
     source: 'app',
@@ -3409,6 +3419,12 @@ app.whenReady().then(async () => {
 
   ipcMain.once(IPC.APP_READY, () => {
     rendererReady = true
+    // The renderer finished its whole boot sequence, so the page content exists even
+    // if the hidden window never composited a frame ('ready-to-show' is unreliable
+    // for never-shown windows). Do not keep gating the reveal on it - that deadlock
+    // left the splash looping forever on boots where the first hidden paint never
+    // happened. show() forces a paint.
+    mainWindowReadyToShow = true
     clearSplashSafetyWatchdog()
     flushPendingNxmUrls()
     // Deliver any update result that resolved during the splash, now that the

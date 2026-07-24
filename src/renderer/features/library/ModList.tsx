@@ -249,6 +249,32 @@ export const ModList: React.FC = () => {
     return counts
   }, [orderedEntries, modUpdates])
 
+  // Conflict roll-up for COLLAPSED separators: PRESENCE only (some enabled member
+  // wins conflicts / is overwritten / is redundant) - deliberately no counts and no
+  // names, because on a 100-mod group any number or list is just noise. The signal
+  // is "there is overwriting going on inside here"; expanding shows the detail.
+  const separatorConflictRollups = useMemo(() => {
+    const rollups = new Map<string, { wins: boolean; losses: boolean; redundant: boolean }>()
+    let currentSeparatorId: string | null = null
+    for (const entry of orderedEntries) {
+      if (entry.kind === 'separator') {
+        currentSeparatorId = entry.uuid
+        continue
+      }
+      if (!currentSeparatorId || !entry.enabled) continue
+      const summary = entry.conflictSummary
+      if (!summary) continue
+      const isRedundant = Boolean(summary.redundant)
+      if (summary.overwrites <= 0 && summary.overwrittenBy <= 0 && !isRedundant) continue
+      const bucket = rollups.get(currentSeparatorId) ?? { wins: false, losses: false, redundant: false }
+      if (summary.overwrites > 0) bucket.wins = true
+      if (summary.overwrittenBy > 0) bucket.losses = true
+      if (isRedundant) bucket.redundant = true
+      rollups.set(currentSeparatorId, bucket)
+    }
+    return rollups
+  }, [orderedEntries])
+
   const {
     isBulkToggling,
     runBulkToggle,
@@ -778,6 +804,7 @@ export const ModList: React.FC = () => {
             collapsedSeparatorSet={collapsedSeparatorSet}
             separatorSummaryTotal={separatorSummary.total}
             separatorUpdateCounts={separatorUpdateCounts}
+            separatorConflictRollups={separatorConflictRollups}
             draggedModCount={draggedModCount}
             rowDropTarget={rowDropTarget}
             renamingModId={renamingModId}

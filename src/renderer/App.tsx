@@ -33,12 +33,22 @@ const CONFLICT_BOOT_WAIT_TIMEOUT_MS = 6000
 // relaunches don't spam Nexus; a normal session gap still refreshes.
 const MOD_UPDATE_LAUNCH_MAX_AGE_MS = 60 * 60 * 1000
 
+// The window is still HIDDEN at this point, and a hidden window is not guaranteed to
+// produce animation frames (compositor throttling) - on flaky boots the rAF callbacks
+// never ran, APP_READY was never sent, and the splash looped forever while the main
+// process waited for it. The timeout race keeps the "paint before reveal" nicety on
+// normal boots but guarantees APP_READY always goes out.
+const FIRST_PAINT_TIMEOUT_MS = 800
+
 async function waitForFirstPaint(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => resolve())
-    })
-  })
+  await Promise.race([
+    new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => resolve())
+      })
+    }),
+    new Promise<void>((resolve) => window.setTimeout(resolve, FIRST_PAINT_TIMEOUT_MS)),
+  ])
 }
 
 async function waitForCriticalFonts(): Promise<void> {

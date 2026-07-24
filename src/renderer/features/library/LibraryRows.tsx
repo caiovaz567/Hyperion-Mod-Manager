@@ -41,6 +41,7 @@ interface LibraryRowsProps {
   collapsedSeparatorSet: Set<string>
   separatorSummaryTotal: Map<string, number>
   separatorUpdateCounts: Map<string, number>
+  separatorConflictRollups: Map<string, { wins: boolean; losses: boolean; redundant: boolean }>
   draggedModCount: number
   rowDropTarget: { targetId: string; position: 'before' | 'after' } | null
   renamingModId: string | null
@@ -101,6 +102,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
   collapsedSeparatorSet,
   separatorSummaryTotal,
   separatorUpdateCounts,
+  separatorConflictRollups,
   draggedModCount,
   rowDropTarget,
   renamingModId,
@@ -215,6 +217,7 @@ export const LibraryRows: React.FC<LibraryRowsProps> = ({
                 separatorCollapsed={mod.kind === 'separator' && collapsedSeparatorSet.has(mod.uuid)}
                 separatorChildCount={mod.kind === 'separator' ? (separatorSummaryTotal.get(mod.uuid) ?? 0) : 0}
                 separatorUpdateCount={mod.kind === 'separator' ? (separatorUpdateCounts.get(mod.uuid) ?? 0) : 0}
+                separatorConflictRollup={mod.kind === 'separator' ? (separatorConflictRollups.get(mod.uuid) ?? null) : null}
                 separatorMoveHint={mod.kind === 'separator' && sortKey === null && draggedModCount > 0
                   ? tn('library.separator.dropHint', draggedModCount)
                   : null}

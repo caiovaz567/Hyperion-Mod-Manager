@@ -24,6 +24,7 @@ interface ModRowProps {
   separatorCollapsed?: boolean
   separatorChildCount?: number
   separatorUpdateCount?: number
+  separatorConflictRollup?: { wins: boolean; losses: boolean; redundant: boolean } | null
   separatorMoveHint?: string | null
   conflictSeparatorTone?: 'win' | 'loss' | 'mixed' | null
   rowDropPosition?: 'before' | 'after' | null
@@ -63,6 +64,7 @@ export const ModRow: React.FC<ModRowProps> = ({
   separatorCollapsed = false,
   separatorChildCount = 0,
   separatorUpdateCount = 0,
+  separatorConflictRollup = null,
   separatorMoveHint = null,
   conflictSeparatorTone = null,
   rowDropPosition = null,
@@ -228,6 +230,64 @@ export const ModRow: React.FC<ModRowProps> = ({
                   <Icon name="upgrade" className="text-[14px] leading-none" />
                   {separatorUpdateCount}
                 </span>
+              ) : null}
+              {/* Collapsed-only conflict roll-up: PRESENCE badges (+ / - / !), no
+                  counts - on a big group any number is noise. The tooltip says what
+                  each mark means in plain words; clicking the row expands the group,
+                  where the per-mod badges carry the detail. */}
+              {separatorCollapsed && separatorConflictRollup &&
+                (separatorConflictRollup.wins || separatorConflictRollup.losses || separatorConflictRollup.redundant) ? (
+                <Tooltip
+                  side="bottom"
+                  variant="help"
+                  content={
+                    <div className="flex max-w-[300px] flex-col gap-1 py-0.5 text-left break-words">
+                      {separatorConflictRollup.wins ? (
+                        <div className="text-[12px] font-medium text-[#34d399]">
+                          {t('library.row.separatorConflictWinsHint')}
+                        </div>
+                      ) : null}
+                      {separatorConflictRollup.losses ? (
+                        <div className="text-[12px] font-medium text-[#f87171]">
+                          {t('library.row.separatorConflictLossesHint')}
+                        </div>
+                      ) : null}
+                      {separatorConflictRollup.redundant ? (
+                        <div className="text-[12px] font-medium text-[var(--status-warning-text)]">
+                          {t('library.row.separatorConflictRedundantHint')}
+                        </div>
+                      ) : null}
+                      <div className="text-[11px] text-[var(--text-muted)]">
+                        {t('library.row.separatorConflictExpandHint')}
+                      </div>
+                    </div>
+                  }
+                >
+                  <span
+                    className="flex shrink-0 items-center gap-1"
+                    aria-label={[
+                      separatorConflictRollup.wins ? t('library.row.separatorConflictWinsHint') : null,
+                      separatorConflictRollup.losses ? t('library.row.separatorConflictLossesHint') : null,
+                      separatorConflictRollup.redundant ? t('library.row.separatorConflictRedundantHint') : null,
+                    ].filter(Boolean).join(' | ')}
+                  >
+                    {separatorConflictRollup.wins ? (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(52,211,153,0.12)] font-mono text-[12px] font-bold leading-none text-[#34d399]">
+                        +
+                      </span>
+                    ) : null}
+                    {separatorConflictRollup.losses ? (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(248,113,113,0.12)] font-mono text-[12px] font-bold leading-none text-[#f87171]">
+                        -
+                      </span>
+                    ) : null}
+                    {separatorConflictRollup.redundant ? (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-[rgba(252,238,9,0.12)] text-[var(--status-warning-text)]">
+                        <Icon name="priority_high" className="text-[13px] leading-none" />
+                      </span>
+                    ) : null}
+                  </span>
+                </Tooltip>
               ) : null}
             </div>
           )}
@@ -688,6 +748,7 @@ function areModRowPropsEqual(prev: ModRowProps, next: ModRowProps): boolean {
     prev.separatorCollapsed === next.separatorCollapsed &&
     prev.separatorChildCount === next.separatorChildCount &&
     prev.separatorUpdateCount === next.separatorUpdateCount &&
+    prev.separatorConflictRollup === next.separatorConflictRollup &&
     prev.separatorMoveHint === next.separatorMoveHint &&
     prev.conflictSeparatorTone === next.conflictSeparatorTone &&
     prev.rowDropPosition === next.rowDropPosition &&
