@@ -19,6 +19,8 @@ const HYPERION_ISSUES_URL = `${HYPERION_GITHUB_URL}/issues`
 const USVFS_URL = 'https://github.com/ModOrganizer2/usvfs'
 const MOD_ORGANIZER_URL = 'https://github.com/ModOrganizer2/modorganizer'
 const REDMODDING_URL = 'https://wiki.redmodding.org/cyberpunk-2077-modding/'
+const WOLVENKIT_URL = 'https://github.com/WolvenKit/WolvenKit'
+const SEVEN_ZIP_URL = 'https://www.7-zip.org/'
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
@@ -851,6 +853,42 @@ export const SettingsPage: React.FC = () => {
                       <button type="button" onClick={() => void handleOpenExternal(MOD_ORGANIZER_URL)} className={aboutActionBtn}>
                         <Icon name="open_in_new" style={{ fontSize: 15 }} />
                         MO2
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
+                    <div className="min-w-0 max-w-[520px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[15px] font-semibold text-[var(--text-primary)]">WolvenKit</span>
+                        <HyperionBadge tone="neutral">{t('settings.about.credits.resourceDataLabel')}</HyperionBadge>
+                      </div>
+                      <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
+                        {t('settings.about.credits.resourceDataBody')}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button type="button" onClick={() => void handleOpenExternal(WOLVENKIT_URL)} className={aboutActionBtn}>
+                        <Icon name="open_in_new" style={{ fontSize: 15 }} />
+                        WolvenKit
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border-0 bg-[var(--surface-secondary)] px-4 py-3.5">
+                    <div className="min-w-0 max-w-[520px]">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[15px] font-semibold text-[var(--text-primary)]">7-Zip</span>
+                        <HyperionBadge tone="neutral">{t('settings.about.credits.extractionLabel')}</HyperionBadge>
+                      </div>
+                      <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
+                        {t('settings.about.credits.extractionBody')}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button type="button" onClick={() => void handleOpenExternal(SEVEN_ZIP_URL)} className={aboutActionBtn}>
+                        <Icon name="folder_zip" style={{ fontSize: 15 }} />
+                        7-Zip
                       </button>
                     </div>
                   </div>

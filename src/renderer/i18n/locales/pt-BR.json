@@ -758,12 +758,16 @@
       "credits": {
         "coreVfsLabel": "VFS Principal",
         "coreVfsBody": "A implantação virtual do Hyperion é movida pelo usvfs, o VFS de espaço de usuário usado pelo Mod Organizer 2.",
+        "resourceDataLabel": "Dados de recursos",
+        "resourceDataBody": "Os conflitos de recursos de archive são nomeados usando o banco comunitário de hashes do projeto WolvenKit.",
+        "extractionLabel": "Extração",
+        "extractionBody": "Os arquivos de mods (.zip, .rar, .7z) são extraídos com o 7-Zip, de Igor Pavlov.",
         "serviceApiLabel": "API de Serviço",
         "serviceApiBody": "Validação de conta, verificações de atualização, links nxm e tratamento de downloads com suporte a Premium.",
         "referenceLabel": "Referência",
         "referenceBody": "Comportamento de archives, detalhes da ordem de carregamento e documentação pública de modding de Cyberpunk."
       },
-      "disclaimer": "O Hyperion não é afiliado à CD PROJEKT RED, ao Nexus Mods, ao Mod Organizer 2 nem aos mantenedores do usvfs."
+      "disclaimer": "O Hyperion não é afiliado à CD PROJEKT RED, ao Nexus Mods, ao Mod Organizer 2, aos mantenedores do usvfs, ao projeto WolvenKit nem ao 7-Zip."
     },
     "toast": {
       "capturesCleared": "Capturas de execução limpas",

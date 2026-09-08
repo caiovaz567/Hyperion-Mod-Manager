@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.37.2] - 2026-09-08
+
+### Changed
+- **Full third-party credits.** Settings -> About now credits every component bundled with Hyperion, each with a link: the WolvenKit community resource-hash database (used to turn archive-resource conflicts into readable resource names) and 7-Zip (mod archive extraction) join the existing usvfs / Mod Organizer 2, Nexus Mods API, and REDmodding entries. A `THIRD_PARTY_LICENSES.md` file at the root of the repository lists the licenses in full, and the README links to it. The hash database contains no game assets - only hash values and the internal resource paths they resolve to.
+
+---
+
 ## [0.37.1] - 2026-07-24
 
 ### Added

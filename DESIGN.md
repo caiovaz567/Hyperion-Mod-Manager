@@ -378,7 +378,8 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - When Nexus validation succeeds, show real account identity details such as display name, premium/free state, and user id/email rather than generic placeholder text
 - Keep library maintenance tools in the main library workflow instead of duplicating them inside Settings
 - The third Settings section should focus on Hyperion application updates only; diagnostics and app logs remain available from the shell header
-- About links such as GitHub, Releases, issue reporting, usvfs, MO2, and REDmodding must look like real secondary buttons when placed inside dark cards: use a filled dark surface, subtle inset boundary, clear hover tint, and icon/text color that changes together
+- The About tab credits every bundled third-party component with a link: usvfs / Mod Organizer 2 (virtual deployment), WolvenKit (the community resource-hash database used to name archive-resource conflicts), 7-Zip (archive extraction), the Nexus Mods API, and the REDmodding documentation. Keep this list in sync with `THIRD_PARTY_LICENSES.md` whenever a bundled component is added or removed
+- About links such as GitHub, Releases, issue reporting, usvfs, MO2, WolvenKit, 7-Zip, and REDmodding must look like real secondary buttons when placed inside dark cards: use a filled dark surface, subtle inset boundary, clear hover tint, and icon/text color that changes together
 
 ### Internationalization
 

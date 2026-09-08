@@ -758,12 +758,16 @@
       "credits": {
         "coreVfsLabel": "Core VFS",
         "coreVfsBody": "Hyperion's virtual deployment is powered by usvfs, the User-Space VFS used by Mod Organizer 2.",
+        "resourceDataLabel": "Resource data",
+        "resourceDataBody": "Archive-resource conflicts are named using the community resource-hash database from the WolvenKit project.",
+        "extractionLabel": "Extraction",
+        "extractionBody": "Mod archives (.zip, .rar, .7z) are unpacked with 7-Zip by Igor Pavlov.",
         "serviceApiLabel": "Service API",
         "serviceApiBody": "Account validation, update checks, nxm links, and Premium-aware download handling.",
         "referenceLabel": "Reference",
         "referenceBody": "Archive behavior, load-order details, and public Cyberpunk modding documentation."
       },
-      "disclaimer": "Hyperion is not affiliated with CD PROJEKT RED, Nexus Mods, Mod Organizer 2, or the usvfs maintainers."
+      "disclaimer": "Hyperion is not affiliated with CD PROJEKT RED, Nexus Mods, Mod Organizer 2, the usvfs maintainers, the WolvenKit project, or 7-Zip."
     },
     "toast": {
       "capturesCleared": "Runtime captures cleared",
