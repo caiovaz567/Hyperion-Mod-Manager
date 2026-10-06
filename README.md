@@ -48,7 +48,7 @@ Since then, Hyperion has become the manager I use for my own Cyberpunk 2077 mod 
 
 ### Interface
 - **Modern UI** built with HeroUI - dark and light modes (or follow the system), with eight accent colors that re-skin the entire app live
-- **Multilingual** - English and Brazilian Portuguese, switchable live; the architecture is ready for community translations
+- **Multilingual** - English and Brazilian Portuguese (translated by [@Roberth-Souza](https://github.com/Roberth-Souza)), switchable live; the architecture is ready for community translations
 - **Live launch feedback** - a progress card narrates the whole launch pipeline (mod scan, VFS mount, REDmod compilation, game start) with real tool output
 - **App logs** - built-in inspector for runtime events and Nexus API traffic, with masked credentials
 - **Automatic updates** - delivered through GitHub Releases with one-click install
@@ -90,6 +90,10 @@ npm run build:native  # build the usvfs native bridge
 npm run dev           # run in development
 npm run build         # build a local installer
 ```
+
+## Credits
+
+- **Brazilian Portuguese translation** - [Roberth Souza (@Roberth-Souza)](https://github.com/Roberth-Souza)
 
 ## License
 
