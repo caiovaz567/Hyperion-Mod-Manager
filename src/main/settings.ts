@@ -1,6 +1,7 @@
 import { app, safeStorage } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import crypto from 'crypto'
 import type { AppSettings } from '../shared/types'
 import type { PathDefaults } from '../shared/types'
 
@@ -13,9 +14,9 @@ function getSettingsPath(): string {
 
 // ─── Nexus API key at-rest encryption ─────────────────────────────────────────
 // The key is persisted OS-encrypted (DPAPI on Windows via Electron safeStorage)
-// under `nexusApiKeyEncrypted` instead of plaintext. In memory (and over IPC to
-// the renderer) AppSettings keeps the decrypted `nexusApiKey` so every consumer
-// stays unchanged. Legacy plaintext files migrate on first load; if decryption
+// under `nexusApiKeyEncrypted` instead of plaintext. In main-process memory
+// AppSettings keeps the decrypted `nexusApiKey`; it never crosses IPC to the
+// renderer (see `toRendererSettings`). Legacy plaintext files migrate on first load; if decryption
 // ever fails (settings.json copied to another machine/user profile), the key
 // resolves to empty and the user simply re-enters it in Settings > Nexus.
 interface PersistedSettings extends Partial<AppSettings> {
@@ -162,6 +163,20 @@ export function loadSettings(): AppSettings {
   const defaults = normalizeSettings()
   ensureManagedDirectories(defaults)
   return defaults
+}
+
+/**
+ * The settings shape that may cross IPC to the renderer: the decrypted Nexus key
+ * is replaced by a non-reversible fingerprint, so script running in the renderer
+ * can never read the account key.
+ */
+export function toRendererSettings(settings: AppSettings): AppSettings {
+  const key = settings.nexusApiKey?.trim() ?? ''
+  return {
+    ...settings,
+    nexusApiKey: '',
+    nexusApiKeyId: key ? crypto.createHash('sha256').update(key).digest('hex').slice(0, 12) : '',
+  }
 }
 
 export function saveSettings(settings: AppSettings): void {

@@ -554,7 +554,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     const nexusModId = mod.nexusModId
 
     const ext = get() as LibrarySlice & {
-      settings?: { nexusApiKey?: string } | null
+      settings?: { nexusApiKeyId?: string } | null
       addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
       startNxmDownload?: (
         payload: NxmLinkPayload,
@@ -582,11 +582,13 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
         }
       ) => void
     }
-    const apiKey = ext.settings?.nexusApiKey
+    // Validated in main against the stored key - the renderer never holds it.
+
+    const hasApiKey = Boolean(ext.settings?.nexusApiKeyId)
 
     let isPremium = false
-    if (apiKey) {
-      const validate = await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY, apiKey)
+    if (hasApiKey) {
+      const validate = await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY)
       isPremium = !!(validate.ok && validate.data?.isPremium)
     }
 
@@ -635,7 +637,7 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
 
     const ext = get() as LibrarySlice & {
       gameRunning?: boolean
-      settings?: { nexusApiKey?: string } | null
+      settings?: { nexusApiKeyId?: string } | null
       addToast?: (message: string, severity?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
       startNxmDownload?: (
         payload: NxmLinkPayload,
@@ -666,10 +668,11 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     )
     if (outdated.length === 0) return
 
-    const apiKey = ext.settings?.nexusApiKey
+    // Validated in main against the stored key - the renderer never holds it.
+    const hasApiKey = Boolean(ext.settings?.nexusApiKeyId)
     let isPremium = false
-    if (apiKey) {
-      const validate = await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY, apiKey)
+    if (hasApiKey) {
+      const validate = await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY)
       isPremium = !!(validate.ok && validate.data?.isPremium)
     }
 

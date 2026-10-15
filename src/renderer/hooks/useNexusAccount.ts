@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { IpcService } from '../services/IpcService'
 import { IPC } from '@shared/types'
 import type { IpcResult, NexusValidateResult } from '@shared/types'
@@ -17,25 +17,43 @@ const NOT_CONFIGURED_STATE: NexusAccountState = {
   error: null,
 }
 
-export function useNexusAccount(apiKey?: string, debounceMs = 450): NexusAccountState {
-  const normalizedApiKey = useMemo(() => apiKey?.trim() ?? '', [apiKey])
+// Validates the account behind either a key the user is typing right now
+// (`typedKey`) or, when nothing is typed, the key stored in the main process -
+// identified only by its fingerprint `storedKeyId`. The renderer never holds
+// the stored key itself.
+export function useNexusAccount(
+  typedKey: string | undefined,
+  storedKeyId: string | undefined,
+  debounceMs = 450,
+): NexusAccountState {
+  const normalizedApiKey = useMemo(() => typedKey?.trim() ?? '', [typedKey])
+  const normalizedStoredId = storedKeyId?.trim() ?? ''
   const [state, setState] = useState<NexusAccountState>(NOT_CONFIGURED_STATE)
+  const previousTypedKeyRef = useRef(normalizedApiKey)
+  const stateRef = useRef(state)
+  stateRef.current = state
 
   useEffect(() => {
-    if (!normalizedApiKey) {
+    // A just-saved typed key being cleared from the input hands validation over
+    // to the stored key (the same account) - re-check silently instead of
+    // flashing "checking" over an already-connected account.
+    const handingOffToStored = Boolean(previousTypedKeyRef.current) && !normalizedApiKey
+      && Boolean(normalizedStoredId) && stateRef.current.status === 'connected'
+    previousTypedKeyRef.current = normalizedApiKey
+
+    if (!normalizedApiKey && !normalizedStoredId) {
       setState(NOT_CONFIGURED_STATE)
       return
     }
 
     let cancelled = false
     const timeoutId = window.setTimeout(async () => {
-      setState({ status: 'checking', isLoading: true, data: null, error: null })
+      if (!handingOffToStored) setState({ status: 'checking', isLoading: true, data: null, error: null })
 
       try {
-        const result = await IpcService.invoke<IpcResult<NexusValidateResult>>(
-          IPC.NEXUS_VALIDATE_KEY,
-          normalizedApiKey,
-        )
+        const result = normalizedApiKey
+          ? await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY, normalizedApiKey)
+          : await IpcService.invoke<IpcResult<NexusValidateResult>>(IPC.NEXUS_VALIDATE_KEY)
 
         if (cancelled) return
 
@@ -64,7 +82,7 @@ export function useNexusAccount(apiKey?: string, debounceMs = 450): NexusAccount
       cancelled = true
       window.clearTimeout(timeoutId)
     }
-  }, [debounceMs, normalizedApiKey])
+  }, [debounceMs, normalizedApiKey, normalizedStoredId])
 
   return state
 }

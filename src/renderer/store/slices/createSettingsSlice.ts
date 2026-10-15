@@ -59,20 +59,23 @@ export const createSettingsSlice: StateCreator<SettingsSlice, [], [], SettingsSl
     // persisted settings. Sending the full renderer copy let a stale/empty
     // in-memory value (e.g. the Nexus API key before hydration) silently
     // overwrite what was on disk.
-    const saveResult = await IpcService.invoke<IpcResult<void>>(IPC.SET_SETTINGS, partial)
+    const saveResult = await IpcService.invoke<IpcResult<AppSettings>>(IPC.SET_SETTINGS, partial)
     if (!saveResult.ok) {
       // The save was rejected (e.g. a data path inside the install folder). Leave the
       // persisted settings untouched so the UI never reflects an unsaved value.
-      return saveResult
+      return { ok: false, error: saveResult.error }
     }
-    const validation = await IpcService.invoke<IpcResult<boolean>>(IPC.VALIDATE_GAME_PATH, merged.gamePath)
-    const libraryValidation = await IpcService.invoke<IpcResult<boolean>>(IPC.VALIDATE_LIBRARY_PATH, merged.libraryPath)
+    // Prefer main's renderer-safe copy (fresh Nexus key hint/fingerprint). The
+    // store must never hold the key itself, even one the user just typed.
+    const next: AppSettings = { ...(saveResult.data ?? merged), nexusApiKey: '' }
+    const validation = await IpcService.invoke<IpcResult<boolean>>(IPC.VALIDATE_GAME_PATH, next.gamePath)
+    const libraryValidation = await IpcService.invoke<IpcResult<boolean>>(IPC.VALIDATE_LIBRARY_PATH, next.libraryPath)
     set({
-      settings: merged,
+      settings: next,
       gamePathValid: Boolean(validation.ok && validation.data),
       libraryPathValid: Boolean(libraryValidation.ok && libraryValidation.data),
     })
-    return saveResult
+    return { ok: true }
   },
 
   detectGamePath: async () => IpcService.invoke<IpcResult<string>>(IPC.DETECT_GAME),

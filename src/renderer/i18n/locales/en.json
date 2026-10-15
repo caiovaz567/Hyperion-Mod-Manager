@@ -22,7 +22,8 @@
     "next": "Next",
     "clearSearch": "Clear search",
     "noFolderSelected": "No folder selected yet",
-    "settingsNotLoaded": "Settings not loaded yet"
+    "settingsNotLoaded": "Settings not loaded yet",
+    "savedNexusKeyPlaceholder": "Key saved - paste a new key to replace it"
   },
   "language": {
     "label": "Language",

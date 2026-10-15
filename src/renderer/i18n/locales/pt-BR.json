@@ -22,7 +22,8 @@
     "next": "Próximo",
     "clearSearch": "Limpar busca",
     "noFolderSelected": "Nenhuma pasta selecionada ainda",
-    "settingsNotLoaded": "As configurações ainda não foram carregadas"
+    "settingsNotLoaded": "As configurações ainda não foram carregadas",
+    "savedNexusKeyPlaceholder": "Chave salva - cole uma nova chave para substituir"
   },
   "language": {
     "label": "Idioma",

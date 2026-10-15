@@ -10,6 +10,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.37.4] - 2026-10-15
+
+### Security
+- **Your Nexus API key never leaves Hyperion's background process.** The interface no longer receives the saved key at all - not even part of it - so even code running inside the app window can't read it. Settings > Nexus and the setup wizard just say a key is saved; paste a new key to replace it, or use `Clear key` to remove it. Your connected account still shows as before.
+- **"Open folder" actions can only open folders.** The command behind every open-folder button (Downloads, Mods folder, Open in File Explorer, mod-details folders) now refuses anything that is not a folder, so it can never be used to launch a program.
+
+### Fixed
+- **Install progress card no longer repeats itself.** The line under the progress bar used to echo the phase title (`Extracting` above, `Extracting...` below) in untranslated English. It now describes what the phase is doing (for example `Extracting package contents`), in the selected language.
+
+---
+
 ## [0.37.3] - 2026-10-15
 
 ### Security

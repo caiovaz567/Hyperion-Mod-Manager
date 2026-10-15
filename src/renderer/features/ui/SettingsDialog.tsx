@@ -128,6 +128,8 @@ export const SettingsPage: React.FC = () => {
   const [libraryPathValid, setLibraryPathValid] = useState(false)
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [nexusApiKey, setNexusApiKey] = useState('')
+  // The typed key most recently persisted - cleared from the input once Nexus confirms it.
+  const [savedTypedKey, setSavedTypedKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
   const [updateActionLoading, setUpdateActionLoading] = useState<null | 'check' | 'download'>(null)
   const nexusSaveTimerRef = useRef<number | null>(null)
@@ -138,7 +140,8 @@ export const SettingsPage: React.FC = () => {
   const [runtimeCapturesInfo, setRuntimeCapturesInfo] = useState<VfsOverwriteInfo | null>(null)
   const [clearingCaptures, setClearingCaptures] = useState(false)
 
-  const nexusAccount = useNexusAccount(nexusApiKey)
+  const nexusAccount = useNexusAccount(nexusApiKey, settings?.nexusApiKeyId)
+  const hasStoredNexusKey = Boolean(settings?.nexusApiKeyId)
 
   const refreshRuntimeCaptures = useCallback(async () => {
     const result = await IpcService.invoke<IpcResult<VfsOverwriteInfo>>(IPC.GET_VFS_OVERWRITE_INFO)
@@ -205,7 +208,6 @@ export const SettingsPage: React.FC = () => {
       setGamePath(settings.gamePath ?? '')
       setLibraryPath(settings.libraryPath ?? '')
       setDownloadPath(settings.downloadPath ?? '')
-      setNexusApiKey(settings.nexusApiKey ?? '')
     }
   }, [settings])
 
@@ -284,17 +286,26 @@ export const SettingsPage: React.FC = () => {
     tn,
   ])
 
+  // The input only ever holds a NEW key the user is typing - the stored key never
+  // reaches the renderer. An empty input means "keep the stored key"; removing
+  // it is the explicit Clear action (handleClearNexusKey).
   useEffect(() => {
     if (!settings) return
     if (!nexusKeyTouchedRef.current) return
-    if (nexusApiKey === (settings.nexusApiKey ?? '')) return
+    const typedKey = nexusApiKey.trim()
+    if (!typedKey) return
 
     if (nexusSaveTimerRef.current) window.clearTimeout(nexusSaveTimerRef.current)
     nexusSaveTimerRef.current = window.setTimeout(async () => {
       try {
-        await updateSettings({ nexusApiKey })
+        const result = await updateSettings({ nexusApiKey: typedKey })
+        if (!result.ok) {
+          addToast(result.error ?? t('settings.toast.nexusKeyError'), 'error', 2600)
+          return
+        }
         nexusKeyTouchedRef.current = false
-        addToast(nexusApiKey.trim() ? t('settings.toast.nexusKeySaved') : t('settings.toast.nexusKeyCleared'), 'success', 1800)
+        setSavedTypedKey(typedKey)
+        addToast(t('settings.toast.nexusKeySaved'), 'success', 1800)
       } catch {
         addToast(t('settings.toast.nexusKeyError'), 'error', 2600)
       }
@@ -304,6 +315,32 @@ export const SettingsPage: React.FC = () => {
       if (nexusSaveTimerRef.current) window.clearTimeout(nexusSaveTimerRef.current)
     }
   }, [addToast, nexusApiKey, settings, updateSettings, t])
+
+  // Once the typed key is both saved and confirmed by Nexus, drop it from the
+  // input (and from renderer memory) - the field falls back to the "Key saved"
+  // placeholder. A key that fails validation stays visible so it can be fixed.
+  useEffect(() => {
+    const typedKey = nexusApiKey.trim()
+    if (!typedKey || typedKey !== savedTypedKey) return
+    if (nexusAccount.status !== 'connected') return
+    setNexusApiKey('')
+    setSavedTypedKey('')
+    setShowApiKey(false)
+  }, [nexusAccount.status, nexusApiKey, savedTypedKey])
+
+  const handleClearNexusKey = async () => {
+    if (nexusSaveTimerRef.current) window.clearTimeout(nexusSaveTimerRef.current)
+    nexusKeyTouchedRef.current = false
+    setSavedTypedKey('')
+    setNexusApiKey('')
+    if (!hasStoredNexusKey) return
+    try {
+      await updateSettings({ nexusApiKey: '' })
+      addToast(t('settings.toast.nexusKeyCleared'), 'success', 1800)
+    } catch {
+      addToast(t('settings.toast.nexusKeyError'), 'error', 2600)
+    }
+  }
 
   const browseFolder = async (title: string, assign: (path: string) => void) => {
     const result = await IpcService.invoke<{ canceled: boolean; filePaths: string[] }>(IPC.OPEN_FOLDER_DIALOG, { title })
@@ -636,24 +673,29 @@ export const SettingsPage: React.FC = () => {
                         nexusKeyTouchedRef.current = true
                         setNexusApiKey(e.target.value)
                       }}
-                      placeholder={t('settings.nexus.connection.placeholder')}
+                      placeholder={hasStoredNexusKey
+                        ? t('common.savedNexusKeyPlaceholder')
+                        : t('settings.nexus.connection.placeholder')}
                       className="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-mono text-[14px] text-[var(--text-primary-alt)] placeholder:text-[var(--text-muted)] focus:outline-none"
                       spellCheck={false}
                       autoComplete="off"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey((value) => !value)}
-                      className="flex items-center self-stretch px-3 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
-                      tabIndex={-1}
-                    >
-                      <Icon name={showApiKey ? 'visibility_off' : 'visibility'} style={{ fontSize: 18 }} />
-                    </button>
+                    {/* Reveal only applies to a key being typed - the saved key never reaches the UI. */}
+                    {nexusApiKey && (
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey((value) => !value)}
+                        className="flex items-center self-stretch px-3 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+                        tabIndex={-1}
+                      >
+                        <Icon name={showApiKey ? 'visibility_off' : 'visibility'} style={{ fontSize: 18 }} />
+                      </button>
+                    )}
                   </div>
                   <button
                     type="button"
-                    onClick={() => setNexusApiKey('')}
-                    disabled={!nexusApiKey.trim()}
+                    onClick={() => void handleClearNexusKey()}
+                    disabled={!nexusApiKey.trim() && !hasStoredNexusKey}
                     className={`${secondaryBtn} w-full sm:w-auto`}
                   >
                     <Icon name="backspace" style={{ fontSize: 16 }} />

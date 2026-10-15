@@ -317,9 +317,10 @@ function normalizeBoolean(value: unknown): boolean {
   return false
 }
 
+// The validate.json response echoes the account key back; it is deliberately
+// dropped here so the result can be sent to the renderer safely.
 function normalizeNexusValidateResult(
   payload: RawNexusValidateResult,
-  apiKey: string,
 ): NexusValidateResult {
   const rawUserId = payload.userId ?? payload.user_id
   const normalizedUserId =
@@ -331,7 +332,6 @@ function normalizeNexusValidateResult(
 
   return {
     userId: normalizedUserId,
-    key: typeof payload.key === 'string' && payload.key.trim() ? payload.key : apiKey,
     name:
       (typeof payload.name === 'string' && payload.name.trim()) ||
       (typeof payload.username === 'string' && payload.username.trim()) ||
@@ -359,7 +359,7 @@ export async function validateNexusApiKey(
 
   return {
     ok: true,
-    data: normalizeNexusValidateResult(result.data, apiKey),
+    data: normalizeNexusValidateResult(result.data),
   }
 }
 
@@ -1313,8 +1313,14 @@ export async function checkModUpdates(
 }
 
 export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWindow | null): void {
-  ipcMain.handle(IPC.NEXUS_VALIDATE_KEY, async (_event, apiKey: string) => {
-    return validateNexusApiKey(apiKey, getMainWindow())
+  // The renderer passes a key only while the user is typing a NEW one; with no
+  // argument it validates the stored key, which never leaves the main process.
+  ipcMain.handle(IPC.NEXUS_VALIDATE_KEY, async (_event, apiKey?: string) => {
+    const key = typeof apiKey === 'string' && apiKey.trim()
+      ? apiKey.trim()
+      : loadSettings().nexusApiKey?.trim() ?? ''
+    if (!key) return { ok: false, error: 'Nexus API key not configured. Add it in Settings > Nexus.' }
+    return validateNexusApiKey(key, getMainWindow())
   })
 
   ipcMain.handle(IPC.NEXUS_CHECK_MOD_UPDATES, async (_event, request: ModUpdateCheckRequest) => {

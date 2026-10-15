@@ -333,7 +333,7 @@ export const App: React.FC = () => {
 
               <div className="mt-2.5 flex items-center justify-between">
                 <span className="text-[13px] text-[var(--text-muted)]">
-                  {installStatus || (detecting ? t('downloads.overlay.detectingFormat') : '')}
+                  {installing ? installAppearance.summary : t('downloads.overlay.detectingFormat')}
                 </span>
                 <span className="text-[13px] font-medium tabular-nums text-[var(--text-secondary)]">{Math.round(clampedInstallProgress)}%</span>
               </div>

@@ -154,7 +154,7 @@ export const WelcomeScreen: React.FC = () => {
   const [stepDirection, setStepDirection] = useState<'forward' | 'backward'>('forward')
   const [isInitializing, setIsInitializing] = useState(false)
 
-  const nexusAccount = useNexusAccount(nexusApiKey)
+  const nexusAccount = useNexusAccount(nexusApiKey, settings?.nexusApiKeyId)
 
   const openNexusApiKeysPage = () => {
     void IpcService.invoke(IPC.OPEN_EXTERNAL, NEXUS_API_KEYS_URL)
@@ -184,8 +184,7 @@ export const WelcomeScreen: React.FC = () => {
     setGamePath(settings?.gamePath ?? '')
     setLibraryPath(settings?.libraryPath ?? defaultPaths?.libraryPath ?? '')
     setDownloadPath(settings?.downloadPath ?? resolveDownloadPath(settings?.libraryPath ?? defaultPaths?.libraryPath ?? ''))
-    setNexusApiKey(settings?.nexusApiKey ?? '')
-  }, [defaultPaths?.libraryPath, settings?.downloadPath, settings?.gamePath, settings?.libraryPath, settings?.nexusApiKey])
+  }, [defaultPaths?.libraryPath, settings?.downloadPath, settings?.gamePath, settings?.libraryPath])
 
   useEffect(() => {
     checkGamePath(gamePath).then((valid) => {
@@ -340,7 +339,14 @@ export const WelcomeScreen: React.FC = () => {
         }
       }
 
-      const saveResult = await updateSettings({ gamePath, libraryPath, downloadPath: resolvedDownloadPath, nexusApiKey: nexusApiKey.trim(), setupCompleted: true })
+      const saveResult = await updateSettings({
+        gamePath,
+        libraryPath,
+        downloadPath: resolvedDownloadPath,
+        setupCompleted: true,
+        // Only a newly typed key is sent - an empty field keeps the stored key.
+        ...(nexusApiKey.trim() ? { nexusApiKey: nexusApiKey.trim() } : {}),
+      })
       if (!saveResult.ok) {
         addToast(saveResult.error ?? t('welcome.toast.saveFailed'), 'error', 5000)
         return
@@ -598,7 +604,7 @@ export const WelcomeScreen: React.FC = () => {
                       type={showApiKey ? 'text' : 'password'}
                       value={nexusApiKey}
                       onChange={(event) => setNexusApiKey(event.target.value)}
-                      placeholder={t('welcome.nexus.apiKeyPlaceholder')}
+                      placeholder={settings?.nexusApiKeyId ? t('common.savedNexusKeyPlaceholder') : t('welcome.nexus.apiKeyPlaceholder')}
                       spellCheck={false}
                       autoComplete="off"
                       className="h-11 w-full rounded-lg border-0 bg-[var(--surface-secondary)] px-3 pr-11 text-[13.5px] text-[var(--text-primary)] outline-none transition-colors focus:bg-[color-mix(in_srgb,var(--surface-secondary),white_7%)] focus-visible:outline-none"

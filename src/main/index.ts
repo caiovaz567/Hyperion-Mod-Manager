@@ -15,7 +15,7 @@ import os from 'os'
 import crypto from 'crypto'
 import { fileURLToPath } from 'url'
 import { spawn, exec, execFile } from 'child_process'
-import { getPathDefaults, loadSettings, saveSettings } from './settings'
+import { getPathDefaults, loadSettings, saveSettings, toRendererSettings } from './settings'
 import { createSplashWindow } from './splash'
 import { initializeUpdates, checkForUpdatesOnStartup, flushCachedUpdateInfo } from './updater'
 import {
@@ -2287,7 +2287,7 @@ function attachEditContextMenu(win: BrowserWindow): void {
 
 function registerGlobalHandlers(): void {
   // Settings
-  ipcMain.handle(IPC.GET_SETTINGS, () => loadSettings())
+  ipcMain.handle(IPC.GET_SETTINGS, () => toRendererSettings(loadSettings()))
   ipcMain.handle(IPC.GET_PATH_DEFAULTS, () => getPathDefaults())
   ipcMain.handle(IPC.ENSURE_DIRECTORY, (_event, targetPath: string) => {
     const resolvedPath = targetPath?.trim()
@@ -2355,7 +2355,9 @@ function registerGlobalHandlers(): void {
       startDownloadsWatcher(settings.downloadPath)
       startLibraryWatcher(settings.libraryPath)
 
-      return { ok: true }
+      // Hand back the renderer-safe view so the store picks up the new key hint
+      // without ever holding the key itself.
+      return { ok: true, data: toRendererSettings(loadSettings()) }
     } catch (error) {
       pushGeneralLog(mainWindow, {
         level: 'error',
@@ -2500,7 +2502,17 @@ function registerGlobalHandlers(): void {
 
   // Shell
   ipcMain.handle(IPC.OPEN_PATH, async (_event, targetPath: string) => {
-    if (!targetPath) return { ok: false, error: 'Path not provided' }
+    if (!targetPath || typeof targetPath !== 'string') return { ok: false, error: 'Path not provided' }
+    // Folders only: shell.openPath on a file launches it with its default
+    // handler (an .exe would run), and every caller here opens a directory.
+    // Files are revealed via SHOW_ITEM_IN_FOLDER instead.
+    try {
+      if (!fs.statSync(targetPath).isDirectory()) {
+        return { ok: false, error: 'Only folders can be opened' }
+      }
+    } catch {
+      return { ok: false, error: 'Folder not found' }
+    }
     const errorMessage = await shell.openPath(targetPath)
     if (errorMessage) {
       return { ok: false, error: errorMessage }

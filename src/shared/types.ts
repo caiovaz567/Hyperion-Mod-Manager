@@ -80,7 +80,15 @@ export interface AppSettings {
   uiMode?: 'light' | 'dark' | 'system'
   autoUpdate: boolean
   autoInstallDownloads: boolean
+  // The decrypted key lives ONLY in the main process. Settings sent to the
+  // renderer always carry `nexusApiKey: ''`; the renderer writes a NEW key by
+  // sending it in a SET_SETTINGS partial and reads the stored one only through
+  // the fingerprint below (computed by `toRendererSettings`, never persisted).
   nexusApiKey: string
+  // Short non-reversible fingerprint of the stored key - changes whenever the key
+  // does, so renderer hooks can re-validate. '' when none is stored (so it also
+  // answers "is a key saved?").
+  nexusApiKeyId?: string
   // BCP-47 locale code for the interface language (e.g. 'en', 'pt-BR'). The
   // renderer owns the list of supported locales; the main process only persists
   // the value and falls back to 'en' when it is missing or not a string.
@@ -154,7 +162,6 @@ export interface NxmDownloadStartResponse {
 
 export interface NexusValidateResult {
   userId: number
-  key: string
   name: string
   isPremium: boolean
   email: string

@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
     checkGameRunning: state.checkGameRunning,
     killGame: state.killGame,
   }), shallow)
-  const nexusAccount = useNexusAccount(settings?.nexusApiKey, 250)
+  const nexusAccount = useNexusAccount(undefined, settings?.nexusApiKeyId, 250)
   const { t } = useTranslation()
 
   useEffect(() => {
