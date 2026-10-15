@@ -868,6 +868,21 @@ function buildDuplicateArchiveName(fileName: string, index: number): string {
   return `${normalizedBaseName}${suffix}${extension}`
 }
 
+/**
+ * Reduces a server-supplied archive name (CDN URL path / Nexus `file_name`) to a
+ * single safe file name: keeps only the last path segment (so `..\` or `/`
+ * can never steer the write outside the Downloads folder), replaces
+ * filesystem-invalid characters, and drops trailing dots/spaces. Returns ''
+ * when nothing usable remains so the caller falls back to a generated name.
+ */
+export function sanitizeDownloadFileName(raw: string): string {
+  const lastSegment = raw.split(/[\\/]/).pop() ?? ''
+  // eslint-disable-next-line no-control-regex
+  const cleaned = lastSegment.replace(/[<>:"|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '').trim()
+  if (!cleaned || cleaned === '.' || cleaned === '..') return ''
+  return cleaned
+}
+
 function getReservedDownloadTargets(): Set<string> {
   const reserved = new Set<string>()
   for (const handle of inFlightDownloads.values()) {
@@ -1439,7 +1454,7 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
     const cdnUrl = cdnResult.data
     let rawName: string
     try {
-      rawName = decodeURIComponent(path.basename(new URL(cdnUrl).pathname))
+      rawName = sanitizeDownloadFileName(decodeURIComponent(path.basename(new URL(cdnUrl).pathname)))
     } catch {
       rawName = ''
     }
@@ -1458,8 +1473,9 @@ export function registerNexusDownloaderHandlers(getMainWindow: () => BrowserWind
 
     // Prefer the Nexus API file_name when the CDN URL path has no archive extension
     // (some CDNs use UUID-like paths that strip the filename).
-    const nameFromApi = fileInfo.fileName && ARCHIVE_EXTENSIONS.has(path.extname(fileInfo.fileName).toLowerCase())
-      ? fileInfo.fileName
+    const safeApiFileName = fileInfo.fileName ? sanitizeDownloadFileName(fileInfo.fileName) : ''
+    const nameFromApi = safeApiFileName && ARCHIVE_EXTENSIONS.has(path.extname(safeApiFileName).toLowerCase())
+      ? safeApiFileName
       : undefined
 
     const currentDirDownload = existingIsInCurrentDir ? existingDownload : null

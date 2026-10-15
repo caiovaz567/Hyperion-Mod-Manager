@@ -5,6 +5,7 @@ import {
   isSupersededCategory,
   pickLatestPrimaryFile,
   pickLatestSameNameFile,
+  sanitizeDownloadFileName,
 } from '../src/main/ipc/nexusDownloader'
 
 describe('parseNxmUrl', () => {
@@ -115,5 +116,24 @@ describe('isSupersededCategory', () => {
     expect(isSupersededCategory({ file_id: 1, category_name: 'MAIN' })).toBe(false)
     expect(isSupersededCategory({ file_id: 1 })).toBe(false)
     expect(isSupersededCategory(null)).toBe(false)
+  })
+})
+
+describe('sanitizeDownloadFileName', () => {
+  it('keeps normal archive names intact', () => {
+    expect(sanitizeDownloadFileName('Cool Mod-1234-1-0-1700000000.zip')).toBe('Cool Mod-1234-1-0-1700000000.zip')
+  })
+
+  it('never lets a server-supplied name leave the downloads folder', () => {
+    expect(sanitizeDownloadFileName('..\\..\\evil.zip')).toBe('evil.zip')
+    expect(sanitizeDownloadFileName('../../Startup/evil.zip')).toBe('evil.zip')
+    expect(sanitizeDownloadFileName('C:\\Windows\\evil.zip')).toBe('evil.zip')
+    expect(sanitizeDownloadFileName('..')).toBe('')
+    expect(sanitizeDownloadFileName('foo/')).toBe('')
+  })
+
+  it('replaces filesystem-invalid characters and trailing dots', () => {
+    expect(sanitizeDownloadFileName('a:b?c.zip')).toBe('a_b_c.zip')
+    expect(sanitizeDownloadFileName('mod.zip. ')).toBe('mod.zip')
   })
 })

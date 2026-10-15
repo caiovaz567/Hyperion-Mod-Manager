@@ -13,6 +13,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import crypto from 'crypto'
+import { fileURLToPath } from 'url'
 import { spawn, exec, execFile } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings } from './settings'
 import { createSplashWindow } from './splash'
@@ -2160,6 +2161,37 @@ function computeResolutionZoom(win: BrowserWindow): number {
   return clampNumber(Math.round(zoom * 100) / 100, ZOOM_MIN, ZOOM_MAX)
 }
 
+const DEVTOOLS_ENABLED = !app.isPackaged || process.env['HYPERION_DEVTOOLS'] === '1'
+
+// True only for Hyperion's own renderer page (the dev server or the bundled
+// index.html) - every other URL is treated as foreign content.
+function isAppRendererUrl(rawUrl: string): boolean {
+  try {
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    if (devUrl) return new URL(rawUrl).origin === new URL(devUrl).origin
+    const url = new URL(rawUrl)
+    if (url.protocol !== 'file:') return false
+    const indexPath = path.resolve(__dirname, '../renderer/index.html')
+    return path.resolve(fileURLToPath(url)).toLowerCase() === indexPath.toLowerCase()
+  } catch {
+    return false
+  }
+}
+
+// Navigation lockdown for every window: the app never navigates away from its
+// own page and never opens child BrowserWindows (they would inherit the preload
+// bridge). External https links go to the user's browser instead.
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://')) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  contents.on('will-navigate', (event, url) => {
+    if (!isAppRendererUrl(url)) event.preventDefault()
+  })
+  contents.on('will-attach-webview', (event) => event.preventDefault())
+})
+
 function createMainWindow(): BrowserWindow {
   const bounds = getInitialMainWindowBounds()
   const win = new BrowserWindow({
@@ -2179,7 +2211,8 @@ function createMainWindow(): BrowserWindow {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      devTools: DEVTOOLS_ENABLED,
     }
   })
 
@@ -2211,10 +2244,11 @@ function createMainWindow(): BrowserWindow {
   attachEditContextMenu(win)
 
   // DevTools toggle. The window is frameless and no application menu is set, so the
-  // default Ctrl+Shift+I / F12 accelerators don't fire - bind them explicitly here so
-  // the console is reachable in any build (dev or packaged) for diagnostics.
+  // default Ctrl+Shift+I / F12 accelerators don't fire - bind them explicitly here.
+  // Packaged builds keep DevTools off (the console exposes the in-memory Nexus key)
+  // unless launched with HYPERION_DEVTOOLS=1 for diagnostics.
   win.webContents.on('before-input-event', (event, input) => {
-    if (input.type !== 'keyDown') return
+    if (!DEVTOOLS_ENABLED || input.type !== 'keyDown') return
     const key = (input.key || '').toLowerCase()
     const isToggleDevTools = key === 'f12' || (input.control && input.shift && key === 'i')
     if (isToggleDevTools) {

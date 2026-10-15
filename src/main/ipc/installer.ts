@@ -1657,20 +1657,46 @@ async function installFromFomod(
   }
 }
 
+/**
+ * Joins an untrusted relative path (from a FOMOD ModuleConfig.xml) onto `root`
+ * and returns it only if the result stays inside `root` (or is `root` itself).
+ * Returns null for anything that escapes - `..` segments, drive-qualified or UNC
+ * paths - so a malicious installer can never read or write outside its sandbox.
+ */
+export function resolvePathInsideRoot(root: string, relativePath: string): string | null {
+  const normalized = relativePath.replace(/\\/g, '/').replace(/^\/+/, '')
+  if (/^[a-zA-Z]:/.test(normalized)) return null
+  const resolvedRoot = path.resolve(root)
+  const resolved = path.resolve(resolvedRoot, normalized)
+  const relative = path.relative(resolvedRoot, resolved)
+  if (relative === '') return resolved
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return null
+  return resolved
+}
+
 function copyFomodEntries(entries: FomodFileEntry[], extractRoot: string, destDir: string): void {
   for (const entry of entries) {
     const normalizedSource = entry.source.replace(/\\/g, '/')
     const normalizedDest = entry.destination.replace(/\\/g, '/')
-    const srcPath = path.join(extractRoot, normalizedSource)
+    const srcPath = resolvePathInsideRoot(extractRoot, normalizedSource)
+    if (!srcPath) {
+      throw new Error(`FOMOD source path escapes the archive: ${entry.source}`)
+    }
 
     if (!fs.existsSync(srcPath)) continue
 
     if (entry.type === 'folder') {
-      const destPath = normalizedDest ? path.join(destDir, normalizedDest) : destDir
+      const destPath = normalizedDest ? resolvePathInsideRoot(destDir, normalizedDest) : destDir
+      if (!destPath) {
+        throw new Error(`FOMOD destination path escapes the mod folder: ${entry.destination}`)
+      }
       copyDirSync(srcPath, destPath)
     } else {
       const destFileName = normalizedDest || path.basename(normalizedSource)
-      const destPath = path.join(destDir, destFileName)
+      const destPath = resolvePathInsideRoot(destDir, destFileName)
+      if (!destPath || destPath === path.resolve(destDir)) {
+        throw new Error(`FOMOD destination path escapes the mod folder: ${entry.destination}`)
+      }
       fs.mkdirSync(path.dirname(destPath), { recursive: true })
       fs.copyFileSync(srcPath, destPath)
     }

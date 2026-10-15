@@ -10,6 +10,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.37.3] - 2026-10-15
+
+### Security
+- **FOMOD installers can no longer write outside the mod folder.** A FOMOD's `ModuleConfig.xml` decides where each selected file goes. A malicious mod could use `..\` paths to drop files anywhere on the PC (for example the Windows Startup folder). Every FOMOD source and destination path is now checked to stay inside the archive and the mod's own folder; an installer that tries to escape is refused and nothing is written.
+- **Downloaded archive names are sanitized.** The archive file name reported by the Nexus CDN / API is reduced to a single safe file name before saving, so a crafted name can never place a download outside the Downloads folder.
+- **Hardened app window.** The interface can only talk to the app through the channels Hyperion actually defines; any other request is refused. The window can no longer be navigated to an outside page or open pop-up windows - web links always open in your normal browser. The developer console (F12) is disabled in installed builds, since it could expose the Nexus API key to anyone at the PC; it can still be enabled for troubleshooting by starting Hyperion with `HYPERION_DEVTOOLS=1`.
+
+---
+
 ## [0.37.2] - 2026-09-08
 
 ### Changed

@@ -6,6 +6,7 @@ import {
   extractVersionFromName,
   normalizeModName,
   parseMetaIniNexusInfo,
+  resolvePathInsideRoot,
   sanitizeFolderName,
   shouldPreserveArchiveRootFolder,
   uniqueDisplayName,
@@ -108,5 +109,26 @@ describe('parseMetaIniNexusInfo', () => {
   it('strips a leading v from versions and keeps the first ids seen', () => {
     const ini = 'modid=10\nversion=v3.2\n1\\modid=99\nfileid=7'
     expect(parseMetaIniNexusInfo(ini)).toEqual({ modId: 10, fileId: 7, version: '3.2' })
+  })
+})
+
+describe('resolvePathInsideRoot (FOMOD path containment)', () => {
+  const root = path.resolve(os.tmpdir(), 'hyperion-fomod-root')
+
+  it('resolves normal relative paths inside the root', () => {
+    expect(resolvePathInsideRoot(root, 'archive/pc/mod/a.archive')).toBe(path.join(root, 'archive', 'pc', 'mod', 'a.archive'))
+    expect(resolvePathInsideRoot(root, 'r6\\scripts\\x.reds')).toBe(path.join(root, 'r6', 'scripts', 'x.reds'))
+    expect(resolvePathInsideRoot(root, '/bin/x64/a.dll')).toBe(path.join(root, 'bin', 'x64', 'a.dll'))
+    expect(resolvePathInsideRoot(root, 'a/../b.txt')).toBe(path.join(root, 'b.txt'))
+    expect(resolvePathInsideRoot(root, '')).toBe(root)
+  })
+
+  it('rejects anything that escapes the root', () => {
+    expect(resolvePathInsideRoot(root, '../evil.bat')).toBeNull()
+    expect(resolvePathInsideRoot(root, '..\\..\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\x.bat')).toBeNull()
+    expect(resolvePathInsideRoot(root, 'r6/../../evil.dll')).toBeNull()
+    expect(resolvePathInsideRoot(root, 'C:/Windows/System32/evil.dll')).toBeNull()
+    expect(resolvePathInsideRoot(root, 'C:evil.dll')).toBeNull()
+    expect(resolvePathInsideRoot(root, '//server/share/evil.dll')).toBe(path.join(root, 'server', 'share', 'evil.dll'))
   })
 })
