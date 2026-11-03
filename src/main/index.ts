@@ -12,7 +12,6 @@ import {
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import crypto from 'crypto'
 import { fileURLToPath } from 'url'
 import { spawn, exec, execFile } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings, toRendererSettings } from './settings'
@@ -29,6 +28,7 @@ import {
 } from './ipc/modManager'
 import { getVfsBridgeDiagnostics, loadVfsBridge, type UsvfsBridge, type VfsLink } from './vfsBridge'
 import { pruneEmptyModFrameworkDirs } from './vfsFrameworkCleanup'
+import { computeRedmodFingerprint, readGameBuildIdentity } from './redmodFingerprint'
 import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
@@ -350,6 +350,9 @@ function isVolatileOverwriteFile(relFile: string): boolean {
   }
 
   if (extension === '.log' || extension === '.tmp' || extension === '.dmp') return true
+  // redMod's own run log, captured when a deploy is cancelled mid-run. It is rewritten
+  // on every deploy, and the launch that mounted a stale copy had redMod die at once.
+  if (baseName === 'redmodlog.txt') return true
   if (normalized.startsWith(normalizeRelativePath(path.join('red4ext', 'logs')).toLowerCase() + path.sep)) return true
   if (normalized.startsWith(normalizeRelativePath(path.join('r6', 'logs')).toLowerCase() + path.sep)) return true
 
@@ -1461,22 +1464,12 @@ function writeRedmodDeployState(state: { fingerprint: string; deployedAt: string
   }
 }
 
-// Identity of the enabled REDmod set: which mods, whether their payload changed
-// (size/count/source timestamps), and the resolved `-mod=` load order - a pure
-// reorder must trigger a redeploy because the compiled output depends on it.
-function computeRedmodFingerprint(enabledRedmods: ModMetadata[], orderedModNames: string[]): string {
-  const identity = {
-    mods: enabledRedmods
-      .map((mod) => ({
-        folder: (mod.folderName ?? mod.uuid).toLowerCase(),
-        size: mod.fileSize ?? 0,
-        count: Array.isArray(mod.files) ? mod.files.length : 0,
-        stamp: mod.sourceModifiedAt ?? mod.installedAt ?? '',
-      }))
-      .sort((left, right) => left.folder.localeCompare(right.folder)),
-    order: orderedModNames.map((name) => name.toLowerCase()),
+function clearRedmodDeployState(): void {
+  try {
+    fs.rmSync(getRedmodDeployStatePath(), { force: true })
+  } catch {
+    // Best-effort; a leftover state still has to match the new fingerprint.
   }
-  return crypto.createHash('sha1').update(JSON.stringify(identity)).digest('hex')
 }
 
 async function deployRedmodsUnderVfs(
@@ -1503,13 +1496,17 @@ async function deployRedmodsUnderVfs(
   orderedNamesRaw.forEach((name, index) => lastIndexByName.set(name.toLowerCase(), index))
   const orderedModNames = orderedNamesRaw.filter((name, index) => lastIndexByName.get(name.toLowerCase()) === index)
 
-  const fingerprint = computeRedmodFingerprint(enabledRedmods, orderedModNames)
+  const fingerprint = computeRedmodFingerprint(enabledRedmods, orderedModNames, readGameBuildIdentity(gameRoot))
   const artifactDir = path.join(overwriteDir, 'r6', 'cache', 'modded')
   const artifactsPresent = fs.existsSync(artifactDir) && collectFilesRecursive(artifactDir).length > 0
   if (readRedmodDeployState()?.fingerprint === fingerprint && artifactsPresent) {
     appendVfsLaunchLog('redmod deploy skipped: fingerprint unchanged', { fingerprint, redmods: enabledRedmods.length })
     return { modded: true, skipped: true }
   }
+
+  // A cancelled or crashed deploy leaves partial output behind. Dropping the state
+  // first means only a finished deploy can ever match on a later launch.
+  clearRedmodDeployState()
 
   emitProgress({
     step: 'Deploying REDmods',
@@ -1657,7 +1654,7 @@ async function deployRedmodsUnderVfs(
       artifactDir,
       logTail: finalLog.slice(-1500),
     })
-    if (logSaysSuccess || (!logSaysFailure && (produced || artifactsPresent))) {
+    if (logSaysSuccess || (!logSaysFailure && produced)) {
       return { status: 'succeeded' }
     }
     const tailLine = finalLog.trim().split(/\r?\n/).filter(Boolean).pop() ?? 'no output'

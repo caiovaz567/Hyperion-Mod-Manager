@@ -10,6 +10,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.37.5] - 2026-11-03
+
+### Fixed
+- **REDmods are recompiled after a game patch.** Hyperion kept using REDmod output compiled for the old game version after an update, because it only checked whether your mods had changed. It now also notices when the game itself changes, with no Hyperion update needed for future patches.
+- **A cancelled REDmod compile no longer counts as finished.** Cancelling or crashing mid-compile could leave partial output that later launches treated as complete, so tweak-based REDmods silently stopped working. Only a compile that really finished is reused now.
+- **A leftover REDmod log no longer gets in the way of the next compile.** The log file left behind by a cancelled compile is now cleaned up before launch.
+
+---
+
 ## [0.37.4] - 2026-10-15
 
 ### Security
