@@ -123,7 +123,7 @@
    before the runtime tokens apply. AppThemeProvider overwrites these custom properties as
    inline styles on the root element: the dark palette (src/shared/theme/palettes/dark.json),
    overlaid with the light palette in light mode, plus the accent-color overlay last - see
-   AGENTS.md → "UI Theming". */
+   docs/agents/ui.md → "UI Theming". */
 
 * { box-sizing: border-box; }
 
