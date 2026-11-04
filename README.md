@@ -43,7 +43,13 @@ Turn mods on and off, one at a time or in bulk. Group them with collapsible sepa
 
 Two mods can change the same part of the game even when their `.archive` files have different names, so the conflict never shows up as a shared file. Hyperion reads inside each `.archive` to find these, and it also catches mods that replace the same loose file.
 
-A small badge on each row tells you if a mod wins or loses. Clicking it shows exactly which game resources are involved and against which mod.
+Click a mod and the list lights up: green for the mods it wins over, red for the mods that win over it. This way of showing conflicts is inspired by [Mod Organizer 2](https://github.com/ModOrganizer2/modorganizer).
+
+<p align="center">
+  <img src="docs/screenshots/conflict-highlight.png" width="800" alt="A selected mod in the library, with the mod it wins over in green and the mod that wins over it in red" />
+</p>
+
+The badge on each row shows how many resources a mod wins and loses. Clicking it shows exactly which ones, and against which mod.
 
 <p align="center">
   <img src="docs/screenshots/conflicts.png" width="800" alt="Conflicts tab of a mod showing .archive conflicts: the game resources this mod wins and the ones another mod wins" />
