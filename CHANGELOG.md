@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.38.2] - 2026-11-04
+
 ### Fixed
 - **Dates follow your Windows format.** Dates and times always appeared as `DD/MM/YYYY` and 24-hour, whatever your system used. They now match the format set in Windows, including custom ones and 12-hour clocks. If you change the format in Windows, reopen Hyperion to see it.
 
