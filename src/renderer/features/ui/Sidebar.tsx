@@ -219,7 +219,7 @@ export const Sidebar: React.FC = () => {
             <HyperionBadge tone={subscriptionTone} size="sm">
               {accountLabel}
             </HyperionBadge>
-            <span className="text-[10px] tracking-widest text-[var(--text-support)]">{accountSubLabel}</span>
+            <span className="text-[12px] text-[var(--text-support)]">{accountSubLabel}</span>
           </div>
         </div>
       </div>
@@ -236,7 +236,7 @@ export const Sidebar: React.FC = () => {
           >
             <span className={itemInnerClass}>
               <span className="relative flex h-11 w-11 items-center justify-center">
-                <Icon name={item.icon} className={`text-[22px] ${item.active ? 'drop-shadow-[0_0_4px_rgb(var(--accent-rgb)/0.3)]' : ''}`} />
+                <Icon name={item.icon} className="text-[22px]" />
                 {item.badge ? (
                   <span
                     className="absolute -right-1 -top-0.5 inline-flex min-w-[20px] items-center justify-center rounded-md border-0 bg-[rgb(var(--accent-rgb)/0.18)] px-1.5 py-[2px] font-sans text-[9px] font-semibold leading-none tracking-[0.04em] text-[var(--accent)] transition-opacity duration-150"
@@ -261,7 +261,7 @@ export const Sidebar: React.FC = () => {
         >
           <span className={itemInnerClass}>
             <span className="flex h-11 w-11 items-center justify-center">
-              <Icon name={settingsItem.icon} className={`text-[22px] ${settingsItem.active ? 'drop-shadow-[0_0_4px_rgb(var(--accent-rgb)/0.3)]' : ''}`} />
+              <Icon name={settingsItem.icon} className="text-[22px]" />
             </span>
             <span className={labelClass(settingsItem.active)}>
               {settingsItem.label}

@@ -10,7 +10,6 @@ const NAME_MIN_WIDTH = 220
 const VERSION_WIDTH = 110
 const CATEGORY_WIDTH = 220
 const DATE_WIDTH = 184
-const ACTIONS_WIDTH = 96
 
 export const LIBRARY_GRID_FALLBACK = [
   `${TOGGLE_WIDTH}px`,
@@ -19,5 +18,4 @@ export const LIBRARY_GRID_FALLBACK = [
   `${VERSION_WIDTH}px`,
   `${CATEGORY_WIDTH}px`,
   `${DATE_WIDTH}px`,
-  `${ACTIONS_WIDTH}px`,
 ].join(' ')

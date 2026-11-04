@@ -602,7 +602,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
           }`}
         >
           <span className="ui-support-mono">{formatWindowsDateTime(entry.timestamp)}</span>
-          <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="justify-self-start font-mono">{entry.method}</HyperionBadge>
+          <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="justify-self-start font-mono uppercase tracking-[0.08em]">{entry.method}</HyperionBadge>
           <span className="min-w-0">
             <span className="mb-1 flex items-center gap-2">
               <span className="block truncate font-mono text-[15px] text-[var(--text-primary-alt)]">{entry.endpoint}</span>
@@ -614,7 +614,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             </span>
             <span className="ui-support-mono block truncate">{entry.url}</span>
           </span>
-          <HyperionBadge tone={entry.status === 'success' ? 'success' : 'danger'} size="sm" className="justify-self-start font-mono">
+          <HyperionBadge tone={entry.status === 'success' ? 'success' : 'danger'} size="sm" className="justify-self-start font-mono uppercase tracking-[0.08em]">
             {formatStatusCode(entry)}
           </HyperionBadge>
           <span className="ui-support-mono truncate text-[var(--text-secondary)]">{formatDuration(entry.durationMs)}</span>
@@ -631,7 +631,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
             ) : null}
             <div className="mb-4 grid gap-3 md:grid-cols-4">
               <MetaCard label={t('logs.method')}>
-                <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="font-mono">{entry.method}</HyperionBadge>
+                <HyperionBadge tone={requestMethodTone[entry.method]} size="sm" className="font-mono uppercase tracking-[0.08em]">{entry.method}</HyperionBadge>
               </MetaCard>
               <MetaCard label={t('logs.endpoint')}>
                 <div className="font-mono text-[14px] text-[var(--text-primary)] break-all">{entry.endpoint}</div>
@@ -775,7 +775,7 @@ export const AppLogsDialog: React.FC<AppLogsDialogProps> = ({ onClose }) => {
                         }`}
                       >
                         <span className="ui-support-mono">{formatWindowsDateTime(entry.timestamp)}</span>
-                        <HyperionBadge tone={generalLevelTone[entry.level]} size="sm" className="font-mono">{entry.level}</HyperionBadge>
+                        <HyperionBadge tone={generalLevelTone[entry.level]} size="sm" className="font-mono uppercase tracking-[0.08em]">{entry.level}</HyperionBadge>
                         <span className="ui-support-mono truncate uppercase tracking-[0.14em] text-[var(--text-secondary)]">{entry.source}</span>
                         <span className="ui-support-mono truncate text-[var(--text-primary-alt)]">{entry.message}</span>
                         <Icon name="expand_more" className={`text-[16px] text-[var(--text-support)] transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`} />

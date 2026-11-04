@@ -1,6 +1,6 @@
 import React from 'react'
 import type { LibraryStatusFilter } from '../../store/slices/createLibrarySlice'
-import { HyperionBadge, HyperionButton, HyperionIconButton, HyperionSearchField } from '../ui/HyperionPrimitives'
+import { HyperionButton, HyperionIconButton, HyperionSearchField } from '../ui/HyperionPrimitives'
 import { Tooltip } from '../ui/Tooltip'
 import { useTranslation } from '../../i18n/I18nContext'
 import { Icon } from '../ui/Icon'
@@ -89,7 +89,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
             side="bottom"
             variant="help"
           >
-            <HyperionBadge tone="accent">{t('library.toolbar.customOrder')}</HyperionBadge>
+            <span className="mt-0.5 cursor-help text-[13px] text-[var(--text-support)]">{t('library.toolbar.customOrder')}</span>
           </Tooltip>
         )}
       </div>
@@ -159,7 +159,7 @@ export const LibraryToolbar: React.FC<LibraryToolbarProps> = ({
           <Tooltip content={t('library.toolbar.checkUpdatesTooltip')} side="bottom" variant="help">
             <HyperionButton
               onClick={onCheckUpdates}
-              variant="cyan"
+              variant="toolbar"
               icon={checkingUpdates ? 'progress_activity' : 'sync'}
               iconClassName={checkingUpdates ? 'animate-spin' : undefined}
               disabled={checkingUpdates}

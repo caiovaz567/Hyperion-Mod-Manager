@@ -4,7 +4,7 @@ import { Tooltip } from '../ui/Tooltip'
 import { LIBRARY_GRID_FALLBACK } from './libraryColumns'
 import { useTranslation } from '../../i18n/I18nContext'
 
-export type LibrarySortKey = 'name' | 'category' | 'installedAt'
+export type LibrarySortKey = 'name' | 'version' | 'category' | 'installedAt'
 export type SortDirection = 'asc' | 'desc'
 
 export const LIBRARY_GRID_TEMPLATE = LIBRARY_GRID_FALLBACK
@@ -100,8 +100,17 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
       className="justify-start gap-0.5"
       innerClassName="gap-0.5"
     />
-    <div className="relative flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">
-      <span className="min-w-0 truncate whitespace-nowrap">{t('library.header.columnVersion')}</span>
+    <div className="relative flex min-w-0 items-center">
+      <HyperionSortHeader
+        columnKey="version"
+        label={t('library.header.columnVersion')}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        ariaLabel={t('library.header.sortByVersion')}
+        className="justify-start gap-0.5"
+        innerClassName="gap-0.5"
+      />
     </div>
     <div className="relative flex min-w-0 items-center">
       <HyperionSortHeader
@@ -123,11 +132,10 @@ export const LibraryTableHeader: React.FC<LibraryTableHeaderProps> = ({
         sortDirection={sortDirection}
         onSort={onSort}
         ariaLabel={t('library.header.sortByDate')}
-        className="justify-start gap-0.5"
+        className="justify-end gap-0.5"
         innerClassName="gap-0.5"
       />
     </div>
-    <div className="flex h-8 min-w-0 items-center justify-start text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">{t('library.header.columnActions')}</div>
   </div>
   )
 }

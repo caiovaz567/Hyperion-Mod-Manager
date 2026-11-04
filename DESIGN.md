@@ -89,8 +89,8 @@ Accessibility:
 ### Header
 
 - The header is a **floating overlay cluster, not a layout row**: a transparent 48px strip absolutely positioned over the top-right half of the window, so the content area starts at the window's top edge and each view's title (Managed Mods, Downloads) sits on the same horizontal line as the header controls - no reserved chrome bar, no blank strip above the title
-- Window dragging lives in the empty part of that overlay (from mid-window to the controls); the title area on the left stays fully interactive
-- The brand mark does NOT live in the header - it heads the sidebar rail (see Sidebar). The header shows no version marker either - the current build lives in the Settings header chip and the About tab
+- The window can be dragged from anywhere along the top of the window, like a normal title bar: a transparent 36px strip spans the full width, stopping just above the view titles so they stay interactive. Controls, dialogs, and the sidebar rail opt out, so anything passing under the strip stays clickable
+- The brand mark does NOT live in the header - it heads the sidebar rail (see Sidebar). The header shows no version marker either - the current build lives in the Settings header and the About tab as plain text
 - The header holds only the right-side controls: single-step updater CTA, the light/dark/system mode toggle, the icon-only language selector, the App Logs button, and native window controls - all sharing one HeroUI icon-button chrome (h-9 rounded-lg `--surface` fill, `--surface-secondary` hover)
 - The terminal icon in the header opens App Logs; it is not an in-app terminal session
 
@@ -114,7 +114,7 @@ Navigation order:
 4. Launch Game CTA at the bottom
 
 Sidebar behavior:
-- Active item gets accent-colored text, subtle dark background, and a 2px left accent bar
+- Active item gets accent-colored text, subtle dark background, and a 2px left accent bar, with no glow on the icon
 - Inactive items use muted gray and brighten on hover
 - Labels fade in only in expanded state
 - Launch Game is icon-only while collapsed and reveals text on sidebar hover
@@ -196,21 +196,22 @@ Setup wizard:
 - Library status filtering should live in the screen itself as a compact readout below the title, not as a dropdown or a global-header control
 - Use the local `All N | On N | Off N` control for status filtering, rendered as the shared segmented pill (active segment lifted on `--surface-secondary`); no second accent color for `All`
 - Enable/disable-all control should read as a compact rectangular command block, not a toggle switch and not a rounded pill
-- Table sorting should be available from `Mod Name`, `Category`, and `Installed`
-- Sort icons should stay visually secondary and sit tight to the label without affecting the left alignment of the header text
+- Table sorting should be available from `Mod Name`, `Version`, `Category`, and `Date`. Versions compare numerically, so 1.10 sorts after 1.9
+- Sort icons should stay visually secondary and sit tight to the label without affecting the alignment of the header text
 - The `Category` column shows the mod's category as plain left-aligned text in the neutral secondary text color (not type-colored, not a bordered badge chip); when a Nexus category is known it shows the real Nexus category name, otherwise the detected type label. Category values must preserve source casing from Nexus or the detected type label
-- Columns are **fixed - not user-resizable**: the enable-toggle, `#`, `Version`, `Category`, `Date`, and `Actions` all have set widths sized to their content (version numbers, real Nexus category names, the full Windows timestamp), and `Mod Name` flexes to absorb the remaining space so `Version` through `Actions` stay pushed to the right edge on wide layouts. Because the flexible column shrinks first (down to a hard minimum), the table always fits the viewport - **no permanent horizontal scrollbar on smaller windows/resolutions**; horizontal scroll only appears below ~1080px logical width, where nothing readable would fit anyway. Do not reintroduce drag handles or persisted column widths
+- Columns are **fixed - not user-resizable**: the enable-toggle, `#`, `Version`, `Category`, and `Date` all have set widths sized to their content (version numbers, real Nexus category names, the full Windows timestamp), and `Mod Name` flexes to absorb the remaining space so `Version` through `Date` stay pushed to the right edge on wide layouts. Because the flexible column shrinks first (down to a hard minimum), the table always fits the viewport - **no permanent horizontal scrollbar on smaller windows/resolutions**; horizontal scroll only appears below ~1080px logical width, where nothing readable would fit anyway. Do not reintroduce drag handles or persisted column widths
 - Every data cell (`Mod Name`, `Version`, `Category`, `Date`) clips with `overflow-hidden` + single-line truncation, so a narrowed column never lets its text spill over the next column; the `gap` between columns keeps a minimum visual separation
+- There is no `Actions` column. Row actions (rename, delete) appear over the `Date` cell, replacing the date while the row is hovered or a control inside it has keyboard focus, so a long list never reads as a column of red icons and no column sits empty. The date column and its header align right, so the date and the icons end on the same edge. While a row is being renamed its save/cancel controls stay visible. The same actions remain in the row context menu
 - All library row variants (header, mod rows, install/delete progress rows) read one shared static grid template (`LIBRARY_GRID_TEMPLATE`), so every row stays in lockstep
 - Bulk actions should appear only when multiple mods are selected
-- Sort affordance should keep the entire header cell clickable, left align the label, and show only one active sorted column at a time
+- Sort affordance should keep the entire header cell clickable, left align the label (the last date column aligns right), and show only one active sorted column at a time
 - When the local status filter is `Enabled` or `Disabled`, the enable/disable-all control should be visibly disabled and explain that state through the shared tooltip treatment
 - Separators are first-class library rows in `Custom Order`, not a separate grouping mode layered on top of the list
 - While a column sort is active, flatten the library into a pure sorted mod list and hide separators entirely; the third click must return to `Custom Order` with separators restored in their saved positions
 - Mods inside a separator are left-aligned flush with ungrouped rows - they are NOT indented/shifted inward. Group membership is conveyed by the cyan left accent bar and the separator header above them, not by horizontal displacement
 - Grouped mods should use the regular left accent position with a cyan accent instead of introducing a second cyan guide line beside the row
 - Separators should support moving selected mods into the block through direct drag/drop and explicit library actions
-- Separator headers should align left like a real section marker, use readable label sizing, and avoid compressed microtype
+- Separator headers carry no decorative dot; the left accent bar and the name mark the group. Numbers and dates in library rows use Inter with tabular figures, not monospace. Separator headers should align left like a real section marker, use readable label sizing, and avoid compressed microtype
 - Separator names must render exactly as the user typed them; do not force uppercase or title case on user-authored separator labels
 - Separator helper copy should stay hidden until an actual drag is in progress; do not keep `Drag mods here` permanently visible on the row
 - Separators should be collapsible so large grouped sections can fold away without losing their custom-order placement
@@ -218,12 +219,13 @@ Setup wizard:
 - Manual drag reorder in `Custom Order` should work both on separators and on individual mod rows; dropping before or after a mod row must be a valid target, not just dropping onto the separator header
 - Moving a mod into a separator should update the visible custom order immediately and should never require reselection or a refresh for the row to appear in its new block
 - The persistent `Custom Order` guidance should stay lightweight inside the title/toolbar chrome; do not spend a full-width helper row on it. When dragging, the table header itself should become the compact `Top Level` drop target
+- The `Custom Order` marker beside the title and the `N mods` count on a separator are plain gray text, not chips (the count uses the stronger secondary gray at 14px medium so it stays easy to read on the separator bar); they are readouts and should not compete with the accent-colored actions
 - Selecting a separator should support range/additive selection with the existing `Shift` and `Ctrl/Cmd` patterns, and dragging a selected separator should move its whole block with child mods intact
 - Creating or renaming a separator should use a compact confirmation/input modal instead of forcing inline rename on the row itself
 - The `Create Separator` modal should open with the text cursor already active in the input so the user can type immediately without clicking first
 - In `Custom Order`, the library should explain how to group mods: drag onto a separator, use the separator context action, or use the bulk `Move to Separator` command
 - `Open Mods Folder` belongs beside search and `Check Updates`, while destructive library actions stay near the primary `Install Mod` CTA on the far end of the toolbar. Separator creation remains available through context menus and bulk/custom-order workflows instead of the main toolbar
-- Library toolbar controls should use the quiet filled/tinted button language: no bright colored outline rectangles around search, filter, Open Mods Folder, Check Updates, or destructive icon buttons. Use subtle inset shadows for input boundaries and let color live in the surface fill/icon/text
+- In a toolbar the solid primary action is the only accent-colored control, plus `Update All` while updates are flagged; `Open Mods Folder`, `Check Updates`, `Refresh` and `Open Folder` use neutral label and icon color. Library toolbar controls should use the quiet filled/tinted button language: no bright colored outline rectangles around search, filter, Open Mods Folder, Check Updates, or destructive icon buttons. Use subtle inset shadows for input boundaries and let color live in the surface fill/icon/text
 - The status filter is a segmented pill control: `All N | On N | Off N`. Items are real buttons for accessibility, with muted inactive labels and the active segment lifted on `--surface-secondary` - no boxed outline treatment
 - When `On` or `Off` is active, the toolbar shows a compact tinted notice (`Viewing enabled` / `Viewing disabled`) with a close icon to clear the filter. This prevents users from missing that they are viewing a filtered subset without reintroducing a large dropdown trigger
 - Toolbar button icons must remain visible on hover and track the current text color; Open Mods Folder and Check Updates keep their existing hover fill behavior while the icon color changes cleanly with the label
@@ -279,7 +281,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - When a newer version is available, the mod row renders its installed version in red (`#f87171`) in the Version column with an inline cyber-blue `upgrade` button beside it. Tooltip format: `Installed: X - Latest: Y - New version on Nexus. Click to update.`
 - Clicking the upgrade button is adaptive to the Nexus account: Premium resolves the download directly, stays on the Library view, then replaces and re-enables the mod in place when the archive finishes. Free opens the mod's Nexus files page so the user triggers the `nxm://` flow.
 - An **Update All** button (cyan, `upgrade` icon) appears beside `Check Updates` whenever at least one update is flagged. Premium: downloads and installs every outdated mod **one at a time** through the existing inline-update pipeline (installs never overlap), narrating progress in the button (`Updating X/N...`); per-mod upgrade buttons and a summary toast close the loop. Free: queues every update intent (each matching `nxm://` link then installs inline) and opens the first mod's Nexus files page with guidance. Blocked while the game is running, like every library mutation
-- A `Check Updates` control in the Library toolbar (cyan, with spinner + `Updates (N)` count) runs a bulk re-check and toasts the result: one `updated.json` request (with a window that adapts to time since the last check - 1 day / 1 week / 1 month) finds which mods changed game-wide, and only those installed mods get a per-file deep check. This scales to large libraries instead of one request per mod. A per-mod `Check for Update` action also lives in the mod right-click menu (Nexus-sourced mods only) - it checks just that one mod (a single `files.json` request) and toasts whether an update is available. Both merge results into the cached statuses (which persist between sessions); these are the only two ways update status is fetched.
+- A `Check Updates` control in the Library toolbar (neutral, with spinner + `Updates (N)` count) runs a bulk re-check and toasts the result: one `updated.json` request (with a window that adapts to time since the last check - 1 day / 1 week / 1 month) finds which mods changed game-wide, and only those installed mods get a per-file deep check. This scales to large libraries instead of one request per mod. A per-mod `Check for Update` action also lives in the mod right-click menu (Nexus-sourced mods only) - it checks just that one mod (a single `files.json` request) and toasts whether an update is available. Both merge results into the cached statuses (which persist between sessions); these are the only two ways update status is fetched.
 
 ### FOMOD Installer
 
@@ -307,9 +309,9 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Downloads should behave like a real sortable table: `Archive Name`, `Status`, `Version`, `Size`, and `Downloaded` must support the same `asc -> desc -> default` sort cycle used in Managed Mods
 - Downloads should remember the user's last search and sort state between visits/restarts instead of resetting to the default table every time
 - `Status` in Downloads is an operational column (`Downloading`, `Paused`, `Installed`, `Downloaded`, `Error`, etc.); temporary attention markers such as `NEW` remain badges on the archive name rather than becoming status values
-- Because the table has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` inside the `Actions` column
+- Because the table has a dedicated `Status` column, Downloads action controls should stay compact and icon-driven with clear tooltips; do not repeat textual state labels like `Installed` beside them
 - Status badges in Downloads should stay visually stable while hovering the row; the row hover may brighten the line, but the badge itself should not morph into another semantic state
-- Downloads status badges and row action buttons use filled/tinted semantic surfaces instead of colored outline boxes. `Downloaded`/`Installed`, active transfer states, pause/resume/cancel, install/reinstall, and delete controls should keep their color meaning through background fill, icon/text color, and hover fill
+- Downloads status badges and row action buttons use filled/tinted semantic surfaces instead of colored outline boxes. `Downloaded`/`Installed`, active transfer states, pause/resume/cancel, and install/reinstall controls should keep their color meaning through background fill, icon/text color, and hover fill. There is no `Actions` column: on archive rows the install/reinstall and delete controls appear over the `Downloaded` cell, replacing the date while the row is hovered or a control inside it has keyboard focus; that column and its header align right so the date and the icons end on the same edge. Active transfer controls (pause/resume/cancel) stay visible at the end of the name cell. Status labels are 12px sentence case, and the header count reads as a sentence (`199 files`), not an uppercase label
 - Summary strip shows configured path, file count, and zip-ready count
 - Download rows prioritize file name, format, modified date, install/reinstall action, and delete action
 - Download ordering should remain stable across navigation and library changes; Nexus archives should keep the chronology of when the user initiated each download request, not the order in which transfers happen to finish or related mods get installed/removed
@@ -341,7 +343,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Version mismatch decisions should be explicit per install attempt; do not show a remember-this-choice checkbox in the prompt
 - While an archive is actively downloading or paused, its active progress row should own that slot in Downloads; do not render a second local-file row for the same archive path until the transfer leaves the active state
 - Paused downloads should switch from the accent transfer language to a cooler tint, show a `Paused` badge, and swap the primary row control from `Pause` to `Resume`
-- Pause and resume should flip the row state immediately on click, use compact icon buttons in the actions column, and never let stale progress events from an earlier transfer attempt fight with the current row state
+- Pause and resume should flip the row state immediately on click, use compact icon buttons at the end of the name cell, and never let stale progress events from an earlier transfer attempt fight with the current row state
 
 ### Settings
 
@@ -353,10 +355,10 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - Do not keep a generic `Workspace` section or placeholder future-module scaffold in the primary UX
 - Settings uses the HeroUI card language: rounded `--surface` cards on the darker page background, borderless fills, Inter sentence-case titles, and the accent as signal rather than decoration
 - `src/renderer/features/ui/uiKit.tsx` may provide shared helpers for Settings and Welcome, but Settings should not inherit a soft onboarding or SaaS-style card language from first-run flows
-- Cards use the `SettingCard` pattern as single-column HeroUI cards stacked vertically: a header row with an accent icon tile + sentence-case title/description and the compact control (switch, combo box, status chip) on the right, then any richer content below aligned under the title - no side-by-side explanation column, no nested colored outline boxes
+- Cards use the `SettingCard` pattern as single-column HeroUI cards stacked vertically: a header row with a sentence-case title/description (no decorative icon tile) and the compact control (switch, combo box, status chip) on the right, then any richer content below aligned under the title - no side-by-side explanation column, no nested colored outline boxes
 - State is shown two ways: an inline `ValidationRow` under the relevant control for the human, consequence-aware message, and an optional HeroUI chip (`HyperionBadge`) in the card header for at-a-glance status
-- Validation copy must be consequence-aware (e.g. `Cyberpunk 2077 found. Launch and deployment validation are ready.` / invalid copy that names what stays blocked) while the surrounding chrome stays compact and operational
-- Header status readouts must communicate only the concrete state value: `CONNECTED`, `PREMIUM`, `READY TO INSTALL`, or `v0.14.0`; avoid split prefix/value badges such as `NEXUS / CONNECTED` and avoid decorative side bars inside the badge
+- Validation copy must be consequence-aware (e.g. `Cyberpunk 2077 found. You're ready to launch.` / invalid copy that names what stays blocked) while the surrounding chrome stays compact and operational
+- Header status readouts must communicate only the concrete state value, in sentence case (the version beside the Settings title and the About version, license and credit labels are plain support-gray text, not chips): `Connected`, `Premium`, or `Ready to install`; avoid split prefix/value badges such as `NEXUS / CONNECTED` and avoid decorative side bars inside the badge
 - Path values render in the shared monospace `PathBox`; buttons use the shared kit set with 40px HeroUI proportions and no hover lift or press-scale theatrics
 - Tabs use the shared `UnderlineTabs` from `uiKit` (the app-wide primary tab pattern): icon + sentence-case label, muted inactive labels, and a rounded accent underline on the active tab sitting on the divider line
 - Settings tabs should visually align with the content panel below: the tab rail and content share the same horizontal boundary, and the active tab is communicated by the underline rather than by a filled box, pill, or raised connected tab
@@ -368,7 +370,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - `Paths` is the primary section and must surface consequence (launch blocked / installs blocked) in the invalid validation copy when required targets are missing
 - `General` owns runtime behavior decisions. It contains both Install Behavior and Runtime Captures, because captured files are automatic runtime output rather than a path configuration task
 - The Runtime Captures folder is a single always-active catch-all: captured files are never moved, parked, or hidden based on which mods are enabled. The card's file count reflects everything in the folder, and `Clear captures` wipes it manually. The only automatic cleanup is removing a mod's leftover files when that mod is deleted, limited to the mod's own private folder so it can never disturb another mod's data
-- Runtime Captures does not live in `Paths`; keep the Paths tab focused on Game Path, Mod Library, and Downloads Intake
+- Runtime Captures does not live in `Paths`; keep the Paths tab focused on Game Path, Mod Library, and Downloads
 - Nexus subscription tone is semantic across the app: `Premium` uses the warm amber/gold readout tone, while `Free` uses the cool info-blue readout tone
 - The Account card in Settings > Nexus shows a two-card side-by-side tier comparison (`NexusTierComparison` in `SettingsDialog.tsx`): one card per tier, each listing 3 bullets describing how that tier behaves inside Hyperion. The active tier's card gets a subtle tinted fill and icon/text accent (blue for Free, amber for Premium); the inactive tier is rendered in muted grey. When the user is not connected, both cards render in neutral grey with no highlight
 - The sidebar should always expose a compact Nexus identity marker (avatar or initials) even when the rail is collapsed; expanding the rail may reveal the full name and subscription label

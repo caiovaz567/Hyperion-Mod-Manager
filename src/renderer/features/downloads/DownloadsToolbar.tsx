@@ -23,7 +23,7 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
   onOpenFolder,
   onDeleteAll,
 }) => {
-  const { t } = useTranslation()
+  const { t, tn } = useTranslation()
   return (
   // pt-10 keeps the Downloads title on the same top line as the library title (aligned
   // with the sidebar brand mark's axis).
@@ -32,9 +32,9 @@ export const DownloadsToolbar: React.FC<DownloadsToolbarProps> = ({
       {t('downloads.title')}
     </h1>
     <p className="mt-1.5 flex items-center gap-2 text-[14px] text-[var(--text-support)]">
-      {t('downloads.summary.local')}: {localFileCount}
-      {activeDownloadCount > 0 && <>&nbsp;|&nbsp; {t('downloads.summary.active')}: {activeDownloadCount}</>}
-      {searchQuery.trim() && <>&nbsp;|&nbsp; {t('downloads.summary.shown')}: {totalRows}</>}
+      {tn('downloads.summary.local', localFileCount)}
+      {activeDownloadCount > 0 && <>&nbsp;|&nbsp; {t('downloads.summary.active', { count: activeDownloadCount })}</>}
+      {searchQuery.trim() && <>&nbsp;|&nbsp; {t('downloads.summary.shown', { count: totalRows })}</>}
     </p>
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <HyperionSearchField

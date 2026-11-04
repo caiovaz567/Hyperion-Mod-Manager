@@ -10,7 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [0.38.0] - 2026-11-04
+## [0.38.1] - 2026-11-04
 
 ### Added
 - **Sort the library by version.** The Version column can now be sorted like Mod Name, Category and Date.
@@ -25,6 +25,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Move the window from anywhere along the top.** The whole top edge now drags the window, like any other app, instead of only the right half.
 - **Mod names follow updates.** Updating a mod no longer leaves an old version in its name, such as "Mod v1.0" beside version 1.1. A name you chose yourself is always kept.
 - **Cleaner names on install.** Names no longer pick up `.zip` from the file name, and manual downloads in Nexus's newer file name format no longer keep the id, date and hash.
+
+---
+
+## [0.38.0] - 2026-11-04
+
+### Changed
+- Version number only. This release was published before its changes were included, so it behaves like 0.37.5. Everything planned for it shipped in the next release.
 
 ---
 

@@ -47,13 +47,13 @@
     },
     "account": {
       "name": "NEXUS ACCOUNT",
-      "premium": "PREMIUM",
-      "free": "FREE",
-      "checking": "CHECKING",
-      "offline": "OFFLINE",
-      "connected": "NEXUS CONNECTED",
-      "validating": "VALIDATING",
-      "notConnected": "NOT CONNECTED",
+      "premium": "Premium",
+      "free": "Free",
+      "checking": "Checking",
+      "offline": "Offline",
+      "connected": "Connected to Nexus",
+      "validating": "Validating",
+      "notConnected": "Not connected",
       "validateFailed": "Could not validate Nexus account"
     },
     "header": {
@@ -84,17 +84,17 @@
     "openFolder": "Open Folder",
     "deleteAllTooltip": "Delete every file in the downloads folder",
     "summary": {
-      "local": "LOCAL",
-      "active": "ACTIVE",
-      "shown": "SHOWN"
+      "local_one": "{count} file",
+      "local_other": "{count} files",
+      "active": "{count} downloading",
+      "shown": "Showing {count}"
     },
     "columns": {
       "name": "Archive Name",
       "status": "Status",
       "version": "Version",
       "size": "Size",
-      "downloaded": "Downloaded",
-      "actions": "Actions"
+      "downloaded": "Downloaded"
     },
     "sort": {
       "name": "Sort by archive name",
@@ -374,8 +374,8 @@
       "columnVersion": "Version",
       "columnCategory": "Category",
       "columnDate": "Date",
-      "columnActions": "Actions",
       "sortByName": "Sort by mod name",
+      "sortByVersion": "Sort by version",
       "sortByCategory": "Sort by category",
       "sortByDate": "Sort by installed date",
       "bulkUnavailableEnabled": "Unavailable while Enabled filter is active",
@@ -624,13 +624,13 @@
     "general": {
       "installBehavior": {
         "title": "Install Behavior",
-        "description": "Default behavior for archives that finish downloading through Nexus links.",
+        "description": "What happens when a Nexus download finishes.",
         "toggleTitle": "Auto-install completed downloads",
-        "toggleDescription": "Nexus downloads install automatically when the archive is ready. Disable this if you prefer staging files in Downloads first."
+        "toggleDescription": "Nexus downloads install as soon as they finish. Turn this off to install them yourself from Downloads."
       },
       "runtimeCaptures": {
         "title": "Runtime Captures",
-        "description": "Files written by mod tools (CET, RED4ext plugins) during gameplay are captured here and kept out of the game folder between sessions.",
+        "description": "Files that mod tools like CET and RED4ext create while you play. They are kept here so your game folder stays clean.",
         "clean": "No captured files - game folder is clean.",
         "captured_one": "{count} file captured from previous sessions.",
         "captured_other": "{count} files captured from previous sessions.",
@@ -644,14 +644,14 @@
       },
       "accent": {
         "title": "Color",
-        "description": "Pick the highlight color used across buttons, switches, and active states. Applies instantly.",
+        "description": "Changes the color of buttons, switches, and highlights.",
         "select": "Select color"
       }
     },
     "header": {
       "eyebrow": "Control panel",
       "title": "Settings",
-      "subtitle": "Configure paths, Nexus access, and Hyperion updates without leaving the manager.",
+      "subtitle": "Your folders, your Nexus account, and app updates.",
       "sectionsAria": "Settings sections"
     },
     "tabs": {
@@ -664,26 +664,26 @@
     "paths": {
       "game": {
         "title": "Game Path",
-        "description": "Cyberpunk 2077 installation root used for launch validation and deployment.",
+        "description": "Where Cyberpunk 2077 is installed.",
         "placeholder": "No folder selected - detect or browse",
-        "valid": "Cyberpunk 2077 found. Launch and deployment validation are ready.",
+        "valid": "Cyberpunk 2077 found. You're ready to launch.",
         "invalid": "We couldn't find Cyberpunk 2077 in this folder. Launch stays blocked until it's fixed.",
         "dialogTitle": "Select Cyberpunk 2077 folder"
       },
       "library": {
         "title": "Mod Library",
-        "description": "Managed archive repository for metadata, reinstalls, staged recovery, and deploy rebuilds.",
+        "description": "Where Hyperion keeps your installed mods.",
         "placeholder": "No folder selected - use suggested or browse",
-        "valid": "Installs, rescans, and recovery can use this library.",
+        "valid": "Your mods can be installed here.",
         "invalid": "This folder can't be used as a mod library. Installs stay blocked until it's fixed.",
         "dialogTitle": "Select Mod Library folder"
       },
       "downloads": {
-        "title": "Downloads Intake",
-        "description": "Optional source folder for incoming archives before install.",
+        "title": "Downloads",
+        "description": "Optional. Where your mod archives are saved before you install them.",
         "placeholder": "Waiting for a library path...",
         "defaultDescription": "Using the default folder next to your library.",
-        "activeDescription": "New mod archives are picked up from here.",
+        "activeDescription": "Archives saved here show up in Downloads.",
         "dialogTitle": "Select Downloads folder"
       }
     },
@@ -696,15 +696,15 @@
       },
       "connection": {
         "title": "Nexus Connection",
-        "description": "Paste your personal Nexus API key. Hyperion saves it automatically and validates it in the background.",
+        "description": "Paste your personal Nexus API key. It's saved and checked automatically.",
         "placeholder": "Paste your Nexus API key here...",
         "clearKey": "Clear key"
       },
       "account": {
         "title": "Account",
-        "description": "Linked Nexus identity and subscription tier.",
+        "description": "Your Nexus account and membership.",
         "userLine": "{email} · User #{id}",
-        "empty": "Add a valid API key to show your account and unlock Nexus-aware flows."
+        "empty": "Add a valid API key to see your account."
       },
       "tiers": {
         "free": {
@@ -714,20 +714,20 @@
         },
         "premium": {
           "feat1": "Mod updates download directly, no browser",
-          "feat2": "Direct CDN links resolved via Nexus API",
-          "feat3": "One-click inline install, stays in the Library"
+          "feat2": "Downloads start right inside Hyperion",
+          "feat3": "One-click updates, right from the Library"
         }
       },
       "downloadFlow": {
         "title": "Download Flow",
-        "description": "Keep Nexus installs predictable.",
-        "bullet1": "Nexus links land in Downloads and install automatically unless disabled in General.",
-        "bullet2": "Hyperion still asks when a duplicate, FOMOD, or overwrite decision needs your input."
+        "description": "How Nexus downloads reach your library.",
+        "bullet1": "Nexus links go to Downloads and install automatically, unless you turn that off in General.",
+        "bullet2": "Hyperion asks you first when there's a duplicate, a FOMOD installer, or files that overlap."
       }
     },
     "updates": {
       "title": "Application Updates",
-      "description": "Check for, download, and install new Hyperion builds.",
+      "description": "Check for new versions of Hyperion.",
       "status": {
         "ready": "Ready to install",
         "available": "Update available"
@@ -735,7 +735,7 @@
       "message": {
         "ready": "Update {version} is ready to install.",
         "available": "Update {version} is available to download.",
-        "upToDate": "Current build is up to date."
+        "upToDate": "You're on the latest version."
       },
       "checking": "Checking...",
       "checkButton": "Check for updates",
@@ -745,28 +745,28 @@
     },
     "about": {
       "title": "About Hyperion",
-      "description": "Cyberpunk 2077 mod manager focused on virtual deployment, conflict visibility, and a predictable load order.",
+      "description": "A mod manager for Cyberpunk 2077. Mods stay out of your game folder, conflicts are easy to see, and you control the load order.",
       "projectLabel": "Project",
       "unofficial": "Unofficial",
-      "projectBody": "Built for a clean Cyberpunk 2077 modding workflow: install, inspect, reorder, and launch without turning the game folder into the source of truth.",
+      "projectBody": "Install, check, and reorder your mods, then launch the game. When you close it, your game folder is clean again.",
       "releases": "Releases",
       "supportLabel": "Support",
-      "supportBody": "For bug reports, include your Hyperion version and diagnostics summary so launch, VFS, and path issues are easier to trace.",
+      "supportBody": "When reporting a bug, include your Hyperion version and the diagnostics summary. They make launch and path problems much easier to track down.",
       "reportIssue": "Report issue",
       "copyDiagnostics": "Copy diagnostics",
       "creditsTitle": "Credits",
-      "creditsDescription": "Acknowledgements for the tools, APIs, and modding references that make Hyperion possible.",
+      "creditsDescription": "The tools and projects Hyperion is built on.",
       "credits": {
         "coreVfsLabel": "Core VFS",
-        "coreVfsBody": "Hyperion's virtual deployment is powered by usvfs, the User-Space VFS used by Mod Organizer 2.",
+        "coreVfsBody": "Mods are mounted over the game by usvfs, the virtual file system from Mod Organizer 2.",
         "resourceDataLabel": "Resource data",
         "resourceDataBody": "Archive-resource conflicts are named using the community resource-hash database from the WolvenKit project.",
         "extractionLabel": "Extraction",
         "extractionBody": "Mod archives (.zip, .rar, .7z) are unpacked with 7-Zip by Igor Pavlov.",
         "serviceApiLabel": "Service API",
-        "serviceApiBody": "Account validation, update checks, nxm links, and Premium-aware download handling.",
+        "serviceApiBody": "Account checks, update checks, nxm links, and Premium downloads.",
         "referenceLabel": "Reference",
-        "referenceBody": "Archive behavior, load-order details, and public Cyberpunk modding documentation."
+        "referenceBody": "Documentation on archives, load order, and Cyberpunk modding."
       },
       "disclaimer": "Hyperion is not affiliated with CD PROJEKT RED, Nexus Mods, Mod Organizer 2, the usvfs maintainers, the WolvenKit project, or 7-Zip."
     },

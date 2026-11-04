@@ -265,6 +265,10 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                       {row.hiddenInSeparator}
                     </span>
                   ) : null}
+                  <span className="ml-auto inline-flex h-7 shrink-0 min-w-[58px] items-center justify-center gap-1 rounded-md bg-[rgb(var(--accent-rgb)/0.18)] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)]">
+                    <Icon name={row.side === 'top' ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'} className="text-[15px] leading-none text-current" />
+                    {t('library.conflict.go')}
+                  </span>
                 </div>
                 <div className="truncate font-mono text-[13px] text-[var(--text-secondary)]">
                   {row.mod.version ?? '-'}
@@ -272,15 +276,9 @@ export const LibraryConflictFloatingRows: React.FC<LibraryConflictFloatingRowsPr
                 <div className="truncate text-[13px] text-[var(--text-secondary)]">
                   {category}
                 </div>
-                <div className="flex min-w-0 items-center font-mono text-[13px] text-[var(--text-support)]">
+                <div className="flex min-w-0 items-center justify-end font-mono text-[13px] text-[var(--text-support)]">
                   <span className="truncate whitespace-nowrap">
                     {row.tone === 'win' ? t('library.conflict.losesToSelected') : t('library.conflict.winsOverSelected')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <span className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-md bg-[rgb(var(--accent-rgb)/0.18)] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent)] transition-colors group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)]">
-                    <Icon name={row.side === 'top' ? 'keyboard_double_arrow_up' : 'keyboard_double_arrow_down'} className="text-[15px] leading-none text-current" />
-                    {t('library.conflict.go')}
                   </span>
                 </div>
               </button>

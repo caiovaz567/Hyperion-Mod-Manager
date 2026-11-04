@@ -54,7 +54,7 @@ export const HyperionButton = React.forwardRef<HTMLButtonElement, HyperionButton
       onPress={onClick ? (() => (onClick as unknown as () => void)()) : undefined}
       // Pin md/icon buttons to 40px so they always match the h-10 search fields beside them
       // (HeroUI's default md height renders shorter and made toolbars look uneven).
-      className={cx('font-semibold', size === 'md' && 'h-10', size === 'icon' && 'h-10 w-10', className)}
+      className={cx('font-semibold', variant === 'toolbar' && 'text-[var(--text-primary-alt)]', size === 'md' && 'h-10', size === 'icon' && 'h-10 w-10', className)}
       {...(props as Record<string, never>)}
     >
       {icon ? (
@@ -205,7 +205,7 @@ export const HyperionBadge: React.FC<HyperionBadgeProps> = ({ tone = 'neutral', 
     color={badgeChipColor[tone]}
     variant="soft"
     size={size}
-    className={cx('cursor-default font-semibold uppercase tracking-[0.08em]', className)}
+    className={cx('cursor-default font-semibold', className)}
     {...(props as Record<string, never>)}
   >
     {children}

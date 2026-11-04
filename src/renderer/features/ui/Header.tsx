@@ -133,15 +133,22 @@ export const Header: React.FC = () => {
       : 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
 
   return (
+    <>
+    {/* Full-width window drag strip, like a normal title bar. It stops above the view
+        titles (they start at 40px), and every control opts out through the global
+        no-drag rule in globals.css. */}
+    <div
+      aria-hidden="true"
+      className="absolute inset-x-0 top-0 z-30 h-9"
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+    />
     <header
       className="absolute top-0 left-1/2 right-0 z-50 flex h-12 items-center justify-end px-6 bg-transparent"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* The brand mark lives at the top of the sidebar rail (Sidebar.tsx). The header is a
           floating overlay, not a layout row: content starts at the window top, so each
-          view's title shares this top line with the controls. It spans only the right half
-          so the title area below stays interactive; the empty half up to the controls is
-          the window drag strip. */}
+          view's title shares this top line with the controls. */}
       {/* Right: window controls */}
       <div
         className="flex items-center gap-3"
@@ -222,5 +229,6 @@ export const Header: React.FC = () => {
         </div>
       </div>
     </header>
+    </>
   )
 }

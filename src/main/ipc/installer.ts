@@ -596,35 +596,77 @@ function findNexusInfoFromMetaIni(rootDir: string): MetaIniNexusInfo | null {
   return null
 }
 
+const ARCHIVE_EXTENSION_TAIL = /\.(?:zip|rar|7z)$/i
+
+// Some authors upload with the raw filename as the Nexus file name
+// ("mod_settings_v0.2.21.zip"). Real display names are left exactly as written.
+export function cleanNexusDisplayName(name: string): string {
+  if (!ARCHIVE_EXTENSION_TAIL.test(name)) return name
+  return name.replace(ARCHIVE_EXTENSION_TAIL, '').replace(/_+/g, ' ').trim() || name
+}
+
 export function normalizeModName(rawName: string): string {
-  const cleaned = rawName
+  const spaced = rawName
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\([^)]*nexus[^)]*\)/gi, ' ')
     .replace(/[_]+/g, ' ')
-    // Nexus MANUAL-download filename tail: "<Name> <modId> <version> <hash>"
-    // (e.g. "Rosemary Winters - Hair Pack 31149 1.0 n1B61wYbu"). nxm downloads
-    // carry a clean display name; manual ones don't, so strip the id/version/hash
-    // trio here. Kept tight (3+ digit id, a dotted version, a 5+ char mixed hash)
-    // so real names aren't clipped.
-    .replace(/\s+\d{3,}\s+v?\d[\d.]*\s+[A-Za-z0-9]{5,}$/, '')
     .replace(/\s+/g, ' ')
     .trim()
 
-  const dashParts = cleaned.split('-').map((part) => part.trim()).filter(Boolean)
+  // Nexus MANUAL-download filename tail: "<Name> <modId> <version> [<timestamp>] <hash>"
+  // (e.g. "Rosemary Winters - Hair Pack 31149 1.0 n1B61wYbu"). nxm downloads
+  // carry a clean display name; manual ones don't, so strip the tail here. Kept
+  // tight (3+ digit id, a dotted version, a 5+ char mixed hash) so real names
+  // aren't clipped. What remains is the author's file name, so it is final.
+  const withoutTail = spaced.replace(/\s+\d{3,}\s+v?\d[\d.]*(?:\s+\d{4}-\d{2}-\d{2}T\d{2}-\d{2}Z)?\s+[A-Za-z0-9]{5,}$/, '')
+  if (withoutTail !== spaced) return withoutTail.trim() || rawName
+
+  const dashParts = spaced.split('-').map((part) => part.trim()).filter(Boolean)
   if (dashParts.length > 1) {
     for (let index = 1; index < dashParts.length; index += 1) {
       const trailing = dashParts.slice(index)
       const versionLike = trailing.every((part) => /^v?\d+[a-z0-9.]*$/i.test(part))
       if (versionLike) {
-        return dashParts.slice(0, index).join(' - ').trim()
+        return dashParts.slice(0, index).join(' - ').replace(ARCHIVE_EXTENSION_TAIL, '').trim()
       }
     }
   }
 
-  return cleaned
+  return spaced
+    .replace(ARCHIVE_EXTENSION_TAIL, '')
     .replace(/[-_]?v?\d+(?:[._-]\d+)+(?:[._-]\d+)*$/i, '')
     .replace(/[-_ ]+$/g, '')
     .trim() || rawName
+}
+
+function modNameKey(name: string): string {
+  return name.replace(ARCHIVE_EXTENSION_TAIL, '').replace(/[_\s]+/g, ' ').trim().toLowerCase()
+}
+
+// Replacing a mod keeps a name the user chose, but a name Hyperion generated from
+// the old file follows the new file, so "Mod v1.0" never sits beside version 1.1.
+export function resolveReplacedModName(
+  currentName: string,
+  previousAutoNames: string[],
+  incomingName: string,
+  otherModNames: string[]
+): string {
+  const currentKey = modNameKey(currentName)
+  if (!previousAutoNames.some((name) => modNameKey(name) === currentKey)) return currentName
+  const incomingKey = modNameKey(incomingName)
+  return otherModNames.some((name) => modNameKey(name) === incomingKey) ? currentName : incomingName
+}
+
+function getReplacedModName(mod: ModMetadata, existingMods: ModMetadata[], incomingName: string): string {
+  const sourcePath = mod.sourcePath
+  const previousAutoNames = sourcePath
+    ? [
+        findNexusDownloadRecordByPath(sourcePath)?.displayName,
+        normalizeModName(path.basename(sourcePath, path.extname(sourcePath))),
+      ].filter((name): name is string => Boolean(name))
+    : []
+  const otherModNames = existingMods.filter((other) => other.uuid !== mod.uuid).map((other) => other.name)
+  return resolveReplacedModName(mod.name, previousAutoNames, incomingName, otherModNames)
 }
 
 function normalizeInstallRequest(input: string | InstallModRequest): InstallModRequest {
@@ -859,7 +901,7 @@ async function installMod(
     // the clean Nexus file display name, then the cleaned archive filename (which
     // can carry author tokens/hashes, e.g. "Weird_Glass_Begone_1_sHIUHDmOO.zip").
     const earlyNexusRecord = findNexusDownloadRecordByPath(filePath)
-    const nexusDisplayName = earlyNexusRecord?.displayName?.trim()
+    const nexusDisplayName = cleanNexusDisplayName(earlyNexusRecord?.displayName?.trim() ?? '')
     const customName = request.customName?.trim()
     normalizedName = customName || nexusDisplayName || normalizeModName(rawName)
     folderBase = sanitizeFolderName(normalizedName)
@@ -1080,7 +1122,9 @@ async function installMod(
 
     const modName = duplicateAction === 'copy'
       ? uniqueDisplayName(existingMods, normalizedName)
-      : duplicateMod?.name ?? normalizedName
+      : duplicateMod
+        ? (customName ? duplicateMod.name : getReplacedModName(duplicateMod, existingMods, normalizedName))
+        : normalizedName
     const folderName = duplicateAction === 'replace' && duplicateMod?.folderName
       ? duplicateMod.folderName
       : uniqueFolderName(settings.libraryPath, sanitizeFolderName(modName))
@@ -1402,7 +1446,7 @@ async function installFromFomod(
   // the clean Nexus file display name, then the cleaned archive filename (which
   // may carry author tokens) - matching the normal install flow.
   const fomodNexusRecord = findNexusDownloadRecordByPath(originalFilePath)
-  const fomodNexusDisplayName = fomodNexusRecord?.displayName?.trim()
+  const fomodNexusDisplayName = cleanNexusDisplayName(fomodNexusRecord?.displayName?.trim() ?? '')
   const customName = request.customName?.trim()
   const normalizedName = customName || fomodNexusDisplayName || normalizeModName(rawName)
   // Incoming Nexus identity (from the request or the download record), used to
@@ -1535,7 +1579,9 @@ async function installFromFomod(
 
     const modName = duplicateAction === 'copy'
       ? uniqueDisplayName(existingMods, normalizedName)
-      : duplicateMod?.name ?? normalizedName
+      : duplicateMod
+        ? (customName ? duplicateMod.name : getReplacedModName(duplicateMod, existingMods, normalizedName))
+        : normalizedName
     const folderName = duplicateAction === 'replace' && duplicateMod?.folderName
       ? duplicateMod.folderName
       : uniqueFolderName(settings.libraryPath, sanitizeFolderName(modName))

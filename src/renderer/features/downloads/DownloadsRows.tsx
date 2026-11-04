@@ -175,23 +175,58 @@ const ActiveDownloadRow: React.FC<{
         className="relative z-10 grid h-14 gap-4 pl-5 pr-5 py-[5px]"
         style={{ gridTemplateColumns: gridTemplate }}
       >
-        <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)]">
-              {download.fileName}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 overflow-hidden">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-medium tracking-tight truncate text-[var(--text-primary-alt)]">
+                {download.fileName}
+              </span>
+            </div>
+            <span
+              className="text-[15px] tabular-nums"
+              style={{ color: isError ? '#fca5a5' : isPaused ? 'var(--text-secondary)' : accent }}
+            >
+              {transferSummary}
             </span>
           </div>
-          <span
-            className="text-[15px] tabular-nums"
-            style={{ color: isError ? '#fca5a5' : isPaused ? 'var(--text-secondary)' : accent }}
-          >
-            {transferSummary}
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            {!isDone && !isError && (
+              <>
+                {isPaused ? (
+                  <Tooltip content={t('downloads.tooltip.resume')}>
+                    <button
+                      onClick={() => void onResumeDownload(download.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
+                    >
+                      <Icon name="play_arrow" className="text-[16px]" />
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <Tooltip content={t('downloads.tooltip.pause')}>
+                    <button
+                      onClick={() => void onPauseDownload(download.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
+                    >
+                      <Icon name="pause" className="text-[16px]" />
+                    </button>
+                  </Tooltip>
+                )}
+                <Tooltip content={t('downloads.tooltip.cancel')}>
+                  <button
+                    onClick={() => void onCancelDownload(download.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[var(--status-error-text)]"
+                  >
+                    <Icon name="close" className="text-[16px]" />
+                  </button>
+                </Tooltip>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden">
           <span
-            className="w-fit rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em]"
+            className="w-fit rounded-md border-0 px-2 py-[3px] text-[12px] font-semibold"
             style={{ color: accent, background: accentSoft }}
           >
             {isError ? t('downloads.status.error') : isDone ? t('downloads.status.downloaded') : isPaused ? t('downloads.status.paused') : t('downloads.status.downloading')}
@@ -209,44 +244,11 @@ const ActiveDownloadRow: React.FC<{
           {formatSize(Math.max(download.totalBytes, download.downloadedBytes))}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-[15px] tabular-nums">
-          <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(download.startedAt)}</span>
-          <span className="truncate text-[var(--text-support)]">{speedSummary}</span>
+        <div className="flex flex-col items-end justify-center gap-1 overflow-hidden text-right text-[15px] tabular-nums">
+          <span className="max-w-full truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(download.startedAt)}</span>
+          <span className="max-w-full truncate text-[var(--text-support)]">{speedSummary}</span>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
-          {!isDone && !isError && (
-            <>
-              {isPaused ? (
-                <Tooltip content={t('downloads.tooltip.resume')}>
-                  <button
-                    onClick={() => void onResumeDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
-                  >
-                    <Icon name="play_arrow" className="text-[16px]" />
-                  </button>
-                </Tooltip>
-              ) : (
-                <Tooltip content={t('downloads.tooltip.pause')}>
-                  <button
-                    onClick={() => void onPauseDownload(download.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
-                  >
-                    <Icon name="pause" className="text-[16px]" />
-                  </button>
-                </Tooltip>
-              )}
-              <Tooltip content={t('downloads.tooltip.cancel')}>
-                <button
-                  onClick={() => void onCancelDownload(download.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[var(--surface)] text-[var(--text-muted)] transition-colors hover:bg-[rgb(248_113_113/0.18)] hover:text-[var(--status-error-text)]"
-                >
-                  <Icon name="close" className="text-[16px]" />
-                </button>
-              </Tooltip>
-            </>
-          )}
-        </div>
       </div>
     </div>
   )
@@ -325,7 +327,7 @@ const InstallingDownloadRow: React.FC<{
 
         <div className="flex flex-col justify-center gap-1 overflow-hidden">
           <span
-            className="w-fit rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em]"
+            className="w-fit rounded-md border-0 px-2 py-[3px] text-[12px] font-semibold"
             style={{
               color: installAppearance.accent,
               background: installAppearance.soft,
@@ -346,22 +348,11 @@ const InstallingDownloadRow: React.FC<{
           {formatSize(entry.size)}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-[15px] tabular-nums">
-          <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
-          <span className="truncate text-[var(--text-support)]">{installAppearance.summary}</span>
+        <div className="flex flex-col items-end justify-center gap-1 overflow-hidden text-right text-[15px] tabular-nums">
+          <span className="max-w-full truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
+          <span className="max-w-full truncate text-[var(--text-support)]">{installAppearance.summary}</span>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg border-0"
-            style={{
-              color: installAppearance.accent,
-              background: installAppearance.soft,
-            }}
-          >
-            <Icon name="progress_activity" className="animate-spin text-[16px]" />
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -420,7 +411,7 @@ const DeletingDownloadRow: React.FC<{
               {entry.name}
             </span>
             <span
-              className="shrink-0 rounded-md border-0 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em]"
+              className="shrink-0 rounded-md border-0 px-2 py-[2px] text-[12px] font-semibold"
               style={{
                 color: deleteAppearance.accent,
                 background: deleteAppearance.soft,
@@ -433,7 +424,7 @@ const DeletingDownloadRow: React.FC<{
 
         <div className="flex items-center">
           <span
-            className="shrink-0 rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em]"
+            className="shrink-0 rounded-md border-0 px-2 py-[3px] text-[12px] font-semibold"
             style={{
               color: deleteAppearance.accent,
               background: deleteAppearance.soft,
@@ -451,24 +442,13 @@ const DeletingDownloadRow: React.FC<{
           {formatSize(entry.size)}
         </div>
 
-        <div className="flex flex-col justify-center gap-1 overflow-hidden text-[15px] tabular-nums">
-          <span className="truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
-          <span className="truncate text-[var(--status-error-text)]">
+        <div className="flex flex-col items-end justify-center gap-1 overflow-hidden text-right text-[15px] tabular-nums">
+          <span className="max-w-full truncate text-[var(--text-primary-alt)]">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
+          <span className="max-w-full truncate text-[var(--status-error-text)]">
             {deleteProgress > 0 ? `${deleteProgress}% · ${deleteSummary}` : deleteSummary}
           </span>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg border-0"
-            style={{
-              color: deleteAppearance.accent,
-              background: deleteAppearance.soft,
-            }}
-          >
-            <Icon name="delete" className="animate-spin text-[16px]" />
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -539,7 +519,7 @@ const LocalDownloadRow: React.FC<{
             {entry.name}
           </span>
           {isNew && (
-            <span className="shrink-0 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.08em] bg-[var(--accent)] text-[var(--accent-foreground)] rounded-md">
+            <span className="shrink-0 px-2 py-[2px] text-[12px] font-semibold bg-[var(--accent)] text-[var(--accent-foreground)] rounded-md">
               {t('downloads.badge.new')}
             </span>
           )}
@@ -548,7 +528,7 @@ const LocalDownloadRow: React.FC<{
 
       <div className="flex items-center">
         <span
-          className={`shrink-0 rounded-md border-0 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.08em] ${
+          className={`shrink-0 rounded-md border-0 px-2 py-[3px] text-[12px] font-semibold ${
             installedMod
               ? 'bg-[rgb(52_211_153/0.14)] text-[var(--status-success)]'
               : 'bg-[rgb(var(--accent-rgb)/0.14)] text-[var(--accent)]'
@@ -566,41 +546,41 @@ const LocalDownloadRow: React.FC<{
         {formatSize(entry.size)}
       </div>
 
-      <div className="flex items-center text-[15px] tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
-        {formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}
+      <div className="group/date relative flex min-w-0 items-center justify-end text-[15px] tabular-nums text-[var(--text-support)] group-hover:text-[var(--text-secondary)] transition-colors">
+        <span className="truncate whitespace-nowrap transition-opacity duration-150 group-hover:opacity-0 group-has-[:focus-visible]/date:opacity-0">{formatWindowsDateTime(entry.downloadedAt ?? entry.modifiedAt)}</span>
+        <div className="absolute inset-y-0 right-0 flex items-center gap-2 transition-opacity duration-150 opacity-0 has-[:focus-visible]:opacity-100 group-hover:opacity-100">
+          <Tooltip content={installedMod ? t('downloads.tooltip.reinstallArchive') : t('downloads.tooltip.installArchive')}>
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                void onInstall(entry)
+              }}
+              aria-label={installedMod ? t('downloads.tooltip.reinstallArchive') : t('downloads.tooltip.installArchive')}
+              disabled={isInstalling}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border-0 transition-colors disabled:opacity-50 ${
+                installedMod
+                  ? 'bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[rgb(var(--accent-rgb)/0.12)] hover:text-[var(--accent)]'
+                  : 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
+              } disabled:hover:bg-[var(--surface)] disabled:hover:text-[var(--accent)]`}
+            >
+              <Icon name={installedMod ? 'restart_alt' : 'deployed_code'} className="text-[18px]" />
+            </button>
+          </Tooltip>
+          <Tooltip content={t('downloads.tooltip.delete')}>
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                onDeleteRequest(entry)
+              }}
+              aria-label={t('downloads.tooltip.delete')}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(248_113_113/0.13)] text-[var(--status-error)] transition-colors hover:bg-[var(--status-error)] hover:text-[#190505]"
+            >
+              <Icon name="delete" className="text-[16px]" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2">
-        <Tooltip content={installedMod ? t('downloads.tooltip.reinstallArchive') : t('downloads.tooltip.installArchive')}>
-          <button
-            onClick={(event) => {
-              event.stopPropagation()
-              void onInstall(entry)
-            }}
-            aria-label={installedMod ? t('downloads.tooltip.reinstallArchive') : t('downloads.tooltip.installArchive')}
-            disabled={isInstalling}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg border-0 transition-colors disabled:opacity-50 ${
-              installedMod
-                ? 'bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[rgb(var(--accent-rgb)/0.12)] hover:text-[var(--accent)]'
-                : 'bg-[rgb(var(--accent-rgb)/0.12)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]'
-            } disabled:hover:bg-[var(--surface)] disabled:hover:text-[var(--accent)]`}
-          >
-            <Icon name={installedMod ? 'restart_alt' : 'deployed_code'} className="text-[18px]" />
-          </button>
-        </Tooltip>
-        <Tooltip content={t('downloads.tooltip.delete')}>
-          <button
-            onClick={(event) => {
-              event.stopPropagation()
-              onDeleteRequest(entry)
-            }}
-            aria-label={t('downloads.tooltip.delete')}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgb(248_113_113/0.13)] text-[var(--status-error)] transition-colors hover:bg-[var(--status-error)] hover:text-[#190505]"
-          >
-            <Icon name="delete" className="text-[16px]" />
-          </button>
-        </Tooltip>
-      </div>
     </div>
   )
 }

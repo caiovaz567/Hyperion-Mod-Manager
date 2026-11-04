@@ -474,3 +474,22 @@ html:not(.dark) .switch:not([aria-checked='true']):not([data-selected='true']) {
 html.dark .switch:not([aria-checked='true']):not([data-selected='true']) {
   --switch-control-bg: rgba(255, 255, 255, 0.18);
 }
+
+/* The window drag strip spans the whole top of the window, and Electron gives drag regions
+   priority over whatever is painted above them. Controls opt out so anything that passes
+   under the strip (scrolled Settings content, modals, the sidebar rail) stays clickable. */
+button,
+a,
+input,
+select,
+textarea,
+label,
+nav,
+[role='button'],
+[role='tab'],
+[role='switch'],
+[role='radio'],
+[role='menuitem'],
+[role='dialog'] {
+  -webkit-app-region: no-drag;
+}

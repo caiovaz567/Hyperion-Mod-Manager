@@ -134,19 +134,8 @@ export const LibraryInstallProgressRow: React.FC<LibraryInstallProgressRowProps>
               {appearance.label}
             </span>
           </div>
-          <div className="flex items-center text-[15px] font-mono tracking-tight text-[var(--text-secondary)]">
+          <div className="flex items-center justify-end text-right text-[15px] font-mono tracking-tight text-[var(--text-secondary)]">
             {status || appearance.summary}
-          </div>
-          <div className="flex items-center justify-start">
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-lg border-0"
-              style={{
-                color: appearance.accent,
-                background: `${appearance.accent}18`,
-              }}
-            >
-              <Icon name="progress_activity" className="animate-spin text-[15px]" />
-            </div>
           </div>
         </div>
       </div>
@@ -253,19 +242,8 @@ export const LibraryDeleteProgressRow: React.FC<LibraryDeleteProgressRowProps> =
               {mod.kind === 'separator' ? t('library.progress.deleting') : t('library.progress.deletingMod')}
             </span>
           </div>
-          <div className="flex items-center min-w-0 text-[15px] font-mono tracking-tight text-[var(--status-error-text)]">
+          <div className="flex items-center justify-end text-right min-w-0 text-[15px] font-mono tracking-tight text-[var(--status-error-text)]">
             <span className="truncate">{summary}</span>
-          </div>
-          <div className="flex items-center justify-start">
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-lg border-0"
-              style={{
-                color: appearance.accent,
-                background: `${appearance.accent}18`,
-              }}
-            >
-              <Icon name="delete" className="animate-spin text-[15px]" />
-            </div>
           </div>
         </div>
       </div>

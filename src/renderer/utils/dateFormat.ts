@@ -12,7 +12,7 @@ export function formatWindowsDateTime(value?: string): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
-  }).format(date)
+  }).format(date).replace(', ', ' ')
 }
 
 export function formatWindowsDateTimeOrFallback(value: string | undefined, fallback: string): string {

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '@heroui/react'
-import { HyperionBadge, HyperionSwitch } from '../ui/HyperionPrimitives'
+import { HyperionSwitch } from '../ui/HyperionPrimitives'
 import type { ModMetadata } from '@shared/types'
 import { useAppStore } from '../../store/useAppStore'
 import { shallow } from 'zustand/shallow'
@@ -199,11 +199,6 @@ export const ModRow: React.FC<ModRowProps> = ({
             <div className="flex min-w-0 items-center gap-3 pl-[32px]">
               <Icon name="expand_more" className={`absolute left-[16px] top-1/2 -translate-y-1/2 text-[18px] text-[var(--text-muted)] transition-[transform,color] duration-200 group-hover:text-[var(--text-primary)] ${ separatorCollapsed ? '-rotate-90' : 'rotate-0' }`} />
               <span
-                aria-hidden="true"
-                className="h-[8px] w-[8px] shrink-0 rounded-full transition-[background-color,box-shadow] duration-150"
-                style={{ background: separatorDropTarget ? 'var(--accent-cyber-blue)' : 'var(--accent)' }}
-              />
-              <span
                 className={`truncate text-[14px] font-semibold tracking-[0.01em] transition-colors duration-150 ${
                   separatorDropTarget
                     ? 'text-[var(--accent-cyber-blue)]'
@@ -215,12 +210,9 @@ export const ModRow: React.FC<ModRowProps> = ({
                 {mod.name}
               </span>
               {separatorChildCount > 0 ? (
-                // Real HeroUI chip in the accent tone: the old --surface-secondary span sat
-                // on a row that IS --surface-secondary, so the "N mods" tag melted into the
-                // separator bar; the accent tint keeps it visible and follows the user's color.
-                <HyperionBadge tone="accent" size="sm" className="shrink-0 normal-case tracking-normal">
+                <span className="shrink-0 text-[14px] font-medium tabular-nums text-[var(--text-secondary)]">
                   {tn('library.row.modCount', separatorChildCount)}
-                </HyperionBadge>
+                </span>
               ) : null}
               {separatorCollapsed && separatorUpdateCount > 0 ? (
                 <span
@@ -544,7 +536,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           />
         </div>
 
-        <div className={`flex items-center text-[13px] font-mono transition-colors ${indexTextClass}`}>
+        <div className={`flex items-center text-[13px] tabular-nums transition-colors ${indexTextClass}`}>
           {index}
         </div>
 
@@ -625,7 +617,7 @@ export const ModRow: React.FC<ModRowProps> = ({
           )}
         </div>
 
-        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[15px] font-mono tracking-tight">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[15px] tabular-nums">
           <span className={`truncate transition-colors ${hasModUpdate ? 'text-[#f87171]' : secondaryTextClass}`}>
             {mod.version ?? '-'}
           </span>
@@ -655,73 +647,79 @@ export const ModRow: React.FC<ModRowProps> = ({
           </Tooltip>
         </div>
 
-        <div className={`flex min-w-0 items-center overflow-hidden text-[15px] font-mono tracking-tight transition-colors ${secondaryTextClass}`}>
-          <span className="truncate whitespace-nowrap">{formatWindowsDateTime(mod.installedAt)}</span>
+        <div className={`group/date relative flex min-w-0 items-center justify-end overflow-hidden text-[15px] tabular-nums transition-colors ${secondaryTextClass}`}>
+          <span className={`truncate whitespace-nowrap transition-opacity duration-150 ${isRenaming ? 'opacity-0' : 'group-hover:opacity-0 group-has-[:focus-visible]/date:opacity-0'}`}>{formatWindowsDateTime(mod.installedAt)}</span>
+          <div
+            className={`absolute inset-y-0 right-0 flex items-center gap-2 transition-opacity duration-150 ${
+              isRenaming ? '' : 'opacity-0 has-[:focus-visible]:opacity-100 group-hover:opacity-100'
+            }`}
+            onClick={stopRowActivation}
+            onDoubleClick={stopRowActivation}
+          >
+            {isRenaming ? (
+              <>
+                <Tooltip content={t('library.row.saveName')}>
+                  <button
+                    onMouseDown={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRenameSave()
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(52,211,153,0.13)] text-[var(--status-success-text)] transition-colors hover:bg-[#34d399] hover:text-[#04120d]"
+                  >
+                    <Icon name="check" className="text-[15px]" />
+                  </button>
+                </Tooltip>
+                <Tooltip content={t('library.row.cancelRename')}>
+                  <button
+                    onMouseDown={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onRenameCancel()
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-[var(--surface-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                  >
+                    <Icon name="close" className="text-[15px]" />
+                  </button>
+                </Tooltip>
+              </>
+            ) : (
+              <>
+                <Tooltip content={t('library.row.renameMod')}>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="tertiary"
+                    onPress={() => onRename(mod)}
+                    aria-label={t('library.row.renameMod')}
+                    className="h-7 w-7 min-w-0 rounded-md"
+                  >
+                    <Icon name="edit" className="text-[15px]" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content={t('library.row.removeMod')}>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="danger-soft"
+                    onPress={() => onDelete(mod)}
+                    aria-label={t('library.row.removeMod')}
+                    className="h-7 w-7 min-w-0 rounded-md"
+                  >
+                    <Icon name="delete" className="text-[15px]" />
+                  </Button>
+                </Tooltip>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center justify-start gap-2" onClick={stopRowActivation} onDoubleClick={stopRowActivation}>
-          {isRenaming ? (
-            <>
-              <Tooltip content={t('library.row.saveName')}>
-                <button
-                  onMouseDown={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onRenameSave()
-                  }}
-                  className="flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-[rgba(52,211,153,0.13)] text-[var(--status-success-text)] transition-colors hover:bg-[#34d399] hover:text-[#04120d]"
-                >
-                  <Icon name="check" className="text-[15px]" />
-                </button>
-              </Tooltip>
-              <Tooltip content={t('library.row.cancelRename')}>
-                <button
-                  onMouseDown={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onRenameCancel()
-                  }}
-                  className="flex h-7 w-7 items-center justify-center rounded-md border-0 bg-[var(--surface-secondary)] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-                >
-                  <Icon name="close" className="text-[15px]" />
-                </button>
-              </Tooltip>
-            </>
-          ) : (
-            <>
-              <Tooltip content={t('library.row.renameMod')}>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="tertiary"
-                  onPress={() => onRename(mod)}
-                  aria-label={t('library.row.renameMod')}
-                  className="h-7 w-7 min-w-0 rounded-md"
-                >
-                  <Icon name="edit" className="text-[15px]" />
-                </Button>
-              </Tooltip>
-              <Tooltip content={t('library.row.removeMod')}>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="danger-soft"
-                  onPress={() => onDelete(mod)}
-                  aria-label={t('library.row.removeMod')}
-                  className="h-7 w-7 min-w-0 rounded-md"
-                >
-                  <Icon name="delete" className="text-[15px]" />
-                </Button>
-              </Tooltip>
-            </>
-          )}
-        </div>
 
         {(mod.enabled || conflictTone !== 'none') && (
           <div

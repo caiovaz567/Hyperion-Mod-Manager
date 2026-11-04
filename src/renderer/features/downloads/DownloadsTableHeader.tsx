@@ -3,11 +3,11 @@ import { HyperionSortHeader } from '../ui/HyperionPrimitives'
 import { useTranslation } from '../../i18n/I18nContext'
 
 export const DOWNLOADS_GRID_TEMPLATE =
-  'minmax(580px, 4.3fr) minmax(118px, 0.74fr) minmax(112px, 0.58fr) minmax(108px, 0.52fr) minmax(140px, 0.70fr) minmax(72px, 0.28fr)'
+  'minmax(580px, 4.3fr) minmax(118px, 0.74fr) minmax(112px, 0.58fr) minmax(108px, 0.52fr) minmax(140px, 0.70fr)'
 export const DOWNLOADS_GRID_TEMPLATE_WIDE =
-  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(160px, 0.85fr) minmax(72px, 0.28fr)'
+  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(160px, 0.85fr)'
 export const DOWNLOADS_GRID_TEMPLATE_FULLSCREEN =
-  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(120px, 0.60fr) minmax(64px, 0.22fr)'
+  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(120px, 0.60fr)'
 
 export type DownloadSortKey = 'name' | 'status' | 'version' | 'size' | 'downloadedAt'
 export type DownloadSortDirection = 'asc' | 'desc'
@@ -71,10 +71,8 @@ export const DownloadsTableHeader: React.FC<DownloadsTableHeaderProps> = ({
       sortDirection={sortDirection}
       onSort={onSort}
       ariaLabel={t('downloads.sort.downloaded')}
+      className="justify-end"
     />
-    <div className="flex h-8 items-center justify-end text-[11px] uppercase tracking-[0.07em] font-medium text-[var(--text-muted)]">
-      {t('downloads.columns.actions')}
-    </div>
   </div>
   )
 }

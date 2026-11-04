@@ -172,6 +172,11 @@ export function useLibraryEntries({
         return getModCategoryLabel(left).localeCompare(getModCategoryLabel(right), undefined, { sensitivity: 'base' })
       }
 
+      if (sortKey === 'version') {
+        // Numeric, so 1.10 sorts after 1.9. Same comparison as the Downloads Version column.
+        return (left.version ?? '').localeCompare(right.version ?? '', undefined, { numeric: true, sensitivity: 'base' })
+      }
+
       const leftTime = left.installedAt ? new Date(left.installedAt).getTime() : 0
       const rightTime = right.installedAt ? new Date(right.installedAt).getTime() : 0
       return leftTime - rightTime

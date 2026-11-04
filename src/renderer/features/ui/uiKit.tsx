@@ -142,49 +142,31 @@ export const SegmentedTabs = <T extends string,>({
   </div>
 )
 
-/* -- Icon tile -- */
-export const IconTile: React.FC<{ icon: string; size?: 'sm' | 'md' }> = ({ icon, size = 'md' }) => {
-  const isMd = size === 'md'
-  return (
-    <div
-      className={`flex flex-shrink-0 items-center justify-center rounded-xl border-0 bg-[rgb(var(--accent-rgb)/0.12)] ${
-        isMd ? 'h-10 w-10' : 'h-8 w-8'
-      }`}
-    >
-      <Icon name={icon} className="text-[var(--accent)]" style={{ fontSize: isMd ? 21 : 17 }} />
-    </div>
-  )
-}
-
 /* -- Setting card -- */
-// One HeroUI-style card per setting: header row (icon tile + title/description, with the
-// compact control or status readout on the right), and any richer content below, aligned
-// under the title. Cards stack vertically on the darker page background so they lift
-// without borders competing for attention - no side-by-side explanation column.
+// One HeroUI-style card per setting: header row (title/description, with the compact
+// control or status readout on the right), and any richer content below, aligned under
+// the title. Cards stack vertically on the darker page background so they lift without
+// borders competing for attention - no side-by-side explanation column.
 export const SettingCard: React.FC<{
-  icon: string
   title: string
   description?: string
   headerRight?: React.ReactNode
   className?: string
   style?: React.CSSProperties
   children?: React.ReactNode
-}> = ({ icon, title, description, headerRight, className = '', style, children }) => (
+}> = ({ title, description, headerRight, className = '', style, children }) => (
   <section
     className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 ${className}`}
     style={style}
   >
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 sm:flex-nowrap">
-      <div className="flex min-w-0 items-start gap-3.5">
-        <IconTile icon={icon} />
-        <div className="min-w-0 pt-0.5 text-left">
-          <h3 className="text-[1rem] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{title}</h3>
-          {description ? <p className="mt-1 max-w-[560px] text-[13.5px] leading-6 text-[var(--text-support)]">{description}</p> : null}
-        </div>
+      <div className="min-w-0 text-left">
+        <h3 className="text-[1rem] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{title}</h3>
+        {description ? <p className="mt-1 max-w-[560px] text-[13.5px] leading-6 text-[var(--text-support)]">{description}</p> : null}
       </div>
       {headerRight ? <div className="flex shrink-0 items-center pt-1">{headerRight}</div> : null}
     </div>
-    {children ? <div className="mt-4 sm:pl-[54px]">{children}</div> : null}
+    {children ? <div className="mt-4">{children}</div> : null}
   </section>
 )
 

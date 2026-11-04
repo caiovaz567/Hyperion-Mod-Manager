@@ -4,7 +4,9 @@ import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   extractVersionFromName,
+  cleanNexusDisplayName,
   normalizeModName,
+  resolveReplacedModName,
   parseMetaIniNexusInfo,
   resolvePathInsideRoot,
   sanitizeFolderName,
@@ -82,6 +84,52 @@ describe('extractVersionFromName / normalizeModName', () => {
     // A real name that merely ends in a number must NOT be clipped.
     expect(normalizeModName('Cyberpunk 2077 HD Reworked Project')).toBe('Cyberpunk 2077 HD Reworked Project')
     expect(normalizeModName('E3 Window')).toBe('E3 Window')
+  })
+
+  it('strips the newer Nexus tail that carries a timestamp, keeping the file name intact', () => {
+    expect(normalizeModName('Mod Settings v0.2.28 for 2.50 4885 0.2.28 2026-10-28T23-15Z Q6xF6liX8')).toBe('Mod Settings v0.2.28 for 2.50')
+    expect(normalizeModName('CET 1.38.1 - Game version 2.5 107 1.38.1 2026-10-26T01-28Z ozVyzbb0n')).toBe('CET 1.38.1 - Game version 2.5')
+  })
+
+  it('drops an archive extension buried in the file name', () => {
+    expect(normalizeModName('input_loader_v0.2.3.zip-4575-0-2-3-1752939429')).toBe('input loader v0.2.3')
+    expect(normalizeModName('Cool Mod.rar')).toBe('Cool Mod')
+  })
+})
+
+describe('cleanNexusDisplayName', () => {
+  it('cleans a raw filename used as the Nexus file name', () => {
+    expect(cleanNexusDisplayName('mod_settings_v0.2.21.zip')).toBe('mod settings v0.2.21')
+  })
+
+  it('leaves real display names exactly as written', () => {
+    expect(cleanNexusDisplayName('CET 1.38.1 - Game version 2.5')).toBe('CET 1.38.1 - Game version 2.5')
+    expect(cleanNexusDisplayName('Under_Score Name')).toBe('Under_Score Name')
+    expect(cleanNexusDisplayName('')).toBe('')
+  })
+})
+
+describe('resolveReplacedModName', () => {
+  it('follows the new file when the current name was generated from the old one', () => {
+    expect(resolveReplacedModName('CET 1.37.1 - Scripting fixes', ['CET 1.37.1 - Scripting fixes'], 'CET 1.38.1 - Game version 2.5', []))
+      .toBe('CET 1.38.1 - Game version 2.5')
+  })
+
+  it('matches generated names across underscores, spaces, case and extension', () => {
+    expect(resolveReplacedModName('mod settings v0.2.21.zip', ['mod_settings_v0.2.21.zip'], 'Mod Settings v0.2.28', []))
+      .toBe('Mod Settings v0.2.28')
+  })
+
+  it('keeps a name the user chose', () => {
+    expect(resolveReplacedModName('My CET', ['CET 1.37.1 - Scripting fixes'], 'CET 1.38.1', [])).toBe('My CET')
+  })
+
+  it('keeps the current name when we cannot tell where it came from', () => {
+    expect(resolveReplacedModName('CET 1.37.1', [], 'CET 1.38.1', [])).toBe('CET 1.37.1')
+  })
+
+  it('never takes a name another mod already uses', () => {
+    expect(resolveReplacedModName('Old File', ['Old File'], 'New File', ['new file'])).toBe('Old File')
   })
 })
 

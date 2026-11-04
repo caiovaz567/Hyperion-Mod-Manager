@@ -470,7 +470,7 @@ export const SettingsPage: React.FC = () => {
                 {t('settings.header.subtitle')}
               </p>
             </div>
-            <HyperionBadge tone="accent">v{appVersion}</HyperionBadge>
+            <span className="shrink-0 text-[14px] tabular-nums text-[var(--text-support)]">v{appVersion}</span>
           </div>
         </header>
 
@@ -486,7 +486,6 @@ export const SettingsPage: React.FC = () => {
             {activeTab === 'general' && (
               <>
                 <SettingCard
-                  icon="deployed_code"
                   title={t('settings.general.installBehavior.title')}
                   description={t('settings.general.installBehavior.description')}
                   className="fade-up"
@@ -510,7 +509,6 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="folder_special"
                 title={t('settings.general.runtimeCaptures.title')}
                 description={t('settings.general.runtimeCaptures.description')}
                 className="fade-up"
@@ -546,7 +544,6 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="colorize"
                 title={t('settings.general.accent.title')}
                 description={t('settings.general.accent.description')}
                 className="fade-up"
@@ -560,7 +557,6 @@ export const SettingsPage: React.FC = () => {
             {activeTab === 'paths' && (
               <>
                 <SettingCard
-                  icon="sports_esports"
                   title={t('settings.paths.game.title')}
                   description={t('settings.paths.game.description')}
                   className="fade-up"
@@ -597,7 +593,6 @@ export const SettingsPage: React.FC = () => {
                 </SettingCard>
 
               <SettingCard
-                icon="inventory_2"
                 title={t('settings.paths.library.title')}
                 description={t('settings.paths.library.description')}
                 className="fade-up"
@@ -625,7 +620,6 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="download"
                 title={t('settings.paths.downloads.title')}
                 description={t('settings.paths.downloads.description')}
                 className="fade-up"
@@ -653,7 +647,6 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'nexus' && (
             <>
               <SettingCard
-                icon="vpn_key"
                 title={t('settings.nexus.connection.title')}
                 description={t('settings.nexus.connection.description')}
                 headerRight={
@@ -710,7 +703,6 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="account_circle"
                 title={t('settings.nexus.account.title')}
                 description={t('settings.nexus.account.description')}
                 headerRight={
@@ -743,7 +735,6 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="downloading"
                 title={t('settings.nexus.downloadFlow.title')}
                 description={t('settings.nexus.downloadFlow.description')}
                 className="fade-up"
@@ -765,7 +756,6 @@ export const SettingsPage: React.FC = () => {
 
           {activeTab === 'updates' && (
             <SettingCard
-              icon="update"
               title={t('settings.updates.title')}
               description={t('settings.updates.description')}
               headerRight={updateReadout ? (
@@ -832,17 +822,14 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'about' && (
             <>
               <SettingCard
-                icon="hexagon"
                 title={t('settings.about.title')}
                 description={t('settings.about.description')}
                 className="fade-up"
                 style={{ animationDelay: '0ms' }}
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <HyperionBadge tone="accent">v{appVersion}</HyperionBadge>
-                  <HyperionBadge tone="neutral">GPL-3.0</HyperionBadge>
-                  <HyperionBadge tone="neutral">{t('settings.about.unofficial')}</HyperionBadge>
-                </div>
+                <p className="text-[14px] tabular-nums text-[var(--text-support)]">
+                  v{appVersion} · GPL-3.0 · {t('settings.about.unofficial')}
+                </p>
                 <p className="mt-3 max-w-[620px] text-[13.5px] leading-6 text-[var(--text-support)]">
                   {t('settings.about.projectBody')}
                 </p>
@@ -870,7 +857,6 @@ export const SettingsPage: React.FC = () => {
               </SettingCard>
 
               <SettingCard
-                icon="groups"
                 title={t('settings.about.creditsTitle')}
                 description={t('settings.about.creditsDescription')}
                 className="fade-up"
@@ -881,7 +867,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[15px] font-semibold text-[var(--text-primary)]">usvfs / Mod Organizer 2</span>
-                        <HyperionBadge tone="accent">{t('settings.about.credits.coreVfsLabel')}</HyperionBadge>
+                        <span className="text-[13px] text-[var(--text-support)]">{t('settings.about.credits.coreVfsLabel')}</span>
                       </div>
                       <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.coreVfsBody')}
@@ -903,7 +889,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[15px] font-semibold text-[var(--text-primary)]">WolvenKit</span>
-                        <HyperionBadge tone="neutral">{t('settings.about.credits.resourceDataLabel')}</HyperionBadge>
+                        <span className="text-[13px] text-[var(--text-support)]">{t('settings.about.credits.resourceDataLabel')}</span>
                       </div>
                       <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.resourceDataBody')}
@@ -921,7 +907,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[15px] font-semibold text-[var(--text-primary)]">7-Zip</span>
-                        <HyperionBadge tone="neutral">{t('settings.about.credits.extractionLabel')}</HyperionBadge>
+                        <span className="text-[13px] text-[var(--text-support)]">{t('settings.about.credits.extractionLabel')}</span>
                       </div>
                       <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.extractionBody')}
@@ -939,7 +925,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[15px] font-semibold text-[var(--text-primary)]">Nexus Mods API</span>
-                        <HyperionBadge tone="neutral">{t('settings.about.credits.serviceApiLabel')}</HyperionBadge>
+                        <span className="text-[13px] text-[var(--text-support)]">{t('settings.about.credits.serviceApiLabel')}</span>
                       </div>
                       <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.serviceApiBody')}
@@ -951,7 +937,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="min-w-0 max-w-[520px]">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[15px] font-semibold text-[var(--text-primary)]">REDmodding ecosystem</span>
-                        <HyperionBadge tone="neutral">{t('settings.about.credits.referenceLabel')}</HyperionBadge>
+                        <span className="text-[13px] text-[var(--text-support)]">{t('settings.about.credits.referenceLabel')}</span>
                       </div>
                       <p className="mt-1 text-[14px] leading-5 text-[var(--text-support)]">
                         {t('settings.about.credits.referenceBody')}
