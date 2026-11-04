@@ -2,12 +2,14 @@ import React from 'react'
 import { HyperionSortHeader } from '../ui/HyperionPrimitives'
 import { useTranslation } from '../../i18n/I18nContext'
 
+// The last column fits a 12-hour date such as 12/31/2026 11:59:59 PM. The name
+// column gave up that width, so the table still fits a 1280px window.
 export const DOWNLOADS_GRID_TEMPLATE =
-  'minmax(580px, 4.3fr) minmax(118px, 0.74fr) minmax(112px, 0.58fr) minmax(108px, 0.52fr) minmax(140px, 0.70fr)'
+  'minmax(516px, 4.3fr) minmax(118px, 0.74fr) minmax(112px, 0.58fr) minmax(108px, 0.52fr) minmax(196px, 0.70fr)'
 export const DOWNLOADS_GRID_TEMPLATE_WIDE =
-  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(160px, 0.85fr)'
+  'minmax(656px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(196px, 0.85fr)'
 export const DOWNLOADS_GRID_TEMPLATE_FULLSCREEN =
-  'minmax(692px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(120px, 0.60fr)'
+  'minmax(616px, 5.38fr) minmax(118px, 0.70fr) minmax(112px, 0.54fr) minmax(108px, 0.48fr) minmax(196px, 0.60fr)'
 
 export type DownloadSortKey = 'name' | 'status' | 'version' | 'size' | 'downloadedAt'
 export type DownloadSortDirection = 'asc' | 'desc'

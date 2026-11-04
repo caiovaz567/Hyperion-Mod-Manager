@@ -65,7 +65,7 @@ Accessibility:
 - Monospace is reserved for clearly technical values only, such as code-like payload inspection or highly technical diagnostics
 - Do not use monospace for small helper copy, explanatory paragraphs, or secondary UI descriptions; those should use Inter instead
 - Small support text should prefer the same visual token used by download dates: readable 14px sizing, restrained gray, and AA contrast at minimum
-- Dates and timestamps should follow the user's Windows-style local format in UI surfaces: `DD/MM/YYYY HH:mm:ss` (example: `19/04/2026 15:47:08`)
+- Dates and timestamps follow the date and time format the user configured in Windows, custom formats and 12-hour clocks included (example on a Brazilian system: `19/04/2026 15:47:08`; on a US system: `4/19/2026 3:47:08 PM`). They do not depend on the app language
 
 ### Motion
 

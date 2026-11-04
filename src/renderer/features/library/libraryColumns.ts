@@ -9,7 +9,7 @@ const ORDER_WIDTH = 56
 const NAME_MIN_WIDTH = 220
 const VERSION_WIDTH = 110
 const CATEGORY_WIDTH = 220
-const DATE_WIDTH = 184
+const DATE_WIDTH = 204 // Room for a 12-hour date such as 12/31/2026 11:59:59 PM
 
 export const LIBRARY_GRID_FALLBACK = [
   `${TOGGLE_WIDTH}px`,

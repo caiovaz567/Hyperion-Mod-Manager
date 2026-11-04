@@ -3,6 +3,8 @@ import { useAppStore } from './store/useAppStore'
 import { shallow } from 'zustand/shallow'
 import { IpcService } from './services/IpcService'
 import { IPC } from '../shared/types'
+import type { SystemDateFormat } from '../shared/types'
+import { setSystemDateFormat } from './utils/dateFormat'
 import { Header } from './features/ui/Header'
 import { Sidebar } from './features/ui/Sidebar'
 import { ToastContainer } from './features/ui/ToastContainer'
@@ -136,6 +138,11 @@ export const App: React.FC = () => {
       const updateBootStatus = (message: string) => {
         IpcService.send(IPC.APP_BOOT_STATUS, message)
       }
+
+      // Before anything renders a date. A failure just leaves the locale fallback.
+      await IpcService.invoke<SystemDateFormat>(IPC.GET_SYSTEM_DATE_FORMAT)
+        .then(setSystemDateFormat)
+        .catch(() => undefined)
 
       updateBootStatus('Loading settings...')
       let currentSettings = await loadSettings()

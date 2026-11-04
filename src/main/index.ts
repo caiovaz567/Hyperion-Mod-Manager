@@ -15,6 +15,7 @@ import os from 'os'
 import { fileURLToPath } from 'url'
 import { spawn, exec, execFile } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings, toRendererSettings } from './settings'
+import { readSystemDateFormat } from './systemDateFormat'
 import { createSplashWindow } from './splash'
 import { initializeUpdates, checkForUpdatesOnStartup, flushCachedUpdateInfo } from './updater'
 import {
@@ -2286,6 +2287,7 @@ function registerGlobalHandlers(): void {
   // Settings
   ipcMain.handle(IPC.GET_SETTINGS, () => toRendererSettings(loadSettings()))
   ipcMain.handle(IPC.GET_PATH_DEFAULTS, () => getPathDefaults())
+  ipcMain.handle(IPC.GET_SYSTEM_DATE_FORMAT, () => readSystemDateFormat())
   ipcMain.handle(IPC.ENSURE_DIRECTORY, (_event, targetPath: string) => {
     const resolvedPath = targetPath?.trim()
     if (!resolvedPath) return { ok: false, error: 'Path not provided' }

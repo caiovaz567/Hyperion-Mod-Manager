@@ -525,6 +525,16 @@ export interface ModUpdateCache {
   checkedAt: string | null
 }
 
+// The user's Windows date and time format, read by the main process. The patterns
+// are empty when no format could be read, and dates then follow `locale`.
+export interface SystemDateFormat {
+  locale: string
+  shortDate: string
+  time: string
+  am: string
+  pm: string
+}
+
 // ─── IPC Channels ────────────────────────────────────────────────────────────
 
 export const IPC = {
@@ -532,6 +542,7 @@ export const IPC = {
   GET_SETTINGS: 'settings:get',
   SET_SETTINGS: 'settings:set',
   GET_PATH_DEFAULTS: 'settings:getPathDefaults',
+  GET_SYSTEM_DATE_FORMAT: 'settings:getSystemDateFormat',
   ENSURE_DIRECTORY: 'settings:ensureDirectory',
 
   // Mods
