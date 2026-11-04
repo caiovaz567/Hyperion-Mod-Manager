@@ -15,7 +15,7 @@ export interface AccentPreset {
   hover: string
   /** SPACE-separated RGB channels of `accent`, for `rgb(var(--accent-rgb)/opacity)` blends.
    *  Must be space-separated (not commas): `rgb(0, 111, 238/0.2)` is invalid CSS and renders
-   *  transparent, whereas `rgb(0 111 238/0.2)` is valid. See CLAUDE.md → UI Theming. */
+   *  transparent, whereas `rgb(0 111 238/0.2)` is valid. See AGENTS.md → UI Theming. */
   rgb: string
 }
 

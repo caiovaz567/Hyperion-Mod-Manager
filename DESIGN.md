@@ -44,7 +44,7 @@ Accessibility:
 
 ### Component library
 
-- The interface is built with the **HeroUI v3** component library (React 19 + Tailwind v4). Buttons, switches, inputs, chips/badges, dialogs, context menus and toasts are real HeroUI components - rounded surfaces, soft borders, filled/tinted fills - not hand-styled boxes. There is no MUI/Emotion. Shared wrappers (`HyperionButton`, `HyperionSwitch`, `HyperionBadge`, `HyperionSearchField`, `HyperionModal`) map Hyperion's semantic variants onto HeroUI so call sites stay stable. HeroUI is providerless: its components read theme CSS variables straight from the root element, so an accent change re-skins them live. Shared tab patterns (`UnderlineTabs` primary rail + `SegmentedTabs` sub-level pill) and the `Tooltip`/`CloseButton` wrappers are HeroUI too. Implementation details live in CLAUDE.md → Stack / UI Theming
+- The interface is built with the **HeroUI v3** component library (React 19 + Tailwind v4). Buttons, switches, inputs, chips/badges, dialogs, context menus and toasts are real HeroUI components - rounded surfaces, soft borders, filled/tinted fills - not hand-styled boxes. There is no MUI/Emotion. Shared wrappers (`HyperionButton`, `HyperionSwitch`, `HyperionBadge`, `HyperionSearchField`, `HyperionModal`) map Hyperion's semantic variants onto HeroUI so call sites stay stable. HeroUI is providerless: its components read theme CSS variables straight from the root element, so an accent change re-skins them live. Shared tab patterns (`UnderlineTabs` primary rail + `SegmentedTabs` sub-level pill) and the `Tooltip`/`CloseButton` wrappers are HeroUI too. Implementation details live in AGENTS.md → Stack / UI Theming
 
 ### Color mode & accent color
 
@@ -54,7 +54,7 @@ Accessibility:
 - There is **no theme selector, no Themes folder, and no community-theme JSON support** - that system was removed in favor of the single accent-color axis
 - Status colors (`--status-success/warning/error/info`), the Nexus **Premium gold**, and per-mod-type colors are **never** recolored by the accent - they carry fixed meaning. The Nexus **Free** tier marker follows the accent color
 - Scrollbars are neutral gray chrome, never accent-tinted
-- Engine details (token architecture, the accent-preset overlay) live in CLAUDE.md -> UI Theming / Accent Color
+- Engine details (token architecture, the accent-preset overlay) live in AGENTS.md -> UI Theming / Accent Color
 
 ### Typography
 
@@ -168,7 +168,7 @@ Welcome screen:
 Setup wizard:
 - Top: the small brand mark plus a `Step X of N` counter, then a step progress rail of **rounded numbered circles** connected by a fill bar - active circle is filled with the accent color with a soft ring, completed circles show a check on a green ring (and the connector fills green), future circles stay dim. Clicking a completed circle navigates back to it
 - Each path step is one rounded card: an accent icon tile, the question heading, a plain description, a `Selected folder` path box, an inline validation row, and two folder actions (`Detect automatically`/`Use suggested` as a neutral button + `Choose folder` as the accent-outline button)
-- `Use suggested` for the Mod Library and Downloads points INSIDE the Hyperion install directory by design (a `Mods` and `Downloads` folder beside the executable) for a self-contained, portable layout. This is safe because the NSIS uninstaller is surgical and only removes Hyperion's own files (see CLAUDE.md → Updater Expectations), so updating or uninstalling never deletes those folders or any other user content placed alongside the app
+- `Use suggested` for the Mod Library and Downloads points INSIDE the Hyperion install directory by design (a `Mods` and `Downloads` folder beside the executable) for a self-contained, portable layout. This is safe because the NSIS uninstaller is surgical and only removes Hyperion's own files (see AGENTS.md → Updater Expectations), so updating or uninstalling never deletes those folders or any other user content placed alongside the app
 - The final `Nexus` step teaches the user how to get their personal Nexus Mods API key (mirroring the README: open API Key Settings, scroll to Personal API Key, copy, paste), with an `Open API Key page` button, a masked key input with a reveal toggle, and a live validation line (`Validating…` / `Connected as {name} (Premium|Free)` / error). It is optional - finishing without a key is allowed and the key can be added later in Settings > Nexus. `Finish setup` saves the key alongside the paths
 - A saved Nexus key is never shown again, in onboarding or Settings > Nexus: the key input stays empty and its placeholder reads `Key saved - paste a new key to replace it` (no characters of the key are shown) and the reveal toggle appears only once something is typed. In Settings > Nexus a newly pasted key leaves the field on its own as soon as it is saved and Nexus confirms it (the field returns to `Key saved`), with no "checking" flicker on the already-connected account; a key Nexus rejects stays in the field so it can be corrected, while the live validation line still reports the connected account. Pasting a new key replaces it; an empty field keeps the saved one. Settings > Nexus removes the key only through the explicit `Clear key` action
 - Validation is communicated inline, not via badges: green `check_circle` + positive copy when valid, yellow `error` + plain explanation when invalid, a muted `radio_button_unchecked` when empty, and a neutral `info` line on the optional Downloads step
@@ -390,7 +390,7 @@ Conflict dialogs (OverwriteConflictDialog, ConflictInspectorDialog):
 - The selector is the shared `LanguageSelect` rendered as an **icon-only HeroUI button** (translate icon) in two places: the setup wizard top-right and the app header beside App Logs. Its popover has a muted "Choose a language" header and lists each language by its native name (English label as a secondary line) with a leading check on the active one. It no longer lives in Settings > General
 - Changing the language applies **live** (no restart) and persists across sessions in `settings.language`
 - Translation coverage spans the whole renderer UI: the setup wizard, app shell, Downloads, Library (including mod details, conflicts, and dialogs), all Settings tabs, the shared install/conflict/version/duplicate/move-to-separator dialogs, the FOMOD installer, App Logs, and toasts. Only main-process error strings remain English. Untranslated strings fall back to English rather than showing missing-key placeholders, so the app stays readable; `en.json` is the source of truth and `pt-BR.json` is a complete translation at full key parity with it (770/770 keys)
-- Engine/implementation details (JSON catalogs, the `LOCALES` registry, the `t()` fallback, how to add a language) live in CLAUDE.md → Internationalization
+- Engine/implementation details (JSON catalogs, the `LOCALES` registry, the `t()` fallback, how to add a language) live in AGENTS.md → Internationalization
 
 ### App Logs
 
