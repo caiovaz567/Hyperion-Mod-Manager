@@ -10,6 +10,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.38.0] - 2026-11-04
+
+### Added
+- **Sort the library by version.** The Version column can now be sorted like Mod Name, Category and Date.
+
+### Changed
+- **A calmer library.** The Actions column is gone. Rename and delete now appear over the date when you hover a mod row (or reach them with the keyboard), so the list gains space and no longer fills with red icons. "Custom Order" and the mod count on separators are now plain text.
+- **Calmer Downloads.** Statuses are easier to read (`Installed` instead of a tiny `INSTALLED`), the header reads `199 files` instead of `LOCAL: 199`, and the Actions column is gone: install and delete appear over the date when you hover an archive row (or reach them with the keyboard). Pause and cancel stay visible next to the name while a download runs.
+- **Simpler Settings.** Cards no longer carry a decorative icon, the version, license and credit labels are plain text instead of colored tags, and the descriptions are rewritten in plain language.
+- **Quieter colors and type across the app.** Toolbars keep one blue action, tags no longer shout in capitals, separators lost their blue dot, the active sidebar icon lost its glow, and library numbers and dates use the same font as the rest of the app. Dates now read `02/11/2026 23:02:35`, without the comma.
+
+### Fixed
+- **Move the window from anywhere along the top.** The whole top edge now drags the window, like any other app, instead of only the right half.
+- **Mod names follow updates.** Updating a mod no longer leaves an old version in its name, such as "Mod v1.0" beside version 1.1. A name you chose yourself is always kept.
+- **Cleaner names on install.** Names no longer pick up `.zip` from the file name, and manual downloads in Nexus's newer file name format no longer keep the id, date and hash.
+
+---
+
 ## [0.37.5] - 2026-11-03
 
 ### Fixed
