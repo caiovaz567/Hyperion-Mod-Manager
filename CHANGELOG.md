@@ -10,6 +10,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.38.3] - 2026-11-11
+
+### Fixed
+- **Updates wait for the game to close.** Hyperion no longer installs an update while Cyberpunk 2077 is running. The game uses some of Hyperion's files, so the install could fail halfway. The update stays downloaded and installs once the game is closed.
+- **Loader files are always cleaned up.** A loader file left in the game folder by an earlier session was never removed again, and a leftover loader can crash a launch without mods. Hyperion now removes it when the game closes.
+
+---
+
 ## [0.38.2] - 2026-11-04
 
 ### Fixed

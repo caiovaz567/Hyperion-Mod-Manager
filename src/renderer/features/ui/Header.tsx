@@ -63,6 +63,7 @@ export const Header: React.FC = () => {
     installUpdate,
     addToast,
     openDialog,
+    gameRunning,
   } = useAppStore()
   const [autoApplyUpdate, setAutoApplyUpdate] = useState(false)
 
@@ -73,13 +74,21 @@ export const Header: React.FC = () => {
   useEffect(() => {
     if (!updateDownloaded || !autoApplyUpdate) return
 
+    // The game loads files from Hyperion's folder, so installing now would fail halfway.
+    // Keep the download and let the user install once the game is closed.
+    if (gameRunning) {
+      setAutoApplyUpdate(false)
+      addToast(t('shell.update.closeGameFirst'), 'warning')
+      return
+    }
+
     addToast(t('shell.update.downloaded'), 'info', 1800)
     const timeoutId = window.setTimeout(() => {
       installUpdate()
     }, 700)
 
     return () => window.clearTimeout(timeoutId)
-  }, [updateDownloaded, autoApplyUpdate, installUpdate, addToast])
+  }, [updateDownloaded, autoApplyUpdate, installUpdate, addToast, gameRunning, t])
 
   useEffect(() => {
     if (!updateError) return
@@ -93,6 +102,10 @@ export const Header: React.FC = () => {
     }
 
     if (updateDownloaded) {
+      if (gameRunning) {
+        addToast(t('shell.update.closeGameFirst'), 'warning')
+        return
+      }
       installUpdate()
       return
     }

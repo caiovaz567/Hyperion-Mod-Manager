@@ -72,7 +72,8 @@
       "install": "Install update",
       "installVersion": "Install update {version}",
       "downloaded": "Update downloaded. Restarting Hyperion...",
-      "downloadFailed": "Could not download update"
+      "downloadFailed": "Could not download update",
+      "closeGameFirst": "Close Cyberpunk 2077 to install the update."
     },
     "toast": {
       "gameAutoDetected": "Game path auto-detected"

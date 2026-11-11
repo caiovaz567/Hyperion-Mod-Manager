@@ -17,7 +17,7 @@ import { spawn, exec, execFile } from 'child_process'
 import { getPathDefaults, loadSettings, saveSettings, toRendererSettings } from './settings'
 import { readSystemDateFormat } from './systemDateFormat'
 import { createSplashWindow } from './splash'
-import { initializeUpdates, checkForUpdatesOnStartup, flushCachedUpdateInfo } from './updater'
+import { initializeUpdates, checkForUpdatesOnStartup, flushCachedUpdateInfo, setInstallUpdateOnQuit } from './updater'
 import {
   registerModManagerHandlers,
   buildEnabledModLinks,
@@ -30,6 +30,7 @@ import {
 import { getVfsBridgeDiagnostics, loadVfsBridge, type UsvfsBridge, type VfsLink } from './vfsBridge'
 import { pruneEmptyModFrameworkDirs } from './vfsFrameworkCleanup'
 import { computeRedmodFingerprint, readGameBuildIdentity } from './redmodFingerprint'
+import { isHyperionStagedEntry, mergeStagedBootstrapEntries, type BootstrapStageEntry } from './bootstrapStaging'
 import { isLibraryWatchSuppressed } from './libraryWatchSuppress'
 import { cleanupInstallerTempDirs, registerInstallerHandlers } from './ipc/installer'
 import { registerGameDetectorHandlers } from './ipc/gameDetector'
@@ -134,6 +135,14 @@ function unmountVfsIfMounted(): void {
     pruneEmptyModFrameworkDirs(resolveGameRootPath(loadSettings().gamePath))
   } catch {
     // Best-effort; a stray empty dir is harmless if this ever throws.
+  }
+}
+
+function isGameAttachedToVfs(): boolean {
+  try {
+    return vfsMounted && (loadVfsBridge()?.vfsProcesses?.() ?? []).length > 0
+  } catch {
+    return false
   }
 }
 
@@ -546,16 +555,6 @@ function appendVfsLaunchLog(message: string, details?: unknown): void {
   } catch {
     // Diagnostics must never block launching.
   }
-}
-
-interface BootstrapStageEntry {
-  source: string
-  dest: string
-  deployPath: string
-  modName?: string
-  modFolderName?: string
-  status: 'copied' | 'already-present' | 'existing-kept' | 'error'
-  error?: string
 }
 
 interface BootstrapCandidate {
@@ -1267,21 +1266,6 @@ function persistBootstrapStagingManifest(): void {
   }
 }
 
-// Merge staging left by a previous session (from the manifest) with this run's
-// fresh staging. Keyed on dest so a re-staged file keeps its newest entry; only
-// 'copied' entries matter - cleanup ignores every other status.
-function mergeStagedBootstrapEntries(
-  previous: BootstrapStageEntry[] | undefined,
-  current: BootstrapStageEntry[]
-): BootstrapStageEntry[] {
-  const byDest = new Map<string, BootstrapStageEntry>()
-  for (const entry of [...(previous ?? []), ...current]) {
-    if (entry?.status !== 'copied' || !entry.dest) continue
-    byDest.set(pathKey(entry.dest), entry)
-  }
-  return [...byDest.values()]
-}
-
 function mergeStagedTempDirs(
   previous: BootstrapTempDir[] | undefined,
   current: BootstrapTempDir[]
@@ -1348,7 +1332,7 @@ function cleanupStagedBootstrapFiles(): void {
     // once a loader survived one dirty exit it became 'already-present' on the
     // next launch and was then orphaned forever, piling up in bin/x64/plugins
     // until a vanilla / all-disabled launch crashed on stale loaders.
-    if (entry.status !== 'copied' && entry.status !== 'already-present') continue
+    if (!isHyperionStagedEntry(entry)) continue
     try {
       if (!fs.existsSync(entry.dest)) {
         results.push({ dest: entry.dest, deployPath: entry.deployPath, status: 'skipped' })
@@ -2838,10 +2822,9 @@ function registerGlobalHandlers(): void {
       // (crash, kill, or quit while the game was attached), so those files are
       // removed on this run's game exit instead of lingering in the game folder.
       const leftoverStaging = readBootstrapStagingManifest()
-      stagedBootstrapEntries = mergeStagedBootstrapEntries(
-        leftoverStaging?.entries,
-        bootstrapStage.entries.filter((entry) => entry.status === 'copied')
-      )
+      // 'already-present' loaders are Hyperion's too (left by an earlier session), so
+      // they are tracked for removal on game exit exactly like freshly copied ones.
+      stagedBootstrapEntries = mergeStagedBootstrapEntries(leftoverStaging?.entries, bootstrapStage.entries)
       stagedBootstrapTempDirs = mergeStagedTempDirs(leftoverStaging?.tempDirs, bootstrapStage.tempDirs)
       persistBootstrapStagingManifest()
       const bootstrapCancelled = cancelledLaunchResult(64)
@@ -3449,7 +3432,11 @@ app.whenReady().then(async () => {
   // Initialize auto-updater and start the self-update check during the splash so the
   // header update button is ready by the time the window opens, instead of a few
   // seconds after the renderer boots.
-  initializeUpdates(mainWindow)
+  // The game loads usvfs from Hyperion's own folder, so the installer can't replace
+  // Hyperion's files while the game is running - refuse to install until it closes.
+  initializeUpdates(mainWindow, {
+    canInstallNow: async () => !isGameAttachedToVfs() && !(await isGameProcessRunning()),
+  })
   if (app.isPackaged && settings.autoUpdate) {
     void checkForUpdatesOnStartup()
   }
@@ -3492,14 +3479,12 @@ app.on('before-quit', () => {
   // case leave the VFS resident (the game's own handle keeps the shared memory
   // alive) and let the startup sweep / next launch reconcile staged bootstrap
   // files and runtime residue from the persisted manifest.
-  let attachedToVfs = false
-  try {
-    attachedToVfs = vfsMounted && (loadVfsBridge()?.vfsProcesses?.() ?? []).length > 0
-  } catch {
-    attachedToVfs = false
-  }
+  const attachedToVfs = isGameAttachedToVfs()
   if (attachedToVfs) {
     appendVfsLaunchLog('app quitting with game attached to VFS - leaving VFS resident')
+    // A downloaded update would otherwise install on quit while the game still holds
+    // Hyperion's usvfs files; it installs on the next quit instead.
+    setInstallUpdateOnQuit(false)
   } else {
     unmountVfsIfMounted()
   }

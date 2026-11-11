@@ -82,6 +82,49 @@ function rollChangelog(version) {
   return true
 }
 
+function runNpmScript(script) {
+  const npmExecPath = process.env.npm_execpath
+  if (npmExecPath) {
+    execFileSync(process.execPath, [npmExecPath, 'run', script], { cwd: repoRoot, stdio: 'inherit' })
+    return
+  }
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  execFileSync(npmCommand, ['run', script], { cwd: repoRoot, stdio: 'inherit', shell: process.platform === 'win32' })
+}
+
+function unreleasedHasEntries() {
+  const changelogPath = path.join(repoRoot, 'CHANGELOG.md')
+  if (!fs.existsSync(changelogPath)) return false
+  const text = fs.readFileSync(changelogPath, 'utf8').replace(/\r\n/g, '\n')
+  const start = text.indexOf('## [Unreleased]')
+  if (start === -1) return false
+  const afterHeading = text.slice(start + '## [Unreleased]'.length)
+  const separator = /\n---[ \t]*\n/.exec(afterHeading)
+  const body = separator ? afterHeading.slice(0, separator.index) : afterHeading
+  return /^\s*-\s+\S/m.test(body)
+}
+
+// 0) Safety checks. A release only carries what is committed, so anything left in the
+//    working tree would ship a version without its changes (this happened with 0.38.0).
+const pendingChanges = runGit(['status', '--porcelain'])
+if (pendingChanges) {
+  console.error('[release] Commit your changes first. These files are not committed:')
+  console.error(pendingChanges.split('\n').map((line) => `    ${line}`).join('\n'))
+  process.exit(1)
+}
+if (!unreleasedHasEntries()) {
+  console.error('[release] The CHANGELOG [Unreleased] section is empty. Describe the changes first.')
+  process.exit(1)
+}
+console.log('[release] Running the typecheck and tests before releasing...')
+try {
+  runNpmScript('typecheck')
+  runNpmScript('test')
+} catch {
+  console.error('[release] Typecheck or tests failed. Nothing was changed.')
+  process.exit(1)
+}
+
 // 1) Bump version (updates package.json + package-lock.json)
 runNpmVersion(releaseType)
 

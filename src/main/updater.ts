@@ -8,7 +8,14 @@ import { safeSendToWindow } from './logStore'
 let cachedUpdateInfo: { version: string; releaseNotes: unknown } | null = null
 let updatesWindow: BrowserWindow | null = null
 
-export function initializeUpdates(mainWindow: BrowserWindow): void {
+export function setInstallUpdateOnQuit(allowed: boolean): void {
+  autoUpdater.autoInstallOnAppQuit = allowed
+}
+
+export function initializeUpdates(
+  mainWindow: BrowserWindow,
+  options: { canInstallNow: () => Promise<boolean> },
+): void {
   updatesWindow = mainWindow
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
@@ -65,7 +72,12 @@ export function initializeUpdates(mainWindow: BrowserWindow): void {
     }
   })
 
-  ipcMain.on(IPC.INSTALL_UPDATE, () => {
+  ipcMain.on(IPC.INSTALL_UPDATE, async () => {
+    // The renderer already blocks this while the game runs; this is the backstop.
+    if (!(await options.canInstallNow())) {
+      safeSendToWindow(mainWindow, IPC.UPDATE_ERROR, 'Close Cyberpunk 2077 before installing the update.')
+      return
+    }
     autoUpdater.quitAndInstall(true, true)
   })
 }
