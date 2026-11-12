@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { createSerialQueue } from '../../utils/taskQueue'
 import { IPC } from '../../../shared/types'
 import type {
   ActiveDownload,
@@ -294,6 +295,11 @@ async function installCompletedDownload(
     state.setRecentLibraryBadge?.(mod.uuid, 'installed')
   }
 }
+
+// Installs that start on their own when a download finishes (mod updates and
+// auto-install) run one at a time: several downloads can finish together, and
+// overlapping installs would shift library order and fight over the install UI state.
+const queueDownloadInstall = createSerialQueue()
 
 async function installCompletedModUpdate(
   get: () => DownloadsSlice,
@@ -1345,14 +1351,15 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         }
       })
       if (completedDownload?.intent?.kind === 'mod-update') {
-        void installCompletedModUpdate(get, savedPath, {
+        const intent = completedDownload.intent
+        void queueDownloadInstall(() => installCompletedModUpdate(get, savedPath, {
           modId: completedDownload.nxmModId,
           fileId: completedDownload.nxmFileId,
         }, {
           fileName: fileName ?? completedDownload.fileName,
-          version: version ?? completedDownload.version ?? completedDownload.intent.latestVersion,
-          intent: completedDownload.intent,
-        })
+          version: version ?? completedDownload.version ?? intent.latestVersion,
+          intent,
+        }))
       } else if (completedDownload && (get() as DownloadsStoreBridge).settings?.autoInstallDownloads !== false) {
         // Auto-install must never run while the game is open (installing rewrites
         // the mod library usvfs deploys from). The download is already saved into
@@ -1372,13 +1379,13 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
             )
             return
           }
-          await installCompletedDownload(get, savedPath, {
+          await queueDownloadInstall(() => installCompletedDownload(get, savedPath, {
             modId: completedDownload.nxmModId,
             fileId: completedDownload.nxmFileId,
           }, {
             fileName: fileName ?? completedDownload.fileName,
             version: version ?? completedDownload.version,
-          })
+          }))
         })()
       }
     })

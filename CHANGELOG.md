@@ -10,6 +10,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.38.4] - 2026-11-12
+
+### Changed
+- **Faster Update All.** It now downloads up to three updates at a time instead of one, and installs each one as soon as its download finishes. Installs still happen one at a time, so the library order stays right.
+
+### Fixed
+- **Downloads that finish together no longer install at the same time.** Several updates or auto-installed downloads finishing together now install one after another instead of overlapping.
+
+---
+
 ## [0.38.3] - 2026-11-11
 
 ### Fixed

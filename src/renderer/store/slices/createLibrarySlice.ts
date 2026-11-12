@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { runWithConcurrency } from '../../utils/taskQueue'
 import { IPC } from '../../../shared/types'
 import type { ModMetadata, IpcResult, PurgeModsResult, ConflictInfo, ModUpdateStatus, ModUpdateCheckResult, ModUpdateCheckInput, ModUpdateCache, NxmLinkPayload, NexusValidateResult } from '../../../shared/types'
 import { IpcService } from '../../services/IpcService'
@@ -62,12 +63,15 @@ function pickUpdatedPeriod(lastCheckedAt: string | null): '1d' | '1w' | '1m' {
 const archiveNamesResolveInFlight = new Set<string>()
 const archiveNamesResolvedThisSession = new Set<string>()
 
+// How many Update All downloads run at once. Installs stay one at a time (the
+// downloads slice queues them), so this only overlaps the network part.
+const UPDATE_ALL_DOWNLOAD_CONCURRENCY = 3
+
 // Waits for one queued mod update to settle. Success = the mod's update flag is
 // cleared (the inline-update install path calls clearModUpdate when the replace
 // lands); failure = the download errored, never started, or vanished without the
-// install completing within a grace window. Polling the store keeps Update All
-// sequential without new IPC wiring - installs must not run concurrently (they
-// shift library order and share the install UI state).
+// install completing within a grace window. The grace window is generous because a
+// finished download may wait behind other updates in the install queue.
 async function waitForUpdateSettled(
   get: () => LibrarySlice,
   modUuid: string,
@@ -94,7 +98,7 @@ async function waitForUpdateSettled(
       // Download row removed = transfer done; the install is in flight. Give it
       // a generous window before declaring the update lost.
       missingSince ??= Date.now()
-      if (Date.now() - missingSince > 5 * 60_000) return false
+      if (Date.now() - missingSince > 15 * 60_000) return false
     } else if (Date.now() - startedAt > 30_000) {
       return false // the download never started (link resolve failed etc.)
     }
@@ -626,10 +630,11 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     }
   },
 
-  // Update every outdated mod in one go. Premium: downloads and installs them
-  // ONE AT A TIME through the existing inline-update pipeline (installs must not
-  // overlap - they shift library order and share the install UI state), waiting
-  // for each mod's update flag to clear before starting the next. Free accounts
+  // Update every outdated mod in one go. Premium: downloads up to
+  // UPDATE_ALL_DOWNLOAD_CONCURRENCY at a time through the existing inline-update
+  // pipeline; each finished download joins the downloads slice's install queue, so
+  // installs still never overlap (they shift library order and share the install
+  // UI state). A worker moves on once its mod's update flag clears. Free accounts
   // can't mint download links, so every update intent is queued (each matching
   // nxm:// link then installs inline) and the first mod's files page opens.
   updateAllMods: async () => {
@@ -704,34 +709,43 @@ export const createLibrarySlice: StateCreator<LibrarySlice, [], [], LibrarySlice
     set({ updatingAllMods: true, updateAllProgress: { current: 0, total: outdated.length, name: '' } })
     let updated = 0
     let failed = 0
-    try {
-      for (let index = 0; index < outdated.length; index++) {
-        const mod = outdated[index]
-        // Re-read: an earlier iteration (or a manual action) may have already
-        // updated or removed this mod.
-        const status = get().modUpdates[mod.uuid]
-        if (!get().mods.some((m) => m.uuid === mod.uuid)) continue
-        if (!status || status.state !== 'update-available') continue
-        set({ updateAllProgress: { current: index + 1, total: outdated.length, name: mod.name } })
-        if (!status.latestFileId || mod.nexusModId == null || !ext.startNxmDownload) {
-          failed += 1
-          continue
-        }
-        await ext.startNxmDownload({
-          modId: mod.nexusModId,
-          fileId: status.latestFileId,
-          key: '',
-          expires: 0,
-          userId: 0,
-          raw: '',
-        }, {
-          navigateToDownloads: false,
-          intent: intentFor(mod, status),
-        })
-        const settled = await waitForUpdateSettled(get, mod.uuid, mod.nexusModId, status.latestFileId)
-        if (settled) updated += 1
-        else failed += 1
+    let finished = 0
+    const markFinished = (ok: boolean, name: string) => {
+      if (ok) updated += 1
+      else failed += 1
+      finished += 1
+      set({ updateAllProgress: { current: finished, total: outdated.length, name } })
+    }
+
+    const updateOne = async (mod: ModMetadata) => {
+      // Re-read: another worker (or a manual action) may have already updated or
+      // removed this mod.
+      const status = get().modUpdates[mod.uuid]
+      if (!get().mods.some((m) => m.uuid === mod.uuid) || !status || status.state !== 'update-available') {
+        markFinished(true, mod.name)
+        return
       }
+      if (!status.latestFileId || mod.nexusModId == null || !ext.startNxmDownload) {
+        markFinished(false, mod.name)
+        return
+      }
+      await ext.startNxmDownload({
+        modId: mod.nexusModId,
+        fileId: status.latestFileId,
+        key: '',
+        expires: 0,
+        userId: 0,
+        raw: '',
+      }, {
+        navigateToDownloads: false,
+        intent: intentFor(mod, status),
+      })
+      const settled = await waitForUpdateSettled(get, mod.uuid, mod.nexusModId, status.latestFileId)
+      markFinished(settled, mod.name)
+    }
+
+    try {
+      await runWithConcurrency(outdated, UPDATE_ALL_DOWNLOAD_CONCURRENCY, updateOne, (mod) => markFinished(false, mod.name))
     } finally {
       set({ updatingAllMods: false, updateAllProgress: null })
     }

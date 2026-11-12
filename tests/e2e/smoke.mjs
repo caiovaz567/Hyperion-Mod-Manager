@@ -246,12 +246,20 @@ async function scenarioWorkflow() {
     await page.keyboard.press('ControlOrMeta+a')
     await page.keyboard.type('smoke_e2e_renamed')
     await page.keyboard.press('Enter')
-    await page.waitForSelector("[data-slot='toast']", { state: 'attached', timeout: 8_000 }).catch(() => {})
-    await page.waitForTimeout(350) // let the enter view-transition settle
-    const toastBox = await page.locator("[data-slot='toast']").first().boundingBox().catch(() => null)
+    // Probe the rename's OWN toast. The folder creation above leaves an older toast
+    // that may still be fading out, and `.first()` used to pick that one - its
+    // exit animation let elementFromPoint fall through to the modal, so the check
+    // failed at random.
+    const renameToast = page.locator("[data-slot='toast']", { hasText: 'Entry renamed' }).last()
+    await renameToast.waitFor({ state: 'visible', timeout: 8_000 }).catch(() => {})
+    // While the toast is still animating in, a hit test can pass through it, so
+    // poll for a short while. A toast that is really behind the modal never wins.
     let toastOnTop = false
     let toastHit = 'no toast box'
-    if (toastBox) {
+    for (let attempt = 0; attempt < 10 && !toastOnTop; attempt += 1) {
+      await page.waitForTimeout(150)
+      const toastBox = await renameToast.boundingBox().catch(() => null)
+      if (!toastBox) continue
       const probe = await page.evaluate(({ x, y }) => {
         const el = document.elementFromPoint(x, y)
         return {
