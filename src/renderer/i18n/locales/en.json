@@ -229,6 +229,7 @@
       "fomodInstallFailed": "FOMOD install failed",
       "nexusDownloadStartFailed": "Could not start Nexus download",
       "nexusLinkReadFailed": "Could not read Nexus download link",
+      "nexusCollectionUnsupported": "Hyperion can't install Nexus collections yet. Install each mod from its page with Mod Manager Download.",
       "installedToSeparator": "{name} installed to {separator}",
       "gameRunningAutoInstallDeferred": "Cyberpunk 2077 is running - {name} was downloaded but not installed. Close the game, then install it from Downloads."
     }

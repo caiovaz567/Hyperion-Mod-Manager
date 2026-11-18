@@ -71,6 +71,8 @@ It also installs from `nxm://` links, and finds updates for the exact file you h
   <img src="docs/screenshots/downloads.png" width="800" alt="Downloads screen listing archives with their status, version, size and date" />
 </p>
 
+Nexus collections are not supported yet, so install each mod from its own page.
+
 ### Logs
 
 When something goes wrong, you can see why without leaving the app. App Logs keeps app events on one tab and every Nexus request on another, with the status, the response time and the response itself. Your API key stays masked.

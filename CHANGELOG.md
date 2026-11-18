@@ -10,6 +10,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.38.5] - 2026-11-18
+
+### Fixed
+- **Clear message for Nexus collections.** Hyperion can't install collections yet, but clicking one only showed a generic "could not read link" error. It now says so and explains how to install the mods one at a time.
+
+---
+
 ## [0.38.4] - 2026-11-12
 
 ### Changed

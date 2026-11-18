@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseNxmUrl } from '../src/shared/nxm'
+import { isNxmCollectionUrl, parseNxmUrl } from '../src/shared/nxm'
 import {
   findLatestFileIdInLineage,
   isSupersededCategory,
@@ -7,6 +7,25 @@ import {
   pickLatestSameNameFile,
   sanitizeDownloadFileName,
 } from '../src/main/ipc/nexusDownloader'
+
+describe('isNxmCollectionUrl', () => {
+  it('recognizes Nexus collection links', () => {
+    expect(isNxmCollectionUrl('nxm://cyberpunk2077/collections/abc123/revisions/4')).toBe(true)
+    expect(isNxmCollectionUrl('  "nxm://cyberpunk2077/collections/abc123/revisions/4"  ')).toBe(true)
+    expect(isNxmCollectionUrl('NXM://Cyberpunk2077/Collections/abc123/revisions/4')).toBe(true)
+  })
+
+  it('does not mistake other links for collections', () => {
+    expect(isNxmCollectionUrl('nxm://cyberpunk2077/mods/1234/files/5678?key=k')).toBe(false)
+    expect(isNxmCollectionUrl('https://cyberpunk2077/collections/abc123/revisions/4')).toBe(false)
+    expect(isNxmCollectionUrl('total garbage')).toBe(false)
+    expect(isNxmCollectionUrl('')).toBe(false)
+  })
+
+  it('stays unreadable as a download, so nothing tries to install it', () => {
+    expect(parseNxmUrl('nxm://cyberpunk2077/collections/abc123/revisions/4')).toBeNull()
+  })
+})
 
 describe('parseNxmUrl', () => {
   it('parses a standard Nexus download link', () => {

@@ -6,6 +6,20 @@ function normalizeNxmUrl(raw: string): string {
   return raw.trim().replace(/^"+|"+$/g, '')
 }
 
+// Nexus collection links (nxm://<game>/collections/<slug>/revisions/<n>) are valid links
+// Hyperion can't install yet, so they get their own message instead of a generic error.
+export function isNxmCollectionUrl(raw: string): boolean {
+  try {
+    const url = new URL(normalizeNxmUrl(raw))
+    if (url.protocol.toLowerCase() !== 'nxm:') return false
+    const segments = url.pathname.split('/').map((segment) => segment.trim()).filter(Boolean)
+    if (!url.hostname.trim()) segments.shift()
+    return segments[0]?.toLowerCase() === 'collections'
+  } catch {
+    return false
+  }
+}
+
 export function parseNxmUrl(raw: string): NxmLinkPayload | null {
   try {
     const normalizedRaw = normalizeNxmUrl(raw)

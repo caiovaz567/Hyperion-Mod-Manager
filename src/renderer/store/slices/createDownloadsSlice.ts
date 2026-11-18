@@ -16,7 +16,7 @@ import type {
   NxmLinkPayload,
   NxmDownloadStartResponse,
 } from '../../../shared/types'
-import { parseNxmUrl } from '../../../shared/nxm'
+import { isNxmCollectionUrl, parseNxmUrl } from '../../../shared/nxm'
 import { IpcService } from '../../services/IpcService'
 import { translate } from '../../i18n/translate'
 
@@ -1280,7 +1280,11 @@ export const createDownloadsSlice: StateCreator<DownloadsSlice, [], [], Download
         const state = get() as DownloadsSlice & {
           addToast?: (toastMessage: string, toastType?: 'info' | 'success' | 'warning' | 'error', duration?: number) => void
         }
-        state.addToast?.(translate('downloads.toast.nexusLinkReadFailed'), 'warning', 3200)
+        if (typeof incoming === 'string' && isNxmCollectionUrl(incoming)) {
+          state.addToast?.(translate('downloads.toast.nexusCollectionUnsupported'), 'warning', 8000)
+        } else {
+          state.addToast?.(translate('downloads.toast.nexusLinkReadFailed'), 'warning', 3200)
+        }
         return
       }
       const key = `${payload.modId}:${payload.fileId}`
